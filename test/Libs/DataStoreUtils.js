@@ -6,7 +6,7 @@ const chai = require("chai");
 chai.use(solidity);
 const { expect } = chai;
 
-const { ZERO_ADDRESS } = require("../testUtils");
+const { MAX_UINT256, ZERO_ADDRESS } = require("../testUtils");
 
 describe("DataStore", async () => {
   let testContract;
