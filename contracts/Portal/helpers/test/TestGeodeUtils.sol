@@ -150,6 +150,15 @@ contract TestGeodeUtils {
   {
     GEODE.approveSenate(DATASTORE, proposalId, electorId);
   }
+  
+  function setSenate(address newSenate, uint256 senatePeriod)
+    external
+    virtual
+  {
+    GEODE.setSenate(
+     newSenate,
+     senatePeriod);
+  }
 
   /// @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022.
   function isUpgradeAllowed(address proposed_implementation)

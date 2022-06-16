@@ -26,7 +26,7 @@ library GeodeUtils {
     uint256 _duration
   );
   event ProposalApproved(uint256 id);
-  event NewElectorType(uint256 _type);
+  event ElectorTypeSet(uint256 _type, bool _isElector);
   event Vote(uint256 proposalId, uint256 electorId);
   event NewSenate(address senate, uint256 senate_expire_timestamp);
 
@@ -315,7 +315,7 @@ library GeodeUtils {
     } else {
       self._electorCount -= _DATASTORE.allIdsByType[_type].length;
     }
-    emit NewElectorType(_type);
+    emit ElectorTypeSet(_type, _isElector);
   }
 
   /**
@@ -374,11 +374,19 @@ library GeodeUtils {
       _DATASTORE.readUintForId(proposalId, "approvalCount") >=
       ((self._electorCount + 1) * 2) / 3
     ) {
-      self.SENATE = self._proposalForId[proposalId].CONTROLLER;
       self._proposalForId[proposalId].deadline = block.timestamp;
-      self.SENATE_EXPIRE_TIMESTAMP = block.timestamp + MAX_SENATE_PERIOD; // 2 years
-      emit NewSenate(self.SENATE, self.SENATE_EXPIRE_TIMESTAMP);
+      setSenate(self, self._proposalForId[proposalId].CONTROLLER, MAX_SENATE_PERIOD);
     }
+  }
+
+  function setSenate(
+    Universe storage self,
+    address newSenate,
+    uint256 senatePeriod
+  ) internal {
+      self.SENATE = newSenate;
+      self.SENATE_EXPIRE_TIMESTAMP = block.timestamp + senatePeriod;
+      emit NewSenate(self.SENATE, self.SENATE_EXPIRE_TIMESTAMP);
   }
 
   /**

@@ -1,20 +1,15 @@
-const { BigNumber, Signer, constants, Bytes } = require("ethers");
+// const { BigNumber, Signer, constants, Bytes } = require("ethers");
 
 const {
-  MAX_UINT256,
   ZERO_ADDRESS,
   DEAD_ADDRESS,
   getCurrentBlockTimestamp,
-  setNextTimestamp,
+  // setNextTimestamp,
   setTimestamp,
 } = require("../testUtils");
 
 const { solidity } = require("ethereum-waffle");
 const { deployments } = require("hardhat");
-const web3 = require("web3");
-w3 = new web3(
-  "https://eth-mainnet.alchemyapi.io/v2/RWIJcoIxj8EVIfhoDC-Vz5o5t_SmsbZP"
-);
 
 const chai = require("chai");
 
@@ -22,18 +17,19 @@ chai.use(solidity);
 const { expect } = chai;
 
 describe("GeodeUtils", async () => {
-  var testContract;
-  var GOVERNANCE;
-  var SENATE;
-  var userType4;
-  var userType5;
-  var creationTime;
+  let testContract;
+  let GOVERNANCE;
+  let SENATE;
+  let userType4;
+  let userType5;
+  let creationTime;
   const _OPERATION_FEE = 10;
   const _MAX_OPERATION_FEE = 100;
   const AWEEK = 7 * 24 * 60 * 60;
 
-  const setupTest = deployments.createFixture(async ({ ethers }) => {
-    const { get, read } = deployments;
+  const setupTest = deployments.createFixture(async (hre) => {
+    ({ ethers, Web3, Web3 } = hre);
+    const { get } = deployments;
     signers = await ethers.getSigners();
     GOVERNANCE = signers[0];
     SENATE = signers[1];
@@ -92,7 +88,7 @@ describe("GeodeUtils", async () => {
         await expect(response).to.eq(false);
       });
       it("with any address", async () => {
-        address = w3.eth.accounts.create();
+        address = web3.eth.accounts.create();
         response = await testContract.isUpgradeAllowed(address.address);
         await expect(response).to.eq(false);
       });
@@ -139,18 +135,18 @@ describe("GeodeUtils", async () => {
         ).to.eq(id);
       });
       it("RANDOM", async () => {
-        expected = web3.utils.keccak256("43725bvtgfsyudqv6tr23");
+        expected = Web3.utils.keccak256("43725bvtgfsyudqv6tr23");
         id = await testContract.getIdFromName("43725bvtgfsyudqv6tr23");
         await expect(expected).to.eq(id);
       });
     });
     describe("matches with", async () => {
       it("getProposal", async () => {
-        nameHex = web3.utils.asciiToHex("69");
+        nameHex = Web3.utils.asciiToHex("69");
         id = await testContract.getIdFromName("69");
         await testContract.newProposal(ZERO_ADDRESS, 1, 100000, nameHex);
         const proposal = await testContract.getProposal(id);
-        await expect(web3.utils.keccak256(proposal.name)).to.eq(id);
+        await expect(Web3.utils.keccak256(proposal.name)).to.eq(id);
       });
     });
   });
@@ -162,16 +158,16 @@ describe("GeodeUtils", async () => {
       await expect(controller).to.eq(ZERO_ADDRESS);
     });
     it("returns 0 when id not approved", async () => {
-      nameHex = web3.utils.asciiToHex("999");
-      const controllerAddress = w3.eth.accounts.create().address;
+      nameHex = Web3.utils.asciiToHex("999");
+      const controllerAddress = web3.eth.accounts.create().address;
       await testContract.newProposal(controllerAddress, 4, 100000, nameHex);
       id = await testContract.getIdFromName(nameHex);
       const controller = await testContract.getCONTROLLERFromId(id);
       await expect(controller).to.eq(ZERO_ADDRESS);
     });
     it("returns correct Address", async () => {
-      nameHex = web3.utils.asciiToHex("999");
-      const controllerAddress = w3.eth.accounts.create().address;
+      nameHex = Web3.utils.asciiToHex("999");
+      const controllerAddress = web3.eth.accounts.create().address;
       await testContract.newProposal(controllerAddress, 4, 100000, nameHex);
       id = await testContract.getIdFromName("999");
       await testContract.connect(SENATE).approveProposal(id);
@@ -184,12 +180,12 @@ describe("GeodeUtils", async () => {
     let id, newcontrollerAddress;
 
     beforeEach(async () => {
-      nameHex = web3.utils.asciiToHex("999");
-      controllerAddress = w3.eth.accounts.create().address;
+      nameHex = Web3.utils.asciiToHex("999");
+      controllerAddress = web3.eth.accounts.create().address;
       await testContract.newProposal(userType4.address, 4412, 100000, nameHex);
       id = await testContract.getIdFromName("999");
       await testContract.connect(SENATE).approveProposal(id);
-      newcontrollerAddress = w3.eth.accounts.create().address;
+      newcontrollerAddress = web3.eth.accounts.create().address;
     });
 
     describe("reverts if caller is not CONTROLLER", async () => {
@@ -243,45 +239,43 @@ describe("GeodeUtils", async () => {
     });
   });
 
-  //TODO: MIN_DURATION CHECK
-
   describe("newProposal", () => {
     describe("any type", async () => {
       it("new proposal reverts when proposal duration is more then max duration", async () => {
-        const controller = w3.eth.accounts.create();
+        const controller = web3.eth.accounts.create();
         await expect(
           testContract.newProposal(
             controller.address,
             5,
             AWEEK + 1, // 1 weeks
-            web3.utils.asciiToHex("myLovelyPlanet")
+            Web3.utils.asciiToHex("myLovelyPlanet")
           )
         ).to.be.revertedWith("GeodeUtils: duration exceeds");
       });
       it("new proposal reverts when proposal has the same name with a currently active proposal", async () => {
-        const controller = w3.eth.accounts.create();
+        const controller = web3.eth.accounts.create();
         await testContract.newProposal(
           controller.address,
           5,
           AWEEK - 1, // 1 weeks - 1 seconds
-          web3.utils.asciiToHex("myLovelyPlanet")
+          Web3.utils.asciiToHex("myLovelyPlanet")
         );
         await expect(
           testContract.newProposal(
             controller.address,
             4,
             AWEEK - 1, // 1 weeks - 1 seconds
-            web3.utils.asciiToHex("myLovelyPlanet")
+            Web3.utils.asciiToHex("myLovelyPlanet")
           )
         ).to.be.revertedWith("GeodeUtils: name already proposed");
       });
       it("new proposal reverts when proposal has the same name with a Approved proposal", async () => {
-        const controller = w3.eth.accounts.create();
+        const controller = web3.eth.accounts.create();
         await testContract.newProposal(
           controller.address,
           5,
           AWEEK - 1, // 1 weeks - 1 seconds
-          web3.utils.asciiToHex("myLovelyPlanet")
+          Web3.utils.asciiToHex("myLovelyPlanet")
         );
         const id = await testContract.getIdFromName("myLovelyPlanet");
         await testContract.connect(SENATE).approveProposal(id);
@@ -290,17 +284,17 @@ describe("GeodeUtils", async () => {
             controller.address,
             4,
             AWEEK - 1, // 1 weeks - 1 seconds
-            web3.utils.asciiToHex("myLovelyPlanet")
+            Web3.utils.asciiToHex("myLovelyPlanet")
           )
         ).to.be.revertedWith("GeodeUtils: name already claimed");
       });
       it("controller, type, deadline and name should be setted correctly in new proposal", async () => {
-        const controller = w3.eth.accounts.create();
+        const controller = web3.eth.accounts.create();
         await testContract.newProposal(
           controller.address,
           5,
           AWEEK - 1, // 1 weeks - 1 seconds
-          web3.utils.asciiToHex("myLovelyPlanet")
+          Web3.utils.asciiToHex("myLovelyPlanet")
         );
         const blockTimestamp = await getCurrentBlockTimestamp();
         const id = await testContract.getIdFromName("myLovelyPlanet");
@@ -308,7 +302,7 @@ describe("GeodeUtils", async () => {
         expect(proposal.CONTROLLER).to.eq(controller.address);
         expect(proposal.TYPE).to.eq(5);
         expect(proposal.deadline).to.eq(AWEEK - 1 + blockTimestamp);
-        expect(proposal.name).to.eq(web3.utils.asciiToHex("myLovelyPlanet"));
+        expect(proposal.name).to.eq(Web3.utils.asciiToHex("myLovelyPlanet"));
       });
     });
   });
@@ -316,15 +310,15 @@ describe("GeodeUtils", async () => {
   describe("Upgradability Changes according to type", async () => {
     let name, id, Upgrade;
     beforeEach(async () => {
-      name = web3.utils.asciiToHex("RANDOM");
+      name = Web3.utils.asciiToHex("RANDOM");
       id = await testContract.getIdFromName("RANDOM");
-      Upgrade = w3.eth.accounts.create();
+      Upgrade = web3.eth.accounts.create();
     });
     describe("type 2 : Upgrade ", async () => {
       it("isUpgradeAllowed", async () => {
         await testContract.newProposal(Upgrade.address, 2, 100000, name);
         await testContract.connect(SENATE).approveProposal(id);
-        var response = await testContract.isUpgradeAllowed(Upgrade.address);
+        const response = await testContract.isUpgradeAllowed(Upgrade.address);
         await expect(response).to.eq(true);
       });
     });
@@ -332,7 +326,7 @@ describe("GeodeUtils", async () => {
       it("NOT isUpgradeAllowed", async () => {
         await testContract.newProposal(Upgrade.address, 4, 100000, name);
         await testContract.connect(SENATE).approveProposal(id);
-        var response = await testContract.isUpgradeAllowed(Upgrade.address);
+        const response = await testContract.isUpgradeAllowed(Upgrade.address);
         await expect(response).to.eq(false);
       });
     });
@@ -347,9 +341,10 @@ describe("GeodeUtils", async () => {
       "MyPoorOperator",
       "MyNewSenate",
     ];
+    // eslint-disable-next-line prefer-const
+    let controllers = [];
     const types = [5, 5, 5, 5, 4, 1];
     const ids = [];
-    let controllers = [];
     beforeEach(async () => {
       let i;
       for (i = 0; i < 5; i++) {
@@ -359,7 +354,7 @@ describe("GeodeUtils", async () => {
           controller.address,
           types[i],
           AWEEK - 1, // 1 weeks - 1 seconds
-          web3.utils.asciiToHex(names[i])
+          Web3.utils.asciiToHex(names[i])
         );
         const id = await testContract.getIdFromName(names[i]);
         ids.push(id);
@@ -371,7 +366,7 @@ describe("GeodeUtils", async () => {
         controller.address,
         types[i],
         AWEEK - 1, // 1 weeks - 1 seconds
-        web3.utils.asciiToHex(names[i])
+        Web3.utils.asciiToHex(names[i])
       );
       const id = await testContract.getIdFromName(names[i]);
       ids.push(id);
@@ -400,7 +395,7 @@ describe("GeodeUtils", async () => {
         userType4.address,
         5,
         AWEEK - 1, // 1 weeks - 1 seconds
-        web3.utils.asciiToHex("myOtherLovelyPlanet")
+        Web3.utils.asciiToHex("myOtherLovelyPlanet")
       );
       const id = await testContract.getIdFromName("myOtherLovelyPlanet");
       await expect(
@@ -436,7 +431,7 @@ describe("GeodeUtils", async () => {
       senateAfterVotes = await testContract.getSenate();
       expect(senateAfterVotes).to.eq(SENATE.address);
     });
-    it("votes are successfull & senate changes with 3/4 votes", async () => {
+    it("votes are successfull & senate changes more than 2/3 votes", async () => {
       await testContract
         .connect(controllers[0])
         .approveSenate(ids[ids.length - 1], ids[0]);
@@ -455,6 +450,20 @@ describe("GeodeUtils", async () => {
           .connect(controllers[3])
           .approveSenate(ids[ids.length - 1], ids[3])
       ).to.be.revertedWith("GeodeUtils: proposal expired");
+    });
+  });
+
+  describe("Set Senate", () => {
+    it("Sets senate without checking anything, for micro governance in withdrawal credentials contract use", async () => {
+      const beforeTimestamp = await getCurrentBlockTimestamp();
+      await testContract.setSenate(userType4.address, 6969);
+      const afterTimestamp = await getCurrentBlockTimestamp();
+      afterSenate = await testContract.getSenate();
+      expect(afterSenate).to.eq(userType4.address);
+      afterSenateExpireTimestamp =
+        await testContract.getSenateExpireTimestamp();
+      expect(afterSenateExpireTimestamp).to.gte(beforeTimestamp + 6969);
+      expect(afterSenateExpireTimestamp).to.lte(afterTimestamp + 6969);
     });
   });
 });
