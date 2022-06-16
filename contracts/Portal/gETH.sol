@@ -167,7 +167,7 @@ contract gETH is ERC1155SupplyMinterPauser {
             from == _msgSender() ||
                 (isApprovedForAll(from, _msgSender()) ||
                     isInterface(_msgSender(), id)),
-            "ERC1155: caller is not owner nor approved"
+            "ERC1155: caller is not owner nor interface nor approved"
         );
 
         _safeTransferFrom(from, to, id, amount, data);

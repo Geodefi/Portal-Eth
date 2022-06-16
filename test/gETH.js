@@ -346,7 +346,7 @@ describe("gETH ", async function () {
                       "0x"
                     )
                 ).to.be.revertedWith(
-                  "ERC1155: caller is not owner nor approved"
+                  "ERC1155: caller is not owner nor interface nor approved"
                 );
               });
             }
@@ -1556,6 +1556,65 @@ describe("gETH ", async function () {
         });
       });
 
+      describe("can burn underlying tokens ", async function () {
+        let nonERC1155Receiver;
+        beforeEach(async () => {
+          const nonERC1155ReceiverFac = await ethers.getContractFactory(
+            "nonERC1155Receiver"
+          );
+          nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
+            firstTokenId,
+            tokenContract.address
+          );
+          await tokenContract
+            .connect(signers[0])
+            .setInterface(nonERC1155Receiver.address, firstTokenId, true);
+
+          await tokenContract
+            .connect(signers[0])
+            .mint(tokenHolder, firstTokenId, firstAmount, "0x");
+        });
+
+        it("succeeds", async function () {
+          console.log(firstAmount, tokenHolder, firstTokenId);
+          expect(
+            await tokenContract.balanceOf(tokenHolder, firstTokenId)
+          ).to.be.eq(firstAmount.toString());
+          await nonERC1155Receiver.connect(signers[1]).burn(firstAmount);
+          expect(
+            await tokenContract.balanceOf(tokenHolder, firstTokenId)
+          ).to.be.eq(BigNumber.from(0));
+        });
+      });
+
+      describe("can not burn underlying tokens", async function () {
+        let nonERC1155Receiver;
+        beforeEach(async () => {
+          const nonERC1155ReceiverFac = await ethers.getContractFactory(
+            "nonERC1155Receiver"
+          );
+          nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
+            unknownTokenId,
+            tokenContract.address
+          );
+          await tokenContract
+            .connect(signers[0])
+            .setInterface(nonERC1155Receiver.address, 6969, true);
+
+          await tokenContract
+            .connect(signers[0])
+            .mint(tokenHolder, firstTokenId, firstAmount, "0x");
+        });
+
+        it("fails", async function () {
+          await expect(
+            nonERC1155Receiver.connect(signers[1]).burn(firstAmount)
+          ).to.be.revertedWith(
+            "ERC1155: caller is not owner nor interface nor approved"
+          );
+        });
+      });
+
       it("interfaces must be a contract", async function () {
         await expect(
           tokenContract
@@ -1568,7 +1627,10 @@ describe("gETH ", async function () {
         const nonERC1155ReceiverFac = await ethers.getContractFactory(
           "nonERC1155Receiver"
         );
-        const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy();
+        const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
+          unknownTokenId,
+          tokenContract.address
+        );
         await ERC20Interface.connect(signers[2]).transfer(
           nonERC1155Receiver.address,
           firstAmount
@@ -1579,15 +1641,43 @@ describe("gETH ", async function () {
         ).to.be.eq(firstAmount);
       });
 
-      //   it("interfaces can NOT transfer other ids", async function () {
-      //     await expect(
-      //       ERC20Interface.connect(signers[5]).transferFrom(
-      //         firstTokenHolder,
-      //         secondTokenHolder,
-      //         firstAmount
-      //       )
-      //     ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
-      //   });
+      it("interfaces can NOT transfer other ids", async function () {
+        const nonERC1155ReceiverFac = await ethers.getContractFactory(
+          "nonERC1155Receiver"
+        );
+        const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
+          unknownTokenId,
+          tokenContract.address
+        );
+        await tokenContract
+          .connect(signers[0])
+          .setInterface(nonERC1155Receiver.address, 69696, true);
+
+        await expect(
+          nonERC1155Receiver
+            .connect(signers[5])
+            .transfer(secondTokenHolder, firstAmount)
+        ).to.be.revertedWith(
+          "ERC1155: caller is not owner nor interface nor approved"
+        );
+      });
+
+      it("can not transfer if not interface ", async function () {
+        const nonERC1155ReceiverFac = await ethers.getContractFactory(
+          "nonERC1155Receiver"
+        );
+        const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
+          unknownTokenId,
+          tokenContract.address
+        );
+        await expect(
+          nonERC1155Receiver
+            .connect(signers[5])
+            .transfer(secondTokenHolder, firstAmount)
+        ).to.be.revertedWith(
+          "ERC1155: caller is not owner nor interface nor approved"
+        );
+      });
 
       it("unsetted(old) interfaces can NOT act", async function () {
         await tokenContract
@@ -1599,7 +1689,9 @@ describe("gETH ", async function () {
             secondTokenHolder,
             firstAmount
           )
-        ).to.be.revertedWith("ERC1155: caller is not owner nor approved");
+        ).to.be.revertedWith(
+          "ERC1155: caller is not owner nor interface nor approved"
+        );
       });
     });
   });
