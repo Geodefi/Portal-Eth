@@ -94,7 +94,7 @@ contract gETH is ERC1155SupplyMinterPauser {
             "gETH: must have MINTER_ROLE to set"
         );
         require(_Interface.isContract(), "gETH: _Interface must be a contract");
-        
+
         _setInterface(_Interface, _id, isSet);
 
         emit InterfaceChanged(_Interface, _id);

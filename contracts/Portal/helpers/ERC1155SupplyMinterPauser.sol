@@ -10,13 +10,13 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 /**
  * ERC1155SupplyMinterPauser is an ERC1155 implementation that inherites openzeppelin ERC1155PresetMinterPauser which also inherites ERC1155PresetMinterPauser
- * 
+ *
  * @dev only difference between ERC1155SupplyMinterPauser and Openzeppelin's implementation is
  * _doSafeTransferAcceptanceCheck is being virtual:
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol	
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Supply.sol 
+ * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol
+ * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Supply.sol
  * diffchecker link: https://www.diffchecker.com/UOAdD16A
-*/
+ */
 
 contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
     using Address for address;
