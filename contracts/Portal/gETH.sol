@@ -94,7 +94,7 @@ contract gETH is ERC1155SupplyMinterPauser {
             "gETH: must have MINTER_ROLE to set"
         );
         require(_Interface.isContract(), "gETH: _Interface must be a contract");
-        
+
         _setInterface(_Interface, _id, isSet);
 
         emit InterfaceChanged(_Interface, _id);
@@ -167,7 +167,7 @@ contract gETH is ERC1155SupplyMinterPauser {
             from == _msgSender() ||
                 (isApprovedForAll(from, _msgSender()) ||
                     isInterface(_msgSender(), id)),
-            "ERC1155: caller is not owner nor approved"
+            "ERC1155: caller is not owner nor interface nor approved"
         );
 
         _safeTransferFrom(from, to, id, amount, data);
