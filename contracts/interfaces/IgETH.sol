@@ -1,7 +1,5 @@
-
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
-
 
 interface IgETH {
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -17,11 +15,6 @@ interface IgETH {
         external
         view
         returns (uint256[] memory);
-
-    function isInterface(address operator, uint256 id)
-        external
-        view
-        returns (bool);
 
     function setApprovalForAll(address operator, bool approved) external;
 
@@ -58,6 +51,17 @@ interface IgETH {
         uint256[] memory values
     ) external;
 
+    function totalSupply(uint256 id) external view returns (uint256);
+
+    function exists(uint256 id) external view returns (bool);
+
+    function mint(
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) external;
+
     function mintBatch(
         address to,
         uint256[] memory ids,
@@ -69,24 +73,18 @@ interface IgETH {
 
     function unpause() external;
 
-    function exists(uint256 id) external view returns (bool);
-
     function pricePerShare(uint256 _id) external view returns (uint256);
-
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) external;
 
     function setPricePerShare(uint256 pricePerShare_, uint256 _id) external;
 
+    function isInterface(address operator, uint256 id)
+        external
+        view
+        returns (bool);
+
     function setInterface(
         address _Interface,
-        uint256 id,
+        uint256 _id,
         bool isSet
     ) external;
-
-    function totalSupply(uint256 id) external view returns (uint256);
 }
