@@ -7,8 +7,18 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import "../../interfaces/IgETH.sol";
+
+/**
+ * @dev differences between ERC20InterfaceUpgradable and Openzeppelin's implementation of ERC20Upgradeable is:
+ * -> pragma set to =0.8.7;
+ * -> ERC20Interface uses gETH contract for balances and otalsupply info.
+ * -> unique id of ERC1155 is used
+ * -> there is no mint of burn functionality implemented here.
+ *
+ * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/2cb8996b777060e658e2b8c9b1630313aedb04c0/contracts/token/ERC20/ERC20Upgradeable.sol
+ * diffchecker link: https://www.diffchecker.com/0PlrxJT9
+ */
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -35,20 +45,30 @@ import "../../interfaces/IgETH.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20Upgradeable is
+
+contract ERC20InterfaceUpgradable is
     Initializable,
     ContextUpgradeable,
     IERC20Upgradeable,
     IERC20MetadataUpgradeable
 {
-    mapping(address => uint256) private _balances;
+    /**
+     * @dev gETH ERC20 interface doesn't use balance info, catches it from ERC1155.
+     * mapping(address => uint256) private _balances;
+     **/
 
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    uint256 private _totalSupply;
+    /**
+     * @dev gETH ERC20 interface doesn't use totalSupply info, catches it from ERC1155.
+     * uint256 private _totalSupply;
+     **/
 
     string private _name;
     string private _symbol;
+
+    uint256 private _id;
+    IgETH private _ERC1155;
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -59,19 +79,26 @@ contract ERC20Upgradeable is
      * All two of these values are immutable: they can only be set once during
      * construction.
      */
-    function __ERC20_init(string memory name_, string memory symbol_)
-        internal
-        onlyInitializing
-    {
-        __ERC20_init_unchained(name_, symbol_);
+
+    function __ERC20interface_init(
+        uint256 id_,
+        string memory name_,
+        string memory symbol_,
+        address gETH_1155
+    ) internal onlyInitializing {
+        __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);
     }
 
-    function __ERC20_init_unchained(string memory name_, string memory symbol_)
-        internal
-        onlyInitializing
-    {
+    function __ERC20interface_init_unchained(
+        uint256 id_,
+        string memory name_,
+        string memory symbol_,
+        address gETH_1155
+    ) internal onlyInitializing {
+        _id = id_;
         _name = name_;
         _symbol = symbol_;
+        _ERC1155 = IgETH(gETH_1155);
     }
 
     /**
@@ -108,13 +135,17 @@ contract ERC20Upgradeable is
 
     /**
      * @dev See {IERC20-totalSupply}.
+     * @dev CHANGED for gETH.
+     * @dev See {gETH-totalSupply}.
      */
     function totalSupply() public view virtual override returns (uint256) {
-        return _totalSupply;
+        return _ERC1155.totalSupply(_id);
     }
 
     /**
      * @dev See {IERC20-balanceOf}.
+     * @dev CHANGED for gETH.
+     * @dev See {gETH-balanceOf}.
      */
     function balanceOf(address account)
         public
@@ -123,7 +154,16 @@ contract ERC20Upgradeable is
         override
         returns (uint256)
     {
-        return _balances[account];
+        return _ERC1155.balanceOf(account, _id);
+    }
+
+    /**
+     * @dev shows the u underlying ETH for 1 staked ether for a given Registerer as 1e18
+     * @dev CHANGED for gETH.
+     * @dev See {gETH-pricePerShare}.
+     */
+    function pricePerShare() public view returns (uint256) {
+        return _ERC1155.pricePerShare(_id);
     }
 
     /**
@@ -273,6 +313,8 @@ contract ERC20Upgradeable is
      * - `from` cannot be the zero address.
      * - `to` cannot be the zero address.
      * - `from` must have a balance of at least `amount`.
+     * @dev CHANGED for gETH.
+     * @dev See {gETH-safeTransferFrom}.
      */
     function _transfer(
         address from,
@@ -284,68 +326,16 @@ contract ERC20Upgradeable is
 
         _beforeTokenTransfer(from, to, amount);
 
-        uint256 fromBalance = _balances[from];
+        uint256 fromBalance = balanceOf(from);
         require(
             fromBalance >= amount,
             "ERC20: transfer amount exceeds balance"
         );
-        unchecked {
-            _balances[from] = fromBalance - amount;
-        }
-        _balances[to] += amount;
+        _ERC1155.safeTransferFrom(from, to, _id, amount, "");
 
         emit Transfer(from, to, amount);
 
         _afterTokenTransfer(from, to, amount);
-    }
-
-    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
-     * the total supply.
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     */
-    function _mint(address account, uint256 amount) internal virtual {
-        require(account != address(0), "ERC20: mint to the zero address");
-
-        _beforeTokenTransfer(address(0), account, amount);
-
-        _totalSupply += amount;
-        _balances[account] += amount;
-        emit Transfer(address(0), account, amount);
-
-        _afterTokenTransfer(address(0), account, amount);
-    }
-
-    /**
-     * @dev Destroys `amount` tokens from `account`, reducing the
-     * total supply.
-     *
-     * Emits a {Transfer} event with `to` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens.
-     */
-    function _burn(address account, uint256 amount) internal virtual {
-        require(account != address(0), "ERC20: burn from the zero address");
-
-        _beforeTokenTransfer(account, address(0), amount);
-
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        unchecked {
-            _balances[account] = accountBalance - amount;
-        }
-        _totalSupply -= amount;
-
-        emit Transfer(account, address(0), amount);
-
-        _afterTokenTransfer(account, address(0), amount);
     }
 
     /**
@@ -443,5 +433,6 @@ contract ERC20Upgradeable is
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
+
     uint256[45] private __gap;
 }
