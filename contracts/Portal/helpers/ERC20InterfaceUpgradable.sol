@@ -12,7 +12,7 @@ import "../../interfaces/IgETH.sol";
 /**
  * @dev differences between ERC20InterfaceUpgradable and Openzeppelin's implementation of ERC20Upgradeable is:
  * -> pragma set to =0.8.7;
- * -> ERC20Interface uses gETH contract for balances and otalsupply info.
+ * -> ERC20InterfaceUpgradable uses gETH contract for balances and otalsupply info.
  * -> unique id of ERC1155 is used
  * -> there is no mint of burn functionality implemented here.
  *

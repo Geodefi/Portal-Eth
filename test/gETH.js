@@ -1493,14 +1493,16 @@ describe("gETH ", async function () {
           .connect(signers[0])
           .mint(firstTokenHolder, unknownTokenId, firstAmount, "0x");
 
-        const ERC20InterfaceFac = await ethers.getContractFactory(
-          "ERC20Interface"
+        ERC20InterfaceFac = await ethers.getContractFactory(
+          "ERC20InterfacePermitUpgradable"
         );
-        ERC20Interface = await ERC20InterfaceFac.deploy(
+        ERC20Interface = await ERC20InterfaceFac.deploy();
+        await ERC20Interface.initialize(
           unknownTokenId,
           "name",
           tokenContract.address
         );
+
         ERC20Interface.connect(signers[2]).approve(proxy, firstAmount);
 
         await tokenContract
@@ -1508,7 +1510,7 @@ describe("gETH ", async function () {
           .setInterface(ERC20Interface.address, unknownTokenId, true);
       });
 
-      describe("ERC20Interface", async function () {
+      describe("ERC20InterfacePermitUpgradable", async function () {
         it("returns the correct totalSupply", async function () {
           expect(await ERC20Interface.totalSupply()).to.be.eq(firstAmount);
         });
@@ -1552,7 +1554,7 @@ describe("gETH ", async function () {
               secondTokenHolder,
               firstAmount
             )
-          ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+          ).to.be.revertedWith("ERC20: insufficient allowance");
         });
       });
 
