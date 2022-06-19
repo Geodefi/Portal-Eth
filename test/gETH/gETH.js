@@ -1,5 +1,5 @@
 const { BigNumber } = require("ethers");
-const { ZERO_ADDRESS } = require("./testUtils");
+const { ZERO_ADDRESS } = require("../testUtils");
 const { solidity } = require("ethereum-waffle");
 const { deployments } = require("hardhat");
 const web3 = require("web3");
