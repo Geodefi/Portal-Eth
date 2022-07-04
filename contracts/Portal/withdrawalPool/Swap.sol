@@ -26,6 +26,11 @@ import "../../interfaces/ISwap.sol";
  *
  * @dev Most of the logic is stored as a library `SwapUtils` for the sake of reducing contract's
  * deployment size.
+ * @dev The main functionality of Withdrawal Pools is allowing the depositors to have instant withdrawals
+ * relying on the Oracle Price, with the help of Liquidity Providers.
+ * It is important to change the focus point (1-1) of the pricing algorithm with PriceIn and PriceOut functions.
+ * Because the underlying price of the staked assets are expected to raise in time.
+ * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
  */
 contract Swap is
     ISwap,

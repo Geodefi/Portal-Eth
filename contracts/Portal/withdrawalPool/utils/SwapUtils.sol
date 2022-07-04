@@ -8,10 +8,19 @@ import "../../../interfaces/IgETH.sol";
 
 /**
  * @title SwapUtils library
- * @notice A library to be used within Swap.sol. Contains functions responsible for custody and AMM functionalities.
+ *
  * @dev Contracts relying on this library must initialize SwapUtils.Swap struct then use this library
  * for SwapUtils.Swap struct. Note that this library contains both functions called by users and admins.
  * Admin functions should be protected within contracts using this library.
+ *
+ * @notice A library to be used within Swap.sol. Contains functions responsible for custody and AMM functionalities with some changes.
+ * The main functionality of Withdrawal Pools is allowing the depositors to have instant withdrawals
+ * relying on the Oracle Price, with the help of Liquidity Providers.
+ * It is important to change the focus point (1-1) of the pricing algorithm with PriceIn and PriceOut functions.
+ * Because the underlying price of the staked assets are expected to raise in time.
+ * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
+ *
+ * @dev Whenever "Effective Balance" is mentioned it refers to the balance projected with underlying price.
  */
 library SwapUtils {
     using MathUtils for uint256;
@@ -67,9 +76,9 @@ library SwapUtils {
         uint256 adminFee;
         LPToken lpToken;
         uint256 pooledTokenId;
-        // wETH2 contract reference
+        // gETH contract reference
         IgETH referenceForPooledTokens;
-        // the pool balance of each token
+        // the pool balance as [ETH, gETH]
         // the contract's actual token balance might differ
         uint256[] balances;
     }
@@ -85,7 +94,7 @@ library SwapUtils {
     }
 
     // Struct storing variables used in calculations in the
-    // {add,remove}Liquidity functions to avoid stack too deep errors
+    // {add,remove} Liquidity functions to avoid stack too deep errors
     struct ManageLiquidityInfo {
         uint256 d0;
         uint256 d1;
@@ -96,11 +105,11 @@ library SwapUtils {
         uint256[] balances;
     }
 
-    // the precision all pools tokens will be converted to
+    // the precision all pool tokens will be converted to
     uint8 public constant POOL_PRECISION_DECIMALS = 18;
 
     // the denominator used to calculate admin and LP fees. For example, an
-    // LP fee might be something like tradeAmount.mul(fee).div(FEE_DENOMINATOR)
+    // LP fee is BoughtAmount.mul(fee).div(FEE_DENOMINATOR)
     uint256 private constant FEE_DENOMINATOR = 10**10;
 
     // Max swap fee is 1% or 100bps of each swap
@@ -108,8 +117,8 @@ library SwapUtils {
 
     // Max adminFee is 100% of the swapFee
     // adminFee does not add additional fee on top of swapFee
-    // Instead it takes a certain % of the swapFee. Therefore it has no impact on the
-    // users but only on the earnings of LPs
+    // instead it takes a certain percentage of the swapFee.
+    // Therefore it has no impact on users but only on the earnings of LPs
     uint256 public constant MAX_ADMIN_FEE = 10**10;
 
     // Constant value used as max loop limit
@@ -121,7 +130,54 @@ library SwapUtils {
         return AmplificationUtils._getAPrecise(self);
     }
 
-    /// @dev this function assumes prices are sent with the indexes that [ether,gETH]
+    /**
+     * @notice This function MULTIPLIES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+     * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
+     * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
+     * @param balance balance that will be taken into calculation
+     * @param i if i is 0 it means we are dealing with ETH, if i is 1 it is gETH
+     */
+    function _pricedIn(
+        Swap storage self,
+        uint256 balance,
+        uint256 i
+    ) internal view returns (uint256) {
+        return
+            i == 1
+                ? (balance *
+                    IgETH(self.referenceForPooledTokens).pricePerShare(
+                        self.pooledTokenId
+                    )) / 1e18
+                : balance;
+    }
+
+    /**
+     * @notice This function DIVIDES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+     * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
+     * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
+     * @param balance balance that will be taken into calculation
+     * @param i if i is 0 it means we are dealing with ETH, if i is 1 it is gETH
+     */
+    function _pricedOut(
+        Swap storage self,
+        uint256 balance,
+        uint256 i
+    ) internal view returns (uint256) {
+        return
+            i == 1
+                ? (balance * 1e18) /
+                    IgETH(self.referenceForPooledTokens).pricePerShare(
+                        self.pooledTokenId
+                    )
+                : balance;
+    }
+
+    /**
+     * @notice This function MULTIPLIES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+     * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
+     * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
+     * @param balances ARRAY of balances that will be taken into calculation
+     */
     function _pricedInBatch(Swap storage self, uint256[] memory balances)
         internal
         view
@@ -138,35 +194,12 @@ library SwapUtils {
         return _p;
     }
 
-    function _pricedOut(
-        Swap storage self,
-        uint256 balance,
-        uint256 i
-    ) internal view returns (uint256) {
-        return
-            i == 1
-                ? (balance * 1e18) /
-                    IgETH(self.referenceForPooledTokens).pricePerShare(
-                        self.pooledTokenId
-                    )
-                : balance;
-    }
-
-    function _pricedIn(
-        Swap storage self,
-        uint256 balance,
-        uint256 i
-    ) internal view returns (uint256) {
-        return
-            i == 1
-                ? (balance *
-                    IgETH(self.referenceForPooledTokens).pricePerShare(
-                        self.pooledTokenId
-                    )) / 1e18
-                : balance;
-    }
-
-    /// @dev this function assumes prices are sent with the indexes that [ether,gETH]
+    /**
+     * @notice This function DIVIDES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+     * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
+     * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
+     * @param balances ARRAY of balances that will be taken into calculation
+     */
     function _pricedOutBatch(Swap storage self, uint256[] memory balances)
         internal
         view
@@ -282,9 +315,6 @@ library SwapUtils {
         v.feePerToken = self.swapFee / 2;
         for (uint256 i = 0; i < 2; i++) {
             uint256 xpi = self.balances[i];
-            // if i == tokenIndex, dxExpected = xp[i] * d1 / d0 - newY
-            // else dxExpected = xp[i] - (xp[i] * d1 / d0)
-            // xpReduced[i] -= dxExpected * fee / FEE_DENOMINATOR
             xpReduced[i] =
                 xpi -
                 (((
@@ -597,13 +627,9 @@ library SwapUtils {
     }
 
     /**
-     * @notice A simple method to calculate amount of each underlying
-     * tokens that is returned upon burning given amount of
-     * LP tokens
-     *
-     * @param amount the amount of LP tokens that would to be burned on
-     * withdrawal
-     * @return array of amounts of tokens user will receive
+     * @notice Uses _calculateRemoveLiquidity with Effective Balances,
+     * then projects the prices to the token amounts
+     * to get Real Balances, before removing them from pool.
      */
     function calculateRemoveLiquidity(Swap storage self, uint256 amount)
         external
@@ -621,6 +647,15 @@ library SwapUtils {
             );
     }
 
+    /**
+     * @notice A simple method to calculate amount of each underlying
+     * tokens that is returned upon burning given amount of
+     * LP tokens
+     *
+     * @param amount the amount of LP tokens that would to be burned on
+     * withdrawal
+     * @return array of amounts of tokens user will receive
+     */
     function _calculateRemoveLiquidity(
         uint256[] memory balances,
         uint256 amount,
@@ -724,38 +759,44 @@ library SwapUtils {
         uint256 dx,
         uint256 minDy
     ) external returns (uint256) {
-        IgETH wETH2Reference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.referenceForPooledTokens;
         if (tokenIndexFrom == 0) {
+            // Means user is selling some ETH to the pool to get some gETH.
+            // In which case, we need to send exactly that amount of ETH.
             require(dx == msg.value, "Cannot swap more/less than you sent");
         }
         if (tokenIndexFrom == 1) {
-            uint256 tokenId = self.pooledTokenId;
+            // Means user is selling some gETH to the pool to get some ETH.
+
             require(
-                dx <= wETH2Reference.balanceOf(msg.sender, tokenId),
+                dx <= gETHReference.balanceOf(msg.sender, self.pooledTokenId),
                 "Cannot swap more than you own"
             );
 
             // Transfer tokens first
-            uint256 beforeBalance = wETH2Reference.balanceOf(
+            uint256 beforeBalance = gETHReference.balanceOf(
                 address(this),
-                tokenId
+                self.pooledTokenId
             );
-            wETH2Reference.safeTransferFrom(
+            gETHReference.safeTransferFrom(
                 msg.sender,
                 address(this),
-                tokenId,
+                self.pooledTokenId,
                 dx,
                 ""
             );
 
             // Use the actual transferred amount for AMM math
             dx =
-                wETH2Reference.balanceOf(address(this), tokenId) -
+                gETHReference.balanceOf(address(this), self.pooledTokenId) -
                 beforeBalance;
         }
 
         uint256 dy;
         uint256 dyFee;
+        // Meaning the real balances *without* any effect of underlying price
+        // However, when we call _calculateSwap, it uses pricedIn function before calculation,
+        // and pricedOut function after the calculation. So, we don't need to use priceOut here.
         uint256[] memory balances = self.balances;
         (dy, dyFee) = _calculateSwap(
             self,
@@ -766,18 +807,20 @@ library SwapUtils {
         );
 
         require(dy >= minDy, "Swap didn't result in min tokens");
-
         uint256 dyAdminFee = (dyFee * self.adminFee) / FEE_DENOMINATOR;
 
+        // To prevent any Reentrancy, balances are updated before transfering the tokens.
         self.balances[tokenIndexFrom] = balances[tokenIndexFrom] + dx;
         self.balances[tokenIndexTo] = balances[tokenIndexTo] - dy - dyAdminFee;
 
         if (tokenIndexTo == 0) {
+            // Means contract is going to send Idle Ether (ETH)
             (bool sent, ) = payable(msg.sender).call{value: dy}("");
             require(sent, "SwapUtils: Failed to send Ether");
         }
         if (tokenIndexTo == 1) {
-            wETH2Reference.safeTransferFrom(
+            // Means contract is going to send staked ETH (gETH)
+            gETHReference.safeTransferFrom(
                 address(this),
                 msg.sender,
                 self.pooledTokenId,
@@ -785,6 +828,7 @@ library SwapUtils {
                 ""
             );
         }
+
         emit TokenSwap(msg.sender, dx, dy, tokenIndexFrom, tokenIndexTo);
 
         return dy;
@@ -809,7 +853,7 @@ library SwapUtils {
             amounts[0] == msg.value,
             "SwapUtils: received less or more ETH than expected"
         );
-        IgETH wETH2Reference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.referenceForPooledTokens;
         // current state
         ManageLiquidityInfo memory v = ManageLiquidityInfo(
             0,
@@ -837,11 +881,11 @@ library SwapUtils {
 
         {
             // Transfer tokens first
-            uint256 beforeBalance = wETH2Reference.balanceOf(
+            uint256 beforeBalance = gETHReference.balanceOf(
                 address(this),
                 self.pooledTokenId
             );
-            wETH2Reference.safeTransferFrom(
+            gETHReference.safeTransferFrom(
                 msg.sender,
                 address(this),
                 self.pooledTokenId,
@@ -851,7 +895,7 @@ library SwapUtils {
 
             // Update the amounts[] with actual transfer amount
             amounts[1] =
-                wETH2Reference.balanceOf(address(this), self.pooledTokenId) -
+                gETHReference.balanceOf(address(this), self.pooledTokenId) -
                 beforeBalance;
 
             newBalances[1] = v.balances[1] + amounts[1];
@@ -920,7 +964,7 @@ library SwapUtils {
         uint256[] calldata minAmounts
     ) external returns (uint256[] memory) {
         LPToken lpToken = self.lpToken;
-        IgETH wETH2Reference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.referenceForPooledTokens;
         require(amount <= lpToken.balanceOf(msg.sender), ">LP.balanceOf");
         require(minAmounts.length == 2, "minAmounts must match poolTokens");
 
@@ -941,10 +985,13 @@ library SwapUtils {
             self.balances[i] = balances[i] - amounts[i];
         }
 
+        // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
         lpToken.burnFrom(msg.sender, amount);
+
         (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
         require(sent, "SwapUtils: Failed to send Ether");
-        wETH2Reference.safeTransferFrom(
+
+        gETHReference.safeTransferFrom(
             address(this),
             msg.sender,
             self.pooledTokenId,
@@ -971,7 +1018,7 @@ library SwapUtils {
         uint256 minAmount
     ) external returns (uint256) {
         LPToken lpToken = self.lpToken;
-        IgETH wETH2Reference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.referenceForPooledTokens;
 
         require(tokenAmount <= lpToken.balanceOf(msg.sender), ">LP.balanceOf");
         require(tokenIndex < 2, "Token not found");
@@ -987,6 +1034,7 @@ library SwapUtils {
 
         require(dy >= minAmount, "dy < minAmount");
 
+        // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
         self.balances[tokenIndex] =
             self.balances[tokenIndex] -
             (dy + ((dyFee * (self.adminFee)) / (FEE_DENOMINATOR)));
@@ -997,7 +1045,7 @@ library SwapUtils {
             require(sent, "SwapUtils: Failed to send Ether");
         }
         if (tokenIndex == 1) {
-            wETH2Reference.safeTransferFrom(
+            gETHReference.safeTransferFrom(
                 address(this),
                 msg.sender,
                 self.pooledTokenId,
@@ -1032,7 +1080,7 @@ library SwapUtils {
         uint256[] memory amounts,
         uint256 maxBurnAmount
     ) public returns (uint256) {
-        IgETH wETH2Reference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.referenceForPooledTokens;
 
         ManageLiquidityInfo memory v = ManageLiquidityInfo(
             0,
@@ -1091,11 +1139,13 @@ library SwapUtils {
 
         require(tokenAmount <= maxBurnAmount, "tokenAmount > maxBurnAmount");
 
+        // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
         v.lpToken.burnFrom(msg.sender, tokenAmount);
 
         (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
         require(sent, "SwapUtils: Failed to send Ether");
-        wETH2Reference.safeTransferFrom(
+
+        gETHReference.safeTransferFrom(
             address(this),
             msg.sender,
             self.pooledTokenId,
@@ -1120,13 +1170,13 @@ library SwapUtils {
      * @param to Address to send the fees to
      */
     function withdrawAdminFees(Swap storage self, address to) external {
-        IgETH wETH2Reference = self.referenceForPooledTokens;
-        uint256 tokenBalance = wETH2Reference.balanceOf(
+        IgETH gETHReference = self.referenceForPooledTokens;
+        uint256 tokenBalance = gETHReference.balanceOf(
             address(this),
             self.pooledTokenId
         ) - self.balances[1];
         if (tokenBalance != 0) {
-            wETH2Reference.safeTransferFrom(
+            gETHReference.safeTransferFrom(
                 address(this),
                 to,
                 self.pooledTokenId,
