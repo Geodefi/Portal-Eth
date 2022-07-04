@@ -1,11 +1,11 @@
 /* eslint-disable */
 const { solidity } = require("ethereum-waffle");
 const { constants, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { MAX_UINT256 } = constants;
 
 const chai = require("chai");
 chai.use(solidity);
 const { expect } = require("chai");
-const { MAX_UINT256 } = constants;
 
 const { fromRpcSig } = require("ethereumjs-util");
 const ethSigUtil = require("eth-sig-util");
