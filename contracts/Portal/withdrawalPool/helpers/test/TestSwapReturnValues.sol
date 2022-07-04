@@ -4,7 +4,7 @@ pragma solidity =0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "../../../interfaces/ISwap.sol";
+import "../../../../interfaces/ISwap.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -41,14 +41,14 @@ contract TestSwapReturnValues is ERC1155Holder {
         uint256 dx,
         uint256 minDy
     ) public payable {
-        uint256 avaxbalanceBefore = address(this).balance;
-        uint256 gavaxbalanceBefore = wETH2.balanceOf(
+        uint256 etherbalanceBefore = address(this).balance;
+        uint256 getherbalanceBefore = wETH2.balanceOf(
             address(this),
             swap.getToken()
         );
 
         if (tokenIndexFrom == 0) {
-            // If avax to gavax
+            // If ether to gether
             uint256 returnValue = swap.swap{value: msg.value}(
                 tokenIndexFrom,
                 tokenIndexTo,
@@ -57,14 +57,14 @@ contract TestSwapReturnValues is ERC1155Holder {
                 block.timestamp
             );
 
-            uint256 gavaxbalanceAfter = wETH2.balanceOf(
+            uint256 getherbalanceAfter = wETH2.balanceOf(
                 address(this),
                 swap.getToken()
             );
 
             require(
-                returnValue == gavaxbalanceAfter.sub(gavaxbalanceBefore),
-                "swap()'s return value does not match received gavax amount"
+                returnValue == getherbalanceAfter.sub(getherbalanceBefore),
+                "swap()'s return value does not match received gether amount"
             );
         } else {
             uint256 returnValue = swap.swap(
@@ -75,11 +75,11 @@ contract TestSwapReturnValues is ERC1155Holder {
                 block.timestamp
             );
 
-            uint256 avaxbalanceAfter = address(this).balance;
+            uint256 etherbalanceAfter = address(this).balance;
 
             require(
-                returnValue == avaxbalanceAfter.sub(avaxbalanceBefore),
-                "swap()'s return value does not match received avax amount"
+                returnValue == etherbalanceAfter.sub(etherbalanceBefore),
+                "swap()'s return value does not match received ether amount"
             );
         }
     }
@@ -90,7 +90,7 @@ contract TestSwapReturnValues is ERC1155Holder {
     {
         require(
             msg.value == amounts[0],
-            "The update of about AVAX amount -0xCypher"
+            "The update of about ETH amount -0xCypher"
         );
         uint256 balanceBefore = lpToken.balanceOf(address(this));
         uint256 returnValue = swap.addLiquidity{value: msg.value}(
