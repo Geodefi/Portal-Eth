@@ -5,12 +5,12 @@ import "../../interfaces/IDepositContract.sol";
 import "../helpers/BytesLib.sol";
 
 library DepositContractUtils {
-    struct DepositContract {
+    struct DepositContractData {
         address DEPOSIT_CONTRACT_POSITION;
     }
     uint256 constant SIGNATURE_LENGTH = 96;
 
-    function getDepositContract(DepositContract storage self)
+    function getDepositContract(DepositContractData storage self)
         public
         view
         returns (IDepositContract)
@@ -60,12 +60,13 @@ library DepositContractUtils {
         result <<= (24 * 8);
     }
 
-    function _getDepositDataRoot(
+    function getDepositDataRoot(
+        DepositContractData storage self,
         bytes memory pubkey,
         bytes memory withdrawal_credentials,
         bytes memory signature,
         uint256 stakeAmount
-    ) internal pure returns (bytes32) {
+    ) public pure returns (bytes32) {
         require(stakeAmount >= 1 ether, "StakeUtils: deposit value too low");
         require(
             stakeAmount % 1 gwei == 0,
@@ -97,8 +98,8 @@ library DepositContractUtils {
         return depositDataRoot;
     }
 
-    function _addressToWC(address wc_address)
-        internal
+    function addressToWC(DepositContractData storage self, address wc_address)
+        public
         pure
         returns (bytes memory)
     {
