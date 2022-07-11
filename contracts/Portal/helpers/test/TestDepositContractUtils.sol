@@ -13,7 +13,7 @@ contract DepositContractUtilsTest {
             .DEPOSIT_CONTRACT_POSITION = _DEPOSIT_CONTRACT_POSITION;
     }
 
-     function getDepositContract()
+    function getDepositContract()
         external
         view
         virtual
@@ -28,7 +28,13 @@ contract DepositContractUtilsTest {
         bytes memory _signature,
         uint256 _stakeAmount
     ) external view virtual returns (bytes32) {
-        return DEPOSIT_CONTRACT_UTILS.getDepositDataRoot(_pubkey, _withdrawal_credentials, _signature, _stakeAmount);
+        return
+            DEPOSIT_CONTRACT_UTILS.getDepositDataRoot(
+                _pubkey,
+                _withdrawal_credentials,
+                _signature,
+                _stakeAmount
+            );
     }
 
     function addressToWC(address _wc_address)
@@ -39,6 +45,4 @@ contract DepositContractUtilsTest {
     {
         return DEPOSIT_CONTRACT_UTILS.addressToWC(_wc_address);
     }
-
-
 }
