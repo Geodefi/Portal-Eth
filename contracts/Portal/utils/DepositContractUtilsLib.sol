@@ -5,17 +5,17 @@ import "../../interfaces/IDepositContract.sol";
 import "../helpers/BytesLib.sol";
 
 library DepositContractUtils {
-    struct DepositContractData {
-        address DEPOSIT_CONTRACT_POSITION;
-    }
-    uint256 constant SIGNATURE_LENGTH = 96;
+    uint256 constant internal PUBKEY_LENGTH = 48;
+    uint256 constant internal SIGNATURE_LENGTH = 96;
+    uint256 constant internal WITHDRAWAL_CREDENTIALS_LENGTH = 32;
+    address constant internal DEPOSIT_CONTRACT_POSITION = 0x00000000219ab540356cBB839Cbe05303d7705Fa;
 
-    function getDepositContract(DepositContractData storage self)
-        public
-        view
+    function getDepositContract()
+        internal
+        pure
         returns (IDepositContract)
     {
-        return IDepositContract(self.DEPOSIT_CONTRACT_POSITION);
+        return IDepositContract(DEPOSIT_CONTRACT_POSITION);
     }
 
     /**
@@ -61,16 +61,15 @@ library DepositContractUtils {
     }
 
     function getDepositDataRoot(
-        DepositContractData storage self,
         bytes memory pubkey,
         bytes memory withdrawal_credentials,
         bytes memory signature,
         uint256 stakeAmount
-    ) public pure returns (bytes32) {
-        require(stakeAmount >= 1 ether, "StakeUtils: deposit value too low");
+    ) internal pure returns (bytes32) {
+        require(stakeAmount >= 1 ether, "DepositContract: deposit value too low");
         require(
             stakeAmount % 1 gwei == 0,
-            "StakeUtils: deposit value not multiple of gwei"
+            "DepositContract: deposit value not multiple of gwei"
         );
         uint256 deposit_amount = stakeAmount / 1 gwei;
 
@@ -98,15 +97,15 @@ library DepositContractUtils {
         return depositDataRoot;
     }
 
-    function addressToWC(DepositContractData storage self, address wc_address)
-        public
+    function addressToWC(address wcAddress)
+        internal
         pure
         returns (bytes memory)
     {
         uint256 w = 1 << 248;
         return
             abi.encodePacked(
-                bytes32(w) | bytes32(uint256(uint160(address(wc_address))))
+                bytes32(w) | bytes32(uint256(uint160(address(wcAddress))))
             );
     }
 }
