@@ -5,11 +5,13 @@ import "../../interfaces/IDepositContract.sol";
 import "../helpers/BytesLib.sol";
 
 library DepositContractUtils {
+    address constant internal DEPOSIT_CONTRACT_POSITION = 0x00000000219ab540356cBB839Cbe05303d7705Fa;
     uint256 constant internal PUBKEY_LENGTH = 48;
     uint256 constant internal SIGNATURE_LENGTH = 96;
     uint256 constant internal WITHDRAWAL_CREDENTIALS_LENGTH = 32;
-    address constant internal DEPOSIT_CONTRACT_POSITION = 0x00000000219ab540356cBB839Cbe05303d7705Fa;
-
+    uint256 constant internal DEPOSIT_SIZE = 32 ether;
+    uint256 constant internal DEPOSIT_SIZE_PRESTAKE = 1 ether;
+    
     function getDepositContract()
         internal
         pure
