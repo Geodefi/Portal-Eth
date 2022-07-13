@@ -1578,7 +1578,6 @@ describe("gETH ", async function () {
         });
 
         it("succeeds", async function () {
-          console.log(firstAmount, tokenHolder, firstTokenId);
           expect(
             await tokenContract.balanceOf(tokenHolder, firstTokenId)
           ).to.be.eq(firstAmount.toString());
