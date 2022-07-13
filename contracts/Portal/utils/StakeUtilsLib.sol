@@ -56,7 +56,7 @@ library StakeUtils {
      * @param DEFAULT_ADMIN_FEE DWP parameter
      * @param FEE_DENOMINATOR represents 100%, ALSO DWP parameter
      * @param MAX_MAINTAINER_FEE : limits fees, set by GOVERNANCE
-     * @dev changing any of address parameters (gETH, ORACLE, DEFAULT_SWAP_POOL, DEFAULT_LP_TOKEN) MUST require a contract upgrade to ensure security. We can change this in the future with a better GeodeUtils design.
+     * @dev changing any of address parameters (gETH, ORACLE, DEFAULT_DWP, DEFAULT_LP_TOKEN) MUST require a contract upgrade to ensure security. We can change this in the future with a better GeodeUtils design.
      **/
     struct StakePool {
         address gETH;
