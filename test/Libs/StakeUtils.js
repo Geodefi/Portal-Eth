@@ -16,11 +16,10 @@ const chai = require("chai");
 
 chai.use(solidity);
 const { expect } = chai;
-const randId = 696969696969;
-// const randId2 = 420420420;
-// const randId3 = 3131313131;
+const randId = 3131313131;
+const operatorId = 420420420;
+const planetId = 696969696969;
 // const wrongId = 69;
-// const wrappedEtherId = 1;
 // const provider = waffle.provider;
 const INITIAL_A_VALUE = 60;
 const SWAP_FEE = 4e6; // 4bps
@@ -186,81 +185,246 @@ describe("StakeUtils", async () => {
 
   describe("Pause Pool functionality", () => {
     beforeEach(async () => {
-      await testContract.connect(user1).beController(randId);
+      await testContract.connect(user1).beController(planetId);
       await testContract
         .connect(user1)
-        .changeIdMaintainer(randId, user1.address);
+        .changeIdMaintainer(planetId, user1.address);
     });
 
     it("isStakingPausedForPool returns false in the beginning", async () => {
-      expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(false);
+      expect(await testContract.isStakingPausedForPool(planetId)).to.be.eq(
+        false
+      );
     });
 
     it("unpauseStakingForPool reverts in the beginning", async () => {
       await expect(
-        testContract.connect(user1).unpauseStakingForPool(randId)
+        testContract.connect(user1).unpauseStakingForPool(planetId)
       ).to.be.revertedWith(
         "StakeUtils: staking is already NOT paused for pool"
       );
-      expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(false);
+      expect(await testContract.isStakingPausedForPool(planetId)).to.be.eq(
+        false
+      );
     });
 
     describe("pauseStakingForPool functionality", () => {
       it("pauseStakingForPool reverts when it is NOT maintainer", async () => {
         await expect(
-          testContract.connect(user2).pauseStakingForPool(randId)
+          testContract.connect(user2).pauseStakingForPool(planetId)
         ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
-        expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
+        expect(await testContract.isStakingPausedForPool(planetId)).to.be.eq(
           false
         );
       });
       describe("pauseStakingForPool succeeds when it is maintainer", async () => {
         beforeEach(async () => {
-          await testContract.connect(user1).pauseStakingForPool(randId);
-          expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
+          await testContract.connect(user1).pauseStakingForPool(planetId);
+          expect(await testContract.isStakingPausedForPool(planetId)).to.be.eq(
             true
           );
         });
         it("pauseStakingForPool reverts when it is already paused", async () => {
           await expect(
-            testContract.connect(user1).pauseStakingForPool(randId)
+            testContract.connect(user1).pauseStakingForPool(planetId)
           ).to.be.revertedWith(
             "StakeUtils: staking is already paused for pool"
           );
-          expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
+          expect(await testContract.isStakingPausedForPool(planetId)).to.be.eq(
             true
           );
         });
         describe("unpauseStakingForPool when it is already paused", async () => {
           it("unpauseStakingForPool reverts when it is NOT maintainer", async () => {
             await expect(
-              testContract.connect(user2).unpauseStakingForPool(randId)
+              testContract.connect(user2).unpauseStakingForPool(planetId)
             ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
 
-            expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
-              true
-            );
+            expect(
+              await testContract.isStakingPausedForPool(planetId)
+            ).to.be.eq(true);
           });
           describe("unpauseStakingForPool succeeds when called by Maintainer", async () => {
             beforeEach(async () => {
-              await testContract.connect(user1).unpauseStakingForPool(randId);
+              await testContract.connect(user1).unpauseStakingForPool(planetId);
               expect(
-                await testContract.isStakingPausedForPool(randId)
+                await testContract.isStakingPausedForPool(planetId)
               ).to.be.eq(false);
             });
             it("unpauseStakingForPool reverts when it is NOT paused", async () => {
               await expect(
-                testContract.connect(user1).unpauseStakingForPool(randId)
+                testContract.connect(user1).unpauseStakingForPool(planetId)
               ).to.be.revertedWith(
                 "StakeUtils: staking is already NOT paused for pool"
               );
               expect(
-                await testContract.isStakingPausedForPool(randId)
+                await testContract.isStakingPausedForPool(planetId)
               ).to.be.eq(false);
             });
           });
         });
       });
+    });
+  });
+
+  describe("Operator-Planet cooperation", () => {
+    beforeEach(async () => {
+      await testContract.connect(user1).beController(planetId);
+      await testContract
+        .connect(user1)
+        .changeIdMaintainer(planetId, user1.address);
+    });
+
+    it("approveOperator reverts if NOT maintainer", async () => {
+      await expect(
+        testContract.connect(user2).approveOperator(planetId, operatorId, 69)
+      ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
+    });
+
+    it("approveOperator succeeds if maintainer", async () => {
+      await testContract
+        .connect(user1)
+        .approveOperator(planetId, operatorId, 69);
+      expect(
+        await testContract.operatorAllowance(planetId, operatorId)
+      ).to.be.eq(69);
+    });
+
+    it("operatorAllowance returns correct value", async () => {
+      expect(
+        await testContract.operatorAllowance(planetId, operatorId)
+      ).to.be.eq(0);
+
+      await testContract
+        .connect(user1)
+        .approveOperator(planetId, operatorId, 69);
+      expect(
+        await testContract.operatorAllowance(planetId, operatorId)
+      ).to.be.eq(69);
+
+      await testContract
+        .connect(user1)
+        .approveOperator(planetId, operatorId, 31);
+      expect(
+        await testContract.operatorAllowance(planetId, operatorId)
+      ).to.be.eq(31);
+    });
+  });
+
+  describe("Operator Wallet", () => {
+    beforeEach(async () => {
+      await testContract.connect(user1).beController(operatorId);
+      await testContract
+        .connect(user1)
+        .changeIdMaintainer(operatorId, user1.address);
+
+      await testContract.connect(user2).beController(randId);
+      await testContract
+        .connect(user2)
+        .changeIdMaintainer(randId, user2.address);
+    });
+
+    it("increaseOperatorWallet reverts if NOT maintainer", async () => {
+      await expect(
+        testContract.connect(user2).increaseOperatorWallet(operatorId, {
+          value: String(1e17),
+        })
+      ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
+    });
+
+    it("increaseOperatorWallet succeeds if maintainer", async () => {
+      await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+        value: String(2e17),
+      });
+      expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
+        ethers.BigNumber.from(String(2e17))
+      );
+    });
+
+    it("decreaseOperatorWallet reverts if NOT maintainer", async () => {
+      await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+        value: String(2e17),
+      });
+
+      await expect(
+        testContract
+          .connect(user2)
+          .decreaseOperatorWallet(
+            operatorId,
+            ethers.BigNumber.from(String(1e17))
+          )
+      ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
+    });
+
+    it("decreaseOperatorWallet reverts if underflow", async () => {
+      await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+        value: String(2e17),
+      });
+
+      await expect(
+        testContract
+          .connect(user1)
+          .decreaseOperatorWallet(operatorId, String(3e17))
+      ).to.be.reverted;
+    });
+
+    it("decreaseOperatorWallet reverts if Contract Balance is NOT sufficient", async () => {
+      await expect(
+        testContract
+          .connect(user1)
+          .decreaseOperatorWallet(operatorId, String(3e17))
+      ).to.be.revertedWith("StakeUtils: Not enough resources in Portal");
+    });
+
+    it("decreaseOperatorWallet reverts if operatorWallet balance is NOT sufficient", async () => {
+      await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+        value: String(2e17),
+      });
+
+      await testContract.connect(user2).increaseOperatorWallet(randId, {
+        value: String(2e17),
+      });
+
+      await expect(
+        testContract
+          .connect(user1)
+          .decreaseOperatorWallet(operatorId, String(3e17))
+      ).to.be.revertedWith(
+        "StakeUtils: Not enough resources in operatorWallet"
+      );
+    });
+
+    it("decreaseOperatorWallet succeeds if maintainer", async () => {
+      await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+        value: String(2e17),
+      });
+
+      await testContract
+        .connect(user1)
+        .decreaseOperatorWallet(operatorId, String(1e17));
+      expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
+        ethers.BigNumber.from(String(1e17))
+      );
+    });
+
+    it("getOperatorWalletBalance returns correct value", async () => {
+      expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
+        0
+      );
+
+      await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+        value: String(3e17),
+      });
+      expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
+        ethers.BigNumber.from(String(3e17))
+      );
+
+      await testContract
+        .connect(user1)
+        .decreaseOperatorWallet(operatorId, String(1e17));
+      expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
+        ethers.BigNumber.from(String(2e17))
+      );
     });
   });
 });

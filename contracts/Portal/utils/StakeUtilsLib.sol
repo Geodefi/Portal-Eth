@@ -257,13 +257,15 @@ library StakeUtils {
         uint256 _operatorId,
         uint256 value
     ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
-        uint256 contractBalance = address(this).balance;
         require(
-            contractBalance >= value,
+            address(this).balance >= value,
             "StakeUtils: Not enough resources in Portal"
         );
         uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
-        require(_wallet >= value, "StakeUtils: Not enough resources in wallet");
+        require(
+            _wallet >= value,
+            "StakeUtils: Not enough resources in operatorWallet"
+        );
         _wallet -= value;
         _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
         (bool sent, ) = msg.sender.call{value: value}("");
