@@ -57,6 +57,10 @@ contract TestStakeUtils is ERC1155Holder {
         return DATASTORE.readAddressForId(_id, "maintainer");
     }
 
+    function beController(uint256 _id) external {
+        DATASTORE.writeAddressForId(_id, "CONTROLLER", msg.sender);
+    }
+
     function changeIdMaintainer(uint256 _id, address _newMaintainer)
         external
         virtual
@@ -81,8 +85,52 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
     }
 
-    function beController(uint256 _id) external {
-        DATASTORE.writeAddressForId(_id, "CONTROLLER", msg.sender);
+    function operatorAllowance(uint256 _planetId, uint256 _operatorId)
+        external
+        view
+        returns (uint256 allowence)
+    {
+        allowence = StakeUtils.operatorAllowance(
+            DATASTORE,
+            _planetId,
+            _operatorId
+        );
+    }
+
+    function approveOperator(
+        uint256 _planetId,
+        uint256 _operatorId,
+        uint256 _allowance
+    ) external returns (bool success) {
+        success = StakeUtils.approveOperator(
+            DATASTORE,
+            _planetId,
+            _operatorId,
+            _allowance
+        );
+    }
+
+    function getOperatorWalletBalance(uint256 id)
+        external
+        view
+        returns (uint256 balance)
+    {
+        balance = StakeUtils.getOperatorWalletBalance(DATASTORE, id);
+    }
+
+    function increaseOperatorWallet(uint256 id)
+        external
+        payable
+        returns (bool success)
+    {
+        success = StakeUtils.increaseOperatorWallet(DATASTORE, id, msg.value);
+    }
+
+    function decreaseOperatorWallet(uint256 id, uint256 value)
+        external
+        returns (bool success)
+    {
+        success = StakeUtils.decreaseOperatorWallet(DATASTORE, id, value);
     }
 
     function isStakingPausedForPool(uint256 id) external view returns (bool) {
