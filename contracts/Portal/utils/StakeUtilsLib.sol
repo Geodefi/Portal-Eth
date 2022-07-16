@@ -43,6 +43,11 @@ library StakeUtils {
     event MaxMaintainerFeeUpdated(uint256 newMaxFee);
     event PausedPool(uint256 id);
     event UnpausedPool(uint256 id);
+    event OperatorApproval(
+        uint256 planetId,
+        uint256 operatorId,
+        uint256 allowance
+    );
 
     /**
      * @notice StakePool includes the parameters related to multiple Staking Pool Contracts.
@@ -156,6 +161,117 @@ library StakeUtils {
     }
 
     /**
+     * @notice                      ** Operator (TYPE 4) specific functions **
+     */
+
+    /** *
+     * @notice operatorAllowence is the number of validators that the given Operator is allowed to create on behalf of the Planet
+     * @dev an operator can not create new validators if,
+     * allowence is 0 (zero) OR lower than the current number of validators.
+     * But if operator withdraws a validator,then able to create a new one.
+     * @dev prestake checks the approved validator count to make sure the number of validators are not bigger than allowence.
+     * @dev allowence doesn't change when new validators created or old ones are unstaked.
+     * @return allowance
+     */
+    function operatorAllowance(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _planetId,
+        uint256 _operatorId
+    ) public view returns (uint256 allowance) {
+        allowance = _DATASTORE.readUintForId(
+            _planetId,
+            bytes32(keccak256(abi.encodePacked(_operatorId, "allowance")))
+        );
+    }
+
+    /**
+     * @notice To allow a Node Operator run validators for your Planet with Max number of validators.
+     * This number can be set again at any given point in the future.
+     *
+     * @dev If planet decreases the approved validator count, below current running validator,
+     * operator can only withdraw until to that count (until 1 below that count).
+     * @dev only maintainer of _planetId can approve an Operator
+     * @dev key for the allowance is: bytes32(keccak256(abi.encodePacked(_operatorId, "allowance")))
+     * @param _planetId the gETH id of the Planet, only Maintainer can call this function
+     * @param _operatorId the gETH id of the Operator to allow them create validators for a given Planet
+     * @param _allowance the MAX number of validators that can be created by the Operator for a given Planet
+     */
+    function approveOperator(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _planetId,
+        uint256 _operatorId,
+        uint256 _allowance
+    ) external onlyMaintainer(_DATASTORE, _planetId) returns (bool) {
+        _DATASTORE.writeUintForId(
+            _planetId,
+            bytes32(keccak256(abi.encodePacked(_operatorId, "allowance"))),
+            _allowance
+        );
+        emit OperatorApproval(_planetId, _operatorId, _allowance);
+        return true;
+    }
+
+    /**
+     * @notice Operator wallet keeps Ether put in Portal by Operator to make preStake easier, instead of sending n ETH to contract
+     * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
+     * and from there, ETHs can be used to preStake. Then when it is approved and staked, it will be
+     * added back to the wallet to be used for other preStake calls.
+     * @param _operatorId the gETH id of the Operator
+     * @return walletBalance the balance of Operator with the given _operatorId has
+     */
+    function getOperatorWalletBalance(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) public view returns (uint256 walletBalance) {
+        walletBalance = _DATASTORE.readUintForId(_operatorId, "wallet");
+    }
+
+    /**
+     * @notice To increase the balance of an Operator's wallet
+     * @dev only maintainer can increase the balance
+     * @param _operatorId the id of the Operator
+     * @param value Ether (in Wei) amount to increase the wallet balance.
+     * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.
+     */
+    function increaseOperatorWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 value
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+        require(value > 0, "StakeUtils: The value must be greater than 0");
+        uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
+        _wallet += value;
+        _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
+        return true;
+    }
+
+    /**
+     * @notice To decrease the balance of an Operator's wallet
+     * @dev only maintainer can decrease the balance
+     * @param _operatorId the id of the Operator
+     * @param value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
+     * @return success boolean value which is "sent", should be used by Operator is Maintainer is a contract.
+     */
+    function decreaseOperatorWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 value
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+        uint256 contractBalance = address(this).balance;
+        require(
+            contractBalance >= value,
+            "StakeUtils: Not enough resources in Portal"
+        );
+        uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
+        require(_wallet >= value, "StakeUtils: Not enough resources in wallet");
+        _wallet -= value;
+        _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
+        (bool sent, ) = msg.sender.call{value: value}("");
+        require(sent, "StakeUtils: Failed to send ETH");
+        return sent;
+    }
+
+    /**
      * @notice                      ** WITHDRAWAL POOL specific functions **
      */
 
@@ -194,7 +310,7 @@ library StakeUtils {
         uint256 _id
     ) external onlyMaintainer(_DATASTORE, _id) {
         require(
-            isStakingPausedForPool(_DATASTORE,  _id),
+            isStakingPausedForPool(_DATASTORE, _id),
             "StakeUtils: staking is already NOT paused for pool"
         );
         _DATASTORE.writeUintForId(_id, "stakePaused", 0); // meaning false
