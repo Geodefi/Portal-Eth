@@ -137,7 +137,7 @@ describe("StakeUtils", async () => {
       it("Reverts if not maintainer", async () => {
         await expect(
           testContract.setMaintainerFee(randId, 10 ** 9 + 1)
-        ).to.be.revertedWith("StakeUtils: sender not maintainer");
+        ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
       });
     });
 
@@ -172,12 +172,94 @@ describe("StakeUtils", async () => {
       it("Reverts if not controller", async () => {
         await expect(
           testContract.changeIdMaintainer(randId, user2.address)
-        ).to.be.revertedWith("StakeUtils: not CONTROLLER of given id");
+        ).to.be.revertedWith(
+          "StakeUtils: msgSender is NOT CONTROLLER of given id"
+        );
       });
       it("Reverts if ZERO ADDRESS", async () => {
         await expect(
           testContract.connect(user1).changeIdMaintainer(randId, ZERO_ADDRESS)
-        ).to.be.revertedWith("StakeUtils: maintainer can not be zero");
+        ).to.be.revertedWith("StakeUtils: maintainer can NOT be zero");
+      });
+    });
+  });
+
+  describe("Pause Pool functionality", () => {
+    beforeEach(async () => {
+      await testContract.connect(user1).beController(randId);
+      await testContract
+        .connect(user1)
+        .changeIdMaintainer(randId, user1.address);
+    });
+
+    it("isStakingPausedForPool returns false in the beginning", async () => {
+      expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(false);
+    });
+
+    it("unpauseStakingForPool reverts in the beginning", async () => {
+      await expect(
+        testContract.connect(user1).unpauseStakingForPool(randId)
+      ).to.be.revertedWith(
+        "StakeUtils: staking is already NOT paused for pool"
+      );
+      expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(false);
+    });
+
+    describe("pauseStakingForPool functionality", () => {
+      it("pauseStakingForPool reverts when it is NOT maintainer", async () => {
+        await expect(
+          testContract.connect(user2).pauseStakingForPool(randId)
+        ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
+        expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
+          false
+        );
+      });
+      describe("pauseStakingForPool succeeds when it is maintainer", async () => {
+        beforeEach(async () => {
+          await testContract.connect(user1).pauseStakingForPool(randId);
+          expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
+            true
+          );
+        });
+        it("pauseStakingForPool reverts when it is already paused", async () => {
+          await expect(
+            testContract.connect(user1).pauseStakingForPool(randId)
+          ).to.be.revertedWith(
+            "StakeUtils: staking is already paused for pool"
+          );
+          expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
+            true
+          );
+        });
+        describe("unpauseStakingForPool when it is already paused", async () => {
+          it("unpauseStakingForPool reverts when it is NOT maintainer", async () => {
+            await expect(
+              testContract.connect(user2).unpauseStakingForPool(randId)
+            ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
+
+            expect(await testContract.isStakingPausedForPool(randId)).to.be.eq(
+              true
+            );
+          });
+          describe("unpauseStakingForPool succeeds when called by Maintainer", async () => {
+            beforeEach(async () => {
+              await testContract.connect(user1).unpauseStakingForPool(randId);
+              expect(
+                await testContract.isStakingPausedForPool(randId)
+              ).to.be.eq(false);
+            });
+            it("unpauseStakingForPool reverts when it is NOT paused", async () => {
+              await expect(
+                testContract.connect(user1).unpauseStakingForPool(randId)
+              ).to.be.revertedWith(
+                "StakeUtils: staking is already NOT paused for pool"
+              );
+              expect(
+                await testContract.isStakingPausedForPool(randId)
+              ).to.be.eq(false);
+            });
+          });
+        });
       });
     });
   });
