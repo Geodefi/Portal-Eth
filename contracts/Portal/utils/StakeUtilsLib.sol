@@ -139,9 +139,10 @@ library StakeUtils {
     }
 
     /**
-     * @notice even if MAX_MAINTAINER_FEE is decreased later, it returns limited maximum.
+     * @notice Gets fee percentage in terms of FEE_DENOMINATOR.
+     * @dev even if MAX_MAINTAINER_FEE is decreased later, it returns limited maximum.
      * @param _id planet, comet or operator ID
-     *  @return fee = percentage * FEE_DENOMINATOR / 100
+     * @return fee = percentage * FEE_DENOMINATOR / 100
      */
     function getMaintainerFee(
         StakePool storage self,
