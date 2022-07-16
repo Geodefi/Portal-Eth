@@ -17,10 +17,10 @@ import "../../interfaces/ILPToken.sol";
  * Note refer to DataStoreUtils before reviewing
  * Note *suggested* refer to GeodeUtils before reviewing
  * Note beware of the staking pool and operator implementations:
- * 
+ *
  *
  * Type 4 stand for Operators, they maintain Beacon Chain Validators on behalf of Planets and Comets.
- * Operators have properties like fee(as a percentage), maintainer. 
+ * Operators have properties like fee(as a percentage), maintainer.
  *
  * Type 5 stand for Public Staking Pool (Planets).
  * Every Planet is also an Operator by design.
@@ -28,12 +28,12 @@ import "../../interfaces/ILPToken.sol";
  * properties like staking pools - relates to params: stBalance, surplus, withdrawalPool - relates to debt -
  * and liquid asset ID(gETH).
  * Everyone can stake and unstake using public pools.
- * 
- * Type 6 stands for Private Staking Pools (Comets). 
+ *
+ * Type 6 stands for Private Staking Pools (Comets).
  * It is permissionless, one can directly create a Comet by simply choosing a name.
- * Portal adds -comet to the end the selected name, so if one sends my-amazing-DAO as name parameter, 
- * its name will be my-amazing-DAO-comet. 
- * Only Comet's maintainer can stake but everyone can unstake. 
+ * Portal adds -comet to the end the selected name, so if one sends my-amazing-DAO as name parameter,
+ * its name will be my-amazing-DAO-comet.
+ * Only Comet's maintainer can stake but everyone can unstake.
  * In Comets, there is a Withdrawal Queue instead of DWT.
  */
 
@@ -41,6 +41,8 @@ library StakeUtils {
     using DataStoreUtils for DataStoreUtils.DataStore;
     event MaintainerFeeUpdated(uint256 id, uint256 fee);
     event MaxMaintainerFeeUpdated(uint256 newMaxFee);
+    event PausedPool(uint256 id);
+    event UnpausedPool(uint256 id);
 
     /**
      * @notice StakePool includes the parameters related to multiple Staking Pool Contracts.
@@ -77,7 +79,7 @@ library StakeUtils {
     ) {
         require(
             _DATASTORE.readAddressForId(_id, "maintainer") == msg.sender,
-            "StakeUtils: sender not maintainer"
+            "StakeUtils: sender is NOT maintainer"
         );
         _;
     }
@@ -143,13 +145,59 @@ library StakeUtils {
     ) external {
         require(
             _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
-            "StakeUtils: not CONTROLLER of given id"
+            "StakeUtils: msgSender is NOT CONTROLLER of given id"
         );
         require(
             _newMaintainer != address(0),
-            "StakeUtils: maintainer can not be zero"
+            "StakeUtils: maintainer can NOT be zero"
         );
 
         _DATASTORE.writeAddressForId(_id, "maintainer", _newMaintainer);
+    }
+
+    /**
+     * @notice                      ** WITHDRAWAL POOL specific functions **
+     */
+
+    /**
+     * @notice pausing only prevents new staking operations.
+     * when a pool is paused for staking there are NO new funds to be minted, NO surplus.
+     * @dev minting is paused when stakePaused != 0
+     */
+    function isStakingPausedForPool(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) public view returns (bool) {
+        return _DATASTORE.readUintForId(_id, "stakePaused") != 0;
+    }
+
+    /**
+     * @dev pausing requires pool to be NOT paused
+     */
+    function pauseStakingForPool(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) external onlyMaintainer(_DATASTORE, _id) {
+        require(
+            !isStakingPausedForPool(_DATASTORE, _id),
+            "StakeUtils: staking is already paused for pool"
+        );
+        _DATASTORE.writeUintForId(_id, "stakePaused", 1); // meaning true
+        emit PausedPool(_id);
+    }
+
+    /**
+     * @dev pausing requires pool to be NOT paused
+     */
+    function unpauseStakingForPool(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) external onlyMaintainer(_DATASTORE, _id) {
+        require(
+            isStakingPausedForPool(_DATASTORE,  _id),
+            "StakeUtils: staking is already NOT paused for pool"
+        );
+        _DATASTORE.writeUintForId(_id, "stakePaused", 0); // meaning false
+        emit UnpausedPool(_id);
     }
 }
