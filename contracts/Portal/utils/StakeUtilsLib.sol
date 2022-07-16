@@ -119,7 +119,7 @@ library StakeUtils {
      * @dev it is wise to change the CONTROLLER before the maintainer, in case of any migration
      * @dev handle with care
      * note, intended (suggested) usage is to set a contract address that will govern the id for maintainer,
-     * while keeping the controller as a multisig or ZERO_ADDRESS.
+     * while keeping the controller as a multisig or provide smt like 0x000000000000000000000000000000000000dEaD
      */
     function changeMaintainer(
         DataStoreUtils.DataStore storage _DATASTORE,
