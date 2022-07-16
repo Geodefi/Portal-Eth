@@ -99,50 +99,28 @@ library StakeUtils {
 
     /**
      * @notice                      ** Maintainer specific functions **
-     *
-     * @note "Maintainer" is a shared logic like "fee" by both operators and private or public pools.
-     * Maintainers have permissiones to maintain the given id like setting a new fee or interface as
-     * well as paying debt etc. for operators.
-     * @dev maintainer is set by CONTROLLER of given id
      */
 
-    /// @notice even if MAX_MAINTAINER_FEE is decreased later, it returns limited maximum
-    function getMaintainerFee(
-        StakePool storage self,
+    /**
+     * @notice "Maintainer" is a shared logic (like "name") by both operators and private or public pools.
+     * Maintainers have permissiones to maintain the given id like setting a new fee or interface as
+     * well as creating validators etc. for operators.
+     * @dev every ID has 1 maintainer that is set by CONTROLLER
+     */
+    function getMaintainerFromId(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
-    ) public view returns (uint256) {
-        return
-            _DATASTORE.readUintForId(_id, "fee") > self.MAX_MAINTAINER_FEE
-                ? self.MAX_MAINTAINER_FEE
-                : _DATASTORE.readUintForId(_id, "fee");
+    ) external view returns (address maintainer) {
+        maintainer = _DATASTORE.readAddressForId(_id, "maintainer");
     }
 
-    function setMaintainerFee(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id,
-        uint256 _newFee
-    ) external onlyMaintainer(_DATASTORE, _id) {
-        require(
-            _newFee <= self.MAX_MAINTAINER_FEE,
-            "StakeUtils: MAX_MAINTAINER_FEE ERROR"
-        );
-        _DATASTORE.writeUintForId(_id, "fee", _newFee);
-        emit MaintainerFeeUpdated(_id, _newFee);
-    }
-
-    function setMaxMaintainerFee(StakePool storage self, uint256 _newMaxFee)
-        external
-    {
-        require(
-            _newMaxFee <= self.FEE_DENOMINATOR,
-            "StakeUtils: fee more than 100%"
-        );
-        self.MAX_MAINTAINER_FEE = _newMaxFee;
-        emit MaxMaintainerFeeUpdated(_newMaxFee);
-    }
-
+    /**
+     * @notice CONTROLLER of the ID can change the maintainer to any address other than ZERO_ADDRESS
+     * @dev it is wise to change the CONTROLLER before the maintainer, in case of any migration
+     * @dev handle with care
+     * note, intended (suggested) usage is to set a contract address that will govern the id for maintainer,
+     * while keeping the controller as a multisig or ZERO_ADDRESS.
+     */
     function changeMaintainer(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
@@ -158,6 +136,59 @@ library StakeUtils {
         );
 
         _DATASTORE.writeAddressForId(_id, "maintainer", _newMaintainer);
+    }
+
+    /**
+     * @notice even if MAX_MAINTAINER_FEE is decreased later, it returns limited maximum.
+     * @param _id planet, comet or operator ID
+     *  @return fee = percentage * FEE_DENOMINATOR / 100
+     */
+    function getMaintainerFee(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) public view returns (uint256 fee) {
+        return
+            _DATASTORE.readUintForId(_id, "fee") > self.MAX_MAINTAINER_FEE
+                ? self.MAX_MAINTAINER_FEE
+                : _DATASTORE.readUintForId(_id, "fee");
+    }
+
+    /**
+     * @notice Changes the fee that is applied by distributeFee on Oracle Updates.
+     * @dev to achieve 100% fee send FEE_DENOMINATOR
+     * @param _id planet, comet or operator ID
+     * @param _newFee new fee percentage in terms of FEE_DENOMINATOR,reverts if given more than MAX_MAINTAINER_FEE
+     */
+    function setMaintainerFee(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        uint256 _newFee
+    ) external onlyMaintainer(_DATASTORE, _id) {
+        require(
+            _newFee <= self.MAX_MAINTAINER_FEE,
+            "StakeUtils: MAX_MAINTAINER_FEE ERROR"
+        );
+        _DATASTORE.writeUintForId(_id, "fee", _newFee);
+        emit MaintainerFeeUpdated(_id, _newFee);
+    }
+
+    /**
+     * @notice Changes MAX_MAINTAINER_FEE, limits "fee" parameter of every ID.
+     * @dev to achieve 100% fee send FEE_DENOMINATOR
+     * @param _newMaxFee new fee percentage in terms of FEE_DENOMINATOR, reverts if more than FEE_DENOMINATOR
+     * note onlyGovernance check should be handled in PORTAL.sol directly.
+     */
+    function setMaxMaintainerFee(StakePool storage self, uint256 _newMaxFee)
+        external
+    {
+        require(
+            _newMaxFee <= self.FEE_DENOMINATOR,
+            "StakeUtils: fee more than 100%"
+        );
+        self.MAX_MAINTAINER_FEE = _newMaxFee;
+        emit MaxMaintainerFeeUpdated(_newMaxFee);
     }
 
     /**
