@@ -407,6 +407,7 @@ library GeodeUtils {
      * @notice Get if it is allowed to change a specific contract with the current version.
      * @return True if it is allowed by senate and false if not.
      * @dev address(0) should return false
+     * @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022
      **/
     function isUpgradeAllowed(
         Universe storage self,

@@ -54,7 +54,7 @@ contract TestStakeUtils is ERC1155Holder {
         virtual
         returns (address)
     {
-        return DATASTORE.readAddressForId(_id, "maintainer");
+        return StakeUtils.getMaintainerFromId(DATASTORE, _id);
     }
 
     function beController(uint256 _id) external {
