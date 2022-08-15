@@ -2,7 +2,9 @@
 pragma solidity =0.8.7;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./DataStoreLib.sol";
+import "../gETHInterfaces/ERC20InterfacePermitUpgradable.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/ISwap.sol";
 import "../../interfaces/ILPToken.sol";
@@ -39,6 +41,8 @@ import "../../interfaces/ILPToken.sol";
 
 library StakeUtils {
     using DataStoreUtils for DataStoreUtils.DataStore;
+    event IdInitiated(uint256 id, uint256 _type);
+    event PriceChanged(uint256 id, uint256 pricePerShare);
     event MaintainerFeeUpdated(uint256 id, uint256 fee);
     event MaxMaintainerFeeUpdated(uint256 newMaxFee);
     event PausedPool(uint256 id);
@@ -54,8 +58,9 @@ library StakeUtils {
      * @notice A staking pool works with a *bound* Withdrawal Pool (DWP) to create best pricing
      * for the staking derivative. Withdrawal Pools (DWP) uses StableSwap algorithm with Dynamic Pegs.
      * @dev  gETH should not be changed, ever!
-     * @param gETH ERC1155 contract that keeps the totalSupply, pricePerShare and balances of all StakingPools by ID
      * @param ORACLE https://github.com/Geodefi/Telescope-Eth
+     * @param gETH ERC1155 contract that keeps the totalSupply, pricePerShare and balances of all StakingPools by ID
+     * @param DEFAULT_gETH_INTERFACE
      * @param DEFAULT_DWP Dynamic Withdrawal Pool, a STABLESWAP pool that will be cloned to be used for given ID
      * @param DEFAULT_LP_TOKEN LP token implementation that will be cloned to be used for DWP of given ID
      * @param DEFAULT_A DWP parameter
@@ -66,8 +71,9 @@ library StakeUtils {
      * @dev changing any of address parameters (gETH, ORACLE, DEFAULT_DWP, DEFAULT_LP_TOKEN) MUST require a contract upgrade to ensure security. We can change this in the future with a better GeodeUtils design.
      **/
     struct StakePool {
-        address gETH;
         address ORACLE;
+        address gETH;
+        address DEFAULT_gETH_INTERFACE;
         address DEFAULT_DWP;
         address DEFAULT_LP_TOKEN;
         uint256 DEFAULT_A;
@@ -89,6 +95,39 @@ library StakeUtils {
         _;
     }
 
+    modifier onlyController(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) {
+        require(
+            _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
+            "StakeUtils: sender is NOT CONTROLLER"
+        );
+        _;
+    }
+    modifier initiator(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        uint256 _type,
+        uint256 _fee,
+        address _maintainer
+    ) {
+        require(
+            _DATASTORE.readUintForId(_id, "TYPE") == _type,
+            "StakeUtils: id should be Operator TYPE"
+        );
+        require(
+            _DATASTORE.readUintForId(_id, "initiated") == 0,
+            "StakeUtils: already initiated"
+        );
+        _DATASTORE.writeAddressForId(_id, "maintainer", _maintainer);
+
+        _;
+
+        _DATASTORE.writeUintForId(_id, "initiated", 1);
+        emit IdInitiated(_id, _type);
+    }
+
     function _clone(address target) public returns (address) {
         return Clones.clone(target);
     }
@@ -96,6 +135,102 @@ library StakeUtils {
     function getgETH(StakePool storage self) public view returns (IgETH) {
         return IgETH(self.gETH);
     }
+
+    /**
+     *  @notice if a planet did not unset an old Interface, before setting a new one;
+     *  & if new interface is unsetted, the old one will not be remembered!!
+     *  use gETH.isInterface(interface,  id)
+     * @param _Interface address of the new gETH ERC1155 interface for given ID
+     * @param isSet true if new interface is going to be set, false if old interface is being unset
+     */
+    function _setInterface(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        address _Interface,
+        bool isSet
+    ) internal {
+        getgETH(self).setInterface(_Interface, _id, isSet);
+        if (isSet)
+            _DATASTORE.writeAddressForId(_id, "currentInterface", _Interface);
+        else if (
+            _DATASTORE.readAddressForId(_id, "currentInterface") == _Interface
+        ) _DATASTORE.writeAddressForId(_id, "currentInterface", address(0));
+    }
+
+    /**
+     * @notice                      ** Initiate ID functions **
+     */
+    /**
+     * @notice initiates ID as an node operator
+     * @dev requires ID to be approved as a node operator with a specific CONTROLLER
+     * @param _id operator ID
+     */
+    function initiateOperator(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        uint256 _fee,
+        address _maintainer
+    )
+        external
+        onlyController(_DATASTORE, _id)
+        initiator(_DATASTORE, _id, 4, _fee, _maintainer)
+    {}
+
+    /**
+     * @notice initiates ID as a planet (public pool)
+     * @dev requires ID to be approved as a planet with a specific CONTROLLER
+     * @param _id planet ID to initiate
+     */
+    function initiatePlanet(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        uint256 _fee,
+        address _maintainer,
+        address _governance,
+        string memory _interfaceName,
+        string memory _interfaceSymbol
+    )
+        external
+        onlyController(_DATASTORE, _id)
+        initiator(_DATASTORE, _id, 5, _fee, _maintainer)
+    {
+        address currentInterface = _clone(self.DEFAULT_gETH_INTERFACE);
+        ERC20InterfacePermitUpgradable(currentInterface).initialize(
+            _id,
+            _interfaceName,
+            _interfaceSymbol,
+            address(getgETH(self))
+        );
+        _setInterface(self, _DATASTORE, _id, currentInterface, true);
+
+        address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
+        // transfer ownership of DWP to GEODE.GOVERNANCE
+        Ownable(WithdrawalPool).transferOwnership(_governance);
+        // approve token so we can use it in buybacks
+        getgETH(self).setApprovalForAll(WithdrawalPool, true);
+        // initially 1 ETHER = 1 ETHER
+        _setPricePerShare(self, 1 ether, _id);
+    }
+
+    /**
+     * @notice initiates ID as a comet (private pool)
+     * @dev requires ID to be approved as comet with a specific CONTROLLER
+     * @param _id comet ID to initiate
+     */
+    function initiateComet(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        uint256 _fee,
+        address _maintainer
+    )
+        external
+        onlyController(_DATASTORE, _id)
+        initiator(_DATASTORE, _id, 6, _fee, _maintainer)
+    {}
 
     /**
      * @notice                      ** Maintainer specific functions **
@@ -125,11 +260,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         address _newMaintainer
-    ) external {
-        require(
-            _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
-            "StakeUtils: msgSender is NOT CONTROLLER of given id"
-        );
+    ) external onlyController(_DATASTORE, _id) {
         require(
             _newMaintainer != address(0),
             "StakeUtils: maintainer can NOT be zero"
@@ -310,6 +441,38 @@ library StakeUtils {
      */
 
     /**
+     * @notice deploys a new withdrawal pool using DEFAULT_DWP
+     * @dev sets the withdrawal pool and LP token for id
+     */
+    function _deployWithdrawalPool(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) internal returns (address WithdrawalPool) {
+        WithdrawalPool = _clone(self.DEFAULT_DWP);
+
+        address _WPToken = ISwap(WithdrawalPool).initialize(
+            address(getgETH(self)),
+            _id,
+            string(
+                abi.encodePacked(
+                    _DATASTORE.readBytesForId(_id, "name"),
+                    "-Geode WP Token"
+                )
+            ),
+            string(
+                abi.encodePacked(_DATASTORE.readBytesForId(_id, "name"), "-WP")
+            ),
+            self.DEFAULT_A,
+            self.DEFAULT_FEE,
+            self.DEFAULT_ADMIN_FEE,
+            self.DEFAULT_LP_TOKEN
+        );
+        _DATASTORE.writeAddressForId(_id, "withdrawalPool", WithdrawalPool);
+        _DATASTORE.writeAddressForId(_id, "LPToken", _WPToken);
+    }
+
+    /**
      * @notice pausing only prevents new staking operations.
      * when a pool is paused for staking there are NO new funds to be minted, NO surplus.
      * @dev minting is paused when stakePaused != 0
@@ -349,5 +512,26 @@ library StakeUtils {
         );
         _DATASTORE.writeUintForId(_id, "stakePaused", 0); // meaning false
         emit UnpausedPool(_id);
+    }
+
+    /**
+     * @notice                      ** PLANET specific functions **
+     */
+    /**
+     * @notice                      ** ORACLE specific functions **
+     */
+
+    /**
+     * @notice sets pricePerShare parameter of gETH(id)
+     * @dev only ORACLE should be able to reach this after sanity checks on a new price
+     */
+    function _setPricePerShare(
+        StakePool storage self,
+        uint256 pricePerShare_,
+        uint256 _id
+    ) internal {
+        require(_id > 0, "StakeUtils: id should be > 0");
+        getgETH(self).setPricePerShare(pricePerShare_, _id);
+        emit PriceChanged(_id, pricePerShare_);
     }
 }
