@@ -67,6 +67,35 @@ contract TestStakeUtils is ERC1155Holder {
         DATASTORE.writeUintForId(_id, "TYPE", _type);
     }
 
+    function getERC1155() external view virtual returns (IgETH) {
+        return STAKEPOOL.getgETH();
+    }
+
+    function mintgETH(
+        address _to,
+        uint256 _id,
+        uint256 _amount
+    ) external virtual {
+        StakeUtils._mint(address(STAKEPOOL.getgETH()), _to, _id, _amount);
+    }
+
+    function buyback(
+        address to,
+        uint256 poolId,
+        uint256 sellEth,
+        uint256 minToBuy,
+        uint256 deadline
+    ) external returns (uint256 outAmount) {
+        outAmount = STAKEPOOL._buyback(
+            DATASTORE,
+            to,
+            poolId,
+            sellEth,
+            minToBuy,
+            deadline
+        );
+    }
+
     function changeIdMaintainer(uint256 _id, address _newMaintainer)
         external
         virtual

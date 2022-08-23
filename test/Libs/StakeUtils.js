@@ -58,14 +58,14 @@ describe("StakeUtils", async () => {
     DEFAULT_GETH_INTERFACE = (await get("ERC20InterfacePermitUpgradable"))
       .address;
 
-    const TestGeodeUtils = await ethers.getContractFactory("TestStakeUtils", {
+    const TestStakeUtils = await ethers.getContractFactory("TestStakeUtils", {
       libraries: {
         DataStoreUtils: (await get("DataStoreUtils")).address,
         StakeUtils: (await get("StakeUtils")).address,
       },
     });
 
-    testContract = await TestGeodeUtils.deploy(
+    testContract = await TestStakeUtils.deploy(
       gETH.address,
       oracle.address,
       DEFAULT_DWP,
@@ -183,6 +183,28 @@ describe("StakeUtils", async () => {
           testContract.connect(user1).changeIdMaintainer(randId, ZERO_ADDRESS)
         ).to.be.revertedWith("StakeUtils: maintainer can NOT be zero");
       });
+    });
+  });
+
+  describe("Helper functions", () => {
+    it("getgETH", async () => {
+      expect(await testContract.getERC1155()).to.eq(gETH.address);
+    });
+
+    it("_mint", async () => {
+      await testContract.mintgETH(user2.address, randId, String(2e18));
+      expect(await gETH.balanceOf(user2.address, randId)).to.eq(String(2e18));
+    });
+
+    it("_setInterface", async () => {
+      await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE, true);
+      expect(await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)).to.eq(
+        true
+      );
+      await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE, false);
+      expect(await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)).to.eq(
+        false
+      );
     });
   });
 
