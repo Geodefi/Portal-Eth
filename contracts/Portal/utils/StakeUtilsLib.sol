@@ -430,6 +430,19 @@ library StakeUtils {
     /**
      * @notice                      ** WITHDRAWAL POOL specific functions **
      */
+    function withdrawalPoolById(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) public view returns (ISwap) {
+        return ISwap(_DATASTORE.readAddressForId(_id, "withdrawalPool"));
+    }
+
+    function LPTokenById(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) public view returns (ILPToken) {
+        return ILPToken(_DATASTORE.readAddressForId(_id, "LPToken"));
+    }
 
     /**
      * @notice deploys a new withdrawal pool using DEFAULT_DWP
