@@ -1365,7 +1365,7 @@ describe("gETH ", async function () {
           );
         });
       });
-      describe("after new MinterPauserOracle setted", function () {
+      describe("after new MinterPauserOracle set", function () {
         beforeEach(async () => {
           minter = signers[7].address;
           await tokenContract.updateMinterPauserOracle(minter);
@@ -1681,7 +1681,7 @@ describe("gETH ", async function () {
         );
       });
 
-      it("unsetted(old) interfaces can NOT act", async function () {
+      it("unset(old) interfaces can NOT act", async function () {
         await tokenContract
           .connect(signers[0])
           .setInterface(ERC20Interface.address, unknownTokenId, false);

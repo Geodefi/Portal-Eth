@@ -287,7 +287,7 @@ describe("GeodeUtils", async () => {
           )
         ).to.be.revertedWith("GeodeUtils: NAME already claimed");
       });
-      it("controller, type, deadline and name should be setted correctly in new proposal", async () => {
+      it("controller, type, deadline and name should be set correctly in new proposal", async () => {
         const controller = web3.eth.accounts.create();
         await testContract.newProposal(
           controller.address,

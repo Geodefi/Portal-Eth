@@ -133,7 +133,7 @@ library StakeUtils {
 
     /**
      *  @notice if a planet did not unset an old Interface, before setting a new one;
-     *  & if new interface is unsetted, the old one will not be remembered!!
+     *  & if new interface is unset, the old one will not be remembered!!
      *  use gETH.isInterface(interface,  id)
      * @param _Interface address of the new gETH ERC1155 interface for given ID
      * @param isSet true if new interface is going to be set, false if old interface is being unset

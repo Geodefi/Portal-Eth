@@ -5,17 +5,14 @@ import "./helpers/ERC1155SupplyMinterPauser.sol";
 /**
  * @title Geode Finance geode-eth: gETH
  *
+ * gAVAX is a special ERC1155 contract with additional functionalities.
  * One of the unique functionalities are the included price logic that tracks the underlaying ratio with
  * staked asset, ETH.
  * Other and most important change is the implementation of ERC1155Interfaces.
  * This addition effectively result in changes in safeTransferFrom(), burn(), _doSafeTransferAcceptanceCheck()
  * functions, reasoning is in the comments.
  *
- * @dev only difference between ERC1155SupplyMinterPauser and Openzeppelin's implementation is
- * _doSafeTransferAcceptanceCheck is being virtual:
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Supply.sol
- * diffchecker link: https://www.diffchecker.com/UOAdD16A
+ * @dev recommended to check helpers/ERC1155SupplyMinterPauser.sol first
  */
 
 contract gETH is ERC1155SupplyMinterPauser {
@@ -197,7 +194,7 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @notice interfaces should handle their own Checks in the contract
      * @dev See {IERC1155-safeTransferFrom}.
      * @dev CHANGED for gETH
-     * @dev ADDED "&& !isInterface(_msgSender(),id))"
+     * @dev ADDED "&& !isInterface(operator,id))"
      */
     function _doSafeTransferAcceptanceCheck(
         address operator,
