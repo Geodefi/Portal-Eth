@@ -132,6 +132,20 @@ library StakeUtils {
     }
 
     /**
+     * @notice mints gETH tokens with given ID and amount.
+     * @dev shouldn't be accesible publicly
+     */
+    function _mint(
+        address _gETH,
+        address _to,
+        uint256 _id,
+        uint256 _amount
+    ) internal {
+        require(_id > 0, "StakeUtils: _mint id should be > 0");
+        IgETH(_gETH).mint(_to, _id, _amount, "");
+    }
+
+    /**
      *  @notice if a planet did not unset an old Interface, before setting a new one;
      *  & if new interface is unset, the old one will not be remembered!!
      *  use gETH.isInterface(interface,  id)
@@ -436,6 +450,49 @@ library StakeUtils {
     /**
      * @notice                      ** WITHDRAWAL POOL specific functions **
      */
+
+    /**
+     * @notice conducts a buyback using the given withdrawal pool,
+     * @param to address to send bought gETH(id). burns the tokens if to=address(0), transfers if not
+     * @param poolId id of the gETH that will be bought
+     * @param sellEth ETH amount to sell
+     * @param minToBuy TX is expected to revert by Swap.sol if not meet
+     * @param deadline TX is expected to revert by Swap.sol if deadline has past
+     * @dev this function assumes that pool is deployed by deployWithdrawalPool
+     * as index 0 is eth and index 1 is Geth
+     */
+    function _buyback(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        address to,
+        uint256 poolId,
+        uint256 sellEth,
+        uint256 minToBuy,
+        uint256 deadline
+    ) internal returns (uint256 outAmount) {
+        // SWAP in WP
+        outAmount = withdrawalPoolById(_DATASTORE, poolId).swap{value: sellEth}(
+            0,
+            1,
+            sellEth,
+            minToBuy,
+            deadline
+        );
+        if (to == address(0)) {
+            // burn
+            getgETH(self).burn(address(this), poolId, outAmount);
+        } else {
+            // send back to user
+            getgETH(self).safeTransferFrom(
+                address(this),
+                to,
+                poolId,
+                outAmount,
+                ""
+            );
+        }
+    }
+
     function withdrawalPoolById(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
@@ -525,9 +582,6 @@ library StakeUtils {
     }
 
     /**
-     * @notice                      ** PLANET specific functions **
-     */
-    /**
      * @notice                      ** ORACLE specific functions **
      */
 
@@ -544,4 +598,8 @@ library StakeUtils {
         getgETH(self).setPricePerShare(pricePerShare_, _id);
         emit PriceChanged(_id, pricePerShare_);
     }
+
+    /**
+     * @notice                      ** PLANET specific functions **
+     */
 }
