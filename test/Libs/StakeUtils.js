@@ -72,7 +72,8 @@ describe("StakeUtils", async () => {
       DEFAULT_LP_TOKEN,
       DEFAULT_GETH_INTERFACE
     );
-    await gETH.updateMinterPauserOracle(testContract.address);
+    await gETH.updateMinterRole(testContract.address);
+    await gETH.updateOracleRole(testContract.address);
   });
 
   beforeEach(async () => {

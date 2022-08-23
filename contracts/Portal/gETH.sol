@@ -127,23 +127,44 @@ contract gETH is ERC1155SupplyMinterPauser {
     }
 
     /**
-     * @notice updates the authorized party for all crucial operations related to
-     * minting, pricing and interfaces.
-     * @dev MinterPauserOracle is basically a superUser, there can be only 1 at a given time,
+     * @notice updates the authorized party for Minter operations related to minting.
+     * @dev Minter is basically a superUser, there can be only 1 at a given time,
      * intended as "Portal"
      */
-    function updateMinterPauserOracle(address Minter) external virtual {
+    function updateMinterRole(address Minter) external virtual {
         require(
             hasRole(MINTER_ROLE, _msgSender()),
             "gETH: must have MINTER_ROLE to set"
         );
-
         renounceRole(MINTER_ROLE, _msgSender());
-        renounceRole(PAUSER_ROLE, _msgSender());
-        renounceRole(ORACLE_ROLE, _msgSender());
-
         _setupRole(MINTER_ROLE, Minter);
+    }
+
+    /**
+     * @notice updates the authorized party for Pausing operations.
+     * @dev Pauser is basically a superUser, there can be only 1 at a given time,
+     * intended as "Portal"
+     */
+    function updatePauserRole(address Minter) external virtual {
+        require(
+            hasRole(PAUSER_ROLE, _msgSender()),
+            "gETH: must have PAUSER_ROLE to set"
+        );
+        renounceRole(PAUSER_ROLE, _msgSender());
         _setupRole(PAUSER_ROLE, Minter);
+    }
+
+    /**
+     * @notice updates the authorized party for Oracle operations related to pricing.
+     * @dev Oracle is basically a superUser, there can be only 1 at a given time,
+     * intended as "Portal"
+     */
+    function updateOracleRole(address Minter) external virtual {
+        require(
+            hasRole(ORACLE_ROLE, _msgSender()),
+            "gETH: must have ORACLE_ROLE to set"
+        );
+        renounceRole(ORACLE_ROLE, _msgSender());
         _setupRole(ORACLE_ROLE, Minter);
     }
 
