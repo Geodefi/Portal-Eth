@@ -72,7 +72,8 @@ describe("StakeUtils", async () => {
       DEFAULT_LP_TOKEN,
       DEFAULT_GETH_INTERFACE
     );
-    await gETH.updateMinterPauserOracle(testContract.address);
+    await gETH.updateMinterRole(testContract.address);
+    await gETH.updateOracleRole(testContract.address);
   });
 
   beforeEach(async () => {
@@ -271,21 +272,21 @@ describe("StakeUtils", async () => {
           user1.address // _maintainer
         );
       });
-      // check initiated parameter is setted as 1
-      it("check initiated parameter is setted as 1", async () => {
+      // check initiated parameter is set as 1
+      it("check initiated parameter is set as 1", async () => {
         expect(await testContract.isInitiated(randId)).to.be.eq(1);
       });
 
-      // check maintainer is setted correctly
-      it("check maintainer is setted correctly", async () => {
-        settedMaintainer = await testContract.getMaintainerFromId(randId);
-        expect(settedMaintainer).to.be.eq(user1.address);
+      // check maintainer is set correctly
+      it("check maintainer is set correctly", async () => {
+        setMaintainer = await testContract.getMaintainerFromId(randId);
+        expect(setMaintainer).to.be.eq(user1.address);
       });
 
-      // check fee is setted correctly
-      it("check fee is setted correctly", async () => {
-        settedFee = await testContract.getMaintainerFee(randId);
-        expect(settedFee).to.be.eq(1e5);
+      // check fee is set correctly
+      it("check fee is set correctly", async () => {
+        setFee = await testContract.getMaintainerFee(randId);
+        expect(setFee).to.be.eq(1e5);
       });
 
       it("after success, reverts if already initiated", async () => {
@@ -301,8 +302,8 @@ describe("StakeUtils", async () => {
 
     // sender is NOT CONTROLLER
     // id should be Operator TYPE
-    // check initiated parameter is setted as 1
-    // check maintainer is setted correctly
+    // check initiated parameter is set as 1
+    // check maintainer is set correctly
     // already initiated
   });
 
@@ -342,9 +343,9 @@ describe("StakeUtils", async () => {
       expect(await erc20interface.symbol()).to.be.eq("BP");
     });
 
-    it("check fee is setted", async () => {
-      settedFee = await testContract.getMaintainerFee(randId);
-      expect(settedFee).to.be.eq(1e6);
+    it("check fee is set", async () => {
+      setFee = await testContract.getMaintainerFee(randId);
+      expect(setFee).to.be.eq(1e6);
     });
 
     it("check WP is approved for all on gETH", async () => {

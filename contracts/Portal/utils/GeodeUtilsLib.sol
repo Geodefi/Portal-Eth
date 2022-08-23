@@ -6,7 +6,7 @@ import "./DataStoreLib.sol";
 /**
  * @title GeodeUtils library
  * @notice Exclusively contains functions responsible for administration of Geode Portal,
- * including functions related to "limited upgradability" with Senate & porposals.
+ * including functions related to "limited upgradability" with Senate & proposals.
  * @dev Contracts relying on this library must initialize GeodeUtils.Universe
  * @dev ALL "fee" variables are limited by FEE_DENOMINATOR = 100%
  * @dev Admin functions are already protected.
@@ -35,7 +35,7 @@ library GeodeUtils {
    * @notice Proposal basically refers to give the control of an ID to a CONTROLLER.
    *
    * @notice A Proposal has 4 specs:
-   * @param TYPE: seperates the proposals and related functionality between different ID types.
+   * @param TYPE: separates the proposals and related functionality between different ID types.
    * * RESERVED TYPES on GeodeUtils:
    * * * TYPE 0: inactive
    * * * TYPE 1: Senate: controls state of governance, contract updates and other members of A Universe
@@ -330,7 +330,7 @@ library GeodeUtils {
         uint256 id
     ) external onlySenate(self) {
         require(
-            self._proposalForId[id].deadline >= block.timestamp,
+            self._proposalForId[id].deadline > block.timestamp,
             "GeodeUtils: proposal expired"
         );
         require(

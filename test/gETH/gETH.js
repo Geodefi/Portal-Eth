@@ -55,7 +55,9 @@ describe("gETH ", async function () {
       "ERC1155ReceiverMock"
     );
     tokenContract = await gETH.deploy(initialURI);
-    await tokenContract.updateMinterPauserOracle(deployer);
+    await tokenContract.updateMinterRole(deployer);
+    await tokenContract.updateOracleRole(deployer);
+    await tokenContract.updatePauserRole(deployer);
   });
 
   beforeEach(async function () {
@@ -1365,10 +1367,12 @@ describe("gETH ", async function () {
           );
         });
       });
-      describe("after new MinterPauserOracle setted", function () {
+      describe("after new MinterPauserOracle set", function () {
         beforeEach(async () => {
           minter = signers[7].address;
-          await tokenContract.updateMinterPauserOracle(minter);
+          await tokenContract.updateMinterRole(minter);
+          await tokenContract.updateOracleRole(minter);
+          await tokenContract.updatePauserRole(minter);
         });
         it("new minter has the minter role", async function () {
           expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq(
@@ -1400,7 +1404,8 @@ describe("gETH ", async function () {
     describe("setPricePerShare", function () {
       beforeEach(async () => {
         minter = signers[7].address;
-        await tokenContract.updateMinterPauserOracle(minter);
+        await tokenContract.updateMinterRole(minter);
+        await tokenContract.updateOracleRole(minter);
       });
 
       it("ZERO at the beginning", async function () {
@@ -1681,7 +1686,7 @@ describe("gETH ", async function () {
         );
       });
 
-      it("unsetted(old) interfaces can NOT act", async function () {
+      it("unset(old) interfaces can NOT act", async function () {
         await tokenContract
           .connect(signers[0])
           .setInterface(ERC20Interface.address, unknownTokenId, false);
