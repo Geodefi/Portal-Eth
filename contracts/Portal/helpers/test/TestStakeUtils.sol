@@ -85,6 +85,49 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
     }
 
+    function setInterface(
+        uint256 _planetId,
+        address _interface,
+        bool isSet
+    ) external {
+        STAKEPOOL._setInterface(DATASTORE, _planetId, _interface, isSet);
+    }
+
+    function initiateOperator(
+        uint256 _planetId,
+        uint256 _fee,
+        address _maintainer
+    ) external {
+        STAKEPOOL.initiateOperator(DATASTORE, _planetId, _fee, _maintainer);
+    }
+
+    function initiatePlanet(
+        uint256 _planetId,
+        uint256 _fee,
+        address _maintainer,
+        address _governance,
+        string memory _interfaceName,
+        string memory _interfaceSymbol
+    ) external {
+        STAKEPOOL.initiatePlanet(
+            DATASTORE,
+            _planetId,
+            _fee,
+            _maintainer,
+            _governance,
+            _interfaceName,
+            _interfaceSymbol
+        );
+    }
+
+    function initiateComet(
+        uint256 _planetId,
+        uint256 _fee,
+        address _maintainer
+    ) external {
+        STAKEPOOL.initiateComet(DATASTORE, _planetId, _fee, _maintainer);
+    }
+
     function operatorAllowance(uint256 _planetId, uint256 _operatorId)
         external
         view
@@ -131,6 +174,26 @@ contract TestStakeUtils is ERC1155Holder {
         returns (bool success)
     {
         success = StakeUtils.decreaseOperatorWallet(DATASTORE, id, value);
+    }
+
+    function _deployWithdrawalPool(uint256 _id)
+        external
+        returns (address WithdrawalPool)
+    {
+        WithdrawalPool = STAKEPOOL._deployWithdrawalPool(DATASTORE, _id);
+    }
+
+    function withdrawalPoolById(uint256 _id)
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return address(StakeUtils.withdrawalPoolById(DATASTORE, _id));
+    }
+
+    function LPTokenById(uint256 _id) external view virtual returns (address) {
+        return address(StakeUtils.LPTokenById(DATASTORE, _id));
     }
 
     function isStakingPausedForPool(uint256 id) external view returns (bool) {
