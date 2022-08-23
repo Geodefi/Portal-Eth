@@ -15,13 +15,15 @@ contract TestStakeUtils is ERC1155Holder {
         address _gETH,
         address _ORACLE,
         address _DEFAULT_DWP,
-        address _DEFAULT_LP_TOKEN
+        address _DEFAULT_LP_TOKEN,
+        address _DEFAULT_gETH_INTERFACE
     ) {
         STAKEPOOL.ORACLE = _ORACLE;
         STAKEPOOL.gETH = _gETH;
         STAKEPOOL.FEE_DENOMINATOR = 10**10;
         STAKEPOOL.DEFAULT_DWP = _DEFAULT_DWP;
         STAKEPOOL.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
+        STAKEPOOL.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
         STAKEPOOL.DEFAULT_A = 60;
         STAKEPOOL.DEFAULT_FEE = 4e6;
         STAKEPOOL.DEFAULT_ADMIN_FEE = 5e9;
@@ -61,6 +63,10 @@ contract TestStakeUtils is ERC1155Holder {
         DATASTORE.writeAddressForId(_id, "CONTROLLER", msg.sender);
     }
 
+    function setType(uint256 _id, uint256 _type) external {
+        DATASTORE.writeUintForId(_id, "TYPE", _type);
+    }
+
     function changeIdMaintainer(uint256 _id, address _newMaintainer)
         external
         virtual
@@ -83,6 +89,67 @@ contract TestStakeUtils is ERC1155Holder {
         returns (uint256)
     {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
+    }
+
+    function setInterface(
+        uint256 _planetId,
+        address _interface,
+        bool isSet
+    ) external {
+        STAKEPOOL._setInterface(DATASTORE, _planetId, _interface, isSet);
+    }
+
+    function currentInterface(uint256 _id)
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return DATASTORE.readAddressForId(_id, "currentInterface");
+    }
+
+    function isInitiated(uint256 _planetId)
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return DATASTORE.readUintForId(_planetId, "initiated");
+    }
+
+    function initiateOperator(
+        uint256 _planetId,
+        uint256 _fee,
+        address _maintainer
+    ) external {
+        STAKEPOOL.initiateOperator(DATASTORE, _planetId, _fee, _maintainer);
+    }
+
+    function initiatePlanet(
+        uint256 _planetId,
+        uint256 _fee,
+        address _maintainer,
+        address _governance,
+        string memory _interfaceName,
+        string memory _interfaceSymbol
+    ) external {
+        STAKEPOOL.initiatePlanet(
+            DATASTORE,
+            _planetId,
+            _fee,
+            _maintainer,
+            _governance,
+            _interfaceName,
+            _interfaceSymbol
+        );
+    }
+
+    function initiateComet(
+        uint256 _planetId,
+        uint256 _fee,
+        address _maintainer
+    ) external {
+        STAKEPOOL.initiateComet(DATASTORE, _planetId, _fee, _maintainer);
     }
 
     function operatorAllowance(uint256 _planetId, uint256 _operatorId)
@@ -131,6 +198,26 @@ contract TestStakeUtils is ERC1155Holder {
         returns (bool success)
     {
         success = StakeUtils.decreaseOperatorWallet(DATASTORE, id, value);
+    }
+
+    function deployWithdrawalPool(uint256 _id)
+        external
+        returns (address WithdrawalPool)
+    {
+        WithdrawalPool = STAKEPOOL._deployWithdrawalPool(DATASTORE, _id);
+    }
+
+    function withdrawalPoolById(uint256 _id)
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return address(StakeUtils.withdrawalPoolById(DATASTORE, _id));
+    }
+
+    function LPTokenById(uint256 _id) external view virtual returns (address) {
+        return address(StakeUtils.LPTokenById(DATASTORE, _id));
     }
 
     function isStakingPausedForPool(uint256 id) external view returns (bool) {

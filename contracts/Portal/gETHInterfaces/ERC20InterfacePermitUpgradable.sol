@@ -57,9 +57,10 @@ contract ERC20InterfacePermitUpgradable is
     function initialize(
         uint256 id_,
         string memory name_,
+        string memory symbol_,
         address gETH_1155
     ) public virtual initializer {
-        __ERC20interfacePermit_init(id_, name_, gETH_1155);
+        __ERC20interfacePermit_init(id_, name_, symbol_, gETH_1155);
     }
 
     /**
@@ -70,14 +71,11 @@ contract ERC20InterfacePermitUpgradable is
     function __ERC20interfacePermit_init(
         uint256 id_,
         string memory name_,
+        string memory symbol_,
         address gETH_1155
     ) internal onlyInitializing {
-        string memory __name = string(
-            abi.encodePacked(name_, " Geode Staked Ether")
-        );
-        string memory __symbol = string(abi.encodePacked(name_, "-gETH"));
-        __ERC20interface_init_unchained(id_, __name, __symbol, gETH_1155);
-        __EIP712_init_unchained(__name, "1");
+        __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);
+        __EIP712_init_unchained(name_, "1");
     }
 
     /**

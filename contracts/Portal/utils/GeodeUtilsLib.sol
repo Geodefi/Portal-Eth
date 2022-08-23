@@ -21,12 +21,12 @@ library GeodeUtils {
     event ControllerChanged(uint256 id, address newCONTROLLER);
     event Proposed(
         uint256 id,
-        address _CONTROLLER,
-        uint256 _type,
-        uint256 _duration
+        address CONTROLLER,
+        uint256 TYPE,
+        uint256 duration
     );
     event ProposalApproved(uint256 id);
-    event ElectorTypeSet(uint256 _type, bool _isElector);
+    event ElectorTypeSet(uint256 TYPE, bool _isElector);
     event Vote(uint256 proposalId, uint256 electorId);
     event NewSenate(address senate, uint256 senate_expire_timestamp);
 
@@ -55,8 +55,8 @@ library GeodeUtils {
     struct Proposal {
         address CONTROLLER;
         uint256 TYPE;
+        bytes NAME;
         uint256 deadline;
-        bytes name;
     }
     /**
      * @notice Universe is A blockchain. In this case, it defines Avalanche
@@ -103,12 +103,16 @@ library GeodeUtils {
      *                                         ** UNIVERSE GETTERS **
      **/
 
-    /// @return the address of SENATE
+    /**
+     * @return the address of SENATE
+     **/
     function getSenate(Universe storage self) public view returns (address) {
         return self.SENATE;
     }
 
-    /// @return the address of GOVERNANCE
+    /**
+     * @return the address of GOVERNANCE
+     **/
     function getGovernance(Universe storage self)
         public
         view
@@ -117,8 +121,10 @@ library GeodeUtils {
         return self.GOVERNANCE;
     }
 
-    /// @notice MAX_OPERATION_FEE must limit OPERATION_FEE even if MAX is changed
-    /// @return active OPERATION_FEE; limited by MAX_OPERATION_FEE
+    /**
+     * @notice MAX_OPERATION_FEE must limit OPERATION_FEE even if MAX is changed
+     * @return active OPERATION_FEE; limited by MAX_OPERATION_FEE
+     */
     function getOperationFee(Universe storage self)
         public
         view
@@ -130,7 +136,9 @@ library GeodeUtils {
                 : self.OPERATION_FEE;
     }
 
-    /// @return MAX_OPERATION_FEE
+    /**
+     *  @return MAX_OPERATION_FEE
+     */
     function getMaxOperationFee(Universe storage self)
         public
         view
@@ -139,7 +147,9 @@ library GeodeUtils {
         return self.MAX_OPERATION_FEE;
     }
 
-    /// @return the expiration date of current SENATE as a timestamp
+    /**
+     * @return the expiration date of current SENATE as a timestamp
+     */
     function getSenateExpireTimestamp(Universe storage self)
         public
         view
@@ -152,9 +162,10 @@ library GeodeUtils {
      *                                         ** UNIVERSE SETTERS **
      */
 
-    /// @return true if the operation was succesful, might be helpful when governance rights are distributed
-    /// @dev can not set a fee more than MAX
-    /// @dev no need to check FEE_DENOMINATOR
+    /** @return true if the operation was succesful, might be helpful when governance rights are distributed
+     * @dev can not set a fee more than MAX
+     * @dev no need to check FEE_DENOMINATOR
+     */
     function setOperationFee(Universe storage self, uint256 _newFee)
         external
         returns (bool)
@@ -168,8 +179,10 @@ library GeodeUtils {
         return true;
     }
 
-    /// @return true if the operation was succesful
-    /// @dev can not set a fee more than FEE_DENOMINATOR (100%)
+    /**
+     * @return true if the operation was succesful
+     * @dev can not set a fee more than FEE_DENOMINATOR (100%)
+     */
     function setMaxOperationFee(Universe storage self, uint256 _newMaxFee)
         external
         onlySenate(self)
@@ -185,11 +198,58 @@ library GeodeUtils {
     }
 
     /**
-  @notice only the current CONTROLLER can change
-  @dev this operation can not be reverted by old CONTROLLER
-  @dev in case the current controller wants to remove the 
-  need to upgrade to NO Controller they should provide smt like 0x0..dead
-   */
+     *                                          ** ID **
+     */
+
+    /**
+     * @dev Some TYPEs may require permissionless creation. But to allow anyone to claim any ID,
+     * meaning malicious actors can claim names and operate pools to mislead people. To prevent this
+     * TYPEs will be considered during id generation.
+     */
+    function _generateId(bytes calldata _NAME, uint256 _TYPE)
+        internal
+        pure
+        returns (uint256)
+    {
+        return uint256(keccak256(abi.encodePacked(_NAME, _TYPE)));
+    }
+
+    /**
+     * @dev returns address(0) for empty ids, mandatory
+     */
+    function getCONTROLLERFromId(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) external view returns (address) {
+        return _DATASTORE.readAddressForId(_id, "CONTROLLER");
+    }
+
+    /**
+     * @dev returns uint(0) for empty ids, mandatory
+     */
+    function getTYPEFromId(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) external view returns (uint256) {
+        return _DATASTORE.readUintForId(_id, "TYPE");
+    }
+
+    /**
+     * @dev returns bytes(0) for empty ids, mandatory
+     */
+    function getNAMEFromId(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) external view returns (bytes memory) {
+        return _DATASTORE.readBytesForId(_id, "NAME");
+    }
+
+    /**
+     * @notice only the current CONTROLLER can change
+     * @dev this operation can not be reverted by an old CONTROLLER
+     * @dev in case the current controller wants to remove the
+     * need to upgrade to NO Controller they should provide smt like 0x000000000000000000000000000000000000dEaD
+     */
     function changeIdCONTROLLER(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 id,
@@ -231,9 +291,9 @@ library GeodeUtils {
     function newProposal(
         Universe storage self,
         address _CONTROLLER,
-        uint256 _type,
-        uint256 _duration,
-        bytes calldata _name
+        uint256 _TYPE,
+        bytes calldata _NAME,
+        uint256 _duration
     ) external {
         require(
             _duration >= MIN_PROPOSAL_DURATION,
@@ -243,18 +303,18 @@ library GeodeUtils {
             _duration <= MAX_PROPOSAL_DURATION,
             "GeodeUtils: duration exceeds"
         );
-        uint256 id = uint256(keccak256(abi.encodePacked(_name)));
+        uint256 id = _generateId(_NAME, _TYPE);
         require(
             self._proposalForId[id].deadline < block.timestamp,
-            "GeodeUtils: name already proposed"
+            "GeodeUtils: NAME already proposed"
         );
         self._proposalForId[id] = Proposal({
             CONTROLLER: _CONTROLLER,
-            TYPE: _type,
-            deadline: block.timestamp + _duration,
-            name: _name
+            TYPE: _TYPE,
+            NAME: _NAME,
+            deadline: block.timestamp + _duration
         });
-        emit Proposed(id, _CONTROLLER, _type, _duration);
+        emit Proposed(id, _CONTROLLER, _TYPE, _duration);
     }
 
     /**
@@ -277,7 +337,7 @@ library GeodeUtils {
             self._proposalForId[id].TYPE != 1,
             "GeodeUtils: Senate can not approve Senate Proposal"
         );
-        _DATASTORE.writeBytesForId(id, "name", self._proposalForId[id].name);
+        _DATASTORE.writeBytesForId(id, "NAME", self._proposalForId[id].NAME);
         _DATASTORE.writeAddressForId(
             id,
             "CONTROLLER",
@@ -301,41 +361,41 @@ library GeodeUtils {
 
     /**
      * @notice only selected types can vote for senate
-     * @param _type selected type
+     * @param _TYPE selected type
      * @param _isElector true if selected _type can vote for senate from now on
      * @dev can not set with the same value again, preventing double increment/decrements
      */
     function setElectorType(
         Universe storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _type,
+        uint256 _TYPE,
         bool _isElector
     ) external {
         require(
-            self._electorTypes[_type] != _isElector,
+            self._electorTypes[_TYPE] != _isElector,
             "GeodeUtils: type already _isElector"
         );
         require(
-            _type != 0 && _type != 1 && _type != 2 && _type != 3,
+            _TYPE != 0 && _TYPE != 1 && _TYPE != 2 && _TYPE != 3,
             "GeodeUtils: 0, Senate, Upgrade, ProxyAdmin cannot be elector!"
         );
-        self._electorTypes[_type] = _isElector;
+        self._electorTypes[_TYPE] = _isElector;
         if (_isElector) {
-            self._electorCount += _DATASTORE.allIdsByType[_type].length;
+            self._electorCount += _DATASTORE.allIdsByType[_TYPE].length;
         } else {
-            self._electorCount -= _DATASTORE.allIdsByType[_type].length;
+            self._electorCount -= _DATASTORE.allIdsByType[_TYPE].length;
         }
-        emit ElectorTypeSet(_type, _isElector);
+        emit ElectorTypeSet(_TYPE, _isElector);
     }
 
     /**
      * @notice Proposed CONTROLLER is the new Senate after 2/3 of the electors are approved
      * NOTE mathematically, min 4 elector is needed for (c+1)*2/3 to work properly
      * @notice id can not vote if:
-     *- approved already
-     *- not its type is not elector
-     *- not proposal is expired
-     *- not senate proposal
+     * - approved already
+     * - not its type is not elector
+     * - not proposal is expired
+     * - not senate proposal
      * @param electorId should have the voting rights, msg.sender should be the CONTROLLER of given ID
      * @dev pins id as "voted" when approved
      * @dev increases "approvalCount" of proposalId by 1 when approved
