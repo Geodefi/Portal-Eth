@@ -99,7 +99,6 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         uint256 _type,
-        uint256 _fee,
         address _maintainer
     ) {
         require(
@@ -115,6 +114,7 @@ library StakeUtils {
             _DATASTORE.readUintForId(_id, "initiated") == 0,
             "StakeUtils: already initiated"
         );
+
         _DATASTORE.writeAddressForId(_id, "maintainer", _maintainer);
 
         _;
@@ -167,7 +167,9 @@ library StakeUtils {
         uint256 _id,
         uint256 _fee,
         address _maintainer
-    ) external initiator(_DATASTORE, _id, 4, _fee, _maintainer) {}
+    ) external initiator(_DATASTORE, _id, 4, _maintainer) {
+        setMaintainerFee(self, _DATASTORE, _id, _fee);
+    }
 
     /**
      * @notice initiates ID as a planet (public pool)
@@ -183,7 +185,7 @@ library StakeUtils {
         address _governance,
         string memory _interfaceName,
         string memory _interfaceSymbol
-    ) external initiator(_DATASTORE, _id, 5, _fee, _maintainer) {
+    ) external initiator(_DATASTORE, _id, 5, _maintainer) {
         {
             address currentInterface = _clone(self.DEFAULT_gETH_INTERFACE);
             address gEth = address(getgETH(self));
@@ -195,6 +197,8 @@ library StakeUtils {
             );
             _setInterface(self, _DATASTORE, _id, currentInterface, true);
         }
+
+        setMaintainerFee(self, _DATASTORE, _id, _fee);
 
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
         // transfer ownership of DWP to GEODE.GOVERNANCE
@@ -216,7 +220,9 @@ library StakeUtils {
         uint256 _id,
         uint256 _fee,
         address _maintainer
-    ) external initiator(_DATASTORE, _id, 6, _fee, _maintainer) {}
+    ) external initiator(_DATASTORE, _id, 6, _maintainer) {
+        setMaintainerFee(self, _DATASTORE, _id, _fee);
+    }
 
     /**
      * @notice                      ** Maintainer specific functions **
@@ -288,7 +294,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         uint256 _newFee
-    ) external onlyMaintainer(_DATASTORE, _id) {
+    ) public onlyMaintainer(_DATASTORE, _id) {
         require(
             _newFee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"

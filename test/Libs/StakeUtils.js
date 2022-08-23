@@ -29,14 +29,15 @@ const MAX_MAINTAINER_FEE = 1e9;
 
 describe("StakeUtils", async () => {
   let gETH;
-  // let deployer;
+  let deployer;
   let oracle;
-  // let representative;
+  // let planet;
   // let operator;
-  // let user1;
-  // let user2;
+  let user1;
+  let user2;
   let DEFAULT_DWP;
   let DEFAULT_LP_TOKEN;
+  let DEFAULT_GETH_INTERFACE;
 
   const setupTest = deployments.createFixture(async ({ ethers }) => {
     await deployments.fixture(); // ensure you start from a fresh deployments
@@ -45,7 +46,7 @@ describe("StakeUtils", async () => {
 
     deployer = signers[0];
     oracle = signers[1];
-    representative = signers[2];
+    planet = signers[2];
     operator = signers[3];
     user1 = signers[4];
     user2 = signers[5];
@@ -54,6 +55,8 @@ describe("StakeUtils", async () => {
 
     DEFAULT_DWP = (await get("Swap")).address;
     DEFAULT_LP_TOKEN = (await get("LPToken")).address;
+    DEFAULT_GETH_INTERFACE = (await get("ERC20InterfacePermitUpgradable"))
+      .address;
 
     const TestGeodeUtils = await ethers.getContractFactory("TestStakeUtils", {
       libraries: {
@@ -66,7 +69,8 @@ describe("StakeUtils", async () => {
       gETH.address,
       oracle.address,
       DEFAULT_DWP,
-      DEFAULT_LP_TOKEN
+      DEFAULT_LP_TOKEN,
+      DEFAULT_GETH_INTERFACE
     );
     await gETH.updateMinterPauserOracle(testContract.address);
   });
@@ -171,15 +175,189 @@ describe("StakeUtils", async () => {
       it("Reverts if not controller", async () => {
         await expect(
           testContract.changeIdMaintainer(randId, user2.address)
-        ).to.be.revertedWith(
-          "StakeUtils: msgSender is NOT CONTROLLER of given id"
-        );
+        ).to.be.revertedWith("StakeUtils: sender is NOT CONTROLLER");
       });
       it("Reverts if ZERO ADDRESS", async () => {
         await expect(
           testContract.connect(user1).changeIdMaintainer(randId, ZERO_ADDRESS)
         ).to.be.revertedWith("StakeUtils: maintainer can NOT be zero");
       });
+    });
+  });
+
+  describe("deployWithdrawalPool", () => {
+    let wpoolContract;
+
+    beforeEach(async () => {
+      await testContract.deployWithdrawalPool(randId);
+      const wpool = await testContract.withdrawalPoolById(randId);
+      wpoolContract = await ethers.getContractAt("Swap", wpool);
+    });
+
+    describe("check params", () => {
+      it("Returns correct A value", async () => {
+        expect(await wpoolContract.getA()).to.eq(INITIAL_A_VALUE);
+        expect(await wpoolContract.getAPrecise()).to.eq(INITIAL_A_VALUE * 100);
+      });
+
+      it("Returns correct fee value", async () => {
+        expect((await wpoolContract.swapStorage()).swapFee).to.eq(SWAP_FEE);
+      });
+
+      it("Returns correct adminFee value", async () => {
+        expect((await wpoolContract.swapStorage()).adminFee).to.eq(ADMIN_FEE);
+      });
+
+      describe("LPToken", async () => {
+        let LPcontract;
+        it("init() fails with already init", async () => {
+          LPcontract = await ethers.getContractAt(
+            "LPToken",
+            await testContract.LPTokenById(randId)
+          );
+          await expect(
+            LPcontract.initialize("name", "symbol")
+          ).to.be.revertedWith(
+            "Initializable: contract is already initialized"
+          );
+        });
+
+        it("Returns correct name", async () => {
+          expect(await LPcontract.name()).to.eq("-Geode WP Token");
+        });
+
+        it("Returns correct symbol", async () => {
+          expect(await LPcontract.symbol()).to.eq("-WP");
+        });
+      });
+    });
+  });
+
+  describe("initiateOperator / initiator", () => {
+    beforeEach(async () => {
+      await testContract.connect(user1).beController(randId);
+      await testContract.connect(user1).setType(randId, 4);
+      await testContract
+        .connect(user1)
+        .changeIdMaintainer(randId, user1.address);
+    });
+
+    it("reverts if sender is NOT CONTROLLER", async () => {
+      await expect(
+        testContract.connect(user2).initiateOperator(
+          randId, // _id
+          1e5, // _fee
+          user1.address // _maintainer
+        )
+      ).to.be.revertedWith("StakeUtils: sender is NOT CONTROLLER");
+    });
+
+    it("reverts if id should be Operator TYPE", async () => {
+      await testContract.connect(user1).setType(randId, 5);
+      await expect(
+        testContract.connect(user1).initiateOperator(
+          randId, // _id
+          1e5, // _fee
+          user1.address // _maintainer
+        )
+      ).to.be.revertedWith("StakeUtils: id should be Operator TYPE");
+    });
+
+    describe("success", async () => {
+      beforeEach(async () => {
+        await testContract.connect(user1).initiateOperator(
+          randId, // _id
+          1e5, // _fee
+          user1.address // _maintainer
+        );
+      });
+      // check initiated parameter is setted as 1
+      it("check initiated parameter is setted as 1", async () => {
+        expect(await testContract.isInitiated(randId)).to.be.eq(1);
+      });
+
+      // check maintainer is setted correctly
+      it("check maintainer is setted correctly", async () => {
+        settedMaintainer = await testContract.getMaintainerFromId(randId);
+        expect(settedMaintainer).to.be.eq(user1.address);
+      });
+
+      // check fee is setted correctly
+      it("check fee is setted correctly", async () => {
+        settedFee = await testContract.getMaintainerFee(randId);
+        expect(settedFee).to.be.eq(1e5);
+      });
+
+      it("after success, reverts if already initiated", async () => {
+        await expect(
+          testContract.connect(user1).initiateOperator(
+            randId, // _id
+            1e5, // _fee
+            user1.address // _maintainer
+          )
+        ).to.be.revertedWith("StakeUtils: already initiated");
+      });
+    });
+
+    // sender is NOT CONTROLLER
+    // id should be Operator TYPE
+    // check initiated parameter is setted as 1
+    // check maintainer is setted correctly
+    // already initiated
+  });
+
+  describe("initiatePlanet", () => {
+    let wPoolContract;
+
+    beforeEach(async () => {
+      await testContract.connect(user1).beController(randId);
+      await testContract.connect(user1).setType(randId, 5);
+      await testContract
+        .connect(user1)
+        .changeIdMaintainer(randId, user1.address);
+
+      await testContract.connect(user1).initiatePlanet(
+        randId, // _id
+        1e6, // _fee
+        user1.address, // _maintainer
+        deployer.address, // _governance
+        "beautiful-planet", // _interfaceName
+        "BP" // _interfaceSymbol
+      );
+      const wpool = await testContract.withdrawalPoolById(randId);
+      wPoolContract = await ethers.getContractAt("Swap", wpool);
+    });
+
+    it("who is the owner of WP", async () => {
+      expect(await wPoolContract.owner()).to.be.eq(deployer.address);
+    });
+
+    it("check given interface's name and symbol is correctly initialized", async () => {
+      const currentInterface = await testContract.currentInterface(randId);
+      const erc20interface = await ethers.getContractAt(
+        "ERC20InterfacePermitUpgradable",
+        currentInterface
+      );
+      expect(await erc20interface.name()).to.be.eq("beautiful-planet");
+      expect(await erc20interface.symbol()).to.be.eq("BP");
+    });
+
+    it("check fee is setted", async () => {
+      settedFee = await testContract.getMaintainerFee(randId);
+      expect(settedFee).to.be.eq(1e6);
+    });
+
+    it("check WP is approved for all on gETH", async () => {
+      expect(
+        await gETH.isApprovedForAll(testContract.address, wPoolContract.address)
+      ).to.be.eq(true);
+    });
+
+    it("check pricePerShare for randId is 1 ether", async () => {
+      const currentPricePerShare = await gETH.pricePerShare(randId);
+      expect(currentPricePerShare).to.be.eq(
+        ethers.BigNumber.from(String(1e18))
+      );
     });
   });
 

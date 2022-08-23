@@ -1500,6 +1500,7 @@ describe("gETH ", async function () {
         await ERC20Interface.initialize(
           unknownTokenId,
           "name",
+          "SYMBOL",
           tokenContract.address
         );
 

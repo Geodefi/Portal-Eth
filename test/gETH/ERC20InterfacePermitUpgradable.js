@@ -44,7 +44,7 @@ describe("ERC20Permit", function (accounts) {
   let chainId;
   let tokenContract;
 
-  const preName = "Token";
+  const symbol = "gETH";
   const name = "Token Geode Staked Ether";
   const version = "1";
   const unknownTokenId = "6969";
@@ -66,7 +66,8 @@ describe("ERC20Permit", function (accounts) {
     ERC20Interface = await ERC20InterfaceFac.deploy();
     await ERC20Interface.initialize(
       unknownTokenId,
-      preName,
+      name,
+      Symbol,
       tokenContract.address
     );
 
