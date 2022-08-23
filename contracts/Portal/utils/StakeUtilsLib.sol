@@ -95,16 +95,6 @@ library StakeUtils {
         _;
     }
 
-    modifier onlyController(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id
-    ) {
-        require(
-            _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
-            "StakeUtils: sender is NOT CONTROLLER"
-        );
-        _;
-    }
     modifier initiator(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
@@ -112,6 +102,11 @@ library StakeUtils {
         uint256 _fee,
         address _maintainer
     ) {
+        require(
+            _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
+            "StakeUtils: sender is NOT CONTROLLER"
+        );
+
         require(
             _DATASTORE.readUintForId(_id, "TYPE") == _type,
             "StakeUtils: id should be Operator TYPE"
@@ -172,11 +167,7 @@ library StakeUtils {
         uint256 _id,
         uint256 _fee,
         address _maintainer
-    )
-        external
-        onlyController(_DATASTORE, _id)
-        initiator(_DATASTORE, _id, 4, _fee, _maintainer)
-    {}
+    ) external initiator(_DATASTORE, _id, 4, _fee, _maintainer) {}
 
     /**
      * @notice initiates ID as a planet (public pool)
@@ -192,19 +183,18 @@ library StakeUtils {
         address _governance,
         string memory _interfaceName,
         string memory _interfaceSymbol
-    )
-        external
-        onlyController(_DATASTORE, _id)
-        initiator(_DATASTORE, _id, 5, _fee, _maintainer)
-    {
-        address currentInterface = _clone(self.DEFAULT_gETH_INTERFACE);
-        ERC20InterfacePermitUpgradable(currentInterface).initialize(
-            _id,
-            _interfaceName,
-            _interfaceSymbol,
-            address(getgETH(self))
-        );
-        _setInterface(self, _DATASTORE, _id, currentInterface, true);
+    ) external initiator(_DATASTORE, _id, 5, _fee, _maintainer) {
+        {
+            address currentInterface = _clone(self.DEFAULT_gETH_INTERFACE);
+            address gEth = address(getgETH(self));
+            ERC20InterfacePermitUpgradable(currentInterface).initialize(
+                _id,
+                _interfaceName,
+                _interfaceSymbol,
+                gEth
+            );
+            _setInterface(self, _DATASTORE, _id, currentInterface, true);
+        }
 
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
         // transfer ownership of DWP to GEODE.GOVERNANCE
@@ -226,11 +216,7 @@ library StakeUtils {
         uint256 _id,
         uint256 _fee,
         address _maintainer
-    )
-        external
-        onlyController(_DATASTORE, _id)
-        initiator(_DATASTORE, _id, 6, _fee, _maintainer)
-    {}
+    ) external initiator(_DATASTORE, _id, 6, _fee, _maintainer) {}
 
     /**
      * @notice                      ** Maintainer specific functions **
@@ -260,7 +246,12 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         address _newMaintainer
-    ) external onlyController(_DATASTORE, _id) {
+    ) external {
+        require(
+            _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
+            "StakeUtils: sender is NOT CONTROLLER"
+        );
+
         require(
             _newMaintainer != address(0),
             "StakeUtils: maintainer can NOT be zero"
