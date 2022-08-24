@@ -84,6 +84,14 @@ library StakeUtils {
         uint256 MAX_MAINTAINER_FEE;
     }
 
+    /**
+     * @notice gETH lacks *decimals*,
+     * @dev gETH_DENOMINATOR makes sure that we are taking care of decimals on calculations related to gETH
+     */
+    uint256 public constant gETH_DENOMINATOR = 1e18;
+
+    uint256 public constant IGNORABLE_DEBT = 1 ether;
+
     modifier onlyMaintainer(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
@@ -614,4 +622,71 @@ library StakeUtils {
     /**
      * @notice                      ** PLANET specific functions **
      */
+
+    /**
+     * @notice staking function. buys if price is low, mints new tokens if a surplus is sent (extra ETH through msg.value)
+     * @param poolId id of the staking pool, withdrawal pool and gETH to be used.
+     * @param mingETH withdrawal pool parameter
+     * @param deadline withdrawal pool parameter
+     * // d  m.v
+     * // 100 10 => buyback
+     * // 100 100  => buyback
+     * // 10 100  =>  buyback + mint
+     * // 0 x => mint
+     */
+    function stakePlanet(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 poolId,
+        uint256 mingETH,
+        uint256 deadline
+    ) external returns (uint256 totalgETH) {
+        require(msg.value > 0, "StakeUtils: no eth given");
+        require(
+            !isStakingPausedForPool(_DATASTORE, poolId),
+            "StakeUtils: minting is paused"
+        );
+        uint256 debt = withdrawalPoolById(_DATASTORE, poolId).getDebt();
+        if (debt >= msg.value) {
+            return
+                _buyback(
+                    self,
+                    _DATASTORE,
+                    msg.sender,
+                    poolId,
+                    msg.value,
+                    mingETH,
+                    deadline
+                );
+        } else {
+            uint256 boughtgETH = 0;
+            uint256 remEth = msg.value;
+            if (debt > IGNORABLE_DEBT) {
+                boughtgETH = _buyback(
+                    self,
+                    _DATASTORE,
+                    msg.sender,
+                    poolId,
+                    debt,
+                    0,
+                    deadline
+                );
+                remEth -= debt;
+            }
+            uint256 mintgETH = (
+                ((remEth * gETH_DENOMINATOR) / _getPricePerShare(self, poolId))
+            );
+            _mint(self.gETH, msg.sender, poolId, mintgETH);
+            _DATASTORE.writeUintForId(
+                poolId,
+                "surplus",
+                _DATASTORE.readUintForId(poolId, "surplus") + remEth
+            );
+            require(
+                boughtgETH + mintgETH >= mingETH,
+                "StakeUtils: less than mingETH"
+            );
+            return boughtgETH + mintgETH;
+        }
+    }
 }
