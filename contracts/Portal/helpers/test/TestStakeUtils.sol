@@ -265,6 +265,10 @@ contract TestStakeUtils is ERC1155Holder {
         return address(StakeUtils.LPTokenById(DATASTORE, _id));
     }
 
+    function surplusById(uint256 _planetId) external view returns (uint256) {
+        return DATASTORE.readUintForId(_planetId, "surplus");
+    }
+
     function isStakingPausedForPool(uint256 id) external view returns (bool) {
         return StakeUtils.isStakingPausedForPool(DATASTORE, id);
     }
@@ -275,6 +279,20 @@ contract TestStakeUtils is ERC1155Holder {
 
     function unpauseStakingForPool(uint256 id) external {
         StakeUtils.unpauseStakingForPool(DATASTORE, id);
+    }
+
+    function stakePlanet(
+        uint256 planetId,
+        uint256 minGavax,
+        uint256 deadline
+    ) external payable virtual returns (uint256 totalgAvax) {
+        totalgAvax = STAKEPOOL.stakePlanet(
+            DATASTORE,
+            planetId,
+            minGavax,
+            deadline
+        );
+        require(totalgAvax > 0, "Portal: unsuccesful deposit");
     }
 
     function Receive() external payable {}
