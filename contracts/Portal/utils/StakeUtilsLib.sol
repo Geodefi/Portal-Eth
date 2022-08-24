@@ -600,6 +600,18 @@ library StakeUtils {
     }
 
     /**
+     * @notice _getPricePerShare is a reliable source for any contract operation
+     * @dev aka *mint price*
+     */
+    function _getPricePerShare(StakePool storage self, uint256 _id)
+        internal
+        view
+        returns (uint256 _oraclePrice)
+    {
+        _oraclePrice = getgETH(self).pricePerShare(_id);
+    }
+
+    /**
      * @notice                      ** PLANET specific functions **
      */
 }

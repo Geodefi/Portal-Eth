@@ -206,6 +206,21 @@ describe("StakeUtils", async () => {
         false
       );
     });
+
+    it("_setPricePerShare", async () => {
+      await testContract.setPricePerShare(String(1e20), randId);
+      expect(await gETH.pricePerShare(randId)).to.eq(String(1e20));
+      await testContract.setPricePerShare(String(2e19), randId);
+      expect(await gETH.pricePerShare(randId)).to.eq(String(2e19));
+    });
+
+    it("_getPricePerShare", async () => {
+      await testContract.connect(user1).changeOracle();
+      await gETH.connect(user1).setPricePerShare(String(1e20), randId);
+      expect(await testContract.getPricePerShare(randId)).to.eq(String(1e20));
+      await gETH.connect(user1).setPricePerShare(String(2e19), randId);
+      expect(await testContract.getPricePerShare(randId)).to.eq(String(2e19));
+    });
   });
 
   describe("deployWithdrawalPool", () => {

@@ -46,6 +46,10 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.getgETH();
     }
 
+    function changeOracle() public {
+        STAKEPOOL.getgETH().updateOracleRole(msg.sender);
+    }
+
     /**
   * Maintainer
 
@@ -118,6 +122,18 @@ contract TestStakeUtils is ERC1155Holder {
         returns (uint256)
     {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
+    }
+
+    function setPricePerShare(uint256 price, uint256 _planetId) external {
+        STAKEPOOL._setPricePerShare(price, _planetId);
+    }
+
+    function getPricePerShare(uint256 _planetId)
+        external
+        view
+        returns (uint256)
+    {
+        return STAKEPOOL._getPricePerShare(_planetId);
     }
 
     function setInterface(
