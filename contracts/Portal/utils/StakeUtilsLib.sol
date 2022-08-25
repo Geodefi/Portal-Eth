@@ -4,6 +4,7 @@ pragma solidity =0.8.7;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./DataStoreLib.sol";
+import {DepositContractUtils as DCU} from "./DepositContractUtilsLib.sol";
 import "../gETHInterfaces/ERC20InterfacePermitUpgradable.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/ISwap.sol";
@@ -52,7 +53,23 @@ library StakeUtils {
         uint256 operatorId,
         uint256 allowance
     );
+    event PreStaked(bytes pubkey, uint256 planetID, uint256 operatorID);
 
+    /**
+     * @dev we can use uint8 'state' as is 0: inactive, 1:prestaked, 2: pending, 3: active, 4: withdrawn
+     * @param planetID needed for withdrawal_credential
+     * @param operatorID needed for staking after allowence
+     * @param blockTimeStamp needed for validation of approval, cration date
+     * @param alienated needed for validation of approval
+     **/
+    struct Validator {
+        // uint8 state;
+        uint256 planetId;
+        uint256 operatorId;
+        uint256 blockTimeStamp;
+        bytes signature;
+        bool alienated;
+    }
     /**
      * @notice StakePool includes the parameters related to multiple Staking Pool Contracts.
      * @notice A staking pool works with a *bound* Withdrawal Pool (DWP) to create best pricing
@@ -68,6 +85,7 @@ library StakeUtils {
      * @param DEFAULT_ADMIN_FEE DWP parameter
      * @param FEE_DENOMINATOR represents 100%, ALSO DWP parameter
      * @param MAX_MAINTAINER_FEE : limits fees, set by GOVERNANCE
+     * @param Validators : pubKey to Validator
      * @dev changing any of address parameters (gETH, ORACLE, DEFAULT_DWP, DEFAULT_LP_TOKEN) MUST require a contract upgrade to ensure security. We can change this in the future with a better GeodeUtils design.
      **/
     struct StakePool {
@@ -82,6 +100,7 @@ library StakeUtils {
         uint256 FEE_DENOMINATOR;
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 MAX_MAINTAINER_FEE;
+        mapping(bytes => Validator) Validators;
     }
 
     /**
@@ -92,6 +111,7 @@ library StakeUtils {
 
     uint256 public constant IGNORABLE_DEBT = 1 ether;
 
+    // TODO: type check?
     modifier onlyMaintainer(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
@@ -133,6 +153,14 @@ library StakeUtils {
 
     function _clone(address target) public returns (address) {
         return Clones.clone(target);
+    }
+
+    function _getKey(uint256 _id, string memory _param)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return bytes32(keccak256(abi.encodePacked(_id, _param)));
     }
 
     function getgETH(StakePool storage self) public view returns (IgETH) {
@@ -362,7 +390,7 @@ library StakeUtils {
     ) public view returns (uint256 allowance) {
         allowance = _DATASTORE.readUintForId(
             _planetId,
-            bytes32(keccak256(abi.encodePacked(_operatorId, "allowance")))
+            _getKey(_operatorId, "allowance")
         );
     }
 
@@ -373,9 +401,8 @@ library StakeUtils {
      * @dev If planet decreases the approved validator count, below current running validator,
      * operator can only withdraw until to that count (until 1 below that count).
      * @dev only maintainer of _planetId can approve an Operator
-     * @dev key for the allowance is: bytes32(keccak256(abi.encodePacked(_operatorId, "allowance")))
      * @param _planetId the gETH id of the Planet, only Maintainer can call this function
-     * @param _operatorId the gETH id of the Operator to allow them create validators for a given Planet
+     * @param _operatorId the id of the Operator to allow them create validators for a given Planet
      * @param _allowance the MAX number of validators that can be created by the Operator for a given Planet
      */
     function approveOperator(
@@ -386,7 +413,7 @@ library StakeUtils {
     ) external onlyMaintainer(_DATASTORE, _planetId) returns (bool) {
         _DATASTORE.writeUintForId(
             _planetId,
-            bytes32(keccak256(abi.encodePacked(_operatorId, "allowance"))),
+            _getKey(_operatorId, "allowance"),
             _allowance
         );
         emit OperatorApproval(_planetId, _operatorId, _allowance);
@@ -398,7 +425,7 @@ library StakeUtils {
      * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
      * and from there, ETHs can be used to preStake. Then when it is approved and staked, it will be
      * added back to the wallet to be used for other preStake calls.
-     * @param _operatorId the gETH id of the Operator
+     * @param _operatorId the id of the Operator
      * @return walletBalance the balance of Operator with the given _operatorId has
      */
     function getOperatorWalletBalance(
@@ -419,7 +446,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+    ) public onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
         require(value > 0, "StakeUtils: The value must be greater than 0");
         uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
         _wallet += value;
@@ -438,7 +465,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+    ) public onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
         require(
             address(this).balance >= value,
             "StakeUtils: Not enough resources in Portal"
@@ -687,6 +714,115 @@ library StakeUtils {
                 "StakeUtils: less than mingETH"
             );
             return boughtgETH + mintgETH;
+        }
+    }
+
+    /**
+     *  @notice Validator Credentials Proposal function, first step of crating validators. Once a pubKey is proposed and not alienated for some time,
+     *  it is optimistically allowed to take funds from staking pools.
+     *  @param planetId the id of the staking pool whose TYPE can be 5 or 6.
+     *  @param operatorId the id of the Operator whose maintainer calling this function
+     *  @param pubkeys  Array of BLS12-381 public keys of the validators that will be proposed
+     *  @param signatures Array of BLS12-381 signatures of the validators that will be proposed
+     *
+     *  @dev DEPOSIT_AMOUNT_PRESTAKE = 1 ether, which is the minimum number to create validator.
+     *  31 Ether will be staked after verification of oracles. 32 in total.
+     *  1 ether will e sent back to Node Operator when finalized deposit is successful.
+     *  @dev Prestake requires enough allowance from Staking Pools to Operators.
+     *  @dev Prestake requires enough funds within operatorWallet.
+     *  @dev Max number of validators to propose is 64
+     *
+     */
+    function preStake(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 planetId,
+        uint256 operatorId,
+        bytes[] calldata pubkeys,
+        bytes[] calldata signatures
+    ) external onlyMaintainer(_DATASTORE, operatorId) {
+        require(
+            _DATASTORE.readUintForId(planetId, "TYPE") == 5 ||
+                _DATASTORE.readUintForId(planetId, "TYPE") == 6,
+            "StakeUtils: There is no pool with id"
+        );
+        require(
+            pubkeys.length == signatures.length,
+            "StakeUtils: pubkeys and signatures should be same length"
+        );
+        require(
+            pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
+            "StakeUtils: 1 to 64 nodes per transaction"
+        );
+
+        uint256 createdValidators = _DATASTORE.readUintForId(
+            planetId,
+            _getKey(operatorId, "createdValidators")
+        );
+
+        require(
+            operatorAllowance(_DATASTORE, planetId, operatorId) >=
+                pubkeys.length + createdValidators,
+            "StakeUtils: not enough allowance"
+        );
+
+        decreaseOperatorWallet(
+            _DATASTORE,
+            operatorId,
+            pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
+        );
+
+        _DATASTORE.writeUintForId(
+            planetId,
+            _getKey(operatorId, "createdValidators"),
+            createdValidators + pubkeys.length
+        );
+
+        for (uint256 i = 0; i < pubkeys.length; ++i) {
+            // TODO: discuss this alienated to be checked or not
+            // possibly not needed since if the blockTimeStamp is 0
+            // then there is no possibility that it is alienated
+            require(
+                self.Validators[pubkeys[i]].alienated == false &&
+                    self.Validators[pubkeys[i]].blockTimeStamp == 0,
+                "StakeUtils: Pubkey is already used or alienated"
+            );
+            require(
+                pubkeys[i].length == DCU.PUBKEY_LENGTH,
+                "StakeUtils: PUBKEY_LENGTH ERROR"
+            );
+            require(
+                signatures[i].length == DCU.SIGNATURE_LENGTH,
+                "StakeUtils: SIGNATURE_LENGTH ERROR"
+            );
+            {
+                bytes memory WC = _DATASTORE.readBytesForId(
+                    planetId,
+                    "withdrawalCredential"
+                );
+                bytes32 depositDataRoot;
+                {
+                    depositDataRoot = DCU.getDepositDataRoot(
+                        pubkeys[i],
+                        WC,
+                        signatures[i],
+                        DCU.DEPOSIT_AMOUNT_PRESTAKE
+                    );
+                }
+                // TODO: there is no deposit contract, solve and open this comment
+                // DCU.getDepositContract().deposit{
+                //     value: DCU.DEPOSIT_AMOUNT_PRESTAKE
+                // }(pubkeys[i], WC, signatures[i], depositDataRoot);
+            }
+
+            self.Validators[pubkeys[i]] = Validator(
+                planetId,
+                operatorId,
+                block.timestamp,
+                signatures[i],
+                false
+            );
+            emit PreStaked(pubkeys[i], planetId, operatorId);
         }
     }
 }

@@ -3,15 +3,12 @@
 const {
   MAX_UINT256,
   ZERO_ADDRESS,
-  // getCurrentBlockTimestamp,
+  getCurrentBlockTimestamp,
   // setNextTimestamp,
   // setTimestamp,
 } = require("../testUtils");
 
 const { solidity } = require("ethereum-waffle");
-// const { deployments, waffle } = require("hardhat");
-// const web3 = require("web3");
-
 const chai = require("chai");
 
 chai.use(solidity);
@@ -652,47 +649,48 @@ describe("StakeUtils", async () => {
     let preSwapBals;
 
     beforeEach(async () => {
-      await testContract.deployWithdrawalPool(randId);
-      const wpool = await testContract.withdrawalPoolById(randId);
-      wpoolContract = await ethers.getContractAt("Swap", wpool);
-
-      await testContract.setPricePerShare(String(1e18), randId);
-
-      await testContract
-        .connect(deployer)
-        .mintgETH(deployer.address, randId, String(1e20));
-
-      await gETH.connect(deployer).setApprovalForAll(wpool, true);
-
-      // initially there is no debt
-      await wpoolContract
-        .connect(deployer)
-        .addLiquidity([String(1e20), String(1e20)], 0, MAX_UINT256, {
-          value: String(1e20),
-        });
-
-      debt = await wpoolContract.getDebt();
-      expect(debt).to.be.eq(0);
-      preUserBal = await provider.getBalance(user1.address);
-      preUsergETHBal = await gETH.balanceOf(user1.address, randId);
-
-      preContBal = await provider.getBalance(testContract.address);
-      preContgETHBal = await gETH.balanceOf(testContract.address, randId);
-
-      preSurplus = ethers.BigNumber.from(
-        await testContract.surplusById(randId)
-      );
-      preTotSup = await gETH.totalSupply(randId);
-
-      preSwapBals = [
-        await wpoolContract.getTokenBalance(0),
-        await wpoolContract.getTokenBalance(1),
-      ];
+      await testContract.beController(randId);
+      await testContract.changeIdMaintainer(randId, user1.address);
     });
+
     describe("StakePlanet", () => {
       beforeEach(async () => {
-        await testContract.beController(randId);
-        await testContract.changeIdMaintainer(randId, user1.address);
+        await testContract.deployWithdrawalPool(randId);
+        const wpool = await testContract.withdrawalPoolById(randId);
+        wpoolContract = await ethers.getContractAt("Swap", wpool);
+
+        await testContract.setPricePerShare(String(1e18), randId);
+
+        await testContract
+          .connect(deployer)
+          .mintgETH(deployer.address, randId, String(1e20));
+
+        await gETH.connect(deployer).setApprovalForAll(wpool, true);
+
+        // initially there is no debt
+        await wpoolContract
+          .connect(deployer)
+          .addLiquidity([String(1e20), String(1e20)], 0, MAX_UINT256, {
+            value: String(1e20),
+          });
+
+        debt = await wpoolContract.getDebt();
+        expect(debt).to.be.eq(0);
+        preUserBal = await provider.getBalance(user1.address);
+        preUsergETHBal = await gETH.balanceOf(user1.address, randId);
+
+        preContBal = await provider.getBalance(testContract.address);
+        preContgETHBal = await gETH.balanceOf(testContract.address, randId);
+
+        preSurplus = ethers.BigNumber.from(
+          await testContract.surplusById(randId)
+        );
+        preTotSup = await gETH.totalSupply(randId);
+
+        preSwapBals = [
+          await wpoolContract.getTokenBalance(0),
+          await wpoolContract.getTokenBalance(1),
+        ];
       });
 
       it("reverts when wrongId is given", async () => {
@@ -868,6 +866,292 @@ describe("StakeUtils", async () => {
               ethers.BigNumber.from(String(preSwapBals[0])).add(debt)
             );
             expect(swapBals[1]).to.be.lt(preSwapBals[1]); // gEth
+          });
+        });
+      });
+    });
+
+    /**
+     * 0	pubkey	bytes	0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a
+     * 1  withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2  signature	bytes	0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181
+     * 3  deposit_data_root	bytes32	0xcf73f30d1a20e2af0446c2630acc4392f888dc0532a09592e00faf90b2976ab8
+     */
+    /**
+     * 0	pubkey	bytes	0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5
+     * 1	withdrawal_credentials	bytes	0x00cfafe208762abcdd05339a6814cac749bb065cf762ed4fea2e0335cbdd08f0
+     * 2	signature	bytes	0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932
+     * 3	deposit_data_root	bytes32	0x47bd475f56dc4ae776b1fa445323fd0eee9be77fe20a790e7783c73450274dcb
+     */
+    /**
+     * 0	pubkey	bytes	0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151
+     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2	signature	bytes	0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c
+     * 3	deposit_data_root	bytes32	0xb4282f23951b5bb3ead393f50dc9468e6166312a4e78f73cc649a8ae16f0d924
+     */
+    /**
+     * 0	pubkey	bytes	0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7
+     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2	signature	bytes	0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae
+     * 3	deposit_data_root	bytes32	0x2a902df8a7a8a1a5860d54ab73c87c1d1d2fcabe0b12106b5cbe42c3680c0000
+     */
+    describe("preStake", () => {
+      const pubkey1 =
+        "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a";
+      const pubkey2 =
+        "0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5";
+      const pubkey3 =
+        "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
+      const pubkey4 =
+        "0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7";
+      const signature1 =
+        "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
+      const signature2 =
+        "0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932";
+      const signature3 =
+        "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
+      const signature4 =
+        "0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae";
+
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+      });
+
+      it("reverts if there is no pool with id", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              wrongId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: There is no pool with id");
+      });
+
+      it("reverts if pubkeys and signatures are not same length", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(planetId, operatorId, [pubkey1, pubkey2], [signature1])
+        ).to.be.revertedWith(
+          "StakeUtils: pubkeys and signatures should be same length"
+        );
+      });
+
+      it("1 to 64 nodes per transaction", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              Array(65).fill(pubkey1),
+              Array(65).fill(signature1)
+            )
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+
+        await expect(
+          testContract.connect(user1).preStake(planetId, operatorId, [], [])
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+      });
+
+      // TODO: also make this test after a success state to check the calculation of allowance there
+      it("not enough allowance", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: not enough allowance");
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 1);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: not enough allowance");
+      });
+
+      it("StakeUtils: Pubkey is already alienated", async () => {
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(2e18),
+        });
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 2);
+
+        await testContract.alienatePubKey(pubkey2);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: Pubkey is already used or alienated");
+      });
+
+      it("PUBKEY_LENGTH ERROR", async () => {
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(2e18),
+        });
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 2);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2 + "aefe"],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: PUBKEY_LENGTH ERROR");
+      });
+
+      it("SIGNATURE_LENGTH ERROR", async () => {
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(2e18),
+        });
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 2);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2 + "aefe"]
+            )
+        ).to.be.revertedWith("StakeUtils: SIGNATURE_LENGTH ERROR");
+      });
+
+      describe("Success", () => {
+        let prevSurplus;
+        let prevAllowance;
+        let prevWalletBalance;
+        let prevCreatedValidators;
+
+        beforeEach(async () => {
+          await testContract
+            .connect(user2)
+            .approveOperator(planetId, operatorId, 3);
+
+          await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+            value: String(5e18),
+          });
+
+          prevSurplus = await testContract.surplusById(planetId);
+          prevAllowance = await testContract.operatorAllowance(
+            planetId,
+            operatorId
+          );
+          prevWalletBalance = await testContract.getOperatorWalletBalance(
+            operatorId
+          );
+          prevCreatedValidators = await testContract.createdValidatorsById(
+            planetId,
+            operatorId
+          );
+          await testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            );
+        });
+
+        it("surplus stays same", async () => {
+          expect(await testContract.surplusById(planetId)).to.be.eq(
+            prevSurplus
+          );
+        });
+
+        it("Allowance stays same", async () => {
+          expect(
+            await testContract.operatorAllowance(planetId, operatorId)
+          ).to.be.eq(prevAllowance);
+        });
+
+        it("Operator wallet decreased accordingly", async () => {
+          expect(
+            await testContract.getOperatorWalletBalance(operatorId)
+          ).to.be.eq(prevWalletBalance.sub(String(2e18)));
+        });
+
+        it("createdValidators increased accordingly", async () => {
+          expect(
+            await testContract.createdValidatorsById(planetId, operatorId)
+          ).to.be.eq(prevCreatedValidators + 2);
+        });
+
+        it("reverts if pubKey is already created", async () => {
+          await expect(
+            testContract
+              .connect(user1)
+              .preStake(planetId, operatorId, [pubkey1], [signature1])
+          ).to.be.revertedWith(
+            "StakeUtils: Pubkey is already used or alienated"
+          );
+        });
+
+        it("reverts if allowance is not enough after success", async () => {
+          await expect(
+            testContract
+              .connect(user1)
+              .preStake(
+                planetId,
+                operatorId,
+                [pubkey3, pubkey4],
+                [signature3, signature4]
+              )
+          ).to.be.revertedWith("StakeUtils: not enough allowance");
+        });
+
+        it("validator params are correct", async () => {
+          const timeStamp = await getCurrentBlockTimestamp();
+          const val1 = await testContract.getValidatorData(pubkey1);
+          const val2 = await testContract.getValidatorData(pubkey2);
+          const signatures = [signature1, signature2];
+          [val1, val2].forEach(function (vd, i) {
+            expect(vd.planetId).to.be.eq(planetId);
+            expect(vd.operatorId).to.be.eq(operatorId);
+            expect(vd.blockTimeStamp).to.be.gt(0);
+            expect(vd.blockTimeStamp).to.be.eq(timeStamp);
+            expect(vd.signature).to.be.eq(signatures[i]);
+            expect(vd.alienated).to.be.eq(false);
           });
         });
       });

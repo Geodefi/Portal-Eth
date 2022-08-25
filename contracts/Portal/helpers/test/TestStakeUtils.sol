@@ -37,9 +37,31 @@ contract TestStakeUtils is ERC1155Holder {
         external
         view
         virtual
-        returns (StakeUtils.StakePool memory)
+        returns (
+            address ORACLE,
+            address gETH,
+            address DEFAULT_gETH_INTERFACE,
+            address DEFAULT_DWP,
+            address DEFAULT_LP_TOKEN,
+            uint256 DEFAULT_A,
+            uint256 DEFAULT_FEE,
+            uint256 DEFAULT_ADMIN_FEE,
+            uint256 FEE_DENOMINATOR,
+            uint256 PERIOD_PRICE_INCREASE_LIMIT,
+            uint256 MAX_MAINTAINER_FEE
+        )
     {
-        return STAKEPOOL;
+        ORACLE = STAKEPOOL.ORACLE;
+        gETH = STAKEPOOL.gETH;
+        DEFAULT_gETH_INTERFACE = STAKEPOOL.DEFAULT_gETH_INTERFACE;
+        DEFAULT_DWP = STAKEPOOL.DEFAULT_DWP;
+        DEFAULT_LP_TOKEN = STAKEPOOL.DEFAULT_LP_TOKEN;
+        DEFAULT_A = STAKEPOOL.DEFAULT_A;
+        DEFAULT_FEE = STAKEPOOL.DEFAULT_FEE;
+        DEFAULT_ADMIN_FEE = STAKEPOOL.DEFAULT_ADMIN_FEE;
+        FEE_DENOMINATOR = STAKEPOOL.FEE_DENOMINATOR;
+        PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT;
+        MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
     }
 
     function getgETH() public view virtual returns (IgETH) {
@@ -269,6 +291,18 @@ contract TestStakeUtils is ERC1155Holder {
         return DATASTORE.readUintForId(_planetId, "surplus");
     }
 
+    function createdValidatorsById(uint256 _planetId, uint256 _operatorId)
+        external
+        view
+        returns (uint256)
+    {
+        return
+            DATASTORE.readUintForId(
+                _planetId,
+                StakeUtils._getKey(_operatorId, "createdValidators")
+            );
+    }
+
     function isStakingPausedForPool(uint256 id) external view returns (bool) {
         return StakeUtils.isStakingPausedForPool(DATASTORE, id);
     }
@@ -293,6 +327,34 @@ contract TestStakeUtils is ERC1155Holder {
             deadline
         );
         require(totalgAvax > 0, "Portal: unsuccesful deposit");
+    }
+
+    function preStake(
+        uint256 planetId,
+        uint256 operatorId,
+        bytes[] calldata pubkeys,
+        bytes[] calldata signatures
+    ) external virtual {
+        STAKEPOOL.preStake(
+            DATASTORE,
+            planetId,
+            operatorId,
+            pubkeys,
+            signatures
+        );
+    }
+
+    function alienatePubKey(bytes calldata pubkey) external virtual {
+        STAKEPOOL.Validators[pubkey].alienated = true;
+    }
+
+    function getValidatorData(bytes calldata pubkey)
+        external
+        view
+        virtual
+        returns (StakeUtils.Validator memory)
+    {
+        return STAKEPOOL.Validators[pubkey];
     }
 
     function Receive() external payable {}
