@@ -4,8 +4,7 @@ const {
   MAX_UINT256,
   ZERO_ADDRESS,
   getCurrentBlockTimestamp,
-  // setNextTimestamp,
-  // setTimestamp,
+  setTimestamp,
 } = require("../testUtils");
 
 const { solidity } = require("ethereum-waffle");
@@ -636,6 +635,48 @@ describe("StakeUtils", async () => {
   });
 
   describe("Staking Operations ", () => {
+    /**
+     * 0	pubkey	bytes	0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a
+     * 1  withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2  signature	bytes	0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181
+     * 3  deposit_data_root	bytes32	0xcf73f30d1a20e2af0446c2630acc4392f888dc0532a09592e00faf90b2976ab8
+     */
+    /**
+     * 0	pubkey	bytes	0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5
+     * 1	withdrawal_credentials	bytes	0x00cfafe208762abcdd05339a6814cac749bb065cf762ed4fea2e0335cbdd08f0
+     * 2	signature	bytes	0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932
+     * 3	deposit_data_root	bytes32	0x47bd475f56dc4ae776b1fa445323fd0eee9be77fe20a790e7783c73450274dcb
+     */
+    /**
+     * 0	pubkey	bytes	0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151
+     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2	signature	bytes	0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c
+     * 3	deposit_data_root	bytes32	0xb4282f23951b5bb3ead393f50dc9468e6166312a4e78f73cc649a8ae16f0d924
+     */
+    /**
+     * 0	pubkey	bytes	0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7
+     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2	signature	bytes	0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae
+     * 3	deposit_data_root	bytes32	0x2a902df8a7a8a1a5860d54ab73c87c1d1d2fcabe0b12106b5cbe42c3680c0000
+     */
+
+    const pubkey1 =
+      "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a";
+    const pubkey2 =
+      "0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5";
+    const pubkey3 =
+      "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
+    const pubkey4 =
+      "0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7";
+    const signature1 =
+      "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
+    const signature2 =
+      "0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932";
+    const signature3 =
+      "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
+    const signature4 =
+      "0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae";
+
     let wpoolContract;
     let preContBal;
     let preContgETHBal;
@@ -871,48 +912,7 @@ describe("StakeUtils", async () => {
       });
     });
 
-    /**
-     * 0	pubkey	bytes	0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a
-     * 1  withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
-     * 2  signature	bytes	0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181
-     * 3  deposit_data_root	bytes32	0xcf73f30d1a20e2af0446c2630acc4392f888dc0532a09592e00faf90b2976ab8
-     */
-    /**
-     * 0	pubkey	bytes	0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5
-     * 1	withdrawal_credentials	bytes	0x00cfafe208762abcdd05339a6814cac749bb065cf762ed4fea2e0335cbdd08f0
-     * 2	signature	bytes	0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932
-     * 3	deposit_data_root	bytes32	0x47bd475f56dc4ae776b1fa445323fd0eee9be77fe20a790e7783c73450274dcb
-     */
-    /**
-     * 0	pubkey	bytes	0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151
-     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
-     * 2	signature	bytes	0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c
-     * 3	deposit_data_root	bytes32	0xb4282f23951b5bb3ead393f50dc9468e6166312a4e78f73cc649a8ae16f0d924
-     */
-    /**
-     * 0	pubkey	bytes	0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7
-     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
-     * 2	signature	bytes	0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae
-     * 3	deposit_data_root	bytes32	0x2a902df8a7a8a1a5860d54ab73c87c1d1d2fcabe0b12106b5cbe42c3680c0000
-     */
     describe("preStake", () => {
-      const pubkey1 =
-        "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a";
-      const pubkey2 =
-        "0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5";
-      const pubkey3 =
-        "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
-      const pubkey4 =
-        "0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7";
-      const signature1 =
-        "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
-      const signature2 =
-        "0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932";
-      const signature3 =
-        "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
-      const signature4 =
-        "0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae";
-
       beforeEach(async () => {
         await testContract.beController(operatorId);
         await testContract.changeIdMaintainer(operatorId, user1.address);
@@ -1148,13 +1148,379 @@ describe("StakeUtils", async () => {
           [val1, val2].forEach(function (vd, i) {
             expect(vd.planetId).to.be.eq(planetId);
             expect(vd.operatorId).to.be.eq(operatorId);
-            expect(vd.blockTimeStamp).to.be.gt(0);
-            expect(vd.blockTimeStamp).to.be.eq(timeStamp);
+            expect(vd.preStakeTimeStamp).to.be.gt(0);
+            expect(vd.preStakeTimeStamp).to.be.eq(timeStamp);
             expect(vd.signature).to.be.eq(signatures[i]);
             expect(vd.alienated).to.be.eq(false);
           });
         });
       });
     });
+
+    describe("canStake", () => {
+      const anHour = 60 * 60;
+      const aDay = 24 * anHour;
+      let startTS;
+      // let timeRange;
+      let updateTime;
+      // let prevUpdateTS;
+      // let fourDaysLater;
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 3);
+
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(5e18),
+        });
+        startTS = await getCurrentBlockTimestamp();
+        updateTime = startTS + aDay;
+      });
+
+      it("reverst when not PreStaked", async () => {
+        await expect(
+          testContract.canStake(pubkey3, updateTime)
+        ).to.be.revertedWith("StakeUtils: pubkey is not preStaked");
+      });
+
+      // ps update call return
+      // 01   24     25  f
+      // 01   24     35  f
+      // 01   24     37  t
+      // 01   24     43  t
+      // 01   24     49  t
+      // 11   24     25  f
+      // 11   24     35  f
+      // 11   24     37  t
+      // 11   24     43  t
+      // 11   24     49  t
+      // 13   24     25  f
+      // 13   24     35  f
+      // 13   24     37  f
+      // 13   24     43  f
+      // 13   24     49  f
+      // 24   24     25  f
+      // 24   24     35  f
+      // 24   24     37  f
+      // 24   24     43  f
+      // 23   24     49  f
+      // 25   24     25  f
+      // 25   24     35  f
+      // 25   24     37  f
+      // 25   24     43  f
+      // 25   24     49  f
+
+      describe("simulation", async () => {
+        let updateTS;
+        let psTimes;
+        let callTimes;
+        beforeEach(async () => {
+          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+          psTimes = [
+            updateTS + 1 * anHour,
+            updateTS,
+            updateTS - 11 * anHour,
+            updateTS - 13 * anHour,
+            updateTS - 23 * anHour,
+          ];
+          callTimes = [
+            updateTS + 1 * anHour,
+            updateTS + 11 * anHour,
+            updateTS + 13 * anHour,
+            updateTS + 19 * anHour,
+            updateTS + 25 * anHour,
+          ];
+        });
+
+        describe("if preStake was", async () => {
+          describe("1h after last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[0]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              // same do NOT run await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 13 after last update: false", async () => {
+              await setTimestamp(callTimes[2]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 19 after last update: false", async () => {
+              await setTimestamp(callTimes[3]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 25 after last update: false", async () => {
+              await setTimestamp(callTimes[4]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+          });
+
+          describe("same before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[1]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 13 after last update: false", async () => {
+              await setTimestamp(callTimes[2]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 19 after last update: false", async () => {
+              await setTimestamp(callTimes[3]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 25 after last update: false", async () => {
+              await setTimestamp(callTimes[4]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+          });
+
+          describe("11h before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[2]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 13 after last update: false", async () => {
+              await setTimestamp(callTimes[2]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 19 after last update: false", async () => {
+              await setTimestamp(callTimes[3]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 25 after last update: false", async () => {
+              await setTimestamp(callTimes[4]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+          });
+
+          describe("13h before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[3]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            describe("calling 13 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[2]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 19 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[3]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 25 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[4]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+          });
+
+          describe("23h before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[4]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            describe("calling 13 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[2]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 19 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[3]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 25 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[4]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+          });
+        });
+      });
+    });
+    describe("stakeBeacon", () => {});
   });
 });

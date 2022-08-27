@@ -720,20 +720,35 @@ library StakeUtils {
         }
     }
 
+    /**
+     *  @notice Creation of a Validator takes 3 steps. Before entering stakeBeacon function,
+     *  canStake verifies the eligibility of given pubKey that is proposed by an operator
+     *  with Prestake function. Eligibility is defined by alienation, check alienate() for info.
+     *
+     *  @param pubkey BLS12-381 public key of the validator
+     *  @param merkleUpdateTS last oracle update timestamp (first timestampt of the day)
+     *  @return true if:
+     *   - pubkey should be preStaked
+     *   - preStake timestamp should be at least 12 hours before last merkleroot update
+     *   - at least 12 hours should past after the first merkleroot update after preStake
+     *   - pubkey should not be alienated (https://bit.ly/3Tkc6UC)
+     *  else:
+     *      return false
+     */
     function canStake(
         StakePool storage self,
         bytes calldata pubkey,
         uint256 merkleUpdateTS
     ) public view returns (bool) {
         uint256 preStakeTS = self.Validators[pubkey].preStakeTimeStamp;
-        require(preStakeTS > 0);
+        require(preStakeTS > 0, "StakeUtils: pubkey is not preStaked");
         return
-            merkleUpdateTS >= preStakeTS + ALIENATION_PERIOD &&
-            block.timestamp >=
-            preStakeTS +
-                ORACLE_PERIOD -
-                (preStakeTS % ORACLE_PERIOD) +
-                ALIENATION_PERIOD &&
+            (merkleUpdateTS >= (preStakeTS + ALIENATION_PERIOD)) &&
+            (block.timestamp >=
+                (preStakeTS +
+                    ORACLE_PERIOD -
+                    (preStakeTS % ORACLE_PERIOD) +
+                    ALIENATION_PERIOD)) &&
             self.Validators[pubkey].alienated == false;
     }
 
@@ -816,12 +831,12 @@ library StakeUtils {
             );
             {
                 // TODO: there is no deposit contract, solve and open this comment
-                DCU.depositValidator(
-                    pubkeys[i],
-                    _DATASTORE.readBytesForId(planetId, "withdrawalCredential"),
-                    signatures[i],
-                    DCU.DEPOSIT_AMOUNT_PRESTAKE
-                );
+                // DCU.depositValidator(
+                //     pubkeys[i],
+                //     _DATASTORE.readBytesForId(planetId, "withdrawalCredential"),
+                //     signatures[i],
+                //     DCU.DEPOSIT_AMOUNT_PRESTAKE
+                // );
             }
 
             self.Validators[pubkeys[i]] = Validator(
@@ -914,12 +929,12 @@ library StakeUtils {
             signature = self.Validators[pubkeys[i]].signature;
 
             // TODO: there is no deposit contract, solve and open this comment
-            DCU.depositValidator(
-                pubkeys[i],
-                withdrawalCredential,
-                signature,
-                DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
-            );
+            // DCU.depositValidator(
+            //     pubkeys[i],
+            //     withdrawalCredential,
+            //     signature,
+            //     DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
+            // );
 
             emit BeaconStaked(pubkeys[i]);
         }

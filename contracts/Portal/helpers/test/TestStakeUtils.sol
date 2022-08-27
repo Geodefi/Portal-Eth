@@ -357,5 +357,18 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.Validators[pubkey];
     }
 
+    function setMerkleUpdateTS(uint256 _ts) external virtual {
+        STAKEPOOL.merkleUpdateTS = _ts;
+    }
+
+    function canStake(bytes calldata pubkey, uint256 merkleUpdateTS)
+        external
+        view
+        virtual
+        returns (bool)
+    {
+        return STAKEPOOL.canStake(pubkey, merkleUpdateTS);
+    }
+
     function Receive() external payable {}
 }
