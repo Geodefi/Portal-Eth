@@ -10,6 +10,7 @@ contract TestStakeUtils is ERC1155Holder {
     using StakeUtils for StakeUtils.StakePool;
     DataStoreUtils.DataStore private DATASTORE;
     StakeUtils.StakePool private STAKEPOOL;
+    uint256 public lastCreatedVals;
 
     constructor(
         address _gETH,
@@ -303,6 +304,18 @@ contract TestStakeUtils is ERC1155Holder {
             );
     }
 
+    function activeValidatorsById(uint256 _planetId, uint256 _operatorId)
+        external
+        view
+        returns (uint256)
+    {
+        return
+            DATASTORE.readUintForId(
+                _planetId,
+                StakeUtils._getKey(_operatorId, "activeValidators")
+            );
+    }
+
     function isStakingPausedForPool(uint256 id) external view returns (bool) {
         return StakeUtils.isStakingPausedForPool(DATASTORE, id);
     }
@@ -342,6 +355,23 @@ contract TestStakeUtils is ERC1155Holder {
             pubkeys,
             signatures
         );
+    }
+
+    function lastCreatedValidatorNum() external view returns (uint256) {
+        return lastCreatedVals;
+    }
+
+    function stakeBeacon(uint256 operatorId, bytes[] calldata pubkeys)
+        external
+        virtual
+        returns (uint256 succesfullDepositCount)
+    {
+        succesfullDepositCount = STAKEPOOL.stakeBeacon(
+            DATASTORE,
+            operatorId,
+            pubkeys
+        );
+        lastCreatedVals = succesfullDepositCount;
     }
 
     function alienatePubKey(bytes calldata pubkey) external virtual {

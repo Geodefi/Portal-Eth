@@ -34,6 +34,8 @@ describe("StakeUtils", async () => {
   let DEFAULT_DWP;
   let DEFAULT_LP_TOKEN;
   let DEFAULT_GETH_INTERFACE;
+  const anHour = 60 * 60;
+  const aDay = 24 * anHour;
 
   const setupTest = deployments.createFixture(async ({ ethers }) => {
     await deployments.fixture(); // ensure you start from a fresh deployments
@@ -1158,8 +1160,6 @@ describe("StakeUtils", async () => {
     });
 
     describe("canStake", () => {
-      const anHour = 60 * 60;
-      const aDay = 24 * anHour;
       let startTS;
       // let timeRange;
       let updateTime;
@@ -1189,32 +1189,41 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith("StakeUtils: pubkey is not preStaked");
       });
 
+      // Simulation cases
       // ps update call return
       // 01   24     25  f
       // 01   24     35  f
       // 01   24     37  t
-      // 01   24     43  t
+      // 01   24     48  t
       // 01   24     49  t
       // 11   24     25  f
       // 11   24     35  f
       // 11   24     37  t
-      // 11   24     43  t
+      // 11   24     48  t
       // 11   24     49  t
       // 13   24     25  f
       // 13   24     35  f
       // 13   24     37  f
-      // 13   24     43  f
+      // 13   24     48  f
       // 13   24     49  f
       // 24   24     25  f
       // 24   24     35  f
       // 24   24     37  f
-      // 24   24     43  f
-      // 23   24     49  f
+      // 24   24     48  f
+      // 23   24     48  f
       // 25   24     25  f
       // 25   24     35  f
       // 25   24     37  f
-      // 25   24     43  f
+      // 25   24     48  f
       // 25   24     49  f
+
+      // late update cases
+      // ps update call return
+      // 11   48     49  f
+      // 11   48     59  f
+      // 11   48     60  t
+      // 11   48     61  t
+      // 11   48     72  t
 
       describe("simulation", async () => {
         let updateTS;
@@ -1233,7 +1242,7 @@ describe("StakeUtils", async () => {
             updateTS + 1 * anHour,
             updateTS + 11 * anHour,
             updateTS + 13 * anHour,
-            updateTS + 19 * anHour,
+            updateTS + 24 * anHour,
             updateTS + 25 * anHour,
           ];
         });
@@ -1519,8 +1528,220 @@ describe("StakeUtils", async () => {
             });
           });
         });
+
+        describe("missed update for a day", async () => {
+          let psTime;
+          let lateUpdateTS;
+          let newCallTimes;
+          beforeEach(async () => {
+            psTime = updateTS - 13 * anHour;
+
+            lateUpdateTS = updateTS + aDay;
+            newCallTimes = [
+              lateUpdateTS + 1 * anHour,
+              lateUpdateTS + 11 * anHour,
+              lateUpdateTS + 12 * anHour,
+              lateUpdateTS + 13 * anHour,
+              lateUpdateTS + 24 * anHour,
+            ];
+            await setTimestamp(psTime);
+            await testContract
+              .connect(user1)
+              .preStake(planetId, operatorId, [pubkey1], [signature1]);
+          });
+
+          it("calling 1h after last update: false", async () => {
+            await setTimestamp(newCallTimes[0]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              false
+            );
+          });
+
+          it("calling 11h after last update: false", async () => {
+            await setTimestamp(newCallTimes[1]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              false
+            );
+          });
+
+          it("calling 12h after last update: true", async () => {
+            await setTimestamp(newCallTimes[2]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              true
+            );
+          });
+
+          it("calling 13h after last update: true", async () => {
+            await setTimestamp(newCallTimes[3]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              true
+            );
+          });
+
+          it("calling 24 after last update: true", async () => {
+            await setTimestamp(newCallTimes[4]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              true
+            );
+          });
+        });
       });
     });
-    describe("stakeBeacon", () => {});
+    describe("stakeBeacon", () => {
+      let prevSurplus;
+      let prevActiveValidators;
+      let prevOperatorWallet;
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 3);
+        await testContract.setPricePerShare(String(1e18), planetId);
+        await testContract.deployWithdrawalPool(planetId);
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(5e18),
+        });
+        await testContract
+          .connect(user1)
+          .preStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2],
+            [signature1, signature2]
+          );
+        prevActiveValidators = await testContract.activeValidatorsById(
+          planetId,
+          operatorId
+        );
+        prevOperatorWallet = await testContract
+          .connect(user1)
+          .getOperatorWalletBalance(operatorId);
+      });
+
+      it("1 to 64 nodes per transaction", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .stakeBeacon(operatorId, Array(65).fill(pubkey1))
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+
+        await expect(
+          testContract.connect(user1).stakeBeacon(operatorId, [])
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+      });
+
+      it("reverts if NOT all pubkeys are stakeable", async () => {
+        startTS = await getCurrentBlockTimestamp();
+        updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+        await testContract.setMerkleUpdateTS(updateTS);
+
+        await setTimestamp(updateTS);
+        await testContract
+          .connect(user1)
+          .preStake(planetId, operatorId, [pubkey3], [signature3]);
+        await setTimestamp(updateTS + 11 * anHour);
+
+        await expect(
+          testContract.connect(user1).stakeBeacon(operatorId, [pubkey3])
+        ).to.be.revertedWith("StakeUtils: NOT all pubkeys are stakeable");
+      });
+
+      describe("partial success, check params", async () => {
+        beforeEach(async () => {
+          await testContract
+            .connect(user1)
+            .stakePlanet(planetId, 0, MAX_UINT256, {
+              value: String(50e18),
+            });
+          prevSurplus = await testContract.surplusById(planetId);
+          startTS = await getCurrentBlockTimestamp();
+          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+          await testContract.setMerkleUpdateTS(updateTS);
+          await setTimestamp(updateTS + 13 * anHour);
+          await testContract
+            .connect(user1)
+            .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+        });
+
+        it("OperatorWalletBalance", async () => {
+          const currentOperatorWallet = await testContract
+            .connect(user1)
+            .getOperatorWalletBalance(operatorId);
+
+          expect(String(1e18)).to.be.eq(
+            currentOperatorWallet.sub(prevOperatorWallet)
+          );
+        });
+
+        it("Surplus", async () => {
+          const currentSurplus = await testContract.surplusById(planetId);
+          expect(String(32e18)).to.be.eq(prevSurplus.sub(currentSurplus));
+        });
+
+        it("ActiveValidators", async () => {
+          const currentActiveValidators =
+            await testContract.activeValidatorsById(planetId, operatorId);
+          expect(String(1)).to.be.eq(
+            currentActiveValidators.sub(prevActiveValidators)
+          );
+        });
+        it("returns Created Validators", async () => {
+          expect(await testContract.lastCreatedValidatorNum()).to.be.eq(
+            String(1)
+          );
+        });
+      });
+
+      describe("success, check params", async () => {
+        beforeEach(async () => {
+          await testContract
+            .connect(user1)
+            .stakePlanet(planetId, 0, MAX_UINT256, {
+              value: String(1e20),
+            });
+          prevSurplus = await testContract.surplusById(planetId);
+          startTS = await getCurrentBlockTimestamp();
+          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+          await testContract.setMerkleUpdateTS(updateTS);
+          await setTimestamp(updateTS + 13 * anHour);
+          await testContract
+            .connect(user1)
+            .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+        });
+
+        it("OperatorWalletBalance", async () => {
+          const currentOperatorWallet = await testContract
+            .connect(user1)
+            .getOperatorWalletBalance(operatorId);
+          expect(String(2e18)).to.be.eq(
+            currentOperatorWallet.sub(prevOperatorWallet)
+          );
+        });
+
+        it("Surplus", async () => {
+          const currentSurplus = await testContract.surplusById(planetId);
+          expect(String(64e18)).to.be.eq(prevSurplus.sub(currentSurplus));
+        });
+
+        it("ActiveValidators", async () => {
+          const currentActiveValidators =
+            await testContract.activeValidatorsById(planetId, operatorId);
+          expect(String(2)).to.be.eq(
+            currentActiveValidators.sub(prevActiveValidators)
+          );
+        });
+
+        it("returns Created Validators", async () => {
+          expect(await testContract.lastCreatedValidatorNum()).to.be.eq(
+            String(2)
+          );
+        });
+      });
+    });
   });
 });
