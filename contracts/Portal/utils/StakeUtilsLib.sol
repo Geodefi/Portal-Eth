@@ -344,7 +344,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         uint256 _newFee
-    ) public onlyMaintainer(_DATASTORE, _id) {
+    ) external onlyMaintainer(_DATASTORE, _id) {
         require(
             _newFee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
