@@ -111,4 +111,18 @@ library DepositContractUtils {
                 bytes32(w) | bytes32(uint256(uint160(address(wcAddress))))
             );
     }
+
+    function depositValidator(
+        bytes calldata pubkey,
+        bytes memory withdrawalCredential,
+        bytes memory signature,
+        uint256 amount
+    ) internal {
+        getDepositContract().deposit{value: amount}(
+            pubkey,
+            withdrawalCredential,
+            signature,
+            getDepositDataRoot(pubkey, withdrawalCredential, signature, amount)
+        );
+    }
 }
