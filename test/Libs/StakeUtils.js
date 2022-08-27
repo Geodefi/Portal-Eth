@@ -1,17 +1,13 @@
 // const { BigNumber, Signer, constants, Bytes } = require("ethers");
 
 const {
-  // MAX_UINT256,
+  MAX_UINT256,
   ZERO_ADDRESS,
-  // getCurrentBlockTimestamp,
-  // setNextTimestamp,
-  // setTimestamp,
+  getCurrentBlockTimestamp,
+  setTimestamp,
 } = require("../testUtils");
 
 const { solidity } = require("ethereum-waffle");
-// const { deployments, waffle } = require("hardhat");
-// const web3 = require("web3");
-
 const chai = require("chai");
 
 chai.use(solidity);
@@ -19,8 +15,8 @@ const { expect } = chai;
 const randId = 3131313131;
 const operatorId = 420420420;
 const planetId = 696969696969;
-// const wrongId = 69;
-// const provider = waffle.provider;
+const wrongId = 69;
+const provider = waffle.provider;
 const INITIAL_A_VALUE = 60;
 const SWAP_FEE = 4e6; // 4bps
 const ADMIN_FEE = 5e9; // 0
@@ -38,6 +34,8 @@ describe("StakeUtils", async () => {
   let DEFAULT_DWP;
   let DEFAULT_LP_TOKEN;
   let DEFAULT_GETH_INTERFACE;
+  const anHour = 60 * 60;
+  const aDay = 24 * anHour;
 
   const setupTest = deployments.createFixture(async ({ ethers }) => {
     await deployments.fixture(); // ensure you start from a fresh deployments
@@ -206,6 +204,21 @@ describe("StakeUtils", async () => {
         false
       );
     });
+
+    it("_setPricePerShare", async () => {
+      await testContract.setPricePerShare(String(1e20), randId);
+      expect(await gETH.pricePerShare(randId)).to.eq(String(1e20));
+      await testContract.setPricePerShare(String(2e19), randId);
+      expect(await gETH.pricePerShare(randId)).to.eq(String(2e19));
+    });
+
+    it("_getPricePerShare", async () => {
+      await testContract.connect(user1).changeOracle();
+      await gETH.connect(user1).setPricePerShare(String(1e20), randId);
+      expect(await testContract.getPricePerShare(randId)).to.eq(String(1e20));
+      await gETH.connect(user1).setPricePerShare(String(2e19), randId);
+      expect(await testContract.getPricePerShare(randId)).to.eq(String(2e19));
+    });
   });
 
   describe("deployWithdrawalPool", () => {
@@ -321,12 +334,6 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith("StakeUtils: already initiated");
       });
     });
-
-    // sender is NOT CONTROLLER
-    // id should be Operator TYPE
-    // check initiated parameter is set as 1
-    // check maintainer is set correctly
-    // already initiated
   });
 
   describe("initiatePlanet", () => {
@@ -626,6 +633,1115 @@ describe("StakeUtils", async () => {
       expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
         ethers.BigNumber.from(String(2e17))
       );
+    });
+  });
+
+  describe("Staking Operations ", () => {
+    /**
+     * 0	pubkey	bytes	0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a
+     * 1  withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2  signature	bytes	0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181
+     * 3  deposit_data_root	bytes32	0xcf73f30d1a20e2af0446c2630acc4392f888dc0532a09592e00faf90b2976ab8
+     */
+    /**
+     * 0	pubkey	bytes	0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5
+     * 1	withdrawal_credentials	bytes	0x00cfafe208762abcdd05339a6814cac749bb065cf762ed4fea2e0335cbdd08f0
+     * 2	signature	bytes	0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932
+     * 3	deposit_data_root	bytes32	0x47bd475f56dc4ae776b1fa445323fd0eee9be77fe20a790e7783c73450274dcb
+     */
+    /**
+     * 0	pubkey	bytes	0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151
+     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2	signature	bytes	0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c
+     * 3	deposit_data_root	bytes32	0xb4282f23951b5bb3ead393f50dc9468e6166312a4e78f73cc649a8ae16f0d924
+     */
+    /**
+     * 0	pubkey	bytes	0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7
+     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+     * 2	signature	bytes	0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae
+     * 3	deposit_data_root	bytes32	0x2a902df8a7a8a1a5860d54ab73c87c1d1d2fcabe0b12106b5cbe42c3680c0000
+     */
+
+    const pubkey1 =
+      "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a";
+    const pubkey2 =
+      "0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5";
+    const pubkey3 =
+      "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
+    const pubkey4 =
+      "0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7";
+    const signature1 =
+      "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
+    const signature2 =
+      "0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932";
+    const signature3 =
+      "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
+    const signature4 =
+      "0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae";
+
+    let wpoolContract;
+    let preContBal;
+    let preContgETHBal;
+
+    let preUserBal;
+    let preUsergETHBal;
+
+    let preSurplus;
+    let preTotSup;
+    let debt;
+    let preSwapBals;
+
+    beforeEach(async () => {
+      await testContract.beController(randId);
+      await testContract.changeIdMaintainer(randId, user1.address);
+    });
+
+    describe("StakePlanet", () => {
+      beforeEach(async () => {
+        await testContract.deployWithdrawalPool(randId);
+        const wpool = await testContract.withdrawalPoolById(randId);
+        wpoolContract = await ethers.getContractAt("Swap", wpool);
+
+        await testContract.setPricePerShare(String(1e18), randId);
+
+        await testContract
+          .connect(deployer)
+          .mintgETH(deployer.address, randId, String(1e20));
+
+        await gETH.connect(deployer).setApprovalForAll(wpool, true);
+
+        // initially there is no debt
+        await wpoolContract
+          .connect(deployer)
+          .addLiquidity([String(1e20), String(1e20)], 0, MAX_UINT256, {
+            value: String(1e20),
+          });
+
+        debt = await wpoolContract.getDebt();
+        expect(debt).to.be.eq(0);
+        preUserBal = await provider.getBalance(user1.address);
+        preUsergETHBal = await gETH.balanceOf(user1.address, randId);
+
+        preContBal = await provider.getBalance(testContract.address);
+        preContgETHBal = await gETH.balanceOf(testContract.address, randId);
+
+        preSurplus = ethers.BigNumber.from(
+          await testContract.surplusById(randId)
+        );
+        preTotSup = await gETH.totalSupply(randId);
+
+        preSwapBals = [
+          await wpoolContract.getTokenBalance(0),
+          await wpoolContract.getTokenBalance(1),
+        ];
+      });
+
+      it("reverts when wrongId is given", async () => {
+        await expect(
+          testContract.connect(user1).stakePlanet(wrongId, 0, MAX_UINT256, {
+            value: String(1e18),
+          })
+        ).to.be.reverted;
+      });
+
+      it("reverts when pool is paused", async () => {
+        await testContract.connect(user1).pauseStakingForPool(randId);
+        await expect(
+          testContract.stakePlanet(randId, 0, MAX_UINT256, {
+            value: String(2e18),
+          })
+        ).to.be.revertedWith("StakeUtils: minting is paused");
+      });
+
+      describe("succeeds", () => {
+        let gasUsed;
+
+        describe("when NO buyback (no pause, no debt)", () => {
+          beforeEach(async () => {
+            const tx = await testContract
+              .connect(user1)
+              .stakePlanet(randId, 0, MAX_UINT256, {
+                value: String(1e18),
+              });
+            const receipt = await tx.wait();
+            gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
+          });
+
+          it("user lost ether more than stake (+gas) ", async () => {
+            const newBal = await provider.getBalance(user1.address);
+            expect(newBal.add(gasUsed)).to.be.eq(
+              ethers.BigNumber.from(String(preUserBal)).sub(String(1e18))
+            );
+          });
+
+          it("user gained gETH (mintedAmount)", async () => {
+            const price = await testContract.getPricePerShare(randId);
+            expect(price).to.be.eq(String(1e18));
+            const mintedAmount = ethers.BigNumber.from(String(1e18))
+              .div(price)
+              .mul(String(1e18));
+            const newBal = await gETH.balanceOf(user1.address, randId);
+            expect(newBal).to.be.eq(preUsergETHBal.add(mintedAmount));
+          });
+
+          it("contract gained ether = minted gETH", async () => {
+            const newBal = await provider.getBalance(testContract.address);
+            expect(newBal).to.be.eq(String(preContBal.add(String(1e18))));
+          });
+
+          it("contract gEth bal did not change", async () => {
+            const newBal = await gETH.balanceOf(testContract.address, randId);
+            expect(newBal).to.be.eq(preContgETHBal);
+          });
+
+          it("id surplus increased", async () => {
+            const newSur = await testContract.surplusById(randId);
+            expect(newSur.toString()).to.be.eq(
+              String(preSurplus.add(String(1e18)))
+            );
+          });
+
+          it("gETH minted ", async () => {
+            // minted amount from ORACLE PRICE
+            const price = await testContract.getPricePerShare(randId);
+            expect(price).to.be.eq(String(1e18));
+            const mintedAmount = ethers.BigNumber.from(String(1e18))
+              .div(price)
+              .mul(String(1e18));
+            const TotSup = await gETH.totalSupply(randId);
+            expect(TotSup.toString()).to.be.eq(
+              String(preTotSup.add(mintedAmount))
+            );
+          });
+
+          it("swapContract gETH balances NOT changed", async () => {
+            const swapBals = [
+              await wpoolContract.getTokenBalance(0),
+              await wpoolContract.getTokenBalance(1),
+            ];
+            expect(swapBals[0]).to.be.eq(preSwapBals[0]);
+            expect(swapBals[1]).to.be.eq(preSwapBals[1]);
+          });
+        });
+
+        describe("when paused pool is unpaused and not balanced", async () => {
+          let gasUsed;
+          let newPreUserBal;
+
+          beforeEach(async () => {
+            await testContract.connect(user1).pauseStakingForPool(randId);
+            await testContract.connect(user1).unpauseStakingForPool(randId);
+            newPreUserBal = await provider.getBalance(user1.address);
+            await testContract
+              .connect(deployer)
+              .stakePlanet(randId, 0, MAX_UINT256, {
+                value: String(1e20),
+              });
+            await wpoolContract
+              .connect(deployer)
+              .addLiquidity([String(0), String(1e20)], 0, MAX_UINT256);
+            debt = await wpoolContract.getDebt();
+            preSwapBals = [
+              await wpoolContract.getTokenBalance(0),
+              await wpoolContract.getTokenBalance(1),
+            ];
+            preContBal = await provider.getBalance(testContract.address);
+            preSurplus = ethers.BigNumber.from(
+              await testContract.surplusById(randId)
+            );
+            const tx = await testContract
+              .connect(user1)
+              .stakePlanet(randId, 0, MAX_UINT256, {
+                value: String(5e20),
+              });
+            const receipt = await tx.wait();
+            gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
+          });
+
+          it("user lost ether more than stake (+gas) ", async () => {
+            const newBal = await provider.getBalance(user1.address);
+            expect(newBal).to.be.eq(
+              ethers.BigNumber.from(String(newPreUserBal))
+                .sub(String(5e20))
+                .sub(gasUsed)
+            );
+          });
+
+          it("user gained gether more than minted amount (+ wrapped) ", async () => {
+            const price = await testContract.getPricePerShare(randId);
+            expect(price).to.be.eq(String(1e18));
+            const mintedAmount = ethers.BigNumber.from(String(1e18))
+              .div(price)
+              .mul(String(1e18));
+            const newBal = await gETH.balanceOf(user1.address, randId);
+            expect(newBal).to.be.gt(preUsergETHBal.add(mintedAmount));
+          });
+
+          it("contract gained ether = minted ", async () => {
+            const newBal = await provider.getBalance(testContract.address);
+            expect(newBal).to.be.eq(
+              String(
+                preContBal.add(ethers.BigNumber.from("450143212807943082239")) // lower than 5e20 since wp got its part
+              )
+            );
+          });
+
+          it("contract gEth bal did not change", async () => {
+            const newBal = await gETH.balanceOf(testContract.address, randId);
+            expect(newBal).to.be.eq(preContgETHBal);
+          });
+
+          it("id surplus increased", async () => {
+            const newSur = await testContract.surplusById(randId);
+            expect(newSur).to.be.eq(
+              String(
+                preSurplus.add(ethers.BigNumber.from("450143212807943082239")) // lower than 5e20 since wp got its part
+              )
+            );
+          });
+
+          it("swapContract gETH and Ether balance changed accordingly", async () => {
+            const swapBals = [
+              await wpoolContract.getTokenBalance(0),
+              await wpoolContract.getTokenBalance(1),
+            ];
+            expect(swapBals[0]).to.be.eq(
+              ethers.BigNumber.from(String(preSwapBals[0])).add(debt)
+            );
+            expect(swapBals[1]).to.be.lt(preSwapBals[1]); // gEth
+          });
+        });
+      });
+    });
+
+    describe("preStake", () => {
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+      });
+
+      it("reverts if there is no pool with id", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              wrongId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: There is no pool with id");
+      });
+
+      it("reverts if pubkeys and signatures are not same length", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(planetId, operatorId, [pubkey1, pubkey2], [signature1])
+        ).to.be.revertedWith(
+          "StakeUtils: pubkeys and signatures should be same length"
+        );
+      });
+
+      it("1 to 64 nodes per transaction", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              Array(65).fill(pubkey1),
+              Array(65).fill(signature1)
+            )
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+
+        await expect(
+          testContract.connect(user1).preStake(planetId, operatorId, [], [])
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+      });
+
+      // TODO: also make this test after a success state to check the calculation of allowance there
+      it("not enough allowance", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: not enough allowance");
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 1);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: not enough allowance");
+      });
+
+      it("StakeUtils: Pubkey is already alienated", async () => {
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(2e18),
+        });
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 2);
+
+        await testContract.alienatePubKey(pubkey2);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: Pubkey is already used or alienated");
+      });
+
+      it("PUBKEY_LENGTH ERROR", async () => {
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(2e18),
+        });
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 2);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2 + "aefe"],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: PUBKEY_LENGTH ERROR");
+      });
+
+      it("SIGNATURE_LENGTH ERROR", async () => {
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(2e18),
+        });
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 2);
+
+        await expect(
+          testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2 + "aefe"]
+            )
+        ).to.be.revertedWith("StakeUtils: SIGNATURE_LENGTH ERROR");
+      });
+
+      describe("Success", () => {
+        let prevSurplus;
+        let prevAllowance;
+        let prevWalletBalance;
+        let prevCreatedValidators;
+
+        beforeEach(async () => {
+          await testContract
+            .connect(user2)
+            .approveOperator(planetId, operatorId, 3);
+
+          await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+            value: String(5e18),
+          });
+
+          prevSurplus = await testContract.surplusById(planetId);
+          prevAllowance = await testContract.operatorAllowance(
+            planetId,
+            operatorId
+          );
+          prevWalletBalance = await testContract.getOperatorWalletBalance(
+            operatorId
+          );
+          prevCreatedValidators = await testContract.createdValidatorsById(
+            planetId,
+            operatorId
+          );
+          await testContract
+            .connect(user1)
+            .preStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            );
+        });
+
+        it("surplus stays same", async () => {
+          expect(await testContract.surplusById(planetId)).to.be.eq(
+            prevSurplus
+          );
+        });
+
+        it("Allowance stays same", async () => {
+          expect(
+            await testContract.operatorAllowance(planetId, operatorId)
+          ).to.be.eq(prevAllowance);
+        });
+
+        it("Operator wallet decreased accordingly", async () => {
+          expect(
+            await testContract.getOperatorWalletBalance(operatorId)
+          ).to.be.eq(prevWalletBalance.sub(String(2e18)));
+        });
+
+        it("createdValidators increased accordingly", async () => {
+          expect(
+            await testContract.createdValidatorsById(planetId, operatorId)
+          ).to.be.eq(prevCreatedValidators + 2);
+        });
+
+        it("reverts if pubKey is already created", async () => {
+          await expect(
+            testContract
+              .connect(user1)
+              .preStake(planetId, operatorId, [pubkey1], [signature1])
+          ).to.be.revertedWith(
+            "StakeUtils: Pubkey is already used or alienated"
+          );
+        });
+
+        it("reverts if allowance is not enough after success", async () => {
+          await expect(
+            testContract
+              .connect(user1)
+              .preStake(
+                planetId,
+                operatorId,
+                [pubkey3, pubkey4],
+                [signature3, signature4]
+              )
+          ).to.be.revertedWith("StakeUtils: not enough allowance");
+        });
+
+        it("validator params are correct", async () => {
+          const timeStamp = await getCurrentBlockTimestamp();
+          const val1 = await testContract.getValidatorData(pubkey1);
+          const val2 = await testContract.getValidatorData(pubkey2);
+          const signatures = [signature1, signature2];
+          [val1, val2].forEach(function (vd, i) {
+            expect(vd.planetId).to.be.eq(planetId);
+            expect(vd.operatorId).to.be.eq(operatorId);
+            expect(vd.preStakeTimeStamp).to.be.gt(0);
+            expect(vd.preStakeTimeStamp).to.be.eq(timeStamp);
+            expect(vd.signature).to.be.eq(signatures[i]);
+            expect(vd.alienated).to.be.eq(false);
+          });
+        });
+      });
+    });
+
+    describe("canStake", () => {
+      let startTS;
+      // let timeRange;
+      let updateTime;
+      // let prevUpdateTS;
+      // let fourDaysLater;
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 3);
+
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(5e18),
+        });
+        startTS = await getCurrentBlockTimestamp();
+        updateTime = startTS + aDay;
+      });
+
+      it("reverst when not PreStaked", async () => {
+        await expect(
+          testContract.canStake(pubkey3, updateTime)
+        ).to.be.revertedWith("StakeUtils: pubkey is not preStaked");
+      });
+
+      // Simulation cases
+      // ps update call return
+      // 01   24     25  f
+      // 01   24     35  f
+      // 01   24     37  t
+      // 01   24     48  t
+      // 01   24     49  t
+      // 11   24     25  f
+      // 11   24     35  f
+      // 11   24     37  t
+      // 11   24     48  t
+      // 11   24     49  t
+      // 13   24     25  f
+      // 13   24     35  f
+      // 13   24     37  f
+      // 13   24     48  f
+      // 13   24     49  f
+      // 24   24     25  f
+      // 24   24     35  f
+      // 24   24     37  f
+      // 24   24     48  f
+      // 23   24     48  f
+      // 25   24     25  f
+      // 25   24     35  f
+      // 25   24     37  f
+      // 25   24     48  f
+      // 25   24     49  f
+
+      // late update cases
+      // ps update call return
+      // 11   48     49  f
+      // 11   48     59  f
+      // 11   48     60  t
+      // 11   48     61  t
+      // 11   48     72  t
+
+      describe("simulation", async () => {
+        let updateTS;
+        let psTimes;
+        let callTimes;
+        beforeEach(async () => {
+          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+          psTimes = [
+            updateTS + 1 * anHour,
+            updateTS,
+            updateTS - 11 * anHour,
+            updateTS - 13 * anHour,
+            updateTS - 23 * anHour,
+          ];
+          callTimes = [
+            updateTS + 1 * anHour,
+            updateTS + 11 * anHour,
+            updateTS + 13 * anHour,
+            updateTS + 24 * anHour,
+            updateTS + 25 * anHour,
+          ];
+        });
+
+        describe("if preStake was", async () => {
+          describe("1h after last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[0]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              // same do NOT run await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 13 after last update: false", async () => {
+              await setTimestamp(callTimes[2]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 19 after last update: false", async () => {
+              await setTimestamp(callTimes[3]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 25 after last update: false", async () => {
+              await setTimestamp(callTimes[4]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+          });
+
+          describe("same before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[1]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 13 after last update: false", async () => {
+              await setTimestamp(callTimes[2]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 19 after last update: false", async () => {
+              await setTimestamp(callTimes[3]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 25 after last update: false", async () => {
+              await setTimestamp(callTimes[4]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+          });
+
+          describe("11h before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[2]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 13 after last update: false", async () => {
+              await setTimestamp(callTimes[2]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 19 after last update: false", async () => {
+              await setTimestamp(callTimes[3]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 25 after last update: false", async () => {
+              await setTimestamp(callTimes[4]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+          });
+
+          describe("13h before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[3]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            describe("calling 13 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[2]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 19 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[3]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 25 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[4]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+          });
+
+          describe("23h before last update", async () => {
+            beforeEach(async () => {
+              await setTimestamp(psTimes[4]);
+              await testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            });
+
+            it("calling 1h after last update: false", async () => {
+              await setTimestamp(callTimes[0]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            it("calling 11 after last update: false", async () => {
+              await setTimestamp(callTimes[1]);
+              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                false
+              );
+            });
+
+            describe("calling 13 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[2]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 19 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[3]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+
+            describe("calling 25 after last update: true", async () => {
+              beforeEach(async () => {
+                await setTimestamp(callTimes[4]);
+              });
+              it("success", async () => {
+                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
+                  true
+                );
+              });
+              it("returns false if alienated", async () => {
+                await testContract.alienatePubKey(pubkey1);
+                expect(
+                  await testContract.canStake(pubkey1, updateTime)
+                ).to.be.eq(false);
+              });
+            });
+          });
+        });
+
+        describe("missed update for a day", async () => {
+          let psTime;
+          let lateUpdateTS;
+          let newCallTimes;
+          beforeEach(async () => {
+            psTime = updateTS - 13 * anHour;
+
+            lateUpdateTS = updateTS + aDay;
+            newCallTimes = [
+              lateUpdateTS + 1 * anHour,
+              lateUpdateTS + 11 * anHour,
+              lateUpdateTS + 12 * anHour,
+              lateUpdateTS + 13 * anHour,
+              lateUpdateTS + 24 * anHour,
+            ];
+            await setTimestamp(psTime);
+            await testContract
+              .connect(user1)
+              .preStake(planetId, operatorId, [pubkey1], [signature1]);
+          });
+
+          it("calling 1h after last update: false", async () => {
+            await setTimestamp(newCallTimes[0]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              false
+            );
+          });
+
+          it("calling 11h after last update: false", async () => {
+            await setTimestamp(newCallTimes[1]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              false
+            );
+          });
+
+          it("calling 12h after last update: true", async () => {
+            await setTimestamp(newCallTimes[2]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              true
+            );
+          });
+
+          it("calling 13h after last update: true", async () => {
+            await setTimestamp(newCallTimes[3]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              true
+            );
+          });
+
+          it("calling 24 after last update: true", async () => {
+            await setTimestamp(newCallTimes[4]);
+            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
+              true
+            );
+          });
+        });
+      });
+    });
+    describe("stakeBeacon", () => {
+      let prevSurplus;
+      let prevActiveValidators;
+      let prevOperatorWallet;
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 3);
+        await testContract.setPricePerShare(String(1e18), planetId);
+        await testContract.deployWithdrawalPool(planetId);
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(5e18),
+        });
+        await testContract
+          .connect(user1)
+          .preStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2],
+            [signature1, signature2]
+          );
+        prevActiveValidators = await testContract.activeValidatorsById(
+          planetId,
+          operatorId
+        );
+        prevOperatorWallet = await testContract
+          .connect(user1)
+          .getOperatorWalletBalance(operatorId);
+      });
+
+      it("1 to 64 nodes per transaction", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .stakeBeacon(operatorId, Array(65).fill(pubkey1))
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+
+        await expect(
+          testContract.connect(user1).stakeBeacon(operatorId, [])
+        ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
+      });
+
+      it("reverts if NOT all pubkeys are stakeable", async () => {
+        startTS = await getCurrentBlockTimestamp();
+        updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+        await testContract.setMerkleUpdateTS(updateTS);
+
+        await setTimestamp(updateTS);
+        await testContract
+          .connect(user1)
+          .preStake(planetId, operatorId, [pubkey3], [signature3]);
+        await setTimestamp(updateTS + 11 * anHour);
+
+        await expect(
+          testContract.connect(user1).stakeBeacon(operatorId, [pubkey3])
+        ).to.be.revertedWith("StakeUtils: NOT all pubkeys are stakeable");
+      });
+
+      describe("partial success, check params", async () => {
+        beforeEach(async () => {
+          await testContract
+            .connect(user1)
+            .stakePlanet(planetId, 0, MAX_UINT256, {
+              value: String(50e18),
+            });
+          prevSurplus = await testContract.surplusById(planetId);
+          startTS = await getCurrentBlockTimestamp();
+          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+          await testContract.setMerkleUpdateTS(updateTS);
+          await setTimestamp(updateTS + 13 * anHour);
+          await testContract
+            .connect(user1)
+            .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+        });
+
+        it("OperatorWalletBalance", async () => {
+          const currentOperatorWallet = await testContract
+            .connect(user1)
+            .getOperatorWalletBalance(operatorId);
+
+          expect(String(1e18)).to.be.eq(
+            currentOperatorWallet.sub(prevOperatorWallet)
+          );
+        });
+
+        it("Surplus", async () => {
+          const currentSurplus = await testContract.surplusById(planetId);
+          expect(String(32e18)).to.be.eq(prevSurplus.sub(currentSurplus));
+        });
+
+        it("ActiveValidators", async () => {
+          const currentActiveValidators =
+            await testContract.activeValidatorsById(planetId, operatorId);
+          expect(String(1)).to.be.eq(
+            currentActiveValidators.sub(prevActiveValidators)
+          );
+        });
+        it("returns Created Validators", async () => {
+          expect(await testContract.lastCreatedValidatorNum()).to.be.eq(
+            String(1)
+          );
+        });
+      });
+
+      describe("success, check params", async () => {
+        beforeEach(async () => {
+          await testContract
+            .connect(user1)
+            .stakePlanet(planetId, 0, MAX_UINT256, {
+              value: String(1e20),
+            });
+          prevSurplus = await testContract.surplusById(planetId);
+          startTS = await getCurrentBlockTimestamp();
+          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
+          await testContract.setMerkleUpdateTS(updateTS);
+          await setTimestamp(updateTS + 13 * anHour);
+          await testContract
+            .connect(user1)
+            .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+        });
+
+        it("OperatorWalletBalance", async () => {
+          const currentOperatorWallet = await testContract
+            .connect(user1)
+            .getOperatorWalletBalance(operatorId);
+          expect(String(2e18)).to.be.eq(
+            currentOperatorWallet.sub(prevOperatorWallet)
+          );
+        });
+
+        it("Surplus", async () => {
+          const currentSurplus = await testContract.surplusById(planetId);
+          expect(String(64e18)).to.be.eq(prevSurplus.sub(currentSurplus));
+        });
+
+        it("ActiveValidators", async () => {
+          const currentActiveValidators =
+            await testContract.activeValidatorsById(planetId, operatorId);
+          expect(String(2)).to.be.eq(
+            currentActiveValidators.sub(prevActiveValidators)
+          );
+        });
+
+        it("returns Created Validators", async () => {
+          expect(await testContract.lastCreatedValidatorNum()).to.be.eq(
+            String(2)
+          );
+        });
+      });
     });
   });
 });

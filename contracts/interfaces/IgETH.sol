@@ -87,4 +87,10 @@ interface IgETH {
         uint256 _id,
         bool isSet
     ) external;
+
+    function updateMinterRole(address Minter) external;
+
+    function updatePauserRole(address Pauser) external;
+
+    function updateOracleRole(address Oracle) external;
 }

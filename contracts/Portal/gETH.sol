@@ -145,13 +145,13 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @dev Pauser is basically a superUser, there can be only 1 at a given time,
      * intended as "Portal"
      */
-    function updatePauserRole(address Minter) external virtual {
+    function updatePauserRole(address Pauser) external virtual {
         require(
             hasRole(PAUSER_ROLE, _msgSender()),
             "gETH: must have PAUSER_ROLE to set"
         );
         renounceRole(PAUSER_ROLE, _msgSender());
-        _setupRole(PAUSER_ROLE, Minter);
+        _setupRole(PAUSER_ROLE, Pauser);
     }
 
     /**
@@ -159,13 +159,13 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @dev Oracle is basically a superUser, there can be only 1 at a given time,
      * intended as "Portal"
      */
-    function updateOracleRole(address Minter) external virtual {
+    function updateOracleRole(address Oracle) external virtual {
         require(
             hasRole(ORACLE_ROLE, _msgSender()),
             "gETH: must have ORACLE_ROLE to set"
         );
         renounceRole(ORACLE_ROLE, _msgSender());
-        _setupRole(ORACLE_ROLE, Minter);
+        _setupRole(ORACLE_ROLE, Oracle);
     }
 
     /**
