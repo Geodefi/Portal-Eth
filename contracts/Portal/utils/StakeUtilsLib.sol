@@ -53,12 +53,12 @@ library StakeUtils {
         uint256 operatorId,
         uint256 allowance
     );
-    event PreStaked(bytes pubkey, uint256 planetID, uint256 operatorID);
-
+    event PreStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
+    event BeaconStaked(bytes pubkey);
     /**
      * @dev we can use uint8 'state' as is 0: inactive, 1:prestaked, 2: pending, 3: active, 4: withdrawn
-     * @param planetID needed for withdrawal_credential
-     * @param operatorID needed for staking after allowence
+     * @param planetId needed for withdrawal_credential
+     * @param operatorId needed for staking after allowence
      * @param blockTimeStamp needed for validation of approval, cration date
      * @param alienated needed for validation of approval
      **/
@@ -447,7 +447,6 @@ library StakeUtils {
         uint256 _operatorId,
         uint256 value
     ) public onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
-        require(value > 0, "StakeUtils: The value must be greater than 0");
         uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
         _wallet += value;
         _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
@@ -730,8 +729,7 @@ library StakeUtils {
      *  1 ether will e sent back to Node Operator when finalized deposit is successful.
      *  @dev Prestake requires enough allowance from Staking Pools to Operators.
      *  @dev Prestake requires enough funds within operatorWallet.
-     *  @dev Max number of validators to propose is 64
-     *
+     *  @dev Max number of validators to propose is MAX_DEPOSITS_PER_CALL (currently 64)
      */
     function preStake(
         StakePool storage self,
@@ -796,23 +794,13 @@ library StakeUtils {
                 "StakeUtils: SIGNATURE_LENGTH ERROR"
             );
             {
-                bytes memory WC = _DATASTORE.readBytesForId(
-                    planetId,
-                    "withdrawalCredential"
-                );
-                bytes32 depositDataRoot;
-                {
-                    depositDataRoot = DCU.getDepositDataRoot(
-                        pubkeys[i],
-                        WC,
-                        signatures[i],
-                        DCU.DEPOSIT_AMOUNT_PRESTAKE
-                    );
-                }
                 // TODO: there is no deposit contract, solve and open this comment
-                // DCU.getDepositContract().deposit{
-                //     value: DCU.DEPOSIT_AMOUNT_PRESTAKE
-                // }(pubkeys[i], WC, signatures[i], depositDataRoot);
+                DCU.depositValidator(
+                    pubkeys[i],
+                    _DATASTORE.readBytesForId(planetId, "withdrawalCredential"),
+                    signatures[i],
+                    DCU.DEPOSIT_AMOUNT_PRESTAKE
+                );
             }
 
             self.Validators[pubkeys[i]] = Validator(
@@ -822,7 +810,105 @@ library StakeUtils {
                 signatures[i],
                 false
             );
+
             emit PreStaked(pubkeys[i], planetId, operatorId);
         }
+    }
+
+    /**
+     *  @notice Sends 31 Eth from staking pool to validators that are previously created with PreStake.
+     *  1 Eth per successful validator boostraping is returned back to OperatorWallet.
+     *
+     *  @param operatorId the id of the Operator whose maintainer calling this function
+     *  @param pubkeys  Array of BLS12-381 public keys of the validators that are already proposed with PreStake.
+     *
+     *  @dev To save gas cost, pubkeys should be arranged by planedIds.
+     *  ex: [pk1, pk2, pk3, pk4, pk5, pk6, pk7]
+     *  pk1, pk2, pk3 from planet1
+     *  pk4, pk5 from planet2
+     *  pk6 from planet3
+     *  seperate them in similar groups as much as possible.
+     *  @dev Max number of validators to boostrap is MAX_DEPOSITS_PER_CALL (currently 64)
+     *  @dev A pubkey that is alienated will not get through. Do not frontrun during PreStake.
+     *  @return i = successful deposit count, starting from the first element of pubkeys. Even in occurance of one unsucessful deposit.
+     */
+    function stakeBeacon(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 operatorId,
+        bytes[] calldata pubkeys
+    ) external onlyMaintainer(_DATASTORE, operatorId) returns (uint256 i) {
+        require(
+            pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
+            "StakeUtils: 1 to 64 nodes per transaction"
+        );
+        bytes32 activeValKey = _getKey(operatorId, "activeValidators");
+
+        uint256 planetId = self.Validators[pubkeys[0]].planetId;
+        uint256 surplus = _DATASTORE.readUintForId(planetId, "surplus");
+        bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
+            planetId,
+            "withdrawalCredential"
+        );
+        bytes memory signature;
+        uint256 lastPlanetChange;
+        uint256 newActiveVal;
+        for (; i < pubkeys.length; ++i) {
+            // require(
+            //     canStake(self, pubkeys[i]) == true,
+            //     "StakeUtils: pubkey NOT approved"
+            // );
+
+            if (planetId != self.Validators[pubkeys[i]].planetId) {
+                _DATASTORE.writeUintForId(planetId, "surplus", surplus);
+
+                newActiveVal =
+                    _DATASTORE.readUintForId(planetId, activeValKey) +
+                    i -
+                    lastPlanetChange;
+                _DATASTORE.writeUintForId(planetId, activeValKey, newActiveVal);
+
+                lastPlanetChange = i;
+
+                planetId = self.Validators[pubkeys[i]].planetId;
+                withdrawalCredential = _DATASTORE.readBytesForId(
+                    planetId,
+                    "withdrawalCredential"
+                );
+                surplus = _DATASTORE.readUintForId(planetId, "surplus");
+            }
+
+            if (surplus < DCU.DEPOSIT_AMOUNT) {
+                // occurance of an unsuccessful deposit because the planet pool has been drained. return successful deposit count.
+                break;
+            }
+            surplus -= DCU.DEPOSIT_AMOUNT;
+
+            signature = self.Validators[pubkeys[i]].signature;
+
+            // TODO: there is no deposit contract, solve and open this comment
+            DCU.depositValidator(
+                pubkeys[i],
+                withdrawalCredential,
+                signature,
+                DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
+            );
+
+            emit BeaconStaked(pubkeys[i]);
+        }
+
+        _DATASTORE.writeUintForId(planetId, "surplus", surplus);
+
+        newActiveVal =
+            _DATASTORE.readUintForId(planetId, activeValKey) +
+            i -
+            lastPlanetChange;
+        _DATASTORE.writeUintForId(planetId, activeValKey, newActiveVal);
+
+        increaseOperatorWallet(
+            _DATASTORE,
+            operatorId,
+            DCU.DEPOSIT_AMOUNT_PRESTAKE * i
+        );
     }
 }
