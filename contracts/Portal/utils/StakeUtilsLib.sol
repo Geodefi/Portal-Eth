@@ -59,14 +59,14 @@ library StakeUtils {
      * @dev we can use uint8 'state' as is 0: inactive, 1:prestaked, 2: pending, 3: active, 4: withdrawn
      * @param planetId needed for withdrawal_credential
      * @param operatorId needed for staking after allowence
-     * @param blockTimeStamp needed for validation of approval, cration date
+     * @param preStakeTimeStamp needed for validation of approval, cration date
      * @param alienated needed for validation of approval
      **/
     struct Validator {
         // uint8 state;
         uint256 planetId;
         uint256 operatorId;
-        uint256 blockTimeStamp;
+        uint256 preStakeTimeStamp;
         bytes signature;
         bool alienated;
     }
@@ -100,6 +100,7 @@ library StakeUtils {
         uint256 FEE_DENOMINATOR;
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 MAX_MAINTAINER_FEE;
+        uint256 merkleUpdateTS;
         mapping(bytes => Validator) Validators;
     }
 
@@ -108,8 +109,11 @@ library StakeUtils {
      * @dev gETH_DENOMINATOR makes sure that we are taking care of decimals on calculations related to gETH
      */
     uint256 public constant gETH_DENOMINATOR = 1e18;
-
     uint256 public constant IGNORABLE_DEBT = 1 ether;
+
+    /// @notice Oracle is active for the first 30 min for a day
+    uint256 public constant ORACLE_PERIOD = 1 days;
+    uint256 public constant ALIENATION_PERIOD = 12 hours;
 
     // TODO: type check?
     modifier onlyMaintainer(
@@ -716,6 +720,23 @@ library StakeUtils {
         }
     }
 
+    function canStake(
+        StakePool storage self,
+        bytes calldata pubkey,
+        uint256 merkleUpdateTS
+    ) public view returns (bool) {
+        uint256 preStakeTS = self.Validators[pubkey].preStakeTimeStamp;
+        require(preStakeTS > 0);
+        return
+            merkleUpdateTS >= preStakeTS + ALIENATION_PERIOD &&
+            block.timestamp >=
+            preStakeTS +
+                ORACLE_PERIOD -
+                (preStakeTS % ORACLE_PERIOD) +
+                ALIENATION_PERIOD &&
+            self.Validators[pubkey].alienated == false;
+    }
+
     /**
      *  @notice Validator Credentials Proposal function, first step of crating validators. Once a pubKey is proposed and not alienated for some time,
      *  it is optimistically allowed to take funds from staking pools.
@@ -778,11 +799,11 @@ library StakeUtils {
 
         for (uint256 i = 0; i < pubkeys.length; ++i) {
             // TODO: discuss this alienated to be checked or not
-            // possibly not needed since if the blockTimeStamp is 0
+            // possibly not needed since if the preStakeTimeStamp is 0
             // then there is no possibility that it is alienated
             require(
                 self.Validators[pubkeys[i]].alienated == false &&
-                    self.Validators[pubkeys[i]].blockTimeStamp == 0,
+                    self.Validators[pubkeys[i]].preStakeTimeStamp == 0,
                 "StakeUtils: Pubkey is already used or alienated"
             );
             require(
@@ -842,23 +863,29 @@ library StakeUtils {
             pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
             "StakeUtils: 1 to 64 nodes per transaction"
         );
-        bytes32 activeValKey = _getKey(operatorId, "activeValidators");
+        {
+            uint256 merkleUpdateTS = self.merkleUpdateTS;
+            for (i; i < pubkeys.length; ++i) {
+                require(
+                    canStake(self, pubkeys[i], merkleUpdateTS),
+                    "StakeUtils: NOT all pubkeys are stakeable"
+                );
+            }
+        }
+        i = 0;
 
+        bytes32 activeValKey = _getKey(operatorId, "activeValidators");
         uint256 planetId = self.Validators[pubkeys[0]].planetId;
         uint256 surplus = _DATASTORE.readUintForId(planetId, "surplus");
         bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
             planetId,
             "withdrawalCredential"
         );
+
         bytes memory signature;
         uint256 lastPlanetChange;
         uint256 newActiveVal;
         for (; i < pubkeys.length; ++i) {
-            // require(
-            //     canStake(self, pubkeys[i]) == true,
-            //     "StakeUtils: pubkey NOT approved"
-            // );
-
             if (planetId != self.Validators[pubkeys[i]].planetId) {
                 _DATASTORE.writeUintForId(planetId, "surplus", surplus);
 
