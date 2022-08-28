@@ -41,7 +41,7 @@ const config = {
         ? {
             url: process.env.FORK_URL,
           }
-        : false,
+        : undefined,
       // allowUnlimitedContractSize: true,
     },
   },

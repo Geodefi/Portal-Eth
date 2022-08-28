@@ -32,6 +32,8 @@ contract TestStakeUtils is ERC1155Holder {
             (5 * STAKEPOOL.FEE_DENOMINATOR) /
             1e3;
         STAKEPOOL.MAX_MAINTAINER_FEE = (10 * STAKEPOOL.FEE_DENOMINATOR) / 1e2; //10%
+        STAKEPOOL.VERIFICATION_INDEX = 0;
+        STAKEPOOL.VALIDATORS_INDEX = 0;
     }
 
     function getStakePoolParams()
@@ -49,7 +51,9 @@ contract TestStakeUtils is ERC1155Holder {
             uint256 DEFAULT_ADMIN_FEE,
             uint256 FEE_DENOMINATOR,
             uint256 PERIOD_PRICE_INCREASE_LIMIT,
-            uint256 MAX_MAINTAINER_FEE
+            uint256 MAX_MAINTAINER_FEE,
+            uint256 VERIFICATION_INDEX,
+            uint256 VALIDATORS_INDEX
         )
     {
         ORACLE = STAKEPOOL.ORACLE;
@@ -63,6 +67,8 @@ contract TestStakeUtils is ERC1155Holder {
         FEE_DENOMINATOR = STAKEPOOL.FEE_DENOMINATOR;
         PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT;
         MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
+        VERIFICATION_INDEX = STAKEPOOL.VERIFICATION_INDEX;
+        VALIDATORS_INDEX = STAKEPOOL.VALIDATORS_INDEX;
     }
 
     function getgETH() public view virtual returns (IgETH) {
@@ -74,9 +80,8 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     /**
-  * Maintainer
-
-  */
+     * Maintainer
+     */
     function getMaintainerFromId(uint256 _id)
         external
         view
@@ -258,7 +263,7 @@ contract TestStakeUtils is ERC1155Holder {
         payable
         returns (bool success)
     {
-        success = StakeUtils.increaseOperatorWallet(DATASTORE, id, msg.value);
+        success = StakeUtils.increaseOperatorWallet(DATASTORE, id);
     }
 
     function decreaseOperatorWallet(uint256 id, uint256 value)
@@ -342,6 +347,15 @@ contract TestStakeUtils is ERC1155Holder {
         require(totalgAvax > 0, "Portal: unsuccesful deposit");
     }
 
+    function canStake(bytes calldata pubkey)
+        external
+        view
+        virtual
+        returns (bool)
+    {
+        return STAKEPOOL.canStake(pubkey);
+    }
+
     function preStake(
         uint256 planetId,
         uint256 operatorId,
@@ -374,8 +388,16 @@ contract TestStakeUtils is ERC1155Holder {
         lastCreatedVals = succesfullDepositCount;
     }
 
+    function updateVerificationIndex(
+        uint256 new_index,
+        bytes[] calldata alienPubkeys,
+        bytes[] calldata curedPubkeys
+    ) external virtual {
+        STAKEPOOL.updateVerificationIndex(new_index, alienPubkeys, curedPubkeys);
+    }
+
     function alienatePubKey(bytes calldata pubkey) external virtual {
-        STAKEPOOL.Validators[pubkey].alienated = true;
+        STAKEPOOL.Validators[pubkey].state = 69;
     }
 
     function getValidatorData(bytes calldata pubkey)
@@ -387,17 +409,31 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.Validators[pubkey];
     }
 
-    function setMerkleUpdateTS(uint256 _ts) external virtual {
-        STAKEPOOL.merkleUpdateTS = _ts;
-    }
-
-    function canStake(bytes calldata pubkey, uint256 merkleUpdateTS)
+    function getVALIDATORS_INDEX()
         external
         view
         virtual
-        returns (bool)
+        returns (uint256)
     {
-        return STAKEPOOL.canStake(pubkey, merkleUpdateTS);
+        return STAKEPOOL.VALIDATORS_INDEX;
+    }
+
+    function getVERIFICATION_INDEX()
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return STAKEPOOL.VERIFICATION_INDEX;
+    }
+
+    function getContractBalance() 
+        external
+        view
+        virtual 
+        returns (uint256)
+    {
+        return address(this).balance;
     }
 
     function Receive() external payable {}

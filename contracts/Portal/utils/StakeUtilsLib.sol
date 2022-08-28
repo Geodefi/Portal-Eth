@@ -53,22 +53,24 @@ library StakeUtils {
         uint256 operatorId,
         uint256 allowance
     );
+    event Alienation(bytes pubkey, bool isAlien);
+    event VerificationIndexUpdated(uint256 newIndex);
     event PreStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
+
     /**
-     * @dev we can use uint8 'state' as is 0: inactive, 1:prestaked, 2: pending, 3: active, 4: withdrawn
+     * @param state 0: inactive, 1: proposed, 2: active, 3: withdrawn, 69: alien (https://bit.ly/3Tkc6UC)
+     * @param index representing this validators placement on the chronological order of the proposed validators
      * @param planetId needed for withdrawal_credential
      * @param operatorId needed for staking after allowence
-     * @param preStakeTimeStamp needed for validation of approval, cration date
-     * @param alienated needed for validation of approval
+     * @param signature BLS12-381 signature of the validator
      **/
     struct Validator {
-        // uint8 state;
+        uint8 state;
+        uint256 index;
         uint256 planetId;
         uint256 operatorId;
-        uint256 preStakeTimeStamp;
         bytes signature;
-        bool alienated;
     }
     /**
      * @notice StakePool includes the parameters related to multiple Staking Pool Contracts.
@@ -85,6 +87,8 @@ library StakeUtils {
      * @param DEFAULT_ADMIN_FEE DWP parameter
      * @param FEE_DENOMINATOR represents 100%, ALSO DWP parameter
      * @param MAX_MAINTAINER_FEE : limits fees, set by GOVERNANCE
+     * @param VERIFICATION_INDEX the highest index of the validators that are verified to be activated. Updated by Telescope. set to 0 at start
+     * @param VALIDATORS_INDEX total number of validators that are proposed at some point. includes all states of validators. set to 0 at start
      * @param Validators : pubKey to Validator
      * @dev changing any of address parameters (gETH, ORACLE, DEFAULT_DWP, DEFAULT_LP_TOKEN) MUST require a contract upgrade to ensure security. We can change this in the future with a better GeodeUtils design.
      **/
@@ -98,9 +102,10 @@ library StakeUtils {
         uint256 DEFAULT_FEE;
         uint256 DEFAULT_ADMIN_FEE;
         uint256 FEE_DENOMINATOR;
-        uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 MAX_MAINTAINER_FEE;
-        uint256 merkleUpdateTS;
+        uint256 PERIOD_PRICE_INCREASE_LIMIT;
+        uint256 VERIFICATION_INDEX;
+        uint256 VALIDATORS_INDEX;
         mapping(bytes => Validator) Validators;
     }
 
@@ -111,19 +116,20 @@ library StakeUtils {
     uint256 public constant gETH_DENOMINATOR = 1e18;
     uint256 public constant IGNORABLE_DEBT = 1 ether;
 
-    /// @notice Oracle is active for the first 30 min for a day
-    uint256 public constant ORACLE_PERIOD = 1 days;
-    uint256 public constant ALIENATION_PERIOD = 12 hours;
-
     // TODO: type check?
     modifier onlyMaintainer(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
     ) {
         require(
-            _DATASTORE.readAddressForId(_id, "maintainer") == msg.sender,
+            msg.sender == _DATASTORE.readAddressForId(_id, "maintainer"),
             "StakeUtils: sender is NOT maintainer"
         );
+        _;
+    }
+
+    modifier onlyOracle(StakePool storage self) {
+        require(msg.sender == self.ORACLE, "StakeUtils: sender is NOT ORACLE");
         _;
     }
 
@@ -134,7 +140,7 @@ library StakeUtils {
         address _maintainer
     ) {
         require(
-            _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
+            msg.sender == _DATASTORE.readAddressForId(_id, "CONTROLLER"),
             "StakeUtils: sender is NOT CONTROLLER"
         );
 
@@ -308,7 +314,7 @@ library StakeUtils {
         address _newMaintainer
     ) external {
         require(
-            _DATASTORE.readAddressForId(_id, "CONTROLLER") == msg.sender,
+            msg.sender == _DATASTORE.readAddressForId(_id, "CONTROLLER"),
             "StakeUtils: sender is NOT CONTROLLER"
         );
 
@@ -446,15 +452,27 @@ library StakeUtils {
      * @param value Ether (in Wei) amount to increase the wallet balance.
      * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.
      */
-    function increaseOperatorWallet(
+    function _increaseOperatorWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) public onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
-        uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
-        _wallet += value;
-        _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
+    ) internal returns (bool success) {
+        _DATASTORE.writeUintForId(
+            _operatorId,
+            "wallet",
+            _DATASTORE.readUintForId(_operatorId, "wallet") + value
+        );
         return true;
+    }
+
+    /**
+     * @notice external version of _increaseOperatorWallet()
+     */
+    function increaseOperatorWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+        return _increaseOperatorWallet(_DATASTORE, _operatorId, msg.value);
     }
 
     /**
@@ -464,24 +482,41 @@ library StakeUtils {
      * @param value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
      * @return success boolean value which is "sent", should be used by Operator is Maintainer is a contract.
      */
+    function _decreaseOperatorWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 value
+    ) internal returns (bool success) {
+        uint256 _balance = _DATASTORE.readUintForId(_operatorId, "wallet");
+        require(
+            _balance >= value,
+            "StakeUtils: Not enough resources in operatorWallet"
+        );
+        _balance -= value;
+        _DATASTORE.writeUintForId(_operatorId, "wallet", _balance);
+        return true;
+    }
+
+    /**
+     * @notice external version of _decreaseOperatorWallet()
+     */
     function decreaseOperatorWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) public onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
         require(
             address(this).balance >= value,
             "StakeUtils: Not enough resources in Portal"
         );
-        uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
-        require(
-            _wallet >= value,
-            "StakeUtils: Not enough resources in operatorWallet"
+        bool decreased = _decreaseOperatorWallet(
+            _DATASTORE,
+            _operatorId,
+            value
         );
-        _wallet -= value;
-        _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
+
         (bool sent, ) = msg.sender.call{value: value}("");
-        require(sent, "StakeUtils: Failed to send ETH");
+        require(decreased && sent, "StakeUtils: Failed to send ETH");
         return sent;
     }
 
@@ -624,6 +659,46 @@ library StakeUtils {
      */
 
     /**
+     * @notice Batch validator verification
+     */
+
+    /**
+     * @notice Updating VERIFICATION_INDEX, signaling that it is safe to allow
+     * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds.
+     * @param new_index index of the highest validator that is verified to be activated
+     * @param alienPubkeys array of validator pubkeys that are lower than new_index which also
+     * either frontrunned preStake function thus alienated OR proven to be mistakenly alienated.
+     */
+    function updateVerificationIndex(
+        StakePool storage self,
+        uint256 new_index,
+        bytes[] calldata alienPubkeys,
+        bytes[] calldata curedPubkeys
+    ) external onlyOracle(self) {
+        require(self.VALIDATORS_INDEX >= new_index);
+        require(new_index >= self.VERIFICATION_INDEX);
+
+        uint256 i;
+        for (; i < alienPubkeys.length; ++i) {
+            require(self.Validators[alienPubkeys[i]].state == 1, "StakeUtils: NOT all alienPubkeys are pending");
+            self.Validators[alienPubkeys[i]].state = 69;
+            emit Alienation(alienPubkeys[i], true);
+        }
+
+        for (i = 0; i < curedPubkeys.length; ++i) {
+            require(self.Validators[curedPubkeys[i]].state == 69, "StakeUtils: NOT all curedPubkeys are alienated");
+            self.Validators[curedPubkeys[i]].state = 1;
+            emit Alienation(curedPubkeys[i], false);
+        }
+        self.VERIFICATION_INDEX = new_index;
+        emit VerificationIndexUpdated(new_index);
+    }
+
+    /**
+     * @notice Updating PricePerShare
+     */
+
+    /**
      * @notice sets pricePerShare parameter of gETH(id)
      * @dev only ORACLE should be able to reach this after sanity checks on a new price
      */
@@ -659,30 +734,21 @@ library StakeUtils {
      *  with Prestake function. Eligibility is defined by alienation, check alienate() for info.
      *
      *  @param pubkey BLS12-381 public key of the validator
-     *  @param merkleUpdateTS last oracle update timestamp (first timestampt of the day)
      *  @return true if:
      *   - pubkey should be preStaked
-     *   - preStake timestamp should be at least 12 hours before last merkleroot update
-     *   - at least 12 hours should past after the first merkleroot update after preStake
+     *   - validator's index should be lower than VERIFICATION_INDEX, updated by TELESCOPE
      *   - pubkey should not be alienated (https://bit.ly/3Tkc6UC)
      *  else:
      *      return false
      */
-    function canStake(
-        StakePool storage self,
-        bytes calldata pubkey,
-        uint256 merkleUpdateTS
-    ) public view returns (bool) {
-        uint256 preStakeTS = self.Validators[pubkey].preStakeTimeStamp;
-        require(preStakeTS > 0, "StakeUtils: pubkey is not preStaked");
+    function canStake(StakePool storage self, bytes calldata pubkey)
+        public
+        view
+        returns (bool)
+    {
         return
-            (merkleUpdateTS >= (preStakeTS + ALIENATION_PERIOD)) &&
-            (block.timestamp >=
-                (preStakeTS +
-                    ORACLE_PERIOD -
-                    (preStakeTS % ORACLE_PERIOD) +
-                    ALIENATION_PERIOD)) &&
-            self.Validators[pubkey].alienated == false;
+            self.Validators[pubkey].state == 1 &&
+            self.Validators[pubkey].index <= self.VERIFICATION_INDEX;
     }
 
     /**
@@ -766,6 +832,7 @@ library StakeUtils {
      *  @dev Prestake requires enough allowance from Staking Pools to Operators.
      *  @dev Prestake requires enough funds within operatorWallet.
      *  @dev Max number of validators to propose is MAX_DEPOSITS_PER_CALL (currently 64)
+     *  @return i = successful proposal count, starting from the first element of pubkeys. Even in occurance of one unsucessful deposit.
      */
     function preStake(
         StakePool storage self,
@@ -774,7 +841,7 @@ library StakeUtils {
         uint256 operatorId,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
-    ) external onlyMaintainer(_DATASTORE, operatorId) {
+    ) external onlyMaintainer(_DATASTORE, operatorId) returns (uint256 i) {
         require(
             _DATASTORE.readUintForId(planetId, "TYPE") == 5 ||
                 _DATASTORE.readUintForId(planetId, "TYPE") == 6,
@@ -800,7 +867,7 @@ library StakeUtils {
             "StakeUtils: not enough allowance"
         );
 
-        decreaseOperatorWallet(
+        _decreaseOperatorWallet(
             _DATASTORE,
             operatorId,
             pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
@@ -811,14 +878,13 @@ library StakeUtils {
             _getKey(operatorId, "createdValidators"),
             createdValidators + pubkeys.length
         );
-
-        for (uint256 i = 0; i < pubkeys.length; ++i) {
+        uint256 valIndex = self.VALIDATORS_INDEX;
+        for (; i < pubkeys.length; ++i) {
             // TODO: discuss this alienated to be checked or not
             // possibly not needed since if the preStakeTimeStamp is 0
             // then there is no possibility that it is alienated
             require(
-                self.Validators[pubkeys[i]].alienated == false &&
-                    self.Validators[pubkeys[i]].preStakeTimeStamp == 0,
+                self.Validators[pubkeys[i]].state == 0,
                 "StakeUtils: Pubkey is already used or alienated"
             );
             require(
@@ -839,16 +905,17 @@ library StakeUtils {
                 // );
             }
 
+            valIndex += 1;
             self.Validators[pubkeys[i]] = Validator(
+                1,
+                valIndex,
                 planetId,
                 operatorId,
-                block.timestamp,
-                signatures[i],
-                false
+                signatures[i]
             );
-
             emit PreStaked(pubkeys[i], planetId, operatorId);
         }
+        self.VALIDATORS_INDEX = valIndex;
     }
 
     /**
@@ -878,16 +945,13 @@ library StakeUtils {
             pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
             "StakeUtils: 1 to 64 nodes per transaction"
         );
-        {
-            uint256 merkleUpdateTS = self.merkleUpdateTS;
-            for (i; i < pubkeys.length; ++i) {
-                require(
-                    canStake(self, pubkeys[i], merkleUpdateTS),
-                    "StakeUtils: NOT all pubkeys are stakeable"
-                );
-            }
+
+        for (; i < pubkeys.length; ++i) {
+            require(
+                canStake(self, pubkeys[i]),
+                "StakeUtils: NOT all pubkeys are stakeable"
+            );
         }
-        i = 0;
 
         bytes32 activeValKey = _getKey(operatorId, "activeValidators");
         uint256 planetId = self.Validators[pubkeys[0]].planetId;
@@ -900,7 +964,7 @@ library StakeUtils {
         bytes memory signature;
         uint256 lastPlanetChange;
         uint256 newActiveVal;
-        for (; i < pubkeys.length; ++i) {
+        for (i = 0; i < pubkeys.length; ++i) {
             if (planetId != self.Validators[pubkeys[i]].planetId) {
                 _DATASTORE.writeUintForId(planetId, "surplus", surplus);
 
@@ -936,6 +1000,7 @@ library StakeUtils {
             //     DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
             // );
 
+            self.Validators[pubkeys[i]].state = 2;
             emit BeaconStaked(pubkeys[i]);
         }
 
@@ -947,7 +1012,7 @@ library StakeUtils {
             lastPlanetChange;
         _DATASTORE.writeUintForId(planetId, activeValKey, newActiveVal);
 
-        increaseOperatorWallet(
+        _increaseOperatorWallet(
             _DATASTORE,
             operatorId,
             DCU.DEPOSIT_AMOUNT_PRESTAKE * i
