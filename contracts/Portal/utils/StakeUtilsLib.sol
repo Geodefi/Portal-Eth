@@ -85,7 +85,6 @@ library StakeUtils {
      * @param DEFAULT_A DWP parameter
      * @param DEFAULT_FEE DWP parameter
      * @param DEFAULT_ADMIN_FEE DWP parameter
-     * @param FEE_DENOMINATOR represents 100%, ALSO DWP parameter
      * @param MAX_MAINTAINER_FEE : limits fees, set by GOVERNANCE
      * @param VERIFICATION_INDEX the highest index of the validators that are verified to be activated. Updated by Telescope. set to 0 at start
      * @param VALIDATORS_INDEX total number of validators that are proposed at some point. includes all states of validators. set to 0 at start
@@ -101,7 +100,6 @@ library StakeUtils {
         uint256 DEFAULT_A;
         uint256 DEFAULT_FEE;
         uint256 DEFAULT_ADMIN_FEE;
-        uint256 FEE_DENOMINATOR;
         uint256 MAX_MAINTAINER_FEE;
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 VERIFICATION_INDEX;
@@ -387,10 +385,11 @@ library StakeUtils {
     function setMaxMaintainerFee(
         StakePool storage self,
         address _GOVERNANCE,
+        uint256 _FEE_DENOMINATOR,
         uint256 _newMaxFee
     ) external onlyGovernance(_GOVERNANCE) {
         require(
-            _newMaxFee <= self.FEE_DENOMINATOR,
+            _newMaxFee <= _FEE_DENOMINATOR,
             "StakeUtils: fee more than 100%"
         );
         self.MAX_MAINTAINER_FEE = _newMaxFee;
