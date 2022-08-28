@@ -4,7 +4,7 @@ const {
   MAX_UINT256,
   ZERO_ADDRESS,
   getCurrentBlockTimestamp,
-  setTimestamp,
+  // setTimestamp,
 } = require("../testUtils");
 
 const { solidity } = require("ethereum-waffle");
@@ -34,8 +34,6 @@ describe("StakeUtils", async () => {
   let DEFAULT_DWP;
   let DEFAULT_LP_TOKEN;
   let DEFAULT_GETH_INTERFACE;
-  const anHour = 60 * 60;
-  const aDay = 24 * anHour;
 
   const setupTest = deployments.createFixture(async ({ ethers }) => {
     await deployments.fixture(); // ensure you start from a fresh deployments
@@ -114,6 +112,13 @@ describe("StakeUtils", async () => {
     });
     it("correct MAX_MAINTAINER_FEE", async () => {
       expect(stakepool.MAX_MAINTAINER_FEE).to.eq(MAX_MAINTAINER_FEE);
+    });
+
+    it("correct VERIFICATION_INDEX", async () => {
+      expect(stakepool.VERIFICATION_INDEX).to.eq(String(0));
+    });
+    it("correct VALIDATORS_INDEX", async () => {
+      expect(stakepool.VALIDATORS_INDEX).to.eq(String(0));
     });
   });
 
@@ -1142,451 +1147,29 @@ describe("StakeUtils", async () => {
           ).to.be.revertedWith("StakeUtils: not enough allowance");
         });
 
+        it("VALIDATORS_INDEX correct", async () => {
+          expect(
+            (await testContract.getStakePoolParams()).VALIDATORS_INDEX
+          ).to.be.eq(String(2));
+        });
+
         it("validator params are correct", async () => {
-          const timeStamp = await getCurrentBlockTimestamp();
           const val1 = await testContract.getValidatorData(pubkey1);
           const val2 = await testContract.getValidatorData(pubkey2);
           const signatures = [signature1, signature2];
           [val1, val2].forEach(function (vd, i) {
             expect(vd.planetId).to.be.eq(planetId);
             expect(vd.operatorId).to.be.eq(operatorId);
-            expect(vd.preStakeTimeStamp).to.be.gt(0);
-            expect(vd.preStakeTimeStamp).to.be.eq(timeStamp);
+            expect(vd.index).to.be.eq(i + 1);
+            expect(vd.state).to.be.eq(1);
             expect(vd.signature).to.be.eq(signatures[i]);
-            expect(vd.alienated).to.be.eq(false);
           });
         });
       });
     });
 
-    describe("canStake", () => {
-      let startTS;
-      // let timeRange;
-      let updateTime;
-      // let prevUpdateTS;
-      // let fourDaysLater;
-      beforeEach(async () => {
-        await testContract.beController(operatorId);
-        await testContract.changeIdMaintainer(operatorId, user1.address);
-        await testContract.beController(planetId);
-        await testContract.changeIdMaintainer(planetId, user2.address);
-        await testContract.setType(operatorId, 4);
-        await testContract.setType(planetId, 5);
-        await testContract
-          .connect(user2)
-          .approveOperator(planetId, operatorId, 3);
+    describe("canStake", () => {});
 
-        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
-          value: String(5e18),
-        });
-        startTS = await getCurrentBlockTimestamp();
-        updateTime = startTS + aDay;
-      });
-
-      it("reverst when not PreStaked", async () => {
-        await expect(
-          testContract.canStake(pubkey3, updateTime)
-        ).to.be.revertedWith("StakeUtils: pubkey is not preStaked");
-      });
-
-      // Simulation cases
-      // ps update call return
-      // 01   24     25  f
-      // 01   24     35  f
-      // 01   24     37  t
-      // 01   24     48  t
-      // 01   24     49  t
-      // 11   24     25  f
-      // 11   24     35  f
-      // 11   24     37  t
-      // 11   24     48  t
-      // 11   24     49  t
-      // 13   24     25  f
-      // 13   24     35  f
-      // 13   24     37  f
-      // 13   24     48  f
-      // 13   24     49  f
-      // 24   24     25  f
-      // 24   24     35  f
-      // 24   24     37  f
-      // 24   24     48  f
-      // 23   24     48  f
-      // 25   24     25  f
-      // 25   24     35  f
-      // 25   24     37  f
-      // 25   24     48  f
-      // 25   24     49  f
-
-      // late update cases
-      // ps update call return
-      // 11   48     49  f
-      // 11   48     59  f
-      // 11   48     60  t
-      // 11   48     61  t
-      // 11   48     72  t
-
-      describe("simulation", async () => {
-        let updateTS;
-        let psTimes;
-        let callTimes;
-        beforeEach(async () => {
-          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
-          psTimes = [
-            updateTS + 1 * anHour,
-            updateTS,
-            updateTS - 11 * anHour,
-            updateTS - 13 * anHour,
-            updateTS - 23 * anHour,
-          ];
-          callTimes = [
-            updateTS + 1 * anHour,
-            updateTS + 11 * anHour,
-            updateTS + 13 * anHour,
-            updateTS + 24 * anHour,
-            updateTS + 25 * anHour,
-          ];
-        });
-
-        describe("if preStake was", async () => {
-          describe("1h after last update", async () => {
-            beforeEach(async () => {
-              await setTimestamp(psTimes[0]);
-              await testContract
-                .connect(user1)
-                .preStake(planetId, operatorId, [pubkey1], [signature1]);
-            });
-
-            it("calling 1h after last update: false", async () => {
-              // same do NOT run await setTimestamp(callTimes[0]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 11 after last update: false", async () => {
-              await setTimestamp(callTimes[1]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 13 after last update: false", async () => {
-              await setTimestamp(callTimes[2]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 19 after last update: false", async () => {
-              await setTimestamp(callTimes[3]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 25 after last update: false", async () => {
-              await setTimestamp(callTimes[4]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-          });
-
-          describe("same before last update", async () => {
-            beforeEach(async () => {
-              await setTimestamp(psTimes[1]);
-              await testContract
-                .connect(user1)
-                .preStake(planetId, operatorId, [pubkey1], [signature1]);
-            });
-
-            it("calling 1h after last update: false", async () => {
-              await setTimestamp(callTimes[0]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 11 after last update: false", async () => {
-              await setTimestamp(callTimes[1]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 13 after last update: false", async () => {
-              await setTimestamp(callTimes[2]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 19 after last update: false", async () => {
-              await setTimestamp(callTimes[3]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 25 after last update: false", async () => {
-              await setTimestamp(callTimes[4]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-          });
-
-          describe("11h before last update", async () => {
-            beforeEach(async () => {
-              await setTimestamp(psTimes[2]);
-              await testContract
-                .connect(user1)
-                .preStake(planetId, operatorId, [pubkey1], [signature1]);
-            });
-
-            it("calling 1h after last update: false", async () => {
-              await setTimestamp(callTimes[0]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 11 after last update: false", async () => {
-              await setTimestamp(callTimes[1]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 13 after last update: false", async () => {
-              await setTimestamp(callTimes[2]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 19 after last update: false", async () => {
-              await setTimestamp(callTimes[3]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 25 after last update: false", async () => {
-              await setTimestamp(callTimes[4]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-          });
-
-          describe("13h before last update", async () => {
-            beforeEach(async () => {
-              await setTimestamp(psTimes[3]);
-              await testContract
-                .connect(user1)
-                .preStake(planetId, operatorId, [pubkey1], [signature1]);
-            });
-
-            it("calling 1h after last update: false", async () => {
-              await setTimestamp(callTimes[0]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 11 after last update: false", async () => {
-              await setTimestamp(callTimes[1]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            describe("calling 13 after last update: true", async () => {
-              beforeEach(async () => {
-                await setTimestamp(callTimes[2]);
-              });
-              it("success", async () => {
-                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                  true
-                );
-              });
-              it("returns false if alienated", async () => {
-                await testContract.alienatePubKey(pubkey1);
-                expect(
-                  await testContract.canStake(pubkey1, updateTime)
-                ).to.be.eq(false);
-              });
-            });
-
-            describe("calling 19 after last update: true", async () => {
-              beforeEach(async () => {
-                await setTimestamp(callTimes[3]);
-              });
-              it("success", async () => {
-                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                  true
-                );
-              });
-              it("returns false if alienated", async () => {
-                await testContract.alienatePubKey(pubkey1);
-                expect(
-                  await testContract.canStake(pubkey1, updateTime)
-                ).to.be.eq(false);
-              });
-            });
-
-            describe("calling 25 after last update: true", async () => {
-              beforeEach(async () => {
-                await setTimestamp(callTimes[4]);
-              });
-              it("success", async () => {
-                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                  true
-                );
-              });
-              it("returns false if alienated", async () => {
-                await testContract.alienatePubKey(pubkey1);
-                expect(
-                  await testContract.canStake(pubkey1, updateTime)
-                ).to.be.eq(false);
-              });
-            });
-          });
-
-          describe("23h before last update", async () => {
-            beforeEach(async () => {
-              await setTimestamp(psTimes[4]);
-              await testContract
-                .connect(user1)
-                .preStake(planetId, operatorId, [pubkey1], [signature1]);
-            });
-
-            it("calling 1h after last update: false", async () => {
-              await setTimestamp(callTimes[0]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            it("calling 11 after last update: false", async () => {
-              await setTimestamp(callTimes[1]);
-              expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                false
-              );
-            });
-
-            describe("calling 13 after last update: true", async () => {
-              beforeEach(async () => {
-                await setTimestamp(callTimes[2]);
-              });
-              it("success", async () => {
-                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                  true
-                );
-              });
-              it("returns false if alienated", async () => {
-                await testContract.alienatePubKey(pubkey1);
-                expect(
-                  await testContract.canStake(pubkey1, updateTime)
-                ).to.be.eq(false);
-              });
-            });
-
-            describe("calling 19 after last update: true", async () => {
-              beforeEach(async () => {
-                await setTimestamp(callTimes[3]);
-              });
-              it("success", async () => {
-                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                  true
-                );
-              });
-              it("returns false if alienated", async () => {
-                await testContract.alienatePubKey(pubkey1);
-                expect(
-                  await testContract.canStake(pubkey1, updateTime)
-                ).to.be.eq(false);
-              });
-            });
-
-            describe("calling 25 after last update: true", async () => {
-              beforeEach(async () => {
-                await setTimestamp(callTimes[4]);
-              });
-              it("success", async () => {
-                expect(await testContract.canStake(pubkey1, updateTS)).to.be.eq(
-                  true
-                );
-              });
-              it("returns false if alienated", async () => {
-                await testContract.alienatePubKey(pubkey1);
-                expect(
-                  await testContract.canStake(pubkey1, updateTime)
-                ).to.be.eq(false);
-              });
-            });
-          });
-        });
-
-        describe("missed update for a day", async () => {
-          let psTime;
-          let lateUpdateTS;
-          let newCallTimes;
-          beforeEach(async () => {
-            psTime = updateTS - 13 * anHour;
-
-            lateUpdateTS = updateTS + aDay;
-            newCallTimes = [
-              lateUpdateTS + 1 * anHour,
-              lateUpdateTS + 11 * anHour,
-              lateUpdateTS + 12 * anHour,
-              lateUpdateTS + 13 * anHour,
-              lateUpdateTS + 24 * anHour,
-            ];
-            await setTimestamp(psTime);
-            await testContract
-              .connect(user1)
-              .preStake(planetId, operatorId, [pubkey1], [signature1]);
-          });
-
-          it("calling 1h after last update: false", async () => {
-            await setTimestamp(newCallTimes[0]);
-            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
-              false
-            );
-          });
-
-          it("calling 11h after last update: false", async () => {
-            await setTimestamp(newCallTimes[1]);
-            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
-              false
-            );
-          });
-
-          it("calling 12h after last update: true", async () => {
-            await setTimestamp(newCallTimes[2]);
-            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
-              true
-            );
-          });
-
-          it("calling 13h after last update: true", async () => {
-            await setTimestamp(newCallTimes[3]);
-            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
-              true
-            );
-          });
-
-          it("calling 24 after last update: true", async () => {
-            await setTimestamp(newCallTimes[4]);
-            expect(await testContract.canStake(pubkey1, lateUpdateTS)).to.be.eq(
-              true
-            );
-          });
-        });
-      });
-    });
     describe("stakeBeacon", () => {
       let prevSurplus;
       let prevActiveValidators;
@@ -1636,18 +1219,21 @@ describe("StakeUtils", async () => {
       });
 
       it("reverts if NOT all pubkeys are stakeable", async () => {
-        startTS = await getCurrentBlockTimestamp();
-        updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
-        await testContract.setMerkleUpdateTS(updateTS);
-
-        await setTimestamp(updateTS);
+        await testContract
+          .connect(oracle)
+          .updateVerificationIndex(2, [pubkey4]);
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 5);
         await testContract
           .connect(user1)
           .preStake(planetId, operatorId, [pubkey3], [signature3]);
-        await setTimestamp(updateTS + 11 * anHour);
 
         await expect(
           testContract.connect(user1).stakeBeacon(operatorId, [pubkey3])
+        ).to.be.revertedWith("StakeUtils: NOT all pubkeys are stakeable");
+        await expect(
+          testContract.connect(user1).stakeBeacon(operatorId, [pubkey4])
         ).to.be.revertedWith("StakeUtils: NOT all pubkeys are stakeable");
       });
 
@@ -1660,9 +1246,11 @@ describe("StakeUtils", async () => {
             });
           prevSurplus = await testContract.surplusById(planetId);
           startTS = await getCurrentBlockTimestamp();
-          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
-          await testContract.setMerkleUpdateTS(updateTS);
-          await setTimestamp(updateTS + 13 * anHour);
+
+          await testContract
+            .connect(oracle)
+            .updateVerificationIndex(2, [pubkey4]);
+
           await testContract
             .connect(user1)
             .stakeBeacon(operatorId, [pubkey1, pubkey2]);
@@ -1705,10 +1293,10 @@ describe("StakeUtils", async () => {
               value: String(1e20),
             });
           prevSurplus = await testContract.surplusById(planetId);
-          startTS = await getCurrentBlockTimestamp();
-          updateTS = Math.floor((startTS + aDay * 2) / aDay) * aDay;
-          await testContract.setMerkleUpdateTS(updateTS);
-          await setTimestamp(updateTS + 13 * anHour);
+
+          await testContract
+            .connect(oracle)
+            .updateVerificationIndex(2, [pubkey4]);
           await testContract
             .connect(user1)
             .stakeBeacon(operatorId, [pubkey1, pubkey2]);
@@ -1740,6 +1328,13 @@ describe("StakeUtils", async () => {
           expect(await testContract.lastCreatedValidatorNum()).to.be.eq(
             String(2)
           );
+        });
+        it("validator state = 2", async () => {
+          const val1 = await testContract.getValidatorData(pubkey1);
+          const val2 = await testContract.getValidatorData(pubkey2);
+          [val1, val2].forEach(function (vd, i) {
+            expect(vd.state).to.be.eq(2);
+          });
         });
       });
     });
