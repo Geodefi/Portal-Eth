@@ -102,8 +102,8 @@ library StakeUtils {
         uint256 DEFAULT_FEE;
         uint256 DEFAULT_ADMIN_FEE;
         uint256 FEE_DENOMINATOR;
-        uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 MAX_MAINTAINER_FEE;
+        uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 VERIFICATION_INDEX;
         uint256 VALIDATORS_INDEX;
         mapping(bytes => Validator) Validators;
@@ -514,10 +514,9 @@ library StakeUtils {
             _operatorId,
             value
         );
-        require(decreased, "StakeUtils: Failed to decrease walletBalance");
 
         (bool sent, ) = msg.sender.call{value: value}("");
-        require(sent, "StakeUtils: Failed to send ETH");
+        require(decreased && sent, "StakeUtils: Failed to send ETH");
         return sent;
     }
 
