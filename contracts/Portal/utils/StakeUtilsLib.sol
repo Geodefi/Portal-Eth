@@ -680,13 +680,19 @@ library StakeUtils {
 
         uint256 i;
         for (; i < alienPubkeys.length; ++i) {
-            require(self.Validators[alienPubkeys[i]].state == 1, "StakeUtils: NOT all alienPubkeys are pending");
+            require(
+                self.Validators[alienPubkeys[i]].state == 1,
+                "StakeUtils: NOT all alienPubkeys are pending"
+            );
             self.Validators[alienPubkeys[i]].state = 69;
             emit Alienation(alienPubkeys[i], true);
         }
 
         for (i = 0; i < curedPubkeys.length; ++i) {
-            require(self.Validators[curedPubkeys[i]].state == 69, "StakeUtils: NOT all curedPubkeys are alienated");
+            require(
+                self.Validators[curedPubkeys[i]].state == 69,
+                "StakeUtils: NOT all curedPubkeys are alienated"
+            );
             self.Validators[curedPubkeys[i]].state = 1;
             emit Alienation(curedPubkeys[i], false);
         }
