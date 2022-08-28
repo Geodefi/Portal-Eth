@@ -133,6 +133,14 @@ library StakeUtils {
         _;
     }
 
+    modifier onlyGovernance(address GOVERNANCE) {
+        require(
+            msg.sender == GOVERNANCE,
+            "StakeUtils: sender is NOT GOVERNANCE"
+        );
+        _;
+    }
+
     modifier initiator(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
@@ -219,22 +227,25 @@ library StakeUtils {
     /**
      * @notice initiates ID as an node operator
      * @dev requires ID to be approved as a node operator with a specific CONTROLLER
-     * @param _id operator ID
+     * @param _id
+     * @param _cometPeriod
      */
     function initiateOperator(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         uint256 _fee,
-        address _maintainer
+        address _maintainer,
+        uint256 _cometPeriod
     ) external initiator(_DATASTORE, _id, 4, _maintainer) {
         setMaintainerFee(self, _DATASTORE, _id, _fee);
+        updateCometPeriod(_DATASTORE, _id, _cometPeriod);
     }
 
     /**
      * @notice initiates ID as a planet (public pool)
      * @dev requires ID to be approved as a planet with a specific CONTROLLER
-     * @param _id planet ID to initiate
+     * @param _id
      */
     function initiatePlanet(
         StakePool storage self,
@@ -242,7 +253,7 @@ library StakeUtils {
         uint256 _id,
         uint256 _fee,
         address _maintainer,
-        address _governance,
+        address _GOVERNANCE,
         string memory _interfaceName,
         string memory _interfaceSymbol
     ) external initiator(_DATASTORE, _id, 5, _maintainer) {
@@ -262,7 +273,7 @@ library StakeUtils {
 
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
         // transfer ownership of DWP to GEODE.GOVERNANCE
-        Ownable(WithdrawalPool).transferOwnership(_governance);
+        Ownable(WithdrawalPool).transferOwnership(_GOVERNANCE);
         // approve token so we can use it in buybacks
         getgETH(self).setApprovalForAll(WithdrawalPool, true);
         // initially 1 ETHER = 1 ETHER
@@ -272,7 +283,7 @@ library StakeUtils {
     /**
      * @notice initiates ID as a comet (private pool)
      * @dev requires ID to be approved as comet with a specific CONTROLLER
-     * @param _id comet ID to initiate
+     * @param _id
      */
     function initiateComet(
         StakePool storage self,
@@ -364,20 +375,37 @@ library StakeUtils {
     }
 
     /**
+     * @notice                      ** Governance specific functions **
+     */
+
+    /**
      * @notice Changes MAX_MAINTAINER_FEE, limits "fee" parameter of every ID.
      * @dev to achieve 100% fee send FEE_DENOMINATOR
      * @param _newMaxFee new fee percentage in terms of FEE_DENOMINATOR, reverts if more than FEE_DENOMINATOR
-     * note onlyGovernance check should be handled in PORTAL.sol directly.
+     * note onlyGovernance check
      */
-    function setMaxMaintainerFee(StakePool storage self, uint256 _newMaxFee)
-        external
-    {
+    function setMaxMaintainerFee(
+        StakePool storage self,
+        address _GOVERNANCE,
+        uint256 _newMaxFee
+    ) external onlyGovernance(_GOVERNANCE) {
         require(
             _newMaxFee <= self.FEE_DENOMINATOR,
             "StakeUtils: fee more than 100%"
         );
         self.MAX_MAINTAINER_FEE = _newMaxFee;
         emit MaxMaintainerFeeUpdated(_newMaxFee);
+    }
+
+    /**
+     * note onlyGovernance check
+     */
+    function releasePrisoned(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        address _GOVERNANCE,
+        uint256 operatorId
+    ) external onlyGovernance(_GOVERNANCE) {
+        _DATASTORE.writeUintForId(operatorId, "released", 0);
     }
 
     /**
@@ -518,6 +546,29 @@ library StakeUtils {
         (bool sent, ) = msg.sender.call{value: value}("");
         require(decreased && sent, "StakeUtils: Failed to send ETH");
         return sent;
+    }
+
+    function getCometPeriod(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) external view onlyMaintainer(_DATASTORE, _operatorId) returns (uint256) {
+        return _DATASTORE.readUintForId(_operatorId, "cometPeriod");
+    }
+
+    function updateCometPeriod(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 _newPeriod
+    ) public onlyMaintainer(_DATASTORE, _operatorId) {
+        _DATASTORE.writeUintForId(_operatorId, "cometPeriod", _newPeriod);
+    }
+
+    function isPrisoned(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) public view returns (bool _isPrisoned) {
+        _isPrisoned =
+            block.timestamp > _DATASTORE.readUintForId(_operatorId, "released");
     }
 
     /**
@@ -671,9 +722,11 @@ library StakeUtils {
      */
     function updateVerificationIndex(
         StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
         uint256 new_index,
         bytes[] calldata alienPubkeys,
-        bytes[] calldata curedPubkeys
+        bytes[] calldata curedPubkeys,
+        bytes[] calldata prisonedIds
     ) external onlyOracle(self) {
         require(self.VALIDATORS_INDEX >= new_index);
         require(new_index >= self.VERIFICATION_INDEX);
@@ -696,6 +749,15 @@ library StakeUtils {
             self.Validators[curedPubkeys[i]].state = 1;
             emit Alienation(curedPubkeys[i], false);
         }
+
+        for (i = 0; i < prisonedIds.length; ++i) {
+            _DATASTORE.writeUintForId(
+                self.Validators[prisonedIds[i]].operatorId,
+                "released",
+                block.timestamp + 7 days
+            );
+        }
+
         self.VERIFICATION_INDEX = new_index;
         emit VerificationIndexUpdated(new_index);
     }
@@ -848,6 +910,10 @@ library StakeUtils {
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
     ) external onlyMaintainer(_DATASTORE, operatorId) returns (uint256 i) {
+        require(
+            isPrisoned(_DATASTORE, operatorId),
+            "StakeUtils: you are in prison, get in touch with governance"
+        );
         require(
             _DATASTORE.readUintForId(planetId, "TYPE") == 5 ||
                 _DATASTORE.readUintForId(planetId, "TYPE") == 6,
