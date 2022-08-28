@@ -53,7 +53,7 @@ library StakeUtils {
         uint256 operatorId,
         uint256 allowance
     );
-    event Alienated(bytes pubkey, bool isAlien);
+    event Alienation(bytes pubkey, bool isAlien);
     event VerificationIndexUpdated(uint256 newIndex);
     event PreStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
@@ -673,17 +673,21 @@ library StakeUtils {
     function updateVerificationIndex(
         StakePool storage self,
         uint256 new_index,
-        bytes[] calldata alienPubkeys
+        bytes[] calldata alienPubkeys,
+        bytes[] calldata curedPubkeys
     ) external onlyOracle(self) {
         require(self.VALIDATORS_INDEX >= new_index);
         require(new_index >= self.VERIFICATION_INDEX);
-        for (uint256 i = 0; i < alienPubkeys.length; ++i) {
-            if (self.Validators[alienPubkeys[i]].state == 1) {
+
+        uint256 i;
+        for(; i < alienPubkeys.length; ++i) {
                 self.Validators[alienPubkeys[i]].state = 69;
-                emit Alienated(alienPubkeys[i], true);
-            } else if (self.Validators[alienPubkeys[i]].state == 69) {
-                self.Validators[alienPubkeys[i]].state = 1;
-                emit Alienated(alienPubkeys[i], false);
+                emit Alienation(alienPubkeys[i], true);
+                }
+
+        for(i = 0; i < curedPubkeys.length; ++i) {
+                self.Validators[curedPubkeys[i]].state = 1;
+                emit Alienation(curedPubkeys[i], false);
             }
         }
         self.VERIFICATION_INDEX = new_index;
