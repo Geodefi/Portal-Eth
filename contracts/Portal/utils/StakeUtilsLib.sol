@@ -680,15 +680,14 @@ library StakeUtils {
         require(new_index >= self.VERIFICATION_INDEX);
 
         uint256 i;
-        for(; i < alienPubkeys.length; ++i) {
-                self.Validators[alienPubkeys[i]].state = 69;
-                emit Alienation(alienPubkeys[i], true);
-                }
+        for (; i < alienPubkeys.length; ++i) {
+            self.Validators[alienPubkeys[i]].state = 69;
+            emit Alienation(alienPubkeys[i], true);
+        }
 
-        for(i = 0; i < curedPubkeys.length; ++i) {
-                self.Validators[curedPubkeys[i]].state = 1;
-                emit Alienation(curedPubkeys[i], false);
-            }
+        for (i = 0; i < curedPubkeys.length; ++i) {
+            self.Validators[curedPubkeys[i]].state = 1;
+            emit Alienation(curedPubkeys[i], false);
         }
         self.VERIFICATION_INDEX = new_index;
         emit VerificationIndexUpdated(new_index);
