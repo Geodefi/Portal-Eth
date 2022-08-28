@@ -263,7 +263,7 @@ contract TestStakeUtils is ERC1155Holder {
         payable
         returns (bool success)
     {
-        success = StakeUtils.increaseOperatorWallet(DATASTORE, id, msg.value);
+        success = StakeUtils.increaseOperatorWallet(DATASTORE, id);
     }
 
     function decreaseOperatorWallet(uint256 id, uint256 value)

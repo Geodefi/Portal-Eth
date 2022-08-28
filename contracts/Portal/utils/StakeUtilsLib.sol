@@ -452,15 +452,27 @@ library StakeUtils {
      * @param value Ether (in Wei) amount to increase the wallet balance.
      * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.
      */
-    function increaseOperatorWallet(
+    function _increaseOperatorWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) public onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
-        uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
-        _wallet += value;
-        _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
+    ) internal returns (bool success) {
+        _DATASTORE.writeUintForId(
+            _operatorId,
+            "wallet",
+            _DATASTORE.readUintForId(_operatorId, "wallet") + value
+        );
         return true;
+    }
+
+    /**
+     * @notice external version of _increaseOperatorWallet()
+     */
+    function increaseOperatorWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+        return _increaseOperatorWallet(_DATASTORE, _operatorId, msg.value);
     }
 
     /**
@@ -470,22 +482,40 @@ library StakeUtils {
      * @param value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
      * @return success boolean value which is "sent", should be used by Operator is Maintainer is a contract.
      */
+    function _decreaseOperatorWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 value
+    ) internal returns (bool success) {
+        uint256 _balance = _DATASTORE.readUintForId(_operatorId, "wallet");
+        require(
+            _balance >= value,
+            "StakeUtils: Not enough resources in operatorWallet"
+        );
+        _balance -= value;
+        _DATASTORE.writeUintForId(_operatorId, "wallet", _balance);
+        return true;
+    }
+
+    /**
+     * @notice external version of _decreaseOperatorWallet()
+     */
     function decreaseOperatorWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) public onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
         require(
             address(this).balance >= value,
             "StakeUtils: Not enough resources in Portal"
         );
-        uint256 _wallet = _DATASTORE.readUintForId(_operatorId, "wallet");
-        require(
-            _wallet >= value,
-            "StakeUtils: Not enough resources in operatorWallet"
+        bool decreased = _decreaseOperatorWallet(
+            _DATASTORE,
+            _operatorId,
+            value
         );
-        _wallet -= value;
-        _DATASTORE.writeUintForId(_operatorId, "wallet", _wallet);
+        require(decreased, "StakeUtils: Failed to decrease walletBalance");
+
         (bool sent, ) = msg.sender.call{value: value}("");
         require(sent, "StakeUtils: Failed to send ETH");
         return sent;
@@ -833,7 +863,7 @@ library StakeUtils {
             "StakeUtils: not enough allowance"
         );
 
-        decreaseOperatorWallet(
+        _decreaseOperatorWallet(
             _DATASTORE,
             operatorId,
             pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
@@ -978,7 +1008,7 @@ library StakeUtils {
             lastPlanetChange;
         _DATASTORE.writeUintForId(planetId, activeValKey, newActiveVal);
 
-        increaseOperatorWallet(
+        _increaseOperatorWallet(
             _DATASTORE,
             operatorId,
             DCU.DEPOSIT_AMOUNT_PRESTAKE * i
