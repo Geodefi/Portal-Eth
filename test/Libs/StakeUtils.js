@@ -621,6 +621,7 @@ describe("StakeUtils", async () => {
     });
 
     it("getOperatorWalletBalance returns correct value", async () => {
+      const prevContractBalance = await testContract.getContractBalance();
       expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
         0
       );
@@ -631,11 +632,18 @@ describe("StakeUtils", async () => {
       expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
         ethers.BigNumber.from(String(3e17))
       );
+      expect((await testContract.getContractBalance()).sub(prevContractBalance)).to.be.eq(
+        ethers.BigNumber.from(String(3e17))
+      );
 
+      
       await testContract
         .connect(user1)
         .decreaseOperatorWallet(operatorId, String(1e17));
       expect(await testContract.getOperatorWalletBalance(operatorId)).to.be.eq(
+        ethers.BigNumber.from(String(2e17))
+      );
+      expect((await testContract.getContractBalance()).sub(prevContractBalance)).to.be.eq(
         ethers.BigNumber.from(String(2e17))
       );
     });
@@ -1068,6 +1076,7 @@ describe("StakeUtils", async () => {
         let prevAllowance;
         let prevWalletBalance;
         let prevCreatedValidators;
+        let prevContractBalance;
 
         beforeEach(async () => {
           await testContract
@@ -1090,6 +1099,7 @@ describe("StakeUtils", async () => {
             planetId,
             operatorId
           );
+          prevContractBalance = await testContract.getContractBalance();
           await testContract
             .connect(user1)
             .preStake(
@@ -1098,6 +1108,12 @@ describe("StakeUtils", async () => {
               [pubkey1, pubkey2],
               [signature1, signature2]
             );
+        });
+
+        it("Contract balance decreased accordingly (1 eth)", async () => {
+          expect(String(1e18)).to.be.eq(
+            prevContractBalance.sub(await testContract.getContractBalance())
+          );
         });
 
         it("surplus stays same", async () => {
@@ -1168,12 +1184,153 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("canStake and updateVerificationIndex", () => {});
+    describe("updateVerificationIndex", () => {
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 3);
+
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(5e18),
+        });
+      });
+      
+      it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
+        await expect(testContract
+        .connect(oracle)
+        .updateVerificationIndex(2, [pubkey4], [])).to.be.reverted;
+      });
+
+      it("reverts if new index point is smaller than VERIFICATION_INDEX", async () => {
+        await testContract
+          .connect(user1)
+          .preStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2, pubkey3],
+            [signature1, signature2, signature3]
+          );
+        await testContract
+        .connect(oracle)
+        .updateVerificationIndex(2, [pubkey3], []);
+
+        await expect(testContract
+        .connect(oracle)
+        .updateVerificationIndex(1, [], [])).to.be.reverted;
+      });
+
+      it("reverts if not pending validator tried to be alienated", async () => {
+        await testContract
+        .connect(user1)
+        .preStake(
+          planetId,
+          operatorId,
+          [pubkey1, pubkey2],
+          [signature1, signature2]
+        );
+        await expect(testContract
+        .connect(oracle)
+        .updateVerificationIndex(2, [pubkey3], [])).to.be.revertedWith("StakeUtils: NOT all alienPubkeys are pending");
+      });
+
+      it("reverts if not alienated validator tried to be cured", async () => {
+        await testContract
+        .connect(user1)
+        .preStake(
+          planetId,
+          operatorId,
+          [pubkey1, pubkey2],
+          [signature1, signature2]
+        );
+        await expect(testContract
+        .connect(oracle)
+        .updateVerificationIndex(2, [], [pubkey3])).to.be.revertedWith("StakeUtils: NOT all curedPubkeys are alienated");
+      });
+
+      it("success, check params", async () => {
+        await testContract
+        .connect(user1)
+        .preStake(
+          planetId,
+          operatorId,
+          [pubkey1, pubkey2],
+          [signature1, signature2]
+        );
+        expect(await testContract.getVALIDATORS_INDEX()).to.be.eq(2)
+
+        await testContract
+        .connect(oracle)
+        .updateVerificationIndex(1, [pubkey2], []);
+        expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1)
+        expect((await testContract.getValidatorData(pubkey2)).state).to.be.eq(69)
+        await testContract
+        .connect(oracle)
+        .updateVerificationIndex(2, [], [pubkey2]);
+        expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(2)
+        expect((await testContract.getValidatorData(pubkey2)).state).to.be.eq(1)
+      });
+      
+      
+    });
+
+    describe("canStake", () => {
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 3);
+
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(5e18),
+        });
+
+        await testContract
+          .connect(user1)
+          .preStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2],
+            [signature1, signature2]
+          );
+      });
+
+      it("returns false if state is not pending", async () => {
+        expect(await testContract.canStake(pubkey3)).to.be.eq(false)
+      });
+
+      it("returns false if VERIFICATION_INDEX is smaller than validator's index", async () => {
+        await testContract
+        .connect(oracle)
+        .updateVerificationIndex(1, [], [])
+        expect(await testContract.canStake(pubkey2)).to.be.eq(false)
+      });
+
+      it("returns true", async () => {
+        await testContract
+        .connect(oracle)
+        .updateVerificationIndex(2, [], [])
+        expect(await testContract.canStake(pubkey2)).to.be.eq(true)
+      });
+    });
 
     describe("stakeBeacon", () => {
       let prevSurplus;
       let prevActiveValidators;
       let prevOperatorWallet;
+      let prevContractBalance;
       beforeEach(async () => {
         await testContract.beController(operatorId);
         await testContract.changeIdMaintainer(operatorId, user1.address);
@@ -1221,7 +1378,7 @@ describe("StakeUtils", async () => {
       it("reverts if NOT all pubkeys are stakeable", async () => {
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(2, [pubkey4], []);
+          .updateVerificationIndex(2, [], []);
         await testContract
           .connect(user2)
           .approveOperator(planetId, operatorId, 5);
@@ -1249,8 +1406,9 @@ describe("StakeUtils", async () => {
 
           await testContract
             .connect(oracle)
-            .updateVerificationIndex(2, [pubkey4], []);
+            .updateVerificationIndex(2, [], []);
 
+          prevContractBalance = await testContract.getContractBalance();
           await testContract
             .connect(user1)
             .stakeBeacon(operatorId, [pubkey1, pubkey2]);
@@ -1263,6 +1421,12 @@ describe("StakeUtils", async () => {
 
           expect(String(1e18)).to.be.eq(
             currentOperatorWallet.sub(prevOperatorWallet)
+          );
+        });
+
+        it("Contract balance decreased accordingly (32 eth)", async () => {
+          expect(String(32e18)).to.be.eq(
+            prevContractBalance.sub(await testContract.getContractBalance())
           );
         });
 
@@ -1296,7 +1460,9 @@ describe("StakeUtils", async () => {
 
           await testContract
             .connect(oracle)
-            .updateVerificationIndex(2, [pubkey4], []);
+            .updateVerificationIndex(2, [], []);
+          
+          prevContractBalance = await testContract.getContractBalance();
           await testContract
             .connect(user1)
             .stakeBeacon(operatorId, [pubkey1, pubkey2]);
@@ -1308,6 +1474,12 @@ describe("StakeUtils", async () => {
             .getOperatorWalletBalance(operatorId);
           expect(String(2e18)).to.be.eq(
             currentOperatorWallet.sub(prevOperatorWallet)
+          );
+        });
+
+        it("Contract balance decreased accordingly (64 eth)", async () => {
+          expect(String(64e18)).to.be.eq(
+            prevContractBalance.sub(await testContract.getContractBalance())
           );
         });
 

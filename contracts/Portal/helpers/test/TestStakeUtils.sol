@@ -393,7 +393,7 @@ contract TestStakeUtils is ERC1155Holder {
         bytes[] calldata alienPubkeys,
         bytes[] calldata curedPubkeys
     ) external virtual {
-        STAKEPOOL.updateVerificationIndex(new_index, curedPubkeys);
+        STAKEPOOL.updateVerificationIndex(new_index, alienPubkeys, curedPubkeys);
     }
 
     function alienatePubKey(bytes calldata pubkey) external virtual {
@@ -407,6 +407,33 @@ contract TestStakeUtils is ERC1155Holder {
         returns (StakeUtils.Validator memory)
     {
         return STAKEPOOL.Validators[pubkey];
+    }
+
+    function getVALIDATORS_INDEX()
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return STAKEPOOL.VALIDATORS_INDEX;
+    }
+
+    function getVERIFICATION_INDEX()
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return STAKEPOOL.VERIFICATION_INDEX;
+    }
+
+    function getContractBalance() 
+        external
+        view
+        virtual 
+        returns (uint256)
+    {
+        return address(this).balance;
     }
 
     function Receive() external payable {}
