@@ -390,9 +390,10 @@ contract TestStakeUtils is ERC1155Holder {
 
     function updateVerificationIndex(
         uint256 new_index,
-        bytes[] calldata alienPubkeys
+        bytes[] calldata alienPubkeys,
+        bytes[] calldata curedPubkeys
     ) external virtual {
-        STAKEPOOL.updateVerificationIndex(new_index, alienPubkeys);
+        STAKEPOOL.updateVerificationIndex(new_index, curedPubkeys);
     }
 
     function alienatePubKey(bytes calldata pubkey) external virtual {

@@ -1168,7 +1168,7 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("canStake", () => {});
+    describe("canStake and updateVerificationIndex", () => {});
 
     describe("stakeBeacon", () => {
       let prevSurplus;
@@ -1221,7 +1221,7 @@ describe("StakeUtils", async () => {
       it("reverts if NOT all pubkeys are stakeable", async () => {
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(2, [pubkey4]);
+          .updateVerificationIndex(2, [pubkey4], []);
         await testContract
           .connect(user2)
           .approveOperator(planetId, operatorId, 5);
@@ -1249,7 +1249,7 @@ describe("StakeUtils", async () => {
 
           await testContract
             .connect(oracle)
-            .updateVerificationIndex(2, [pubkey4]);
+            .updateVerificationIndex(2, [pubkey4], []);
 
           await testContract
             .connect(user1)
@@ -1296,7 +1296,7 @@ describe("StakeUtils", async () => {
 
           await testContract
             .connect(oracle)
-            .updateVerificationIndex(2, [pubkey4]);
+            .updateVerificationIndex(2, [pubkey4], []);
           await testContract
             .connect(user1)
             .stakeBeacon(operatorId, [pubkey1, pubkey2]);
