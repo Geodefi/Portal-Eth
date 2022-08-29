@@ -160,20 +160,27 @@ describe("StakeUtils", async () => {
 
     describe("setMaxMaintainerFee", () => {
       it("succeeds", async () => {
-        await testContract.setMaxMaintainerFee(0);
+        await testContract.setMaxMaintainerFee(0, deployer);
         expect(
           (await testContract.getStakePoolParams()).MAX_MAINTAINER_FEE
         ).to.be.eq(0);
 
-        await testContract.setMaxMaintainerFee(10 ** 10);
+        await testContract.setMaxMaintainerFee(10 ** 10, deployer);
         expect(
           (await testContract.getStakePoolParams()).MAX_MAINTAINER_FEE
         ).to.be.eq(10 ** 10);
       });
       it("Reverts if > 100%", async () => {
         await expect(
-          testContract.setMaxMaintainerFee(10 ** 10 + 1)
+          testContract.setMaxMaintainerFee(10 ** 10 + 1, deployer)
         ).to.be.revertedWith("StakeUtils: fee more than 100%");
+      });
+      it("Reverts if not governance", async () => {
+        await expect(
+          testContract
+            .connect(user1)
+            .setMaxMaintainerFee(10 ** 10 + 1, deployer)
+        ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
       });
     });
 

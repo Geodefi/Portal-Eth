@@ -138,8 +138,11 @@ contract TestStakeUtils is ERC1155Holder {
         STAKEPOOL.switchMaintainerFee(DATASTORE, _id, _newFee);
     }
 
-    function setMaxMaintainerFee(uint256 _newMaxFee) external virtual {
-        STAKEPOOL.setMaxMaintainerFee(_newMaxFee);
+    function setMaxMaintainerFee(uint256 _newMaxFee, address _governance)
+        external
+        virtual
+    {
+        STAKEPOOL.setMaxMaintainerFee(_governance, FEE_DENOMINATOR, _newMaxFee);
     }
 
     function getMaintainerFee(uint256 _id)
@@ -157,7 +160,7 @@ contract TestStakeUtils is ERC1155Holder {
         virtual
         returns (uint256)
     {
-        return STAKEPOOL.getCometPeriod(DATASTORE, _id);
+        return StakeUtils.getCometPeriod(DATASTORE, _id);
     }
 
     function setPricePerShare(uint256 price, uint256 _planetId) external {
