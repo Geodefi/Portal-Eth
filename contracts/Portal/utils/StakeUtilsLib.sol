@@ -113,8 +113,11 @@ library StakeUtils {
      * @notice gETH lacks *decimals*,
      * @dev gETH_DENOMINATOR makes sure that we are taking care of decimals on calculations related to gETH
      */
-    uint256 public constant gETH_DENOMINATOR = 1e18;
+    uint256 public constant gETH_DENOMINATOR = 1 ether;
     uint256 public constant IGNORABLE_DEBT = 1 ether;
+
+    uint256 public constant FEE_SWITCH_LATENCY = 1 days;
+    uint256 public constant PRISON_SENTENCE = 7 days;
 
     // TODO: type check?
     modifier onlyMaintainer(
@@ -987,17 +990,18 @@ library StakeUtils {
             "StakeUtils: not enough allowance"
         );
 
+        uint256 surplus = _DATASTORE.readUintForId(planetId, "surplus");
+        require(
+            surplus <= DCU.DEPOSIT_AMOUNT * pubkeys.length,
+            "StakeUtils: not enough surplus"
+        );
+
         _decreaseOperatorWallet(
             _DATASTORE,
             operatorId,
             pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
         );
 
-        uint256 surplus = _DATASTORE.readUintForId(planetId, "surplus");
-        require(
-            surplus <= DCU.DEPOSIT_AMOUNT * pubkeys.length,
-            "StakeUtils: not enough surplus"
-        );
         uint256 planetFee = getMaintainerFee(self, _DATASTORE, planetId);
         uint256 operatorFee = getMaintainerFee(self, _DATASTORE, operatorId);
 
@@ -1050,7 +1054,7 @@ library StakeUtils {
         _DATASTORE.writeUintForId(
             planetId,
             "surplus",
-            surplus - DCU.DEPOSIT_AMOUNT * i
+            surplus - (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE) * i
         );
 
         _DATASTORE.writeUintForId(
