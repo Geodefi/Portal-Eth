@@ -578,7 +578,8 @@ library StakeUtils {
         uint256 _operatorId
     ) public view returns (bool _isPrisoned) {
         _isPrisoned =
-            block.timestamp > _DATASTORE.readUintForId(_operatorId, "released");
+            block.timestamp >=
+            _DATASTORE.readUintForId(_operatorId, "released");
     }
 
     /**

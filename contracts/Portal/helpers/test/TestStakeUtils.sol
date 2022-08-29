@@ -315,6 +315,10 @@ contract TestStakeUtils is ERC1155Holder {
         return DATASTORE.readUintForId(_planetId, "surplus");
     }
 
+    function securedById(uint256 _planetId) external view returns (uint256) {
+        return DATASTORE.readUintForId(_planetId, "secured");
+    }
+
     function createdValidatorsById(uint256 _planetId, uint256 _operatorId)
         external
         view
@@ -406,16 +410,39 @@ contract TestStakeUtils is ERC1155Holder {
         lastCreatedVals = succesfullDepositCount;
     }
 
+    function setSurplus(uint256 _id, uint256 _surplus) external {
+        DATASTORE.writeUintForId(_id, "surplus", _surplus);
+    }
+
     function updateVerificationIndex(
         uint256 new_index,
         bytes[] calldata alienPubkeys,
-        bytes[] calldata curedPubkeys
+        bytes[] calldata curedPubkeys,
+        bytes[] calldata prisonedIds
     ) external virtual {
         STAKEPOOL.updateVerificationIndex(
+            DATASTORE,
             new_index,
             alienPubkeys,
-            curedPubkeys
+            curedPubkeys,
+            prisonedIds
         );
+    }
+
+    function isPrisoned(uint256 operatorId)
+        external
+        view
+        virtual
+        returns (bool)
+    {
+        return StakeUtils.isPrisoned(DATASTORE, operatorId);
+    }
+
+    function releasePrisoned(uint256 operatorId, address governance)
+        external
+        virtual
+    {
+        StakeUtils.releasePrisoned(DATASTORE, governance, operatorId);
     }
 
     function alienatePubKey(bytes calldata pubkey) external virtual {

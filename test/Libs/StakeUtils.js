@@ -133,15 +133,15 @@ describe("StakeUtils", async () => {
         let effectTS;
         beforeEach(async () => {
           await testContract.connect(user1).switchMaintainerFee(randId, 12345);
-          effectTS = getCurrentBlockTimestamp() + 24 * 60 * 60 - 1;
+          effectTS = (await getCurrentBlockTimestamp()) + 24 * 60 * 60;
         });
         it("returns old value", async () => {
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
         });
         it("switches after a day", async () => {
-          setTimestamp(getCurrentBlockTimestamp() + effectTS);
+          await setTimestamp(effectTS);
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
-          setTimestamp(getCurrentBlockTimestamp() + effectTS + 2);
+          await setTimestamp(effectTS + 1);
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
         });
       });
@@ -160,26 +160,26 @@ describe("StakeUtils", async () => {
 
     describe("setMaxMaintainerFee", () => {
       it("succeeds", async () => {
-        await testContract.setMaxMaintainerFee(0, deployer);
+        await testContract.setMaxMaintainerFee(0, deployer.address);
         expect(
           (await testContract.getStakePoolParams()).MAX_MAINTAINER_FEE
         ).to.be.eq(0);
 
-        await testContract.setMaxMaintainerFee(10 ** 10, deployer);
+        await testContract.setMaxMaintainerFee(10 ** 10, deployer.address);
         expect(
           (await testContract.getStakePoolParams()).MAX_MAINTAINER_FEE
         ).to.be.eq(10 ** 10);
       });
       it("Reverts if > 100%", async () => {
         await expect(
-          testContract.setMaxMaintainerFee(10 ** 10 + 1, deployer)
+          testContract.setMaxMaintainerFee(10 ** 10 + 1, deployer.address)
         ).to.be.revertedWith("StakeUtils: fee more than 100%");
       });
       it("Reverts if not governance", async () => {
         await expect(
           testContract
             .connect(user1)
-            .setMaxMaintainerFee(10 ** 10 + 1, deployer)
+            .setMaxMaintainerFee(10 ** 10 + 1, deployer.address)
         ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
       });
     });
@@ -1239,11 +1239,13 @@ describe("StakeUtils", async () => {
 
       it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
         await expect(
-          testContract.connect(oracle).updateVerificationIndex(2, [pubkey4], [])
+          testContract
+            .connect(oracle)
+            .updateVerificationIndex(2, [pubkey4], [], [])
         ).to.be.reverted;
       });
 
-      it("reverts if new index point is smaller than VERIFICATION_INDEX", async () => {
+      it("reverts if VERIFICATION_INDEX is bigger than new index point", async () => {
         await testContract
           .connect(user1)
           .preStake(
@@ -1254,10 +1256,10 @@ describe("StakeUtils", async () => {
           );
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(2, [pubkey3], []);
+          .updateVerificationIndex(2, [pubkey3], [], []);
 
         await expect(
-          testContract.connect(oracle).updateVerificationIndex(1, [], [])
+          testContract.connect(oracle).updateVerificationIndex(1, [], [], [])
         ).to.be.reverted;
       });
 
@@ -1271,7 +1273,9 @@ describe("StakeUtils", async () => {
             [signature1, signature2]
           );
         await expect(
-          testContract.connect(oracle).updateVerificationIndex(2, [pubkey3], [])
+          testContract
+            .connect(oracle)
+            .updateVerificationIndex(2, [pubkey3], [], [])
         ).to.be.revertedWith("StakeUtils: NOT all alienPubkeys are pending");
       });
 
@@ -1285,35 +1289,117 @@ describe("StakeUtils", async () => {
             [signature1, signature2]
           );
         await expect(
-          testContract.connect(oracle).updateVerificationIndex(2, [], [pubkey3])
+          testContract
+            .connect(oracle)
+            .updateVerificationIndex(2, [], [pubkey3], [])
         ).to.be.revertedWith("StakeUtils: NOT all curedPubkeys are alienated");
       });
-
-      it("success, check params", async () => {
+      it("cant cure if not enough surplus", async () => {
         await testContract
           .connect(user1)
-          .preStake(
-            planetId,
-            operatorId,
-            [pubkey1, pubkey2],
-            [signature1, signature2]
-          );
-        expect(await testContract.getVALIDATORS_INDEX()).to.be.eq(2);
-
+          .preStake(planetId, operatorId, [pubkey1], [signature1]);
+        await testContract
+          .connect(user1)
+          .updateVerificationIndex(1, [pubkey1], [], []);
+        await testContract.connect(oracle).setSurplus(planetId, 0);
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(1, [pubkey2], []);
-        expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
+          .updateVerificationIndex(1, [], [pubkey1], []);
         expect((await testContract.getValidatorData(pubkey2)).state).to.be.eq(
           69
         );
-        await testContract
-          .connect(oracle)
-          .updateVerificationIndex(2, [], [pubkey2]);
-        expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(2);
-        expect((await testContract.getValidatorData(pubkey2)).state).to.be.eq(
-          1
-        );
+      });
+      describe("success", async () => {
+        let surplus;
+        let secured;
+        beforeEach(async () => {
+          await testContract
+            .connect(user1)
+            .preStake(planetId, operatorId, [pubkey1], [signature1]);
+          expect(await testContract.getVALIDATORS_INDEX()).to.be.eq(1);
+          surplus = await testContract.surplusById(planetId);
+          secured = await testContract.securedById(planetId);
+        });
+        describe("Alienated", async () => {
+          beforeEach(async () => {
+            await testContract
+              .connect(oracle)
+              .updateVerificationIndex(1, [pubkey1], [], []);
+            expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
+          });
+          it("check validator.state", async () => {
+            expect(
+              (await testContract.getValidatorData(pubkey1)).state
+            ).to.be.eq(69);
+          });
+          it("check surplus", async () => {
+            expect(await testContract.surplusById(planetId)).to.be.eq(
+              surplus.add(String(32e18))
+            );
+          });
+          it("check secured", async () => {
+            expect(await testContract.securedById(planetId)).to.be.eq(
+              secured.sub(String(32e18))
+            );
+          });
+        });
+        describe("Cured", async () => {
+          beforeEach(async () => {
+            await testContract
+              .connect(oracle)
+              .updateVerificationIndex(1, [pubkey2], [], []);
+            await testContract
+              .connect(oracle)
+              .updateVerificationIndex(1, [], [pubkey2], []);
+            expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
+          });
+          it("check validator.state", async () => {
+            expect(
+              (await testContract.getValidatorData(pubkey2)).state
+            ).to.be.eq(1);
+          });
+          it("check surplus", async () => {
+            expect(await testContract.surplusById(planetId)).to.be.eq(
+              surplus.sub(String(32e18))
+            );
+          });
+          it("check secured", async () => {
+            expect(await testContract.securedById(planetId)).to.be.eq(
+              secured.add(String(32e18))
+            );
+          });
+        });
+        describe("Prisoned", async () => {
+          let releaseTs;
+          beforeEach(async () => {
+            await testContract
+              .connect(oracle)
+              .updateVerificationIndex(2, [], [], [operatorId]);
+            releaseTs = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
+          });
+          it("released after 7 days later", async () => {
+            expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
+            await setTimestamp(releaseTs);
+            expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
+            await setTimestamp(releaseTs + 1);
+            expect(await testContract.isPrisoned(operatorId)).to.be.eq(false);
+          });
+          describe("releasePrisoned", async () => {
+            it("reverts when not called by Governance", async () => {
+              expect(
+                await testContract
+                  .connect(user1)
+                  .releasePrisoned(operatorId, deployer.address)
+              ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
+            });
+            it("success", async () => {
+              await testContract
+                .connect(deployer)
+                .releasePrisoned(operatorId, deployer.address);
+              expect(await testContract.isPrisoned(operatorId)).to.be.eq(false);
+            });
+          });
+        });
       });
     });
 
