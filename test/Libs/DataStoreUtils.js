@@ -14,18 +14,12 @@ describe("DataStore", async () => {
 
   const setupTest = deployments.createFixture(async (hre) => {
     ({ ethers, web3, Web3 } = hre);
-    const { get } = deployments;
     const signers = await ethers.getSigners();
     user1 = signers[1];
 
     await deployments.fixture(); // ensure you start from a fresh deployments
     const DataStoreUtilsTest = await ethers.getContractFactory(
-      "DataStoreUtilsTest",
-      {
-        libraries: {
-          DataStoreUtils: (await get("DataStoreUtils")).address,
-        },
-      }
+      "DataStoreUtilsTest"
     );
     testContract = await DataStoreUtilsTest.deploy();
   });

@@ -43,7 +43,7 @@ library DataStoreUtils {
         DataStore storage self,
         uint256 _id,
         bytes32 _key
-    ) public view returns (uint256 data) {
+    ) internal view returns (uint256 data) {
         data = self.uintData[keccak256(abi.encodePacked(_id, _key))];
     }
 
@@ -51,7 +51,7 @@ library DataStoreUtils {
         DataStore storage self,
         uint256 _id,
         bytes32 _key
-    ) public view returns (bytes memory data) {
+    ) internal view returns (bytes memory data) {
         data = self.bytesData[keccak256(abi.encodePacked(_id, _key))];
     }
 
@@ -59,7 +59,7 @@ library DataStoreUtils {
         DataStore storage self,
         uint256 _id,
         bytes32 _key
-    ) public view returns (address data) {
+    ) internal view returns (address data) {
         data = self.addressData[keccak256(abi.encodePacked(_id, _key))];
     }
 
@@ -71,7 +71,7 @@ library DataStoreUtils {
         uint256 _id,
         bytes32 _key,
         uint256 data
-    ) public {
+    ) internal {
         self.uintData[keccak256(abi.encodePacked(_id, _key))] = data;
     }
 
@@ -80,7 +80,7 @@ library DataStoreUtils {
         uint256 _id,
         bytes32 _key,
         bytes memory data
-    ) public {
+    ) internal {
         self.bytesData[keccak256(abi.encodePacked(_id, _key))] = data;
     }
 
@@ -89,7 +89,7 @@ library DataStoreUtils {
         uint256 _id,
         bytes32 _key,
         address data
-    ) public {
+    ) internal {
         self.addressData[keccak256(abi.encodePacked(_id, _key))] = data;
     }
 }
