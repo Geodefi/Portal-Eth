@@ -148,6 +148,15 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
     }
 
+    function getCometPeriod(uint256 _id)
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return STAKEPOOL.getCometPeriod(DATASTORE, _id);
+    }
+
     function setPricePerShare(uint256 price, uint256 _planetId) external {
         STAKEPOOL._setPricePerShare(price, _planetId);
     }
@@ -189,9 +198,16 @@ contract TestStakeUtils is ERC1155Holder {
     function initiateOperator(
         uint256 _planetId,
         uint256 _fee,
-        address _maintainer
+        address _maintainer,
+        uint256 _cometPeriod
     ) external {
-        STAKEPOOL.initiateOperator(DATASTORE, _planetId, _fee, _maintainer);
+        STAKEPOOL.initiateOperator(
+            DATASTORE,
+            _planetId,
+            _fee,
+            _maintainer,
+            _cometPeriod
+        );
     }
 
     function initiatePlanet(

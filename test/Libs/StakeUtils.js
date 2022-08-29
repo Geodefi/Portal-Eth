@@ -285,7 +285,8 @@ describe("StakeUtils", async () => {
         testContract.connect(user2).initiateOperator(
           randId, // _id
           1e5, // _fee
-          user1.address // _maintainer
+          user1.address, // _maintainer
+          69 // _cometPeriod
         )
       ).to.be.revertedWith("StakeUtils: sender is NOT CONTROLLER");
     });
@@ -296,7 +297,8 @@ describe("StakeUtils", async () => {
         testContract.connect(user1).initiateOperator(
           randId, // _id
           1e5, // _fee
-          user1.address // _maintainer
+          user1.address, // _maintainer
+          69 // _cometPeriod
         )
       ).to.be.revertedWith("StakeUtils: id should be Operator TYPE");
     });
@@ -306,7 +308,8 @@ describe("StakeUtils", async () => {
         await testContract.connect(user1).initiateOperator(
           randId, // _id
           1e5, // _fee
-          user1.address // _maintainer
+          user1.address, // _maintainer
+          69 // _cometPeriod
         );
       });
       // check initiated parameter is set as 1
@@ -324,6 +327,11 @@ describe("StakeUtils", async () => {
       it("check fee is set correctly", async () => {
         setFee = await testContract.getMaintainerFee(randId);
         expect(setFee).to.be.eq(1e5);
+      });
+
+      it("check cometPeriod is set correctly", async () => {
+        setFee = await testContract.getCometPeriod(randId);
+        expect(setFee).to.be.eq(69);
       });
 
       it("after success, reverts if already initiated", async () => {
