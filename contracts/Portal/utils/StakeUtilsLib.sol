@@ -415,7 +415,7 @@ library StakeUtils {
         address _GOVERNANCE,
         uint256 operatorId
     ) external onlyGovernance(_GOVERNANCE) {
-        _DATASTORE.writeUintForId(operatorId, "released", 0);
+        _DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
     }
 
     /**
