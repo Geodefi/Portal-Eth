@@ -70,6 +70,8 @@ library StakeUtils {
         uint256 index;
         uint256 planetId;
         uint256 operatorId;
+        uint256 planetFee;
+        uint256 operatorFee;
         bytes signature;
     }
     /**
@@ -358,7 +360,7 @@ library StakeUtils {
      * @param _id planet, comet or operator ID
      * @param _newFee new fee percentage in terms of FEE_DENOMINATOR,reverts if given more than MAX_MAINTAINER_FEE
      */
-    function setMaintainerFee(
+    function switchMaintainerFee(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
@@ -368,6 +370,12 @@ library StakeUtils {
             _newFee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
         );
+        _DATASTORE.writeUintForId(
+            _id,
+            "priorFee",
+            _DATASTORE.readUintForId(_id, "fee")
+        );
+        _DATASTORE.writeUintForId(_id, "feeSwitch", block.timestamp + 1 days);
         _DATASTORE.writeUintForId(_id, "fee", _newFee);
         emit MaintainerFeeUpdated(_id, _newFee);
     }
@@ -986,6 +994,20 @@ library StakeUtils {
             surplus <= DCU.DEPOSIT_AMOUNT * pubkeys.length,
             "StakeUtils: not enough surplus"
         );
+        uint256 planetFee = getMaintainerFee(self, _DATASTORE, planetId);
+        uint256 operatorFee = getMaintainerFee(self, _DATASTORE, operatorId);
+        if (
+            _DATASTORE.readUintForId(planetId, "feeEffective") <=
+            block.timestamp
+        ) {
+            planetFee = _DATASTORE.readUintForId(planetId, "priorFee");
+        }
+        if (
+            _DATASTORE.readUintForId(operatorId, "feeEffective") <=
+            block.timestamp
+        ) {
+            operatorFee = _DATASTORE.readUintForId(operatorId, "priorFee");
+        }
 
         uint256 valIndex = self.VALIDATORS_INDEX;
         for (; i < pubkeys.length; ++i) {
@@ -1020,6 +1042,8 @@ library StakeUtils {
                 valIndex,
                 planetId,
                 operatorId,
+                planetFee,
+                operatorFee,
                 signatures[i]
             );
             emit PreStaked(pubkeys[i], planetId, operatorId);
