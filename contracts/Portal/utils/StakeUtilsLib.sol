@@ -770,14 +770,14 @@ library StakeUtils {
                 uint256 newSecured = _DATASTORE.readUintForId(
                     planetId,
                     "secured"
-                ) - (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE);
+                ) - (DCU.DEPOSIT_AMOUNT);
                 _DATASTORE.writeUintForId(planetId, "secured", newSecured);
             }
             {
                 uint256 newSurplus = _DATASTORE.readUintForId(
                     planetId,
                     "surplus"
-                ) + (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE);
+                ) + (DCU.DEPOSIT_AMOUNT);
                 _DATASTORE.writeUintForId(planetId, "surplus", newSurplus);
             }
             emit Alienation(alienPubkeys[i], true);
@@ -791,21 +791,21 @@ library StakeUtils {
             planetId = self.Validators[curedPubkeys[j]].planetId;
             if (
                 _DATASTORE.readUintForId(planetId, "surplus") >=
-                (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE)
+                (DCU.DEPOSIT_AMOUNT)
             ) {
                 self.Validators[curedPubkeys[j]].state = 1;
                 {
                     uint256 newSecured = _DATASTORE.readUintForId(
                         planetId,
                         "secured"
-                    ) + (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE);
+                    ) + (DCU.DEPOSIT_AMOUNT);
                     _DATASTORE.writeUintForId(planetId, "secured", newSecured);
                 }
                 {
                     uint256 newSurplus = _DATASTORE.readUintForId(
                         planetId,
                         "surplus"
-                    ) - (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE);
+                    ) - (DCU.DEPOSIT_AMOUNT);
                     _DATASTORE.writeUintForId(planetId, "surplus", newSurplus);
                 }
                 emit Alienation(curedPubkeys[j], false);
@@ -1083,7 +1083,7 @@ library StakeUtils {
         }
         {
             uint256 secured = _DATASTORE.readUintForId(planetId, "secured") +
-                (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE) *
+                (DCU.DEPOSIT_AMOUNT) *
                 pubkeys.length;
             _DATASTORE.writeUintForId(planetId, "secured", secured);
         }

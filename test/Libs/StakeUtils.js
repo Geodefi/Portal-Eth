@@ -1231,8 +1231,8 @@ describe("StakeUtils", async () => {
           );
         });
 
-        it("secured increased by 31 eth per pubkey", async () => {
-          expect(String(62e18)).to.be.eq(
+        it("secured increased by 32 eth per pubkey", async () => {
+          expect(String(64e18)).to.be.eq(
             (await testContract.securedById(planetId)).sub(prevSecured)
           );
         });
@@ -1418,12 +1418,12 @@ describe("StakeUtils", async () => {
           });
           it("check surplus", async () => {
             expect(await testContract.surplusById(planetId)).to.be.eq(
-              surplus.add(String(31e18))
+              surplus.add(String(32e18))
             );
           });
           it("check secured", async () => {
             expect(await testContract.securedById(planetId)).to.be.eq(
-              secured.sub(String(31e18))
+              secured.sub(String(32e18))
             );
           });
         });
@@ -1559,14 +1559,14 @@ describe("StakeUtils", async () => {
         });
         await testContract.setSurplus(planetId, String(1e20));
         await testContract.Receive({ value: String(1e20) });
-        await testContract
-          .connect(user1)
-          .preStake(
-            planetId,
-            operatorId,
-            [pubkey1, pubkey2],
-            [signature1, signature2]
-          );
+        await testContract.connect(user1).preStake(
+          planetId,
+          operatorId,
+          [pubkey1, pubkey2],
+          [signature1, signature2]
+          // [pubkey1, pubkey2, pubkey3, pubkey4],
+          // [signature1, signature2, signature3, signature4]
+        );
         prevActiveValidators = await testContract.activeValidatorsById(
           planetId,
           operatorId
@@ -1606,9 +1606,11 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith(
           "StakeUtils: you are in prison, get in touch with governance"
         );
+
         await testContract
           .connect(deployer)
           .releasePrisoned(operatorId, deployer.address);
+
         await testContract
           .connect(user1)
           .stakeBeacon(operatorId, [pubkey1, pubkey2]);
@@ -1649,7 +1651,7 @@ describe("StakeUtils", async () => {
         });
 
         it("Secured", async () => {
-          expect(String(62e18)).to.be.eq(
+          expect(String(64e18)).to.be.eq(
             prevSecured.sub(await testContract.securedById(planetId))
           );
         });
