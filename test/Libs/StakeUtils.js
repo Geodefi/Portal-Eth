@@ -4,6 +4,7 @@ const {
   MAX_UINT256,
   ZERO_ADDRESS,
   getCurrentBlockTimestamp,
+  setTimestamp,
   // setTimestamp,
 } = require("../testUtils");
 
@@ -128,9 +129,21 @@ describe("StakeUtils", async () => {
     });
 
     describe("get/set MaintainerFee", () => {
-      it("Succeeds set", async () => {
-        await testContract.connect(user1).switchMaintainerFee(randId, 12345);
-        expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
+      describe("Succeeds set", async () => {
+        let effectTS;
+        beforeEach(async () => {
+          await testContract.connect(user1).switchMaintainerFee(randId, 12345);
+          effectTS = getCurrentBlockTimestamp() + 24 * 60 * 60 - 1;
+        });
+        it("returns old value", async () => {
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
+        });
+        it("switches after a day", async () => {
+          setTimestamp(getCurrentBlockTimestamp() + effectTS);
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
+          setTimestamp(getCurrentBlockTimestamp() + effectTS + 2);
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
+        });
       });
       it("Reverts if > MAX", async () => {
         await testContract.connect(user1).switchMaintainerFee(randId, 10 ** 9);
