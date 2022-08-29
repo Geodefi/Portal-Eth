@@ -28,7 +28,7 @@ import "../../interfaces/ILPToken.sol";
  * Type 5 stand for Public Staking Pool (Planets).
  * Every Planet is also an Operator by design.
  * Planets inherits Operator functionalities and parameters, with additional
- * properties like staking pools - relates to params: stBalance, surplus, withdrawalPool - relates to debt -
+ * properties like staking pools - relates to params: stBalance, surplus, secured, withdrawalPool - relates to debt -
  * and liquid asset ID(gETH).
  * Everyone can stake and unstake using public pools.
  *
@@ -731,12 +731,28 @@ library StakeUtils {
         require(new_index >= self.VERIFICATION_INDEX);
 
         uint256 i;
+        uint256 planetId;
         for (; i < alienPubkeys.length; ++i) {
             require(
                 self.Validators[alienPubkeys[i]].state == 1,
                 "StakeUtils: NOT all alienPubkeys are pending"
             );
+            planetId = self.Validators[alienPubkeys[i]].planetId;
             self.Validators[alienPubkeys[i]].state = 69;
+
+            _DATASTORE.writeUintForId(
+                planetId,
+                "secured",
+                _DATASTORE.readUintForId(planetId, "secured") -
+                    DCU.DEPOSIT_AMOUNT
+            );
+            _DATASTORE.writeUintForId(
+                planetId,
+                "surplus",
+                _DATASTORE.readUintForId(planetId, "surplus") +
+                    DCU.DEPOSIT_AMOUNT
+            );
+
             emit Alienation(alienPubkeys[i], true);
         }
 
@@ -745,8 +761,29 @@ library StakeUtils {
                 self.Validators[curedPubkeys[i]].state == 69,
                 "StakeUtils: NOT all curedPubkeys are alienated"
             );
-            self.Validators[curedPubkeys[i]].state = 1;
-            emit Alienation(curedPubkeys[i], false);
+            if (
+                _DATASTORE.readUintForId(planetId, "surplus") >=
+                DCU.DEPOSIT_AMOUNT
+            ) {
+                planetId = self.Validators[alienPubkeys[i]].planetId;
+                self.Validators[curedPubkeys[i]].state = 1;
+
+                _DATASTORE.writeUintForId(
+                    planetId,
+                    "surplus",
+                    _DATASTORE.readUintForId(planetId, "surplus") -
+                        DCU.DEPOSIT_AMOUNT
+                );
+
+                _DATASTORE.writeUintForId(
+                    planetId,
+                    "secured",
+                    _DATASTORE.readUintForId(planetId, "secured") +
+                        DCU.DEPOSIT_AMOUNT
+                );
+
+                emit Alienation(curedPubkeys[i], false);
+            }
         }
 
         for (i = 0; i < prisonedIds.length; ++i) {
@@ -944,11 +981,12 @@ library StakeUtils {
             pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
         );
 
-        _DATASTORE.writeUintForId(
-            planetId,
-            _getKey(operatorId, "createdValidators"),
-            createdValidators + pubkeys.length
+        uint256 surplus = _DATASTORE.readUintForId(planetId, "surplus");
+        require(
+            surplus <= DCU.DEPOSIT_AMOUNT * pubkeys.length,
+            "StakeUtils: not enough surplus"
         );
+
         uint256 valIndex = self.VALIDATORS_INDEX;
         for (; i < pubkeys.length; ++i) {
             // TODO: discuss this alienated to be checked or not
@@ -986,6 +1024,27 @@ library StakeUtils {
             );
             emit PreStaked(pubkeys[i], planetId, operatorId);
         }
+
+        _DATASTORE.writeUintForId(
+            planetId,
+            _getKey(operatorId, "createdValidators"),
+            createdValidators + i
+        );
+
+        _DATASTORE.writeUintForId(
+            planetId,
+            "surplus",
+            surplus - DCU.DEPOSIT_AMOUNT * i
+        );
+
+        _DATASTORE.writeUintForId(
+            planetId,
+            "secured",
+            _DATASTORE.readUintForId(planetId, "secured") +
+                DCU.DEPOSIT_AMOUNT *
+                i
+        );
+
         self.VALIDATORS_INDEX = valIndex;
     }
 
@@ -1024,9 +1083,14 @@ library StakeUtils {
             );
         }
 
-        bytes32 activeValKey = _getKey(operatorId, "activeValidators");
         uint256 planetId = self.Validators[pubkeys[0]].planetId;
-        uint256 surplus = _DATASTORE.readUintForId(planetId, "surplus");
+        uint256 secured = _DATASTORE.readUintForId(planetId, "secured");
+        require(
+            secured <= DCU.DEPOSIT_AMOUNT * pubkeys.length,
+            "StakeUtils: not enough secured(?)"
+        );
+        bytes32 activeValKey = _getKey(operatorId, "activeValidators");
+
         bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
             planetId,
             "withdrawalCredential"
@@ -1037,7 +1101,7 @@ library StakeUtils {
         uint256 newActiveVal;
         for (i = 0; i < pubkeys.length; ++i) {
             if (planetId != self.Validators[pubkeys[i]].planetId) {
-                _DATASTORE.writeUintForId(planetId, "surplus", surplus);
+                _DATASTORE.writeUintForId(planetId, "secured", secured);
 
                 newActiveVal =
                     _DATASTORE.readUintForId(planetId, activeValKey) +
@@ -1052,14 +1116,8 @@ library StakeUtils {
                     planetId,
                     "withdrawalCredential"
                 );
-                surplus = _DATASTORE.readUintForId(planetId, "surplus");
+                secured = _DATASTORE.readUintForId(planetId, "secured");
             }
-
-            if (surplus < DCU.DEPOSIT_AMOUNT) {
-                // occurance of an unsuccessful deposit because the planet pool has been drained. return successful deposit count.
-                break;
-            }
-            surplus -= DCU.DEPOSIT_AMOUNT;
 
             signature = self.Validators[pubkeys[i]].signature;
 
@@ -1075,7 +1133,11 @@ library StakeUtils {
             emit BeaconStaked(pubkeys[i]);
         }
 
-        _DATASTORE.writeUintForId(planetId, "surplus", surplus);
+        _DATASTORE.writeUintForId(
+            planetId,
+            "secured",
+            secured - DCU.DEPOSIT_AMOUNT * i
+        );
 
         newActiveVal =
             _DATASTORE.readUintForId(planetId, activeValKey) +
