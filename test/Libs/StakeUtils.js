@@ -129,18 +129,18 @@ describe("StakeUtils", async () => {
 
     describe("get/set MaintainerFee", () => {
       it("Succeeds set", async () => {
-        await testContract.connect(user1).setMaintainerFee(randId, 12345);
+        await testContract.connect(user1).switchMaintainerFee(randId, 12345);
         expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
       });
       it("Reverts if > MAX", async () => {
-        await testContract.connect(user1).setMaintainerFee(randId, 10 ** 9);
+        await testContract.connect(user1).switchMaintainerFee(randId, 10 ** 9);
         await expect(
-          testContract.connect(user1).setMaintainerFee(randId, 10 ** 9 + 1)
+          testContract.connect(user1).switchMaintainerFee(randId, 10 ** 9 + 1)
         ).to.be.revertedWith("StakeUtils: MAX_MAINTAINER_FEE ERROR");
       });
       it("Reverts if not maintainer", async () => {
         await expect(
-          testContract.setMaintainerFee(randId, 10 ** 9 + 1)
+          testContract.switchMaintainerFee(randId, 10 ** 9 + 1)
         ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
       });
     });

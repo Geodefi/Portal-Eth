@@ -131,8 +131,11 @@ contract TestStakeUtils is ERC1155Holder {
         StakeUtils.changeMaintainer(DATASTORE, _id, _newMaintainer);
     }
 
-    function setMaintainerFee(uint256 _id, uint256 _newFee) external virtual {
-        STAKEPOOL.setMaintainerFee(DATASTORE, _id, _newFee);
+    function switchMaintainerFee(uint256 _id, uint256 _newFee)
+        external
+        virtual
+    {
+        STAKEPOOL.switchMaintainerFee(DATASTORE, _id, _newFee);
     }
 
     function setMaxMaintainerFee(uint256 _newMaxFee) external virtual {
