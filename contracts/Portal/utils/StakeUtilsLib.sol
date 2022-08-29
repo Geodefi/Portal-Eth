@@ -1057,7 +1057,7 @@ library StakeUtils {
             planetId,
             "secured",
             _DATASTORE.readUintForId(planetId, "secured") +
-                DCU.DEPOSIT_AMOUNT *
+                (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE) *
                 i
         );
 
@@ -1152,7 +1152,7 @@ library StakeUtils {
         _DATASTORE.writeUintForId(
             planetId,
             "secured",
-            secured - DCU.DEPOSIT_AMOUNT * i
+            secured - (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE) * i
         );
 
         newActiveVal =
