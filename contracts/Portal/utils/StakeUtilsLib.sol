@@ -561,7 +561,7 @@ library StakeUtils {
     function getCometPeriod(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId
-    ) external view onlyMaintainer(_DATASTORE, _operatorId) returns (uint256) {
+    ) external view returns (uint256) {
         return _DATASTORE.readUintForId(_operatorId, "cometPeriod");
     }
 

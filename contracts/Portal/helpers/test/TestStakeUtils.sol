@@ -154,6 +154,13 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
     }
 
+    function updateCometPeriod(uint256 _operatorId, uint256 _newPeriod)
+        external
+        virtual
+    {
+        StakeUtils.updateCometPeriod(DATASTORE, _operatorId, _newPeriod);
+    }
+
     function getCometPeriod(uint256 _id)
         external
         view

@@ -673,6 +673,24 @@ describe("StakeUtils", async () => {
     });
   });
 
+  describe("Update Comet Period ", () => {
+    beforeEach(async () => {
+      await testContract.beController(randId);
+      await testContract.changeIdMaintainer(randId, user1.address);
+    });
+    it("reverts when not called by maintainer", async () => {
+      await expect(testContract.updateCometPeriod(operatorId, String(1e18))).to
+        .be.reverted;
+    });
+    it("succeeds", async () => {
+      await testContract
+        .connect(user1)
+        .updateCometPeriod(operatorId, String(1e18));
+      await expect(await testContract.getCometPeriod(operatorId)).to.be.eq(
+        String(1e18)
+      );
+    });
+  });
   describe("Staking Operations ", () => {
     /**
      * 0	pubkey	bytes	0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a
