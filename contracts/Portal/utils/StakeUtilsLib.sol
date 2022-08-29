@@ -1157,9 +1157,7 @@ library StakeUtils {
                 _DATASTORE.writeUintForId(
                     sm.planetId,
                     "secured",
-                    sm.secured -
-                        (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE) *
-                        (i - lastPlanetChange)
+                    sm.secured - (DCU.DEPOSIT_AMOUNT) * (i - lastPlanetChange)
                 );
                 _DATASTORE.writeUintForId(
                     sm.planetId,
@@ -1197,7 +1195,7 @@ library StakeUtils {
             sm.planetId,
             "secured",
             sm.secured -
-                (DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE) *
+                DCU.DEPOSIT_AMOUNT *
                 (pubkeys.length - lastPlanetChange)
         );
         _DATASTORE.writeUintForId(
