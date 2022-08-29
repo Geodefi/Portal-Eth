@@ -10,7 +10,7 @@ contract TestStakeUtils is ERC1155Holder {
     using StakeUtils for StakeUtils.StakePool;
     DataStoreUtils.DataStore private DATASTORE;
     StakeUtils.StakePool private STAKEPOOL;
-    uint256 public lastCreatedVals;
+    uint256 public FEE_DENOMINATOR = 10**10;
 
     constructor(
         address _gETH,
@@ -21,17 +21,14 @@ contract TestStakeUtils is ERC1155Holder {
     ) {
         STAKEPOOL.ORACLE = _ORACLE;
         STAKEPOOL.gETH = _gETH;
-        STAKEPOOL.FEE_DENOMINATOR = 10**10;
         STAKEPOOL.DEFAULT_DWP = _DEFAULT_DWP;
         STAKEPOOL.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
         STAKEPOOL.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
         STAKEPOOL.DEFAULT_A = 60;
         STAKEPOOL.DEFAULT_FEE = 4e6;
         STAKEPOOL.DEFAULT_ADMIN_FEE = 5e9;
-        STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT =
-            (5 * STAKEPOOL.FEE_DENOMINATOR) /
-            1e3;
-        STAKEPOOL.MAX_MAINTAINER_FEE = (10 * STAKEPOOL.FEE_DENOMINATOR) / 1e2; //10%
+        STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT = (5 * FEE_DENOMINATOR) / 1e3;
+        STAKEPOOL.MAX_MAINTAINER_FEE = (10 * FEE_DENOMINATOR) / 1e2; //10%
         STAKEPOOL.VERIFICATION_INDEX = 0;
         STAKEPOOL.VALIDATORS_INDEX = 0;
     }
@@ -49,7 +46,6 @@ contract TestStakeUtils is ERC1155Holder {
             uint256 DEFAULT_A,
             uint256 DEFAULT_FEE,
             uint256 DEFAULT_ADMIN_FEE,
-            uint256 FEE_DENOMINATOR,
             uint256 PERIOD_PRICE_INCREASE_LIMIT,
             uint256 MAX_MAINTAINER_FEE,
             uint256 VERIFICATION_INDEX,
@@ -64,7 +60,6 @@ contract TestStakeUtils is ERC1155Holder {
         DEFAULT_A = STAKEPOOL.DEFAULT_A;
         DEFAULT_FEE = STAKEPOOL.DEFAULT_FEE;
         DEFAULT_ADMIN_FEE = STAKEPOOL.DEFAULT_ADMIN_FEE;
-        FEE_DENOMINATOR = STAKEPOOL.FEE_DENOMINATOR;
         PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT;
         MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
         VERIFICATION_INDEX = STAKEPOOL.VERIFICATION_INDEX;
@@ -135,12 +130,18 @@ contract TestStakeUtils is ERC1155Holder {
         StakeUtils.changeMaintainer(DATASTORE, _id, _newMaintainer);
     }
 
-    function setMaintainerFee(uint256 _id, uint256 _newFee) external virtual {
-        STAKEPOOL.setMaintainerFee(DATASTORE, _id, _newFee);
+    function switchMaintainerFee(uint256 _id, uint256 _newFee)
+        external
+        virtual
+    {
+        STAKEPOOL.switchMaintainerFee(DATASTORE, _id, _newFee);
     }
 
-    function setMaxMaintainerFee(uint256 _newMaxFee) external virtual {
-        STAKEPOOL.setMaxMaintainerFee(_newMaxFee);
+    function setMaxMaintainerFee(uint256 _newMaxFee, address _governance)
+        external
+        virtual
+    {
+        STAKEPOOL.setMaxMaintainerFee(_governance, FEE_DENOMINATOR, _newMaxFee);
     }
 
     function getMaintainerFee(uint256 _id)
@@ -150,6 +151,22 @@ contract TestStakeUtils is ERC1155Holder {
         returns (uint256)
     {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
+    }
+
+    function updateCometPeriod(uint256 _operatorId, uint256 _newPeriod)
+        external
+        virtual
+    {
+        StakeUtils.updateCometPeriod(DATASTORE, _operatorId, _newPeriod);
+    }
+
+    function getCometPeriod(uint256 _id)
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return StakeUtils.getCometPeriod(DATASTORE, _id);
     }
 
     function setPricePerShare(uint256 price, uint256 _planetId) external {
@@ -193,9 +210,16 @@ contract TestStakeUtils is ERC1155Holder {
     function initiateOperator(
         uint256 _planetId,
         uint256 _fee,
-        address _maintainer
+        address _maintainer,
+        uint256 _cometPeriod
     ) external {
-        STAKEPOOL.initiateOperator(DATASTORE, _planetId, _fee, _maintainer);
+        STAKEPOOL.initiateOperator(
+            DATASTORE,
+            _planetId,
+            _fee,
+            _maintainer,
+            _cometPeriod
+        );
     }
 
     function initiatePlanet(
@@ -297,6 +321,10 @@ contract TestStakeUtils is ERC1155Holder {
         return DATASTORE.readUintForId(_planetId, "surplus");
     }
 
+    function securedById(uint256 _planetId) external view returns (uint256) {
+        return DATASTORE.readUintForId(_planetId, "secured");
+    }
+
     function createdValidatorsById(uint256 _planetId, uint256 _operatorId)
         external
         view
@@ -371,33 +399,46 @@ contract TestStakeUtils is ERC1155Holder {
         );
     }
 
-    function lastCreatedValidatorNum() external view returns (uint256) {
-        return lastCreatedVals;
-    }
-
     function stakeBeacon(uint256 operatorId, bytes[] calldata pubkeys)
         external
         virtual
-        returns (uint256 succesfullDepositCount)
     {
-        succesfullDepositCount = STAKEPOOL.stakeBeacon(
-            DATASTORE,
-            operatorId,
-            pubkeys
-        );
-        lastCreatedVals = succesfullDepositCount;
+        STAKEPOOL.stakeBeacon(DATASTORE, operatorId, pubkeys);
+    }
+
+    function setSurplus(uint256 _id, uint256 _surplus) external {
+        DATASTORE.writeUintForId(_id, "surplus", _surplus);
     }
 
     function updateVerificationIndex(
         uint256 new_index,
         bytes[] calldata alienPubkeys,
-        bytes[] calldata curedPubkeys
+        bytes[] calldata curedPubkeys,
+        uint256[] calldata prisonedIds
     ) external virtual {
         STAKEPOOL.updateVerificationIndex(
+            DATASTORE,
             new_index,
             alienPubkeys,
-            curedPubkeys
+            curedPubkeys,
+            prisonedIds
         );
+    }
+
+    function isPrisoned(uint256 operatorId)
+        external
+        view
+        virtual
+        returns (bool)
+    {
+        return StakeUtils.isPrisoned(DATASTORE, operatorId);
+    }
+
+    function releasePrisoned(uint256 operatorId, address governance)
+        external
+        virtual
+    {
+        StakeUtils.releasePrisoned(DATASTORE, governance, operatorId);
     }
 
     function alienatePubKey(bytes calldata pubkey) external virtual {

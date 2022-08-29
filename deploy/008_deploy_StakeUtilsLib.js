@@ -3,11 +3,11 @@ const func = async function (hre) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("DataStoreUtils", {
+  await deploy("StakeUtils", {
     from: deployer,
     log: true,
     skipIfAlreadyDeployed: true,
   });
 };
 module.exports = func;
-module.exports.tags = ["DataStoreUtils"];
+module.exports.tags = ["StakeUtils"];

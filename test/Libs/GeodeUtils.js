@@ -37,7 +37,6 @@ describe("GeodeUtils", async () => {
     creationTime = await getCurrentBlockTimestamp();
     const TestGeodeUtils = await ethers.getContractFactory("TestGeodeUtils", {
       libraries: {
-        DataStoreUtils: (await get("DataStoreUtils")).address,
         GeodeUtils: (await get("GeodeUtils")).address,
       },
     });
