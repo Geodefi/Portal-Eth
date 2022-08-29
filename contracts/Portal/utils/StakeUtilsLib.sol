@@ -238,7 +238,7 @@ library StakeUtils {
         address _maintainer,
         uint256 _cometPeriod
     ) external initiator(_DATASTORE, _id, 4, _maintainer) {
-        setMaintainerFee(self, _DATASTORE, _id, _fee);
+        switchMaintainerFee(self, _DATASTORE, _id, _fee);
         updateCometPeriod(_DATASTORE, _id, _cometPeriod);
     }
 
@@ -269,7 +269,7 @@ library StakeUtils {
             _setInterface(self, _DATASTORE, _id, currentInterface, true);
         }
 
-        setMaintainerFee(self, _DATASTORE, _id, _fee);
+        switchMaintainerFee(self, _DATASTORE, _id, _fee);
 
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
         // transfer ownership of DWP to GEODE.GOVERNANCE
@@ -292,7 +292,7 @@ library StakeUtils {
         uint256 _fee,
         address _maintainer
     ) external initiator(_DATASTORE, _id, 6, _maintainer) {
-        setMaintainerFee(self, _DATASTORE, _id, _fee);
+        switchMaintainerFee(self, _DATASTORE, _id, _fee);
     }
 
     /**
@@ -348,10 +348,13 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
     ) public view returns (uint256 fee) {
-        return
-            _DATASTORE.readUintForId(_id, "fee") > self.MAX_MAINTAINER_FEE
-                ? self.MAX_MAINTAINER_FEE
-                : _DATASTORE.readUintForId(_id, "fee");
+        fee = _DATASTORE.readUintForId(_id, "fee");
+        if (_DATASTORE.readUintForId(_id, "feeSwitch") <= block.timestamp) {
+            fee = _DATASTORE.readUintForId(_id, "priorFee");
+        }
+        if (fee > self.MAX_MAINTAINER_FEE) {
+            fee = self.MAX_MAINTAINER_FEE;
+        }
     }
 
     /**
@@ -996,18 +999,6 @@ library StakeUtils {
         );
         uint256 planetFee = getMaintainerFee(self, _DATASTORE, planetId);
         uint256 operatorFee = getMaintainerFee(self, _DATASTORE, operatorId);
-        if (
-            _DATASTORE.readUintForId(planetId, "feeEffective") <=
-            block.timestamp
-        ) {
-            planetFee = _DATASTORE.readUintForId(planetId, "priorFee");
-        }
-        if (
-            _DATASTORE.readUintForId(operatorId, "feeEffective") <=
-            block.timestamp
-        ) {
-            operatorFee = _DATASTORE.readUintForId(operatorId, "priorFee");
-        }
 
         uint256 valIndex = self.VALIDATORS_INDEX;
         for (; i < pubkeys.length; ++i) {
