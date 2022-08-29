@@ -57,7 +57,6 @@ describe("StakeUtils", async () => {
 
     const TestStakeUtils = await ethers.getContractFactory("TestStakeUtils", {
       libraries: {
-        DataStoreUtils: (await get("DataStoreUtils")).address,
         StakeUtils: (await get("StakeUtils")).address,
       },
     });
@@ -133,16 +132,17 @@ describe("StakeUtils", async () => {
         let effectTS;
         beforeEach(async () => {
           await testContract.connect(user1).switchMaintainerFee(randId, 12345);
-          effectTS = (await getCurrentBlockTimestamp()) + 24 * 60 * 60;
+          effectTS = (await getCurrentBlockTimestamp()) + 24 * 60 * 60 - 1;
         });
         it("returns old value", async () => {
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
         });
         it("switches after a day", async () => {
-          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
           await setTimestamp(effectTS);
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
           await setTimestamp(effectTS + 1);
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
+          await setTimestamp(effectTS + 2);
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
         });
       });
@@ -345,7 +345,10 @@ describe("StakeUtils", async () => {
       });
 
       // check fee is set correctly
-      it("check fee is set correctly", async () => {
+      it("check fee is correct after a day", async () => {
+        await setTimestamp(
+          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 + 1
+        );
         setFee = await testContract.getMaintainerFee(randId);
         expect(setFee).to.be.eq(1e5);
       });
@@ -360,7 +363,8 @@ describe("StakeUtils", async () => {
           testContract.connect(user1).initiateOperator(
             randId, // _id
             1e5, // _fee
-            user1.address // _maintainer
+            user1.address, // _maintainer
+            69 // _cometPeriod
           )
         ).to.be.revertedWith("StakeUtils: already initiated");
       });
@@ -403,7 +407,8 @@ describe("StakeUtils", async () => {
       expect(await erc20interface.symbol()).to.be.eq("BP");
     });
 
-    it("check fee is set", async () => {
+    it("fee is correct after a day", async () => {
+      await setTimestamp((await getCurrentBlockTimestamp()) + 24 * 60 * 60 + 1);
       setFee = await testContract.getMaintainerFee(randId);
       expect(setFee).to.be.eq(1e6);
     });
@@ -680,14 +685,12 @@ describe("StakeUtils", async () => {
       await testContract.changeIdMaintainer(randId, user1.address);
     });
     it("reverts when not called by maintainer", async () => {
-      await expect(testContract.updateCometPeriod(operatorId, String(1e18))).to
-        .be.reverted;
+      await expect(testContract.updateCometPeriod(randId, String(1e18))).to.be
+        .reverted;
     });
     it("succeeds", async () => {
-      await testContract
-        .connect(user1)
-        .updateCometPeriod(operatorId, String(1e18));
-      await expect(await testContract.getCometPeriod(operatorId)).to.be.eq(
+      await testContract.connect(user1).updateCometPeriod(randId, String(1e18));
+      await expect(await testContract.getCometPeriod(randId)).to.be.eq(
         String(1e18)
       );
     });
@@ -977,15 +980,19 @@ describe("StakeUtils", async () => {
         await testContract.initiateOperator(
           operatorId, // _id
           1e5, // _fee
-          user1.address // _maintainer
+          user1.address, // _maintainer
+          69
         );
 
         await testContract.setType(planetId, 5);
         await testContract.beController(planetId);
-        await testContract.initiateOperator(
+        await testContract.initiatePlanet(
           planetId, // _id
           1e5, // _fee
-          user2.address // _maintainer
+          user2.address, // _maintainer
+          deployer.address, // _governance
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
         );
       });
 
@@ -1010,32 +1017,6 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith(
           "StakeUtils: pubkeys and signatures should be same length"
         );
-      });
-
-      describe("if prisoned", async () => {
-        let releaseTS;
-        beforeEach(async () => {
-          await testContract
-            .connect(oracle)
-            .updateVerificationIndex(0, [], [], [operatorId]);
-          releaseTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
-        });
-
-        it("reverts", async () => {
-          await expect(
-            testContract
-              .connect(user1)
-              .preStake(planetId, operatorId, [pubkey4], [signature4])
-          ).to.be.revertedWith(
-            "StakeUtils: you are in prison, get in touch with governance"
-          );
-        });
-        it("success after released", async () => {
-          await setTimestamp(releaseTS);
-          await testContract
-            .connect(user1)
-            .preStake(planetId, operatorId, [pubkey4], [signature4]);
-        });
       });
 
       it("reverts if not enough surplus", async () => {
@@ -1105,7 +1086,8 @@ describe("StakeUtils", async () => {
           .approveOperator(planetId, operatorId, 2);
 
         await testContract.alienatePubKey(pubkey2);
-
+        await testContract.setSurplus(planetId, String(1e20));
+        await testContract.Receive({ value: String(1e20) });
         await expect(
           testContract
             .connect(user1)
@@ -1126,7 +1108,8 @@ describe("StakeUtils", async () => {
         await testContract
           .connect(user2)
           .approveOperator(planetId, operatorId, 2);
-
+        await testContract.setSurplus(planetId, String(1e20));
+        await testContract.Receive({ value: String(1e20) });
         await expect(
           testContract
             .connect(user1)
@@ -1140,6 +1123,8 @@ describe("StakeUtils", async () => {
       });
 
       it("SIGNATURE_LENGTH ERROR", async () => {
+        await testContract.setSurplus(planetId, String(1e20));
+        await testContract.Receive({ value: String(1e20) });
         await testContract.connect(user1).increaseOperatorWallet(operatorId, {
           value: String(2e18),
         });
@@ -1169,6 +1154,9 @@ describe("StakeUtils", async () => {
         let prevContractBalance;
 
         beforeEach(async () => {
+          await setTimestamp(
+            (await getCurrentBlockTimestamp()) + 24 * 60 * 60 + 1
+          );
           await testContract
             .connect(user2)
             .approveOperator(planetId, operatorId, 3);
@@ -1176,7 +1164,8 @@ describe("StakeUtils", async () => {
           await testContract.connect(user1).increaseOperatorWallet(operatorId, {
             value: String(5e18),
           });
-
+          await testContract.setSurplus(planetId, String(64e18));
+          await testContract.Receive({ value: String(64e18) });
           prevSurplus = await testContract.surplusById(planetId);
           prevSecured = await testContract.securedById(planetId);
           prevAllowance = await testContract.operatorAllowance(
@@ -1201,21 +1190,50 @@ describe("StakeUtils", async () => {
             );
         });
 
+        describe("if prisoned", async () => {
+          let releaseTS;
+          beforeEach(async () => {
+            await testContract.setSurplus(planetId, String(64e18));
+            await testContract.Receive({ value: String(64e18) });
+
+            await testContract
+              .connect(oracle)
+              .updateVerificationIndex(0, [], [], [operatorId]);
+            releaseTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
+          });
+
+          it("reverts", async () => {
+            await expect(
+              testContract
+                .connect(user1)
+                .preStake(planetId, operatorId, [pubkey4], [signature4])
+            ).to.be.revertedWith(
+              "StakeUtils: you are in prison, get in touch with governance"
+            );
+          });
+          it("success after released", async () => {
+            await setTimestamp(releaseTS);
+            await testContract
+              .connect(user1)
+              .preStake(planetId, operatorId, [pubkey4], [signature4]);
+          });
+        });
+
         it("Contract balance decreased accordingly (1 eth)", async () => {
           expect(String(1e18)).to.be.eq(
             prevContractBalance.sub(await testContract.getContractBalance())
           );
         });
 
-        it("surplus decreases by 31 eth", async () => {
-          expect(String(31e18)).to.be.eq(
+        it("surplus decreased by 32 eth per pubkey", async () => {
+          expect(String(64e18)).to.be.eq(
             prevSurplus.sub(await testContract.surplusById(planetId))
           );
         });
 
-        it("secured increased by 31 eth", async () => {
-          expect(String(31e18)).to.be.eq(
-            prevSecured.sub(await testContract.securedById(planetId))
+        it("secured increased by 31 eth per pubkey", async () => {
+          expect(String(62e18)).to.be.eq(
+            (await testContract.securedById(planetId)).sub(prevSecured)
           );
         });
 
@@ -1238,6 +1256,8 @@ describe("StakeUtils", async () => {
         });
 
         it("reverts if pubKey is already created", async () => {
+          await testContract.setSurplus(planetId, String(100e18));
+          await testContract.Receive({ value: String(64e18) });
           await expect(
             testContract
               .connect(user1)
@@ -1273,8 +1293,8 @@ describe("StakeUtils", async () => {
           [val1, val2].forEach(function (vd, i) {
             expect(vd.planetId).to.be.eq(planetId);
             expect(vd.operatorId).to.be.eq(operatorId);
-            expect(vd.signature).to.be.eq(1e5);
-            expect(vd.signature).to.be.eq(1e5);
+            expect(vd.planetFee).to.be.eq(1e5);
+            expect(vd.operatorFee).to.be.eq(1e5);
             expect(vd.index).to.be.eq(i + 1);
             expect(vd.state).to.be.eq(1);
             expect(vd.signature).to.be.eq(signatures[i]);
@@ -1291,7 +1311,7 @@ describe("StakeUtils", async () => {
         await testContract.changeIdMaintainer(planetId, user2.address);
         await testContract.setType(operatorId, 4);
         await testContract.setType(planetId, 5);
-
+        await testContract.setSurplus(planetId, String(1e20));
         await testContract
           .connect(user2)
           .approveOperator(planetId, operatorId, 3);
@@ -1363,13 +1383,13 @@ describe("StakeUtils", async () => {
           .connect(user1)
           .preStake(planetId, operatorId, [pubkey1], [signature1]);
         await testContract
-          .connect(user1)
+          .connect(oracle)
           .updateVerificationIndex(1, [pubkey1], [], []);
-        await testContract.connect(oracle).setSurplus(planetId, 0);
+        await testContract.setSurplus(planetId, 0);
         await testContract
           .connect(oracle)
           .updateVerificationIndex(1, [], [pubkey1], []);
-        expect((await testContract.getValidatorData(pubkey2)).state).to.be.eq(
+        expect((await testContract.getValidatorData(pubkey1)).state).to.be.eq(
           69
         );
       });
@@ -1398,60 +1418,64 @@ describe("StakeUtils", async () => {
           });
           it("check surplus", async () => {
             expect(await testContract.surplusById(planetId)).to.be.eq(
-              surplus.add(String(32e18))
+              surplus.add(String(31e18))
             );
           });
           it("check secured", async () => {
             expect(await testContract.securedById(planetId)).to.be.eq(
-              secured.sub(String(32e18))
+              secured.sub(String(31e18))
             );
           });
         });
         describe("Cured", async () => {
           beforeEach(async () => {
+            await testContract.setSurplus(planetId, String(1e20));
+            await testContract.Receive({ value: String(1e20) });
+            surplus = await testContract.surplusById(planetId);
+            secured = await testContract.securedById(planetId);
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(1, [pubkey2], [], []);
+              .updateVerificationIndex(1, [pubkey1], [], []);
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(1, [], [pubkey2], []);
+              .updateVerificationIndex(1, [], [pubkey1], []);
             expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
           });
           it("check validator.state", async () => {
             expect(
-              (await testContract.getValidatorData(pubkey2)).state
+              (await testContract.getValidatorData(pubkey1)).state
             ).to.be.eq(1);
           });
           it("check surplus", async () => {
-            expect(await testContract.surplusById(planetId)).to.be.eq(
-              surplus.sub(String(32e18))
+            expect(0).to.be.eq(
+              surplus.sub(await testContract.surplusById(planetId))
             );
           });
           it("check secured", async () => {
-            expect(await testContract.securedById(planetId)).to.be.eq(
-              secured.add(String(32e18))
+            expect(String(0)).to.be.eq(
+              (await testContract.securedById(planetId)).sub(secured)
             );
           });
         });
         describe("Prisoned", async () => {
           let releaseTs;
           beforeEach(async () => {
+            await testContract.setSurplus(planetId, String(1e20));
+            await testContract.Receive({ value: String(1e20) });
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(2, [], [], [operatorId]);
+              .updateVerificationIndex(1, [], [], [operatorId]);
             releaseTs = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
           });
-          it("released after 7 days later", async () => {
-            expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
-            await setTimestamp(releaseTs);
+          it("released after 7 days", async () => {
             expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
             await setTimestamp(releaseTs + 1);
             expect(await testContract.isPrisoned(operatorId)).to.be.eq(false);
           });
           describe("releasePrisoned", async () => {
             it("reverts when not called by Governance", async () => {
-              expect(
-                await testContract
+              await expect(
+                testContract
                   .connect(user1)
                   .releasePrisoned(operatorId, deployer.address)
               ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
@@ -1460,7 +1484,7 @@ describe("StakeUtils", async () => {
               await testContract
                 .connect(deployer)
                 .releasePrisoned(operatorId, deployer.address);
-              expect(await testContract.isPrisoned(operatorId)).to.be.eq(false);
+              expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
             });
           });
         });
@@ -1475,7 +1499,7 @@ describe("StakeUtils", async () => {
         await testContract.changeIdMaintainer(planetId, user2.address);
         await testContract.setType(operatorId, 4);
         await testContract.setType(planetId, 5);
-
+        await testContract.setSurplus(planetId, String(1e20));
         await testContract
           .connect(user2)
           .approveOperator(planetId, operatorId, 3);
@@ -1499,18 +1523,22 @@ describe("StakeUtils", async () => {
       });
 
       it("returns false if VERIFICATION_INDEX is smaller than validator's index", async () => {
-        await testContract.connect(oracle).updateVerificationIndex(1, [], []);
+        await testContract
+          .connect(oracle)
+          .updateVerificationIndex(1, [], [], []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(false);
       });
 
       it("returns true", async () => {
-        await testContract.connect(oracle).updateVerificationIndex(2, [], []);
+        await testContract
+          .connect(oracle)
+          .updateVerificationIndex(2, [], [], []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(true);
       });
     });
 
     describe("stakeBeacon", () => {
-      let prevSurplus;
+      let prevSecured;
       let prevActiveValidators;
       let prevOperatorWallet;
       let prevContractBalance;
@@ -1527,8 +1555,10 @@ describe("StakeUtils", async () => {
         await testContract.setPricePerShare(String(1e18), planetId);
         await testContract.deployWithdrawalPool(planetId);
         await testContract.connect(user1).increaseOperatorWallet(operatorId, {
-          value: String(5e18),
+          value: String(6e18),
         });
+        await testContract.setSurplus(planetId, String(1e20));
+        await testContract.Receive({ value: String(1e20) });
         await testContract
           .connect(user1)
           .preStake(
@@ -1556,23 +1586,6 @@ describe("StakeUtils", async () => {
         await expect(
           testContract.connect(user1).stakeBeacon(operatorId, [])
         ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
-      });
-
-      it("reverts if NOT all pubkeys are stakeable", async () => {
-        await testContract.connect(oracle).updateVerificationIndex(2, [], []);
-        await testContract
-          .connect(user2)
-          .approveOperator(planetId, operatorId, 5);
-        await testContract
-          .connect(user1)
-          .preStake(planetId, operatorId, [pubkey3], [signature3]);
-
-        await expect(
-          testContract.connect(user1).stakeBeacon(operatorId, [pubkey3])
-        ).to.be.revertedWith("StakeUtils: NOT all pubkeys are stakeable");
-        await expect(
-          testContract.connect(user1).stakeBeacon(operatorId, [pubkey4])
-        ).to.be.revertedWith("StakeUtils: NOT all pubkeys are stakeable");
       });
 
       it("reverts if prisoned, can stake after released", async () => {
@@ -1608,9 +1621,11 @@ describe("StakeUtils", async () => {
             .stakePlanet(planetId, 0, MAX_UINT256, {
               value: String(1e20),
             });
-          prevSurplus = await testContract.surplusById(planetId);
+          prevSecured = await testContract.securedById(planetId);
 
-          await testContract.connect(oracle).updateVerificationIndex(2, [], []);
+          await testContract
+            .connect(oracle)
+            .updateVerificationIndex(2, [], [], []);
 
           prevContractBalance = await testContract.getContractBalance();
           await testContract
@@ -1633,9 +1648,10 @@ describe("StakeUtils", async () => {
           );
         });
 
-        it("Surplus", async () => {
-          const currentSurplus = await testContract.surplusById(planetId);
-          expect(String(64e18)).to.be.eq(prevSurplus.sub(currentSurplus));
+        it("Secured", async () => {
+          expect(String(62e18)).to.be.eq(
+            prevSecured.sub(await testContract.securedById(planetId))
+          );
         });
 
         it("ActiveValidators", async () => {
@@ -1646,11 +1662,6 @@ describe("StakeUtils", async () => {
           );
         });
 
-        it("returns Created Validators", async () => {
-          expect(await testContract.lastCreatedValidatorNum()).to.be.eq(
-            String(2)
-          );
-        });
         it("validator state = 2", async () => {
           const val1 = await testContract.getValidatorData(pubkey1);
           const val2 = await testContract.getValidatorData(pubkey2);

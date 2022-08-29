@@ -10,7 +10,6 @@ contract TestStakeUtils is ERC1155Holder {
     using StakeUtils for StakeUtils.StakePool;
     DataStoreUtils.DataStore private DATASTORE;
     StakeUtils.StakePool private STAKEPOOL;
-    uint256 public lastCreatedVals;
     uint256 public FEE_DENOMINATOR = 10**10;
 
     constructor(
@@ -400,21 +399,11 @@ contract TestStakeUtils is ERC1155Holder {
         );
     }
 
-    function lastCreatedValidatorNum() external view returns (uint256) {
-        return lastCreatedVals;
-    }
-
     function stakeBeacon(uint256 operatorId, bytes[] calldata pubkeys)
         external
         virtual
-        returns (uint256 succesfullDepositCount)
     {
-        succesfullDepositCount = STAKEPOOL.stakeBeacon(
-            DATASTORE,
-            operatorId,
-            pubkeys
-        );
-        lastCreatedVals = succesfullDepositCount;
+        STAKEPOOL.stakeBeacon(DATASTORE, operatorId, pubkeys);
     }
 
     function setSurplus(uint256 _id, uint256 _surplus) external {
@@ -425,7 +414,7 @@ contract TestStakeUtils is ERC1155Holder {
         uint256 new_index,
         bytes[] calldata alienPubkeys,
         bytes[] calldata curedPubkeys,
-        bytes[] calldata prisonedIds
+        uint256[] calldata prisonedIds
     ) external virtual {
         STAKEPOOL.updateVerificationIndex(
             DATASTORE,
