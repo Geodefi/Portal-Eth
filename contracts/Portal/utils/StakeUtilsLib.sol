@@ -1096,6 +1096,11 @@ library StakeUtils {
         bytes[] calldata pubkeys
     ) external onlyMaintainer(_DATASTORE, operatorId) returns (uint256 i) {
         require(
+            isPrisoned(_DATASTORE, operatorId),
+            "StakeUtils: you are in prison, get in touch with governance"
+        );
+
+        require(
             pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
             "StakeUtils: 1 to 64 nodes per transaction"
         );
