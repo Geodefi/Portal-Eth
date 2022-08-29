@@ -1093,7 +1093,6 @@ library StakeUtils {
     //helper struct for Stack too deep and contract size
     struct StakeMemory {
         uint256 planetId;
-        uint256 surplus;
         uint256 secured;
         uint256 activeValidators;
         bytes signature;
@@ -1145,7 +1144,6 @@ library StakeUtils {
             uint256 planetId = self.Validators[pubkeys[0]].planetId;
             sm = StakeMemory(
                 planetId,
-                0,
                 _DATASTORE.readUintForId(planetId, "secured"),
                 _DATASTORE.readUintForId(planetId, activeValKey),
                 self.Validators[pubkeys[0]].signature,
