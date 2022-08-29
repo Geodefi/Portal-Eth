@@ -381,7 +381,11 @@ library StakeUtils {
             "priorFee",
             _DATASTORE.readUintForId(_id, "fee")
         );
-        _DATASTORE.writeUintForId(_id, "feeSwitch", block.timestamp + 1 days);
+        _DATASTORE.writeUintForId(
+            _id,
+            "feeSwitch",
+            block.timestamp + FEE_SWITCH_LATENCY
+        );
         _DATASTORE.writeUintForId(_id, "fee", _newFee);
         emit MaintainerFeeUpdated(_id, _newFee);
     }
@@ -805,7 +809,7 @@ library StakeUtils {
             _DATASTORE.writeUintForId(
                 self.Validators[prisonedIds[i]].operatorId,
                 "released",
-                block.timestamp + 7 days
+                block.timestamp + PRISON_SENTENCE
             );
         }
 
