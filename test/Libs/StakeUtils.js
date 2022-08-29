@@ -87,9 +87,6 @@ describe("StakeUtils", async () => {
     it("correct gETH", async () => {
       expect(stakepool.gETH).to.eq(gETH.address);
     });
-    it("correct FEE_DENOMINATOR", async () => {
-      expect(stakepool.FEE_DENOMINATOR).to.eq(1e10);
-    });
     it("correct DEFAULT_DWP", async () => {
       expect(stakepool.DEFAULT_DWP).to.eq(DEFAULT_DWP);
     });
