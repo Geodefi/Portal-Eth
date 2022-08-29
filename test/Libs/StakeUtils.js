@@ -928,12 +928,21 @@ describe("StakeUtils", async () => {
 
     describe("preStake", () => {
       beforeEach(async () => {
-        await testContract.beController(operatorId);
-        await testContract.changeIdMaintainer(operatorId, user1.address);
-        await testContract.beController(planetId);
-        await testContract.changeIdMaintainer(planetId, user2.address);
         await testContract.setType(operatorId, 4);
+        await testContract.beController(operatorId);
+        await testContract.initiateOperator(
+          operatorId, // _id
+          1e5, // _fee
+          user1.address // _maintainer
+        );
+
         await testContract.setType(planetId, 5);
+        await testContract.beController(planetId);
+        await testContract.initiateOperator(
+          planetId, // _id
+          1e5, // _fee
+          user2.address // _maintainer
+        );
       });
 
       it("reverts if there is no pool with id", async () => {
@@ -1175,6 +1184,8 @@ describe("StakeUtils", async () => {
           [val1, val2].forEach(function (vd, i) {
             expect(vd.planetId).to.be.eq(planetId);
             expect(vd.operatorId).to.be.eq(operatorId);
+            expect(vd.signature).to.be.eq(1e5);
+            expect(vd.signature).to.be.eq(1e5);
             expect(vd.index).to.be.eq(i + 1);
             expect(vd.state).to.be.eq(1);
             expect(vd.signature).to.be.eq(signatures[i]);
