@@ -20,8 +20,8 @@ describe("GeodeUtils", async () => {
   let userType4;
   let userType5;
   let creationTime;
-  const _OPERATION_FEE = 10;
-  const _MAX_OPERATION_FEE = 100;
+  const _GOVERNANCE_TAX = 10;
+  const _MAX_GOVERNANCE_TAX = 100;
   const AWEEK = 7 * 24 * 60 * 60;
 
   const setupTest = deployments.createFixture(async (hre) => {
@@ -43,8 +43,8 @@ describe("GeodeUtils", async () => {
     testContract = await TestGeodeUtils.deploy(
       GOVERNANCE.address,
       SENATE.address,
-      _OPERATION_FEE,
-      _MAX_OPERATION_FEE
+      _GOVERNANCE_TAX,
+      _MAX_GOVERNANCE_TAX
     );
   });
 
@@ -66,13 +66,13 @@ describe("GeodeUtils", async () => {
       response = await testContract.getSenateExpireTimestamp();
       await expect(response).to.eq(creationTime + 24 * 3600);
     });
-    it("correct OPERATION_FEE", async () => {
-      response = await testContract.getOperationFee();
-      await expect(response).to.eq(_OPERATION_FEE);
+    it("correct GOVERNANCE_TAX", async () => {
+      response = await testContract.getGovernanceTax();
+      await expect(response).to.eq(_GOVERNANCE_TAX);
     });
-    it("correct MAX_OPERATION_FEE", async () => {
-      response = await testContract.getMaxOperationFee();
-      await expect(response).to.eq(_MAX_OPERATION_FEE);
+    it("correct MAX_GOVERNANCE_TAX", async () => {
+      response = await testContract.getMaxGovernanceTax();
+      await expect(response).to.eq(_MAX_GOVERNANCE_TAX);
     });
     it("correct FEE_DENOMINATOR", async () => {
       response = await testContract.getFeeDenominator();
@@ -91,35 +91,36 @@ describe("GeodeUtils", async () => {
     });
   });
 
-  describe("Set Operation Fee", () => {
+  describe("Set Governance Tax", () => {
     it("reverts if > MAX", async () => {
       const futureOpFee = 101;
-      response = await testContract.getOperationFee();
+      response = await testContract.getGovernanceTax();
       await expect(
-        testContract.connect(GOVERNANCE).setOperationFee(futureOpFee)
-      ).to.be.revertedWith("GeodeUtils: fee more than MAX");
+        testContract.connect(GOVERNANCE).setGovernanceTax(futureOpFee)
+      ).to.be.revertedWith("GeodeUtils: TAX more than MAX");
     });
 
     it("success if <= MAX", async () => {
       const futureOpFee = 9;
-      await testContract.connect(GOVERNANCE).setOperationFee(futureOpFee);
-      response = await testContract.getOperationFee();
+      await testContract.connect(GOVERNANCE).setGovernanceTax(futureOpFee);
+      response = await testContract.getGovernanceTax();
       await expect(response).to.eq(futureOpFee);
 
       const futureMaxOpFee = 29;
-      await testContract.connect(SENATE).setMaxOperationFee(futureMaxOpFee);
-      await testContract.connect(GOVERNANCE).setOperationFee(futureMaxOpFee);
-      response = await testContract.getOperationFee();
+      await testContract.connect(SENATE).setMaxGovernanceTax(futureMaxOpFee);
+      await testContract.connect(GOVERNANCE).setGovernanceTax(futureMaxOpFee);
+      response = await testContract.getGovernanceTax();
       await expect(response).to.eq(futureMaxOpFee);
     });
-    it("returns MAX, if MAX is decreased", async () => {
-      const futureOpFee = 20;
-      const futureMaxOpFee = 15;
-      await testContract.connect(GOVERNANCE).setOperationFee(futureOpFee);
-      await testContract.connect(SENATE).setMaxOperationFee(futureMaxOpFee);
-      response = await testContract.getOperationFee();
-      await expect(response).to.eq(futureMaxOpFee);
-    });
+    // Below functionality found too problematic and got removed
+    // it("returns MAX, if MAX is decreased", async () => {
+    //   const futureOpFee = 20;
+    //   const futureMaxOpFee = 15;
+    //   await testContract.connect(GOVERNANCE).setGovernanceTax(futureOpFee);
+    //   await testContract.connect(SENATE).setMaxGovernanceTax(futureMaxOpFee);
+    //   response = await testContract.getGovernanceTax();
+    //   await expect(response).to.eq(futureMaxOpFee);
+    // });
   });
 
   describe("getId", () => {

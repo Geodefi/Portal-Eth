@@ -12,14 +12,14 @@ contract TestGeodeUtils {
     constructor(
         address _GOVERNANCE,
         address _SENATE,
-        uint256 _OPERATION_FEE,
-        uint256 _MAX_OPERATION_FEE
+        uint256 _GOVERNANCE_TAX,
+        uint256 _MAX_GOVERNANCE_TAX
     ) {
         GEODE.GOVERNANCE = _GOVERNANCE;
         GEODE.SENATE = _SENATE;
         GEODE.SENATE_EXPIRE_TIMESTAMP = block.timestamp + 1 days;
-        GEODE.OPERATION_FEE = _OPERATION_FEE;
-        GEODE.MAX_OPERATION_FEE = _MAX_OPERATION_FEE;
+        GEODE.GOVERNANCE_TAX = _GOVERNANCE_TAX;
+        GEODE.MAX_GOVERNANCE_TAX = _MAX_GOVERNANCE_TAX;
         GEODE.FEE_DENOMINATOR = 10**10;
 
         GEODE.setElectorType(DATASTORE, 5, true); // allow type4 to vote for Senate
@@ -35,16 +35,16 @@ contract TestGeodeUtils {
         return GEODE.getGovernance();
     }
 
-    function getOperationFee() external view virtual returns (uint256) {
-        return GEODE.getOperationFee();
+    function getGovernanceTax() external view virtual returns (uint256) {
+        return GEODE.getGovernanceTax();
     }
 
     function getFeeDenominator() external view virtual returns (uint256) {
         return GEODE.FEE_DENOMINATOR;
     }
 
-    function getMaxOperationFee() external view virtual returns (uint256) {
-        return GEODE.getMaxOperationFee();
+    function getMaxGovernanceTax() external view virtual returns (uint256) {
+        return GEODE.getMaxGovernanceTax();
     }
 
     function getSenateExpireTimestamp()
@@ -117,22 +117,22 @@ contract TestGeodeUtils {
     /**
      * ** GOVERNANCE/SENATE SETTERS **
      */
-    function setOperationFee(uint256 _newFee)
+    function setGovernanceTax(uint256 _newFee)
         external
         virtual
         returns (bool success)
     {
         // onlyGovernance CHECKED inside
-        success = GEODE.setOperationFee(_newFee);
+        success = GEODE.setGovernanceTax(_newFee);
     }
 
-    function setMaxOperationFee(uint256 _newFee)
+    function setMaxGovernanceTax(uint256 _newFee)
         external
         virtual
         returns (bool success)
     {
         // onlySenate CHECKED inside
-        success = GEODE.setMaxOperationFee(_newFee);
+        success = GEODE.setMaxGovernanceTax(_newFee);
     }
 
     /**

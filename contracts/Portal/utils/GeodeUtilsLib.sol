@@ -16,8 +16,8 @@ import "./DataStoreLib.sol";
 library GeodeUtils {
     using DataStoreUtils for DataStoreUtils.DataStore;
 
-    event OperationFeeUpdated(uint256 newFee);
-    event MaxOperationFeeUpdated(uint256 newMaxFee);
+    event TaxUpdated(uint256 newFee);
+    event MaxTaxUpdated(uint256 newMaxFee);
     event ControllerChanged(uint256 id, address newCONTROLLER);
     event Proposed(
         uint256 id,
@@ -64,8 +64,8 @@ library GeodeUtils {
      * Suggests updates, such as new planets, operators, contract upgrades and new Senate, on the Ecosystem _without any permissions to force them_
      * @param SENATE An address that controls the state of governance, updates and other users in the Geode Ecosystem
      * Note SENATE is proposed by Governance and voted by all planets, if 2/3 approves.
-     * @param OPERATION_FEE operation fee of the given contract, acquired by GOVERNANCE. Limited by MAX_OPERATION_FEE
-     * @param MAX_OPERATION_FEE set by SENATE, limited by FEE_DENOMINATOR
+     * @param GOVERNANCE_TAX operation fee of the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_TAX
+     * @param MAX_GOVERNANCE_TAX set by SENATE, limited by FEE_DENOMINATOR
      * @param FEE_DENOMINATOR represents 100%
      * @param SENATE_EXPIRE_TIMESTAMP refers to the last timestamp that SENATE can continue operating. Enforces a new election, limited by MAX_SENATE_PERIOD
      * @param approvedUpgrade only 1(one) implementation contract can be "approved" at any given time. @dev Should set to address(0) after every upgrade
@@ -76,8 +76,8 @@ library GeodeUtils {
     struct Universe {
         address SENATE;
         address GOVERNANCE;
-        uint256 OPERATION_FEE;
-        uint256 MAX_OPERATION_FEE;
+        uint256 GOVERNANCE_TAX;
+        uint256 MAX_GOVERNANCE_TAX;
         uint256 FEE_DENOMINATOR;
         uint256 SENATE_EXPIRE_TIMESTAMP;
         address approvedUpgrade;
@@ -122,29 +122,26 @@ library GeodeUtils {
     }
 
     /**
-     * @notice MAX_OPERATION_FEE must limit OPERATION_FEE even if MAX is changed
-     * @return active OPERATION_FEE; limited by MAX_OPERATION_FEE
+     * @notice MAX_GOVERNANCE_TAX must limit GOVERNANCE_TAX even if MAX is changed
+     * @return active GOVERNANCE_TAX; limited by MAX_GOVERNANCE_TAX
      */
-    function getOperationFee(Universe storage self)
+    function getGovernanceTax(Universe storage self)
         public
         view
         returns (uint256)
     {
-        return
-            self.OPERATION_FEE > self.MAX_OPERATION_FEE
-                ? self.MAX_OPERATION_FEE
-                : self.OPERATION_FEE;
+        return self.GOVERNANCE_TAX;
     }
 
     /**
-     *  @return MAX_OPERATION_FEE
+     *  @return MAX_GOVERNANCE_TAX
      */
-    function getMaxOperationFee(Universe storage self)
+    function getMaxGovernanceTax(Universe storage self)
         public
         view
         returns (uint256)
     {
-        return self.MAX_OPERATION_FEE;
+        return self.MAX_GOVERNANCE_TAX;
     }
 
     /**
@@ -162,38 +159,39 @@ library GeodeUtils {
      *                                         ** UNIVERSE SETTERS **
      */
 
-    /** @return true if the operation was succesful, might be helpful when governance rights are distributed
+    /**
      * @dev can not set a fee more than MAX
      * @dev no need to check FEE_DENOMINATOR
+     * @return true if the operation was succesful, might be helpful when governance rights are distributed
      */
-    function setOperationFee(Universe storage self, uint256 _newFee)
+    function setGovernanceTax(Universe storage self, uint256 _newFee)
         external
         returns (bool)
     {
         require(
-            _newFee <= self.MAX_OPERATION_FEE,
-            "GeodeUtils: fee more than MAX"
+            _newFee <= self.MAX_GOVERNANCE_TAX,
+            "GeodeUtils: TAX more than MAX"
         );
-        self.OPERATION_FEE = _newFee;
-        emit OperationFeeUpdated(_newFee);
+        self.GOVERNANCE_TAX = _newFee;
+        emit TaxUpdated(_newFee);
         return true;
     }
 
     /**
-     * @return true if the operation was succesful
      * @dev can not set a fee more than FEE_DENOMINATOR (100%)
+     * @return true if the operation was succesful
      */
-    function setMaxOperationFee(Universe storage self, uint256 _newMaxFee)
+    function setMaxGovernanceTax(Universe storage self, uint256 _newMaxFee)
         external
         onlySenate(self)
         returns (bool)
     {
         require(
             _newMaxFee <= self.FEE_DENOMINATOR,
-            "GeodeUtils: fee more than 100%"
+            "GeodeUtils: tax more than 100%"
         );
-        self.MAX_OPERATION_FEE = _newMaxFee;
-        emit MaxOperationFeeUpdated(_newMaxFee);
+        self.MAX_GOVERNANCE_TAX = _newMaxFee;
+        emit MaxTaxUpdated(_newMaxFee);
         return true;
     }
 
