@@ -188,13 +188,13 @@ contract TestStakeUtils is ERC1155Holder {
         return StakeUtils.allInterfaces(DATASTORE, _planetId);
     }
 
-    function currentInterface(uint256 _id)
+    function withdrawalBoost(uint256 _id)
         external
         view
         virtual
-        returns (address)
+        returns (uint256)
     {
-        return DATASTORE.readAddressForId(_id, "currentInterface");
+        return DATASTORE.readUintForId(_id, "withdrawalBoost");
     }
 
     function isInitiated(uint256 _planetId)
@@ -224,6 +224,7 @@ contract TestStakeUtils is ERC1155Holder {
     function initiatePlanet(
         uint256 _planetId,
         uint256 _fee,
+        uint256 _withdrawalBoost,
         address _maintainer,
         address _governance,
         string memory _interfaceName,
@@ -233,6 +234,7 @@ contract TestStakeUtils is ERC1155Holder {
             DATASTORE,
             _planetId,
             _fee,
+            _withdrawalBoost,
             _maintainer,
             _governance,
             _interfaceName,

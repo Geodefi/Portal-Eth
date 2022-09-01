@@ -368,9 +368,6 @@ describe("StakeUtils", async () => {
     beforeEach(async () => {
       await testContract.connect(user1).beController(randId);
       await testContract.connect(user1).setType(randId, 4);
-      await testContract
-        .connect(user1)
-        .changeIdMaintainer(randId, user1.address);
     });
 
     it("reverts if sender is NOT CONTROLLER", async () => {
@@ -446,13 +443,11 @@ describe("StakeUtils", async () => {
     beforeEach(async () => {
       await testContract.connect(user1).beController(randId);
       await testContract.connect(user1).setType(randId, 5);
-      await testContract
-        .connect(user1)
-        .changeIdMaintainer(randId, user1.address);
 
       await testContract.connect(user1).initiatePlanet(
         randId, // _id
         1e6, // _fee
+        1e2, // _maintainer
         user1.address, // _maintainer
         deployer.address, // _governance
         "beautiful-planet", // _interfaceName
@@ -460,6 +455,23 @@ describe("StakeUtils", async () => {
       );
       const wpool = await testContract.withdrawalPoolById(randId);
       wPoolContract = await ethers.getContractAt("Swap", wpool);
+    });
+
+    it("reverts when withdrawalBoost > 100%", async () => {
+      await testContract.connect(user1).beController(planetId);
+      await testContract.connect(user1).setType(planetId, 5);
+
+      expect(
+        testContract.connect(user1).initiatePlanet(
+          planetId, // _id
+          1e6, // _fee
+          1e11, // _withdrawalBoost
+          user1.address, // _maintainer
+          deployer.address, // _governance
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
+        )
+      ).to.be.revertedWith("StakeUtils: withdrawalBoost more than 100%");
     });
 
     it("who is the owner of WP", async () => {
@@ -481,7 +493,12 @@ describe("StakeUtils", async () => {
       expect(setFee).to.be.eq(1e6);
     });
 
-    it("check WP is approved for all on gETH", async () => {
+    it("withdrawalBoost is correct", async () => {
+      withdrawalBoost = await testContract.withdrawalBoost(randId);
+      expect(withdrawalBoost).to.be.eq(1e2);
+    });
+
+    it("check WP is approvedForAll on gETH", async () => {
       expect(
         await gETH.isApprovedForAll(testContract.address, wPoolContract.address)
       ).to.be.eq(true);

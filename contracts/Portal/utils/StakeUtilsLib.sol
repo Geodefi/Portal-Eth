@@ -158,8 +158,8 @@ library StakeUtils {
 
     modifier initiator(
         DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id,
         uint256 _type,
+        uint256 _id,
         address _maintainer
     ) {
         require(
@@ -292,7 +292,7 @@ library StakeUtils {
         uint256 _fee,
         address _maintainer,
         uint256 _cometPeriod
-    ) external initiator(_DATASTORE, _id, 4, _maintainer) {
+    ) external initiator(_DATASTORE, 4, _id, _maintainer) {
         require(
             _fee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
@@ -311,16 +311,22 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         uint256 _fee,
+        uint256 _withdrawalBoost,
         address _maintainer,
         address _GOVERNANCE,
         string memory _interfaceName,
         string memory _interfaceSymbol
-    ) external initiator(_DATASTORE, _id, 5, _maintainer) {
+    ) external initiator(_DATASTORE, 5, _id, _maintainer) {
         require(
             _fee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
         );
+        require(
+            _withdrawalBoost <= FEE_DENOMINATOR,
+            "StakeUtils: withdrawalBoost more than 100%"
+        );
         _DATASTORE.writeUintForId(_id, "fee", _fee);
+        _DATASTORE.writeUintForId(_id, "withdrawalBoost", _withdrawalBoost);
         {
             address gEth = address(getgETH(self));
             address gInterface = _clone(self.DEFAULT_gETH_INTERFACE);
@@ -332,7 +338,6 @@ library StakeUtils {
             );
             setInterface(self, _DATASTORE, _id, gInterface);
         }
-
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
         // transfer ownership of DWP to GEODE.GOVERNANCE
         Ownable(WithdrawalPool).transferOwnership(_GOVERNANCE);
@@ -353,7 +358,7 @@ library StakeUtils {
         uint256 _id,
         uint256 _fee,
         address _maintainer
-    ) external initiator(_DATASTORE, _id, 6, _maintainer) {
+    ) external initiator(_DATASTORE, 6, _id, _maintainer) {
         require(
             _fee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
