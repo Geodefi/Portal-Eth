@@ -65,10 +65,6 @@ const PERIOD_PRICE_INCREASE_LIMIT = 2e7;
 const MAX_MAINTAINER_FEE = 1e9;
 
 describe("StakeUtils", async () => {
-  // test for 10 am gmt so it doesn't fail when tested on gmt midnight :)
-  // to find where settimestamp is used set 90000 to 110000 and test :)
-  await setTimestamp(24 * 60 * 60 * 90000 + 60 * 60 * 10 + 10);
-
   let gETH;
   let deployer;
   let oracle;
@@ -114,6 +110,10 @@ describe("StakeUtils", async () => {
     );
     await gETH.updateMinterRole(testContract.address);
     await gETH.updateOracleRole(testContract.address);
+
+    // test for 10 am gmt so it doesn't fail when tested on gmt midnight :)
+    // to find where settimestamp is used set 90000 to 110000 and test :)
+    await setTimestamp(24 * 60 * 60 * 90000 + 60 * 60 * 10 + 10);
   });
 
   beforeEach(async () => {
@@ -374,10 +374,7 @@ describe("StakeUtils", async () => {
       });
 
       // check fee is set correctly
-      it("check fee is correct after a day", async () => {
-        await setTimestamp(
-          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 7 + 1
-        );
+      it("check fee is correct", async () => {
         setFee = await testContract.getMaintainerFee(randId);
         expect(setFee).to.be.eq(1e5);
       });
@@ -436,10 +433,7 @@ describe("StakeUtils", async () => {
       expect(await erc20interface.symbol()).to.be.eq("BP");
     });
 
-    it("fee is correct after a day", async () => {
-      await setTimestamp(
-        (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60 + 1
-      );
+    it("fee is correct", async () => {
       setFee = await testContract.getMaintainerFee(randId);
       expect(setFee).to.be.eq(1e6);
     });

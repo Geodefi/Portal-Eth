@@ -248,7 +248,11 @@ library StakeUtils {
         address _maintainer,
         uint256 _cometPeriod
     ) external initiator(_DATASTORE, _id, 4, _maintainer) {
-        _switchMaintainerFee(self, _DATASTORE, _id, _fee);
+        require(
+            _fee <= self.MAX_MAINTAINER_FEE,
+            "StakeUtils: MAX_MAINTAINER_FEE ERROR"
+        );
+        _DATASTORE.writeUintForId(_id, "fee", _fee);
         _DATASTORE.writeUintForId(_id, "cometPeriod", _cometPeriod);
     }
 
@@ -267,6 +271,11 @@ library StakeUtils {
         string memory _interfaceName,
         string memory _interfaceSymbol
     ) external initiator(_DATASTORE, _id, 5, _maintainer) {
+        require(
+            _fee <= self.MAX_MAINTAINER_FEE,
+            "StakeUtils: MAX_MAINTAINER_FEE ERROR"
+        );
+        _DATASTORE.writeUintForId(_id, "fee", _fee);
         {
             address currentInterface = _clone(self.DEFAULT_gETH_INTERFACE);
             address gEth = address(getgETH(self));
@@ -278,8 +287,6 @@ library StakeUtils {
             );
             _setInterface(self, _DATASTORE, _id, currentInterface, true);
         }
-
-        _switchMaintainerFee(self, _DATASTORE, _id, _fee);
 
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
         // transfer ownership of DWP to GEODE.GOVERNANCE
@@ -302,7 +309,11 @@ library StakeUtils {
         uint256 _fee,
         address _maintainer
     ) external initiator(_DATASTORE, _id, 6, _maintainer) {
-        _switchMaintainerFee(self, _DATASTORE, _id, _fee);
+        require(
+            _fee <= self.MAX_MAINTAINER_FEE,
+            "StakeUtils: MAX_MAINTAINER_FEE ERROR"
+        );
+        _DATASTORE.writeUintForId(_id, "fee", _fee);
     }
 
     /**
