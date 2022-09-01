@@ -958,7 +958,7 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("preStake", () => {
+    describe("proposeStake", () => {
       beforeEach(async () => {
         await testContract.setType(operatorId, 4);
         await testContract.beController(operatorId);
@@ -985,7 +985,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               wrongId,
               operatorId,
               [pubkey1, pubkey2],
@@ -998,7 +998,12 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(planetId, operatorId, [pubkey1, pubkey2], [signature1])
+            .proposeStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1]
+            )
         ).to.be.revertedWith(
           "StakeUtils: pubkeys and signatures should be same length"
         );
@@ -1009,7 +1014,12 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(planetId, operatorId, [pubkey1, pubkey2], [signature1])
+            .proposeStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1]
+            )
         ).to.be.revertedWith(
           "StakeUtils: pubkeys and signatures should be same length"
         );
@@ -1019,7 +1029,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               planetId,
               operatorId,
               Array(65).fill(pubkey1),
@@ -1028,7 +1038,7 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
 
         await expect(
-          testContract.connect(user1).preStake(planetId, operatorId, [], [])
+          testContract.connect(user1).proposeStake(planetId, operatorId, [], [])
         ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
       });
 
@@ -1037,7 +1047,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               planetId,
               operatorId,
               [pubkey1, pubkey2],
@@ -1052,7 +1062,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               planetId,
               operatorId,
               [pubkey1, pubkey2],
@@ -1076,7 +1086,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               planetId,
               operatorId,
               [pubkey1, pubkey2],
@@ -1098,7 +1108,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               planetId,
               operatorId,
               [pubkey1, pubkey2 + "aefe"],
@@ -1121,7 +1131,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               planetId,
               operatorId,
               [pubkey1, pubkey2],
@@ -1167,7 +1177,7 @@ describe("StakeUtils", async () => {
           prevContractBalance = await testContract.getContractBalance();
           await testContract
             .connect(user1)
-            .preStake(
+            .proposeStake(
               planetId,
               operatorId,
               [pubkey1, pubkey2],
@@ -1191,7 +1201,7 @@ describe("StakeUtils", async () => {
             await expect(
               testContract
                 .connect(user1)
-                .preStake(planetId, operatorId, [pubkey4], [signature4])
+                .proposeStake(planetId, operatorId, [pubkey4], [signature4])
             ).to.be.revertedWith(
               "StakeUtils: you are in prison, get in touch with governance"
             );
@@ -1200,7 +1210,7 @@ describe("StakeUtils", async () => {
             await setTimestamp(releaseTS);
             await testContract
               .connect(user1)
-              .preStake(planetId, operatorId, [pubkey4], [signature4]);
+              .proposeStake(planetId, operatorId, [pubkey4], [signature4]);
           });
         });
 
@@ -1246,7 +1256,7 @@ describe("StakeUtils", async () => {
           await expect(
             testContract
               .connect(user1)
-              .preStake(planetId, operatorId, [pubkey1], [signature1])
+              .proposeStake(planetId, operatorId, [pubkey1], [signature1])
           ).to.be.revertedWith(
             "StakeUtils: Pubkey is already used or alienated"
           );
@@ -1256,7 +1266,7 @@ describe("StakeUtils", async () => {
           await expect(
             testContract
               .connect(user1)
-              .preStake(
+              .proposeStake(
                 planetId,
                 operatorId,
                 [pubkey3, pubkey4],
@@ -1321,7 +1331,7 @@ describe("StakeUtils", async () => {
       it("reverts if VERIFICATION_INDEX is bigger than new index point", async () => {
         await testContract
           .connect(user1)
-          .preStake(
+          .proposeStake(
             planetId,
             operatorId,
             [pubkey1, pubkey2, pubkey3],
@@ -1339,7 +1349,7 @@ describe("StakeUtils", async () => {
       it("reverts if not pending validator tried to be alienated", async () => {
         await testContract
           .connect(user1)
-          .preStake(
+          .proposeStake(
             planetId,
             operatorId,
             [pubkey1, pubkey2],
@@ -1353,7 +1363,7 @@ describe("StakeUtils", async () => {
       it("reverts if not alienated validator tried to be cured", async () => {
         await testContract
           .connect(user1)
-          .preStake(
+          .proposeStake(
             planetId,
             operatorId,
             [pubkey1, pubkey2],
@@ -1366,7 +1376,7 @@ describe("StakeUtils", async () => {
       it("cant cure if not enough surplus", async () => {
         await testContract
           .connect(user1)
-          .preStake(planetId, operatorId, [pubkey1], [signature1]);
+          .proposeStake(planetId, operatorId, [pubkey1], [signature1]);
         await testContract
           .connect(oracle)
           .regulateOperators(1, [pubkey1], [], []);
@@ -1384,7 +1394,7 @@ describe("StakeUtils", async () => {
         beforeEach(async () => {
           await testContract
             .connect(user1)
-            .preStake(planetId, operatorId, [pubkey1], [signature1]);
+            .proposeStake(planetId, operatorId, [pubkey1], [signature1]);
           expect(await testContract.getVALIDATORS_INDEX()).to.be.eq(1);
           surplus = await testContract.surplusById(planetId);
           secured = await testContract.securedById(planetId);
@@ -1495,7 +1505,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(user1)
-          .preStake(
+          .proposeStake(
             planetId,
             operatorId,
             [pubkey1, pubkey2],
@@ -1540,7 +1550,7 @@ describe("StakeUtils", async () => {
         });
         await testContract.setSurplus(planetId, String(1e20));
         await testContract.Receive({ value: String(1e20) });
-        await testContract.connect(user1).preStake(
+        await testContract.connect(user1).proposeStake(
           planetId,
           operatorId,
           [pubkey1, pubkey2],
@@ -1779,7 +1789,7 @@ describe("StakeUtils", async () => {
           });
         await testContract
           .connect(user1)
-          .preStake(
+          .proposeStake(
             planetId,
             operatorId,
             [pubkey1, pubkey2, pubkey3, pubkey4],

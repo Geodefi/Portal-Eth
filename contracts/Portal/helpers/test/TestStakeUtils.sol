@@ -383,13 +383,13 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.canStake(pubkey);
     }
 
-    function preStake(
+    function proposeStake(
         uint256 planetId,
         uint256 operatorId,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
     ) external virtual {
-        STAKEPOOL.preStake(
+        STAKEPOOL.proposeStake(
             DATASTORE,
             planetId,
             operatorId,

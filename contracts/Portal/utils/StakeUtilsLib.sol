@@ -503,10 +503,10 @@ library StakeUtils {
     }
 
     /**
-     * @notice Operator wallet keeps Ether put in Portal by Operator to make preStake easier, instead of sending n ETH to contract
+     * @notice Operator wallet keeps Ether put in Portal by Operator to make proposeStake easier, instead of sending n ETH to contract
      * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
-     * and from there, ETHs can be used to preStake. Then when it is approved and staked, it will be
-     * added back to the wallet to be used for other preStake calls.
+     * and from there, ETHs can be used to proposeStake. Then when it is approved and staked, it will be
+     * added back to the wallet to be used for other proposeStake calls.
      * @param _operatorId the id of the Operator
      * @return walletBalance the balance of Operator with the given _operatorId has
      */
@@ -763,7 +763,7 @@ library StakeUtils {
      * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds.
      * @param new_index index of the highest validator that is verified to be activated
      * @param alienPubkeys array of validator pubkeys that are lower than new_index which also
-     * either frontrunned preStake function thus alienated OR proven to be mistakenly alienated.
+     * either frontrunned proposeStake function thus alienated OR proven to be mistakenly alienated.
      */
     function regulateOperators(
         StakePool storage self,
@@ -1103,7 +1103,7 @@ library StakeUtils {
      *
      *  @param pubkey BLS12-381 public key of the validator
      *  @return true if:
-     *   - pubkey should be preStaked
+     *   - pubkey should be proposeStaked
      *   - validator's index should be lower than VERIFICATION_INDEX, updated by TELESCOPE
      *   - pubkey should not be alienated (https://bit.ly/3Tkc6UC)
      *  else:
@@ -1134,7 +1134,7 @@ library StakeUtils {
      *  @dev Prestake requires enough funds within operatorWallet.
      *  @dev Max number of validators to propose is MAX_DEPOSITS_PER_CALL (currently 64)
      */
-    function preStake(
+    function proposeStake(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 planetId,
@@ -1194,7 +1194,7 @@ library StakeUtils {
 
         for (uint256 i; i < pubkeys.length; ++i) {
             // TODO: discuss this alienated to be checked or not
-            // possibly not needed since if the preStakeTimeStamp is 0
+            // possibly not needed since if the proposeStakeTimeStamp is 0
             // then there is no possibility that it is alienated
             require(
                 self.Validators[pubkeys[i]].state == 0,
