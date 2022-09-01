@@ -1,4 +1,44 @@
-// const { BigNumber, Signer, constants, Bytes } = require("ethers");
+/**
+ * 0	pubkey	bytes	0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a
+ * 1  withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+ * 2  signature	bytes	0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181
+ * 3  deposit_data_root	bytes32	0xcf73f30d1a20e2af0446c2630acc4392f888dc0532a09592e00faf90b2976ab8
+ */
+/**
+ * 0	pubkey	bytes	0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5
+ * 1	withdrawal_credentials	bytes	0x00cfafe208762abcdd05339a6814cac749bb065cf762ed4fea2e0335cbdd08f0
+ * 2	signature	bytes	0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932
+ * 3	deposit_data_root	bytes32	0x47bd475f56dc4ae776b1fa445323fd0eee9be77fe20a790e7783c73450274dcb
+ */
+/**
+ * 0	pubkey	bytes	0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151
+ * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+ * 2	signature	bytes	0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c
+ * 3	deposit_data_root	bytes32	0xb4282f23951b5bb3ead393f50dc9468e6166312a4e78f73cc649a8ae16f0d924
+ */
+/**
+ * 0	pubkey	bytes	0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7
+ * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
+ * 2	signature	bytes	0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae
+ * 3	deposit_data_root	bytes32	0x2a902df8a7a8a1a5860d54ab73c87c1d1d2fcabe0b12106b5cbe42c3680c0000
+ */
+
+const pubkey1 =
+  "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a";
+const pubkey2 =
+  "0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5";
+const pubkey3 =
+  "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
+const pubkey4 =
+  "0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7";
+const signature1 =
+  "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
+const signature2 =
+  "0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932";
+const signature3 =
+  "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
+const signature4 =
+  "0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae";
 
 const {
   MAX_UINT256,
@@ -21,7 +61,7 @@ const provider = waffle.provider;
 const INITIAL_A_VALUE = 60;
 const SWAP_FEE = 4e6; // 4bps
 const ADMIN_FEE = 5e9; // 0
-const PERIOD_PRICE_INCREASE_LIMIT = 5e7;
+const PERIOD_PRICE_INCREASE_LIMIT = 2e7;
 const MAX_MAINTAINER_FEE = 1e9;
 
 describe("StakeUtils", async () => {
@@ -226,21 +266,6 @@ describe("StakeUtils", async () => {
       expect(await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)).to.eq(
         false
       );
-    });
-
-    it("_setPricePerShare", async () => {
-      await testContract.setPricePerShare(String(1e20), randId);
-      expect(await gETH.pricePerShare(randId)).to.eq(String(1e20));
-      await testContract.setPricePerShare(String(2e19), randId);
-      expect(await gETH.pricePerShare(randId)).to.eq(String(2e19));
-    });
-
-    it("_getPricePerShare", async () => {
-      await testContract.connect(user1).changeOracle();
-      await gETH.connect(user1).setPricePerShare(String(1e20), randId);
-      expect(await testContract.getPricePerShare(randId)).to.eq(String(1e20));
-      await gETH.connect(user1).setPricePerShare(String(2e19), randId);
-      expect(await testContract.getPricePerShare(randId)).to.eq(String(2e19));
     });
   });
 
@@ -696,48 +721,6 @@ describe("StakeUtils", async () => {
     });
   });
   describe("Staking Operations ", () => {
-    /**
-     * 0	pubkey	bytes	0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a
-     * 1  withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
-     * 2  signature	bytes	0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181
-     * 3  deposit_data_root	bytes32	0xcf73f30d1a20e2af0446c2630acc4392f888dc0532a09592e00faf90b2976ab8
-     */
-    /**
-     * 0	pubkey	bytes	0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5
-     * 1	withdrawal_credentials	bytes	0x00cfafe208762abcdd05339a6814cac749bb065cf762ed4fea2e0335cbdd08f0
-     * 2	signature	bytes	0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932
-     * 3	deposit_data_root	bytes32	0x47bd475f56dc4ae776b1fa445323fd0eee9be77fe20a790e7783c73450274dcb
-     */
-    /**
-     * 0	pubkey	bytes	0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151
-     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
-     * 2	signature	bytes	0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c
-     * 3	deposit_data_root	bytes32	0xb4282f23951b5bb3ead393f50dc9468e6166312a4e78f73cc649a8ae16f0d924
-     */
-    /**
-     * 0	pubkey	bytes	0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7
-     * 1	withdrawal_credentials	bytes	0x004f58172d06b6d54c015d688511ad5656450933aff85dac123cd09410a0825c
-     * 2	signature	bytes	0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae
-     * 3	deposit_data_root	bytes32	0x2a902df8a7a8a1a5860d54ab73c87c1d1d2fcabe0b12106b5cbe42c3680c0000
-     */
-
-    const pubkey1 =
-      "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a";
-    const pubkey2 =
-      "0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5";
-    const pubkey3 =
-      "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
-    const pubkey4 =
-      "0x999c0efe0e07405164c9512f3fc949340ebca1ab6bacdca7c7242de871d957a86918b2d1055d1c3b4be0683b5c8719d7";
-    const signature1 =
-      "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
-    const signature2 =
-      "0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932";
-    const signature3 =
-      "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
-    const signature4 =
-      "0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae";
-
     let wpoolContract;
     let preContBal;
     let preContgETHBal;
@@ -1670,6 +1653,350 @@ describe("StakeUtils", async () => {
           [val1, val2].forEach(function (vd, i) {
             expect(vd.state).to.be.eq(2);
           });
+        });
+      });
+    });
+  });
+
+  describe("Oracle Operations", async () => {
+    it("_setPricePerShare", async () => {
+      await testContract.setPricePerShare(String(1e20), randId);
+      expect(await gETH.pricePerShare(randId)).to.eq(String(1e20));
+      await testContract.setPricePerShare(String(2e19), randId);
+      expect(await gETH.pricePerShare(randId)).to.eq(String(2e19));
+    });
+
+    it("_getPricePerShare", async () => {
+      await testContract.connect(user1).changeOracle();
+      await gETH.connect(user1).setPricePerShare(String(1e20), randId);
+      expect(await testContract.getPricePerShare(randId)).to.eq(String(1e20));
+      await gETH.connect(user1).setPricePerShare(String(2e19), randId);
+      expect(await testContract.getPricePerShare(randId)).to.eq(String(2e19));
+    });
+
+    describe("isOracleActive", () => {
+      it("false when inactive", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 - 10);
+        await expect(await testContract.isOracleActive()).to.be.eq(false);
+      });
+
+      it("true when active", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 + 0 * 60 + 1);
+        await expect(await testContract.isOracleActive()).to.be.eq(true);
+      });
+
+      it("true when active in 30min", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 + 30 * 60 - 10);
+        await expect(await testContract.isOracleActive()).to.be.eq(true);
+      });
+
+      it("false when inactive after 30min", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 + 30 * 60 + 1);
+        await expect(await testContract.isOracleActive()).to.be.eq(false);
+      });
+
+      it("false after oracle update", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 + 0 * 60 + 5);
+        await testContract.setORACLE_UPDATE_TIMESTAMP(
+          24 * 60 * 60 * 100000 + 0 * 60 + 1
+        );
+        expect(await testContract.isOracleActive()).to.be.eq(false);
+      });
+    });
+
+    describe("_sanityCheck", async () => {
+      beforeEach(async () => {
+        await testContract.setPricePerShare(String(1e18), planetId);
+        await testContract.setORACLE_UPDATE_TIMESTAMP(
+          24 * 60 * 60 * 100000 + 0 * 60 + 1
+        );
+      });
+
+      it("reverts if price is increasing insane after 1 day", async () => {
+        await setTimestamp(24 * 60 * 60 * 100001 + 0 * 60 + 5);
+        await expect(
+          testContract.sanityCheck(planetId, String(1.003e18))
+        ).to.be.revertedWith("StakeUtils: price is insane");
+      });
+
+      it("success increase after 1 day", async () => {
+        await setTimestamp(24 * 60 * 60 * 100001 + 0 * 60 + 5);
+        await testContract.sanityCheck(planetId, String(1.001e18));
+      });
+
+      it("reverts if price is increasing insane after one 10 day", async () => {
+        await setTimestamp(24 * 60 * 60 * 100010 + 0 * 60 + 5);
+        await expect(
+          testContract.sanityCheck(planetId, String(1.021e18))
+        ).to.be.revertedWith("StakeUtils: price is insane");
+      });
+
+      it("success increase after 10 day", async () => {
+        await setTimestamp(24 * 60 * 60 * 100010 + 0 * 60 + 5);
+        await testContract.sanityCheck(planetId, String(1.019e18));
+      });
+
+      it("reverts if price is increasing insane after 100 day", async () => {
+        await setTimestamp(24 * 60 * 60 * 100100 + 0 * 60 + 5);
+        await expect(
+          testContract.sanityCheck(planetId, String(1.201e18))
+        ).to.be.revertedWith("StakeUtils: price is insane");
+      });
+
+      it("success increase after 100 day", async () => {
+        await setTimestamp(24 * 60 * 60 * 100100 + 0 * 60 + 5);
+        await testContract.sanityCheck(planetId, String(1.199e18));
+      });
+    });
+
+    describe("priceSync = not required", async () => {});
+
+    describe("_findPrices_ClearBuffer", async () => {
+      beforeEach(async () => {
+        await testContract.setPricePerShare(String(1e18), planetId);
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 4);
+        await testContract.deployWithdrawalPool(planetId);
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(6e18),
+        });
+        await testContract
+          .connect(user1)
+          .stakePlanet(planetId, 0, MAX_UINT256, {
+            value: String(160e18),
+          });
+        await testContract
+          .connect(user1)
+          .preStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2, pubkey3, pubkey4],
+            [signature1, signature2, signature3, signature4]
+          );
+        await testContract
+          .connect(oracle)
+          .updateVerificationIndex(2, [], [], []);
+
+        await testContract.setORACLE_UPDATE_TIMESTAMP(
+          24 * 60 * 60 * 100000 + 0 * 60 + 1
+        );
+
+        await testContract.setPricePerShare(String(2e18), planetId);
+
+        await setTimestamp(24 * 60 * 60 * 100000 + 30 * 60 + 10);
+
+        await testContract
+          .connect(user1)
+          .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+
+        await setTimestamp(24 * 60 * 60 * 100001 + 0 * 60 + 10);
+
+        // do macig: mint buffer increase
+        await testContract
+          .connect(user1)
+          .stakePlanet(planetId, 0, MAX_UINT256, {
+            value: String(32e18),
+          });
+      });
+
+      it("works when oracle not missed ", async () => {
+        await setTimestamp(24 * 60 * 60 * 100001 + 0 * 60 + 30);
+        await testContract.setORACLE_UPDATE_TIMESTAMP(
+          24 * 60 * 60 * 100001 + 0 * 60 + 30
+        );
+
+        await testContract.findPrices(planetId, String(64e18));
+        const results = await testContract.getLastPrices();
+        const settedPrice = results[0];
+        const unbufferedPrice = results[1];
+
+        expect(settedPrice).to.be.eq(
+          ethers.BigNumber.from(String(192e18)).div(String(176e18))
+        ); // totalETH div getgETH(self).totalSupply(poolId) -> 160 + 32/2 = 176
+        expect(unbufferedPrice).to.be.eq(
+          ethers.BigNumber.from(String(160e18)).div(String(160e18))
+        ); // unbufferedSupply div (getgETH(self).totalSupply(poolId) - calculation) -> 176 - 16
+      });
+
+      it("works when oracle missed 1 day", async () => {
+        await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
+
+        await testContract
+          .connect(oracle)
+          .updateVerificationIndex(4, [], [], []);
+
+        await testContract
+          .connect(user1)
+          .stakeBeacon(operatorId, [pubkey3, pubkey4]);
+
+        await testContract
+          .connect(user1)
+          .stakePlanet(planetId, 0, MAX_UINT256, {
+            value: String(32e18),
+          });
+
+        await setTimestamp(24 * 60 * 60 * 100002 + 0 * 60 + 10);
+
+        // do macig: mint buffer increase
+        await testContract
+          .connect(user1)
+          .stakePlanet(planetId, 0, MAX_UINT256, {
+            value: String(64e18),
+          });
+
+        await setTimestamp(24 * 60 * 60 * 100002 + 0 * 60 + 30);
+
+        await testContract.setORACLE_UPDATE_TIMESTAMP(
+          24 * 60 * 60 * 100002 + 0 * 60 + 30
+        );
+
+        await testContract.findPrices(planetId, String(128e18));
+        const results = await testContract.getLastPrices();
+        const settedPrice = results[0];
+        const unbufferedPrice = results[1];
+
+        expect(settedPrice).to.be.eq(
+          ethers.BigNumber.from(String(256e18)).div(String(224e18))
+        ); // totalETH div getgETH(self).totalSupply(poolId) -> 176 + 32/2 + 64/2 = 224
+        expect(unbufferedPrice).to.be.eq(
+          ethers.BigNumber.from(String(192e18)).div(String(192e18))
+        ); // unbufferedSupply div (getgETH(self).totalSupply(poolId) - calculation) -> 224 - 32
+      });
+      it("works when oracle missed 20 days", async () => {
+        await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
+
+        await testContract
+          .connect(oracle)
+          .updateVerificationIndex(4, [], [], []);
+
+        await testContract
+          .connect(user1)
+          .stakeBeacon(operatorId, [pubkey3, pubkey4]);
+
+        await testContract
+          .connect(user1)
+          .stakePlanet(planetId, 0, MAX_UINT256, {
+            value: String(32e18),
+          });
+
+        await setTimestamp(24 * 60 * 60 * 100021 + 0 * 60 + 10);
+
+        // do macig: mint buffer increase
+        await testContract
+          .connect(user1)
+          .stakePlanet(planetId, 0, MAX_UINT256, {
+            value: String(64e18),
+          });
+
+        await setTimestamp(24 * 60 * 60 * 100021 + 0 * 60 + 30);
+
+        await testContract.setORACLE_UPDATE_TIMESTAMP(
+          24 * 60 * 60 * 100003 + 0 * 60 + 30
+        );
+
+        await testContract.findPrices(planetId, String(128e18));
+        const results = await testContract.getLastPrices();
+        const settedPrice = results[0];
+        const unbufferedPrice = results[1];
+
+        expect(settedPrice).to.be.eq(
+          ethers.BigNumber.from(String(256e18)).div(String(224e18))
+        ); // totalETH div getgETH(self).totalSupply(poolId) -> 176 + 32/2 + 64/2 = 224
+        expect(unbufferedPrice).to.be.eq(
+          ethers.BigNumber.from(String(192e18)).div(String(192e18))
+        ); // unbufferedSupply div (getgETH(self).totalSupply(poolId) - calculation) -> 224 - 32
+      });
+    });
+
+    describe("reportOracle", async () => {
+      const someBytes32 = ethers.utils.formatBytes32String("some");
+      beforeEach(async () => {});
+      it("reverts when caller is not oracle ", async () => {
+        await expect(
+          testContract.reportOracle(
+            someBytes32,
+            [String(1), String(1)],
+            [
+              [someBytes32, someBytes32],
+              [someBytes32, someBytes32],
+            ]
+          )
+        ).to.be.revertedWith("StakeUtils: sender is NOT ORACLE");
+      });
+      it("reverts when oracle is not active", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 - 30);
+        await expect(
+          testContract.connect(oracle).reportOracle(
+            someBytes32,
+            [String(1), String(1)],
+            [
+              [someBytes32, someBytes32],
+              [someBytes32, someBytes32],
+            ]
+          )
+        ).to.be.revertedWith("StakeUtils: oracle is NOT active");
+        await setTimestamp(24 * 60 * 60 * 100000 + 1 * 60 * 60 + 30);
+        await expect(
+          testContract.connect(oracle).reportOracle(
+            someBytes32,
+            [String(1), String(1)],
+            [
+              [someBytes32, someBytes32],
+              [someBytes32, someBytes32],
+            ]
+          )
+        ).to.be.revertedWith("StakeUtils: oracle is NOT active");
+      });
+      it("reverts when beaconBalances.length doesn't match ", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 + 10 * 60);
+        await expect(
+          testContract.connect(oracle).reportOracle(
+            someBytes32,
+            [String(1), String(1)],
+            [
+              [someBytes32, someBytes32],
+              [someBytes32, someBytes32],
+            ]
+          )
+        ).to.be.revertedWith("StakeUtils: incorrect beaconBalances length");
+      });
+      it("reverts when priceProofs.length doesn't match ", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 + 10 * 60);
+        await expect(
+          testContract.connect(oracle).reportOracle(
+            someBytes32,
+            [],
+            [
+              [someBytes32, someBytes32],
+              [someBytes32, someBytes32],
+            ]
+          )
+        ).to.be.revertedWith("StakeUtils: incorrect priceProofs length");
+      });
+      describe("success => needs update with merkle", async () => {
+        beforeEach(async () => {
+          // continue here and make isThisPartUpdated when done.
+          // ----
+          //
+          // ----
+          const isThisPartUpdated = false;
+          expect(isThisPartUpdated).to.be.eq(true);
+        });
+        it("updated all pricePerShares", async () => {
+          expect().to.be.eq();
+        });
+        it("correct ORACLE_UPDATE_TIMESTAMP", async () => {
+          expect().to.be.eq();
+        });
+        it("", async () => {
+          expect().to.be.eq();
         });
       });
     });

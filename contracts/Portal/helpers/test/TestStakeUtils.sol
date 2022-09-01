@@ -27,7 +27,7 @@ contract TestStakeUtils is ERC1155Holder {
         STAKEPOOL.DEFAULT_A = 60;
         STAKEPOOL.DEFAULT_FEE = 4e6;
         STAKEPOOL.DEFAULT_ADMIN_FEE = 5e9;
-        STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT = (5 * FEE_DENOMINATOR) / 1e3;
+        STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT = (2 * FEE_DENOMINATOR) / 1e3;
         STAKEPOOL.MAX_MAINTAINER_FEE = (10 * FEE_DENOMINATOR) / 1e2; //10%
         STAKEPOOL.VERIFICATION_INDEX = 0;
         STAKEPOOL.VALIDATORS_INDEX = 0;
@@ -464,6 +464,63 @@ contract TestStakeUtils is ERC1155Holder {
 
     function getContractBalance() external view virtual returns (uint256) {
         return address(this).balance;
+    }
+
+    function setORACLE_UPDATE_TIMESTAMP(uint256 ts) external virtual {
+        STAKEPOOL.ORACLE_UPDATE_TIMESTAMP = ts;
+    }
+
+    function isOracleActive() external view virtual returns (bool) {
+        return STAKEPOOL._isOracleActive();
+    }
+
+    function sanityCheck(uint256 _id, uint256 _newPrice) external view {
+        STAKEPOOL._sanityCheck(FEE_DENOMINATOR, _id, _newPrice);
+    }
+
+    function priceSync(
+        bytes32 merkleRoot,
+        uint256 index,
+        uint256 poolId,
+        uint256 oraclePrice,
+        bytes32[] calldata priceProofs,
+        uint256 price
+    ) external virtual {
+        STAKEPOOL.PRICE_MERKLE_ROOT = merkleRoot;
+        STAKEPOOL.priceSync(index, poolId, oraclePrice, priceProofs, price);
+    }
+
+    uint256 lastRealPrice;
+    uint256 lastExpectedPrice;
+
+    function getLastPrices() external view returns (uint256, uint256) {
+        return (lastRealPrice, lastExpectedPrice);
+    }
+
+    function findPrices(uint256 poolId, uint256 beaconBalance)
+        external
+        returns (uint256 real, uint256 expected)
+    {
+        (real, expected) = STAKEPOOL._findPrices_ClearBuffer(
+            DATASTORE,
+            poolId,
+            beaconBalance
+        );
+        (lastRealPrice, lastExpectedPrice) = (real, expected);
+    }
+
+    function reportOracle(
+        bytes32 merkleRoot,
+        uint256[] calldata beaconBalances,
+        bytes32[][] calldata priceProofs
+    ) external {
+        STAKEPOOL.reportOracle(
+            DATASTORE,
+            FEE_DENOMINATOR,
+            merkleRoot,
+            beaconBalances,
+            priceProofs
+        );
     }
 
     function Receive() external payable {}

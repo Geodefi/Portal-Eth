@@ -4,6 +4,7 @@ pragma solidity =0.8.7;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./DataStoreLib.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {DepositContractUtils as DCU} from "./DepositContractUtilsLib.sol";
 import "../gETHInterfaces/ERC20InterfacePermitUpgradable.sol";
 import "../../interfaces/IgETH.sol";
@@ -76,7 +77,7 @@ library StakeUtils {
     }
     /**
      * @notice StakePool includes the parameters related to multiple Staking Pool Contracts.
-     * @notice A staking pool works with a *bound* Withdrawal Pool (DWP) to create best pricing
+     * @notice Dynamic Staking Pool contains a staking pool that works with a *bound* Withdrawal Pool (DWP) to create best pricing
      * for the staking derivative. Withdrawal Pools (DWP) uses StableSwap algorithm with Dynamic Pegs.
      * @dev  gETH should not be changed, ever!
      * @param ORACLE https://github.com/Geodefi/Telescope-Eth
@@ -106,6 +107,8 @@ library StakeUtils {
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 VERIFICATION_INDEX;
         uint256 VALIDATORS_INDEX;
+        bytes32 PRICE_MERKLE_ROOT;
+        uint256 ORACLE_UPDATE_TIMESTAMP;
         mapping(bytes => Validator) Validators;
     }
 
@@ -116,8 +119,12 @@ library StakeUtils {
     uint256 public constant gETH_DENOMINATOR = 1 ether;
     uint256 public constant IGNORABLE_DEBT = 1 ether;
 
-    uint256 public constant FEE_SWITCH_LATENCY = 1 days;
+    uint256 public constant FEE_SWITCH_LATENCY = 7 days;
     uint256 public constant PRISON_SENTENCE = 7 days;
+
+    /// @notice Oracle is active for the first 30 min for a day
+    uint256 public constant ORACLE_PERIOD = 1 days;
+    uint256 public constant ORACLE_ACTIVE_PERIOD = 30 minutes;
 
     // TODO: type check?
     modifier onlyMaintainer(
@@ -755,6 +762,7 @@ library StakeUtils {
         bytes[] calldata curedPubkeys,
         uint256[] calldata prisonedIds
     ) external onlyOracle(self) {
+        require(!_isOracleActive(self), "StakeUtils: oracle is active");
         require(self.VALIDATORS_INDEX >= new_index);
         require(new_index >= self.VERIFICATION_INDEX);
 
@@ -855,7 +863,146 @@ library StakeUtils {
     }
 
     /**
-     * @notice                      ** STAKING functions **
+     * @notice Oracle is only allowed for a period every day & pool operations are stopped then
+     * @return false if the last oracle update happened already (within the current daily period)
+     */
+    function _isOracleActive(StakePool storage self)
+        internal
+        view
+        returns (bool)
+    {
+        return
+            (block.timestamp % ORACLE_PERIOD <= ORACLE_ACTIVE_PERIOD) &&
+            (self.ORACLE_UPDATE_TIMESTAMP <
+                block.timestamp - ORACLE_ACTIVE_PERIOD);
+    }
+
+    /**
+     * @notice in order to prevent attacks from malicious Oracle there are boundaries to price & fee updates.
+     * @dev checks:
+     * 1. Price should not be increased more than PERIOD_PRICE_INCREASE_LIMIT
+     *  with the factor of how many days since oracleUpdateTimestamp has past.
+     *  To encourage report oracle each day, price increase limit is not calculated by considering compound effect
+     *  for multiple days.
+     */
+    function _sanityCheck(
+        StakePool storage self,
+        uint256 _FEE_DENOMINATOR,
+        uint256 _id,
+        uint256 _newPrice
+    ) internal view {
+        // need to put the lastPriceUpdate to DATASTORE to check if price is updated already for that day
+        uint256 periodsSinceUpdate = (block.timestamp +
+            ORACLE_ACTIVE_PERIOD -
+            self.ORACLE_UPDATE_TIMESTAMP) / ORACLE_PERIOD;
+        uint256 curPrice = _getPricePerShare(self, _id);
+        uint256 maxPrice = curPrice +
+            ((curPrice *
+                self.PERIOD_PRICE_INCREASE_LIMIT *
+                periodsSinceUpdate) / _FEE_DENOMINATOR);
+
+        require(_newPrice <= maxPrice, "StakeUtils: price is insane");
+    }
+
+    function priceSync(
+        StakePool storage self,
+        uint256 index,
+        uint256 poolId,
+        uint256 oraclePrice,
+        bytes32[] calldata priceProofs,
+        uint256 price
+    ) public {
+        bytes32 node = keccak256(abi.encodePacked(index, poolId, oraclePrice));
+        require(
+            MerkleProof.verify(priceProofs, self.PRICE_MERKLE_ROOT, node),
+            "MerkleDistributor: NOT all proofs are valid."
+        );
+        _setPricePerShare(self, price, poolId);
+    }
+
+    function _findPrices_ClearBuffer(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 poolId,
+        uint256 beaconBalance
+    ) internal returns (uint256, uint256) {
+        bytes32 dailyBufferKey = _getKey(
+            block.timestamp - (block.timestamp % ORACLE_PERIOD),
+            "mintBuffer"
+        );
+
+        uint256 totalEther = beaconBalance +
+            _DATASTORE.readUintForId(poolId, "secured") +
+            _DATASTORE.readUintForId(poolId, "surplus");
+
+        uint256 supply = getgETH(self).totalSupply(poolId);
+
+        uint256 unbufferedEther = totalEther -
+            (_DATASTORE.readUintForId(poolId, dailyBufferKey) *
+                getgETH(self).pricePerShare(poolId)) /
+            gETH_DENOMINATOR;
+
+        uint256 unbufferedSupply = supply -
+            _DATASTORE.readUintForId(poolId, dailyBufferKey);
+
+        // clears daily buffer for the gas refund
+        _DATASTORE.writeUintForId(poolId, dailyBufferKey, 0);
+        return (totalEther / supply, unbufferedEther / unbufferedSupply);
+    }
+
+    function reportOracle(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _FEE_DENOMINATOR,
+        bytes32 merkleRoot,
+        uint256[] calldata beaconBalances,
+        bytes32[][] calldata priceProofs
+    ) external onlyOracle(self) {
+        require(_isOracleActive(self), "StakeUtils: oracle is NOT active");
+        {
+            uint256 planetCount = _DATASTORE.allIdsByType[5].length;
+            require(
+                beaconBalances.length == planetCount,
+                "StakeUtils: incorrect beaconBalances length"
+            );
+            require(
+                priceProofs.length == planetCount,
+                "StakeUtils: incorrect priceProofs length"
+            );
+        }
+
+        self.PRICE_MERKLE_ROOT = merkleRoot;
+
+        uint256 poolId;
+        for (uint256 i = 0; i < beaconBalances.length; i++) {
+            poolId = _DATASTORE.allIdsByType[5][i];
+            (
+                uint256 currentPrice,
+                uint256 expectedPrice
+            ) = _findPrices_ClearBuffer(
+                    self,
+                    _DATASTORE,
+                    poolId,
+                    beaconBalances[i]
+                );
+            _sanityCheck(self, _FEE_DENOMINATOR, poolId, currentPrice);
+            priceSync(
+                self,
+                i,
+                _DATASTORE.allIdsByType[5][i],
+                expectedPrice,
+                priceProofs[i],
+                currentPrice
+            );
+        }
+
+        self.ORACLE_UPDATE_TIMESTAMP =
+            block.timestamp -
+            (block.timestamp % ORACLE_PERIOD);
+    }
+
+    /**
+     * @notice                      * STAKING functions *
      */
 
     /**
@@ -921,6 +1068,17 @@ library StakeUtils {
                 boughtgETH + mintgETH >= mingETH,
                 "StakeUtils: less than mingETH"
             );
+            if (_isOracleActive(self)) {
+                bytes32 dailyBufferKey = _getKey(
+                    block.timestamp - (block.timestamp % ORACLE_PERIOD),
+                    "mintBuffer"
+                );
+                uint256 mintBuffer = _DATASTORE.readUintForId(
+                    poolId,
+                    dailyBufferKey
+                ) + mintgETH;
+                _DATASTORE.writeUintForId(poolId, dailyBufferKey, mintBuffer);
+            }
             return boughtgETH + mintgETH;
         }
     }
@@ -1121,6 +1279,7 @@ library StakeUtils {
         uint256 operatorId,
         bytes[] calldata pubkeys
     ) external onlyMaintainer(_DATASTORE, operatorId) {
+        require(!_isOracleActive(self), "StakeUtils: oracle is active");
         require(
             !isPrisoned(_DATASTORE, operatorId),
             "StakeUtils: you are in prison, get in touch with governance"
