@@ -20,7 +20,6 @@ contract TestGeodeUtils {
         GEODE.SENATE_EXPIRE_TIMESTAMP = block.timestamp + 1 days;
         GEODE.OPERATION_FEE = _OPERATION_FEE;
         GEODE.MAX_OPERATION_FEE = _MAX_OPERATION_FEE;
-        GEODE.FEE_DENOMINATOR = 10**10;
 
         GEODE.setElectorType(DATASTORE, 5, true); // allow type4 to vote for Senate
 
@@ -40,7 +39,7 @@ contract TestGeodeUtils {
     }
 
     function getFeeDenominator() external view virtual returns (uint256) {
-        return GEODE.FEE_DENOMINATOR;
+        return GeodeUtils.FEE_DENOMINATOR;
     }
 
     function getMaxOperationFee() external view virtual returns (uint256) {

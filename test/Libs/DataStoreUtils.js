@@ -14,18 +14,12 @@ describe("DataStore", async () => {
 
   const setupTest = deployments.createFixture(async (hre) => {
     ({ ethers, web3, Web3 } = hre);
-    const { get } = deployments;
     const signers = await ethers.getSigners();
     user1 = signers[1];
 
     await deployments.fixture(); // ensure you start from a fresh deployments
     const DataStoreUtilsTest = await ethers.getContractFactory(
-      "DataStoreUtilsTest",
-      {
-        libraries: {
-          DataStoreUtils: (await get("DataStoreUtils")).address,
-        },
-      }
+      "DataStoreUtilsTest"
     );
     testContract = await DataStoreUtilsTest.deploy();
   });
@@ -91,6 +85,7 @@ describe("DataStore", async () => {
     randomId = 52531125332432;
     randomKey = ethers.utils.formatBytes32String("gsdgsdgfsdfd420gsa");
     describe("UINT", async () => {
+      const randomdata = 69;
       describe("returns inputted values when:", async () => {
         it("0,''", async () => {
           await testContract
@@ -125,7 +120,6 @@ describe("DataStore", async () => {
           expect(response).to.eq(MAX_UINT256);
         });
         it("random,random,", async () => {
-          randomdata = 69;
           await testContract
             .connect(user1)
             .writeUintForId(randomId, randomKey, 0);
@@ -143,6 +137,85 @@ describe("DataStore", async () => {
             .writeUintForId(randomId, randomKey, MAX_UINT256);
           response = await testContract.readUintForId(randomId, randomKey);
           expect(response).to.eq(MAX_UINT256);
+        });
+      });
+      describe("returns correct results when:", async () => {
+        it("0 -> ADD", async () => {
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(0);
+
+          await testContract
+            .connect(user1)
+            .addUintForId(randomId, randomKey, 0);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(0);
+
+          await testContract
+            .connect(user1)
+            .addUintForId(randomId, randomKey, randomdata);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(randomdata);
+
+          await testContract
+            .connect(user1)
+            .addUintForId(randomId, randomKey, randomdata * 3131);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(randomdata * 3132);
+        });
+        it("overflow: ADD reverts", async () => {
+          await testContract
+            .connect(user1)
+            .addUintForId(randomId, randomKey, 1);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(1);
+
+          await expect(
+            testContract
+              .connect(user1)
+              .addUintForId(randomId, randomKey, MAX_UINT256)
+          ).to.be.reverted;
+        });
+
+        it("0->ADD->SUB->0", async () => {
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(0);
+
+          await testContract
+            .connect(user1)
+            .addUintForId(randomId, randomKey, 0);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(0);
+
+          await testContract
+            .connect(user1)
+            .addUintForId(randomId, randomKey, randomdata * 3131);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(randomdata * 3131);
+
+          await testContract
+            .connect(user1)
+            .subUintForId(randomId, randomKey, randomdata * 3111);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(randomdata * 20);
+          await testContract
+            .connect(user1)
+            .subUintForId(randomId, randomKey, randomdata * 20);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(0);
+        });
+
+        it("underflow: SUB reverts", async () => {
+          await testContract
+            .connect(user1)
+            .addUintForId(randomId, randomKey, randomdata);
+          response = await testContract.readUintForId(randomId, randomKey);
+          expect(response).to.eq(randomdata);
+
+          await expect(
+            testContract
+              .connect(user1)
+              .subUintForId(randomId, randomKey, randomdata + 1)
+          ).to.be.reverted;
         });
       });
     });

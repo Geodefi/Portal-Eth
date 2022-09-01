@@ -10,7 +10,7 @@ contract TestStakeUtils is ERC1155Holder {
     using StakeUtils for StakeUtils.StakePool;
     DataStoreUtils.DataStore private DATASTORE;
     StakeUtils.StakePool private STAKEPOOL;
-    uint256 public lastCreatedVals;
+    uint256 public FEE_DENOMINATOR = 10**10;
 
     constructor(
         address _gETH,
@@ -21,17 +21,11 @@ contract TestStakeUtils is ERC1155Holder {
     ) {
         STAKEPOOL.ORACLE = _ORACLE;
         STAKEPOOL.gETH = _gETH;
-        STAKEPOOL.FEE_DENOMINATOR = 10**10;
         STAKEPOOL.DEFAULT_DWP = _DEFAULT_DWP;
         STAKEPOOL.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
         STAKEPOOL.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
-        STAKEPOOL.DEFAULT_A = 60;
-        STAKEPOOL.DEFAULT_FEE = 4e6;
-        STAKEPOOL.DEFAULT_ADMIN_FEE = 5e9;
-        STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT =
-            (5 * STAKEPOOL.FEE_DENOMINATOR) /
-            1e3;
-        STAKEPOOL.MAX_MAINTAINER_FEE = (10 * STAKEPOOL.FEE_DENOMINATOR) / 1e2; //10%
+        STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT = (2 * FEE_DENOMINATOR) / 1e3;
+        STAKEPOOL.MAX_MAINTAINER_FEE = (10 * FEE_DENOMINATOR) / 1e2; //10%
         STAKEPOOL.VERIFICATION_INDEX = 0;
         STAKEPOOL.VALIDATORS_INDEX = 0;
     }
@@ -46,10 +40,6 @@ contract TestStakeUtils is ERC1155Holder {
             address DEFAULT_gETH_INTERFACE,
             address DEFAULT_DWP,
             address DEFAULT_LP_TOKEN,
-            uint256 DEFAULT_A,
-            uint256 DEFAULT_FEE,
-            uint256 DEFAULT_ADMIN_FEE,
-            uint256 FEE_DENOMINATOR,
             uint256 PERIOD_PRICE_INCREASE_LIMIT,
             uint256 MAX_MAINTAINER_FEE,
             uint256 VERIFICATION_INDEX,
@@ -61,10 +51,6 @@ contract TestStakeUtils is ERC1155Holder {
         DEFAULT_gETH_INTERFACE = STAKEPOOL.DEFAULT_gETH_INTERFACE;
         DEFAULT_DWP = STAKEPOOL.DEFAULT_DWP;
         DEFAULT_LP_TOKEN = STAKEPOOL.DEFAULT_LP_TOKEN;
-        DEFAULT_A = STAKEPOOL.DEFAULT_A;
-        DEFAULT_FEE = STAKEPOOL.DEFAULT_FEE;
-        DEFAULT_ADMIN_FEE = STAKEPOOL.DEFAULT_ADMIN_FEE;
-        FEE_DENOMINATOR = STAKEPOOL.FEE_DENOMINATOR;
         PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT;
         MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
         VERIFICATION_INDEX = STAKEPOOL.VERIFICATION_INDEX;
@@ -135,12 +121,18 @@ contract TestStakeUtils is ERC1155Holder {
         StakeUtils.changeMaintainer(DATASTORE, _id, _newMaintainer);
     }
 
-    function setMaintainerFee(uint256 _id, uint256 _newFee) external virtual {
-        STAKEPOOL.setMaintainerFee(DATASTORE, _id, _newFee);
+    function switchMaintainerFee(uint256 _id, uint256 _newFee)
+        external
+        virtual
+    {
+        STAKEPOOL.switchMaintainerFee(DATASTORE, _id, _newFee);
     }
 
-    function setMaxMaintainerFee(uint256 _newMaxFee) external virtual {
-        STAKEPOOL.setMaxMaintainerFee(_newMaxFee);
+    function setMaxMaintainerFee(uint256 _newMaxFee, address _governance)
+        external
+        virtual
+    {
+        STAKEPOOL.setMaxMaintainerFee(_governance, _newMaxFee);
     }
 
     function getMaintainerFee(uint256 _id)
@@ -150,6 +142,22 @@ contract TestStakeUtils is ERC1155Holder {
         returns (uint256)
     {
         return STAKEPOOL.getMaintainerFee(DATASTORE, _id);
+    }
+
+    function updateCometPeriod(uint256 _operatorId, uint256 _newPeriod)
+        external
+        virtual
+    {
+        StakeUtils.updateCometPeriod(DATASTORE, _operatorId, _newPeriod);
+    }
+
+    function getCometPeriod(uint256 _id)
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return StakeUtils.getCometPeriod(DATASTORE, _id);
     }
 
     function setPricePerShare(uint256 price, uint256 _planetId) external {
@@ -193,9 +201,16 @@ contract TestStakeUtils is ERC1155Holder {
     function initiateOperator(
         uint256 _planetId,
         uint256 _fee,
-        address _maintainer
+        address _maintainer,
+        uint256 _cometPeriod
     ) external {
-        STAKEPOOL.initiateOperator(DATASTORE, _planetId, _fee, _maintainer);
+        STAKEPOOL.initiateOperator(
+            DATASTORE,
+            _planetId,
+            _fee,
+            _maintainer,
+            _cometPeriod
+        );
     }
 
     function initiatePlanet(
@@ -293,11 +308,23 @@ contract TestStakeUtils is ERC1155Holder {
         return address(StakeUtils.LPTokenById(DATASTORE, _id));
     }
 
+    function dailyMintBuffer(uint256 poolId) external view returns (uint256) {
+        bytes32 dailyBufferKey = StakeUtils._getKey(
+            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            "mintBuffer"
+        );
+        return DATASTORE.readUintForId(poolId, dailyBufferKey);
+    }
+
     function surplusById(uint256 _planetId) external view returns (uint256) {
         return DATASTORE.readUintForId(_planetId, "surplus");
     }
 
-    function createdValidatorsById(uint256 _planetId, uint256 _operatorId)
+    function securedById(uint256 _planetId) external view returns (uint256) {
+        return DATASTORE.readUintForId(_planetId, "secured");
+    }
+
+    function proposedValidatorsById(uint256 _planetId, uint256 _operatorId)
         external
         view
         returns (uint256)
@@ -305,8 +332,16 @@ contract TestStakeUtils is ERC1155Holder {
         return
             DATASTORE.readUintForId(
                 _planetId,
-                StakeUtils._getKey(_operatorId, "createdValidators")
+                StakeUtils._getKey(_operatorId, "proposedValidators")
             );
+    }
+
+    function totalProposedValidatorsById(uint256 _operatorId)
+        external
+        view
+        returns (uint256)
+    {
+        return DATASTORE.readUintForId(_operatorId, "totalProposedValidators");
     }
 
     function activeValidatorsById(uint256 _planetId, uint256 _operatorId)
@@ -356,13 +391,13 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.canStake(pubkey);
     }
 
-    function preStake(
+    function proposeStake(
         uint256 planetId,
         uint256 operatorId,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
     ) external virtual {
-        STAKEPOOL.preStake(
+        STAKEPOOL.proposeStake(
             DATASTORE,
             planetId,
             operatorId,
@@ -371,29 +406,52 @@ contract TestStakeUtils is ERC1155Holder {
         );
     }
 
-    function lastCreatedValidatorNum() external view returns (uint256) {
-        return lastCreatedVals;
-    }
-
-    function stakeBeacon(uint256 operatorId, bytes[] calldata pubkeys)
+    function beaconStake(uint256 operatorId, bytes[] calldata pubkeys)
         external
         virtual
-        returns (uint256 succesfullDepositCount)
     {
-        succesfullDepositCount = STAKEPOOL.stakeBeacon(
-            DATASTORE,
-            operatorId,
-            pubkeys
-        );
-        lastCreatedVals = succesfullDepositCount;
+        STAKEPOOL.beaconStake(DATASTORE, operatorId, pubkeys);
     }
 
-    function updateVerificationIndex(
-        uint256 new_index,
+    function setSurplus(uint256 _id, uint256 _surplus) external {
+        DATASTORE.writeUintForId(_id, "surplus", _surplus);
+    }
+
+    function setMONOPOLY_THRESHOLD(uint256 threshold) external virtual {
+        STAKEPOOL.MONOPOLY_THRESHOLD = threshold;
+    }
+
+    function regulateOperators(
+        uint256 all_validators_count,
+        uint256 new_verification_index,
         bytes[] calldata alienPubkeys,
-        bytes[] calldata curedPubkeys
+        bytes[] calldata curedPubkeys,
+        uint256[] calldata prisonedIds
     ) external virtual {
-        STAKEPOOL.updateVerificationIndex(new_index, alienPubkeys, curedPubkeys);
+        STAKEPOOL.regulateOperators(
+            DATASTORE,
+            all_validators_count,
+            new_verification_index,
+            alienPubkeys,
+            curedPubkeys,
+            prisonedIds
+        );
+    }
+
+    function isPrisoned(uint256 operatorId)
+        external
+        view
+        virtual
+        returns (bool)
+    {
+        return StakeUtils.isPrisoned(DATASTORE, operatorId);
+    }
+
+    function releasePrisoned(uint256 operatorId, address governance)
+        external
+        virtual
+    {
+        StakeUtils.releasePrisoned(DATASTORE, governance, operatorId);
     }
 
     function alienatePubKey(bytes calldata pubkey) external virtual {
@@ -409,31 +467,94 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.Validators[pubkey];
     }
 
-    function getVALIDATORS_INDEX()
-        external
-        view
-        virtual
-        returns (uint256)
-    {
+    function getVALIDATORS_INDEX() external view virtual returns (uint256) {
         return STAKEPOOL.VALIDATORS_INDEX;
     }
 
-    function getVERIFICATION_INDEX()
-        external
-        view
-        virtual
-        returns (uint256)
-    {
+    function getVERIFICATION_INDEX() external view virtual returns (uint256) {
         return STAKEPOOL.VERIFICATION_INDEX;
     }
 
-    function getContractBalance() 
-        external
-        view
-        virtual 
-        returns (uint256)
-    {
+    function getContractBalance() external view virtual returns (uint256) {
         return address(this).balance;
+    }
+
+    function setORACLE_UPDATE_TIMESTAMP(uint256 ts) external virtual {
+        STAKEPOOL.ORACLE_UPDATE_TIMESTAMP = ts;
+    }
+
+    function isOracleActive() external view virtual returns (bool) {
+        return STAKEPOOL._isOracleActive();
+    }
+
+    function sanityCheck(uint256 _id, uint256 _newPrice) external view {
+        STAKEPOOL._sanityCheck(
+            _id,
+            (block.timestamp +
+                StakeUtils.ORACLE_ACTIVE_PERIOD -
+                STAKEPOOL.ORACLE_UPDATE_TIMESTAMP) / StakeUtils.ORACLE_PERIOD,
+            _newPrice
+        );
+    }
+
+    function priceSync(
+        bytes32 merkleRoot,
+        uint256 index,
+        uint256 poolId,
+        uint256 beaconBalance,
+        uint256 periodsSinceUpdate,
+        bytes32[] calldata priceProofs
+    ) external virtual {
+        bytes32 dailyBufferKey = StakeUtils._getKey(
+            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            "mintBuffer"
+        );
+        STAKEPOOL.PRICE_MERKLE_ROOT = merkleRoot;
+        STAKEPOOL._priceSync(
+            DATASTORE,
+            dailyBufferKey,
+            index,
+            poolId,
+            beaconBalance,
+            periodsSinceUpdate,
+            priceProofs
+        );
+    }
+
+    uint256 lastRealPrice;
+    uint256 lastExpectedPrice;
+
+    function getLastPrices() external view returns (uint256, uint256) {
+        return (lastRealPrice, lastExpectedPrice);
+    }
+
+    function findPrices(uint256 poolId, uint256 beaconBalance)
+        external
+        returns (uint256 real, uint256 expected)
+    {
+        (real, expected) = STAKEPOOL._findPrices_ClearBuffer(
+            DATASTORE,
+            StakeUtils._getKey(
+                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+                "mintBuffer"
+            ),
+            poolId,
+            beaconBalance
+        );
+        (lastRealPrice, lastExpectedPrice) = (real, expected);
+    }
+
+    function reportOracle(
+        bytes32 merkleRoot,
+        uint256[] calldata beaconBalances,
+        bytes32[][] calldata priceProofs
+    ) external {
+        STAKEPOOL.reportOracle(
+            DATASTORE,
+            merkleRoot,
+            beaconBalances,
+            priceProofs
+        );
     }
 
     function Receive() external payable {}
