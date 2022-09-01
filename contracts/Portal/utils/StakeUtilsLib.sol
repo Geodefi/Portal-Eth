@@ -799,30 +799,27 @@ library StakeUtils {
     /**
      * @notice Updating VERIFICATION_INDEX, signaling that it is safe to allow
      * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds.
-     * @param new_verification_index index of the highest validator that is verified to be activated
+     * @param newVerificationIndex index of the highest validator that is verified to be activated
      * @param alienPubkeys array of validator pubkeys that are lower than new_index which also
      * either frontrunned proposeStake function thus alienated OR proven to be mistakenly alienated.
      */
     function regulateOperators(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 all_validators_count,
-        uint256 new_verification_index,
+        uint256 allValidatorsCount,
+        uint256 newVerificationIndex,
         bytes[] calldata alienPubkeys,
         bytes[] calldata curedPubkeys,
         uint256[] calldata prisonedIds
     ) external onlyOracle(self) {
         require(!_isOracleActive(self), "StakeUtils: oracle is active");
+        require(allValidatorsCount >= 1000, "StakeUtils: low validator count");
         require(
-            all_validators_count >= 1000,
-            "StakeUtils: low validator count"
-        );
-        require(
-            self.VALIDATORS_INDEX >= new_verification_index,
+            self.VALIDATORS_INDEX >= newVerificationIndex,
             "StakeUtils: high VERIFICATION_INDEX"
         );
         require(
-            new_verification_index >= self.VERIFICATION_INDEX,
+            newVerificationIndex >= self.VERIFICATION_INDEX,
             "StakeUtils: low VERIFICATION_INDEX"
         );
 
@@ -874,11 +871,11 @@ library StakeUtils {
         }
 
         self.MONOPOLY_THRESHOLD =
-            (all_validators_count * MONOPOLY_RATIO) /
+            (allValidatorsCount * MONOPOLY_RATIO) /
             FEE_DENOMINATOR;
 
-        self.VERIFICATION_INDEX = new_verification_index;
-        emit VerificationIndexUpdated(new_verification_index);
+        self.VERIFICATION_INDEX = newVerificationIndex;
+        emit VerificationIndexUpdated(newVerificationIndex);
     }
 
     /**
