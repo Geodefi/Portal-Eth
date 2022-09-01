@@ -226,7 +226,7 @@ library StakeUtils {
     ) public {
         uint256 IL = _DATASTORE.readUintForId(_id, "interfacesLength");
         require(
-            getgETH(self).isInterface(_Interface, _id),
+            !getgETH(self).isInterface(_Interface, _id),
             "StakeUtils: already an interface"
         );
         _DATASTORE.writeAddressForId(
@@ -249,7 +249,8 @@ library StakeUtils {
             _getKey(_index, "interfaces")
         );
         require(
-            !getgETH(self).isInterface(_Interface, _id),
+            _Interface != address(0) &&
+                getgETH(self).isInterface(_Interface, _id),
             "StakeUtils: already NOT an interface"
         );
         _DATASTORE.writeAddressForId(
@@ -329,7 +330,7 @@ library StakeUtils {
                 _interfaceSymbol,
                 gEth
             );
-            _setInterface(self, _DATASTORE, _id, gInterface);
+            setInterface(self, _DATASTORE, _id, gInterface);
         }
 
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
