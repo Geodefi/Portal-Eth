@@ -1065,14 +1065,14 @@ library StakeUtils {
                 );
                 remEth -= debt;
             }
-            uint256 mintgETH = (
+            uint256 mintedgETH = (
                 ((remEth * gETH_DENOMINATOR) / _getPricePerShare(self, poolId))
             );
-            _mint(self.gETH, msg.sender, poolId, mintgETH);
+            _mint(self.gETH, msg.sender, poolId, mintedgETH);
             _DATASTORE.addUintForId(poolId, "surplus", remEth);
 
             require(
-                boughtgETH + mintgETH >= mingETH,
+                boughtgETH + mintedgETH >= mingETH,
                 "StakeUtils: less than mingETH"
             );
             if (_isOracleActive(self)) {
@@ -1080,9 +1080,9 @@ library StakeUtils {
                     block.timestamp - (block.timestamp % ORACLE_PERIOD),
                     "mintBuffer"
                 );
-                _DATASTORE.addUintForId(poolId, dailyBufferKey, mintgETH);
+                _DATASTORE.addUintForId(poolId, dailyBufferKey, mintedgETH);
             }
-            return boughtgETH + mintgETH;
+            return boughtgETH + mintedgETH;
         }
     }
 
@@ -1153,28 +1153,19 @@ library StakeUtils {
             pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
             "StakeUtils: 1 to 64 nodes per transaction"
         );
-        {
-            uint256 proposedValidators = _DATASTORE.readUintForId(
-                operatorId,
-                "proposedValidators"
-            );
-            require(
-                (proposedValidators + pubkeys.length) <=
-                    self.MONOPOLY_THRESHOLD,
-                "StakeUtils: Ice Bear doesn't like monopolies"
-            );
-        }
-        {
-            uint256 createdValidators = _DATASTORE.readUintForId(
+        require(
+            (_DATASTORE.readUintForId(operatorId, "totalProposedValidators") +
+                pubkeys.length) <= self.MONOPOLY_THRESHOLD,
+            "StakeUtils: Ice Bear doesn't like monopolies"
+        );
+        require(
+            (_DATASTORE.readUintForId(
                 poolId,
-                _getKey(operatorId, "createdValidators")
-            );
-            require(
-                operatorAllowance(_DATASTORE, poolId, operatorId) >=
-                    pubkeys.length + createdValidators,
-                "StakeUtils: not enough allowance"
-            );
-        }
+                _getKey(operatorId, "proposedValidators")
+            ) + pubkeys.length) <=
+                operatorAllowance(_DATASTORE, poolId, operatorId),
+            "StakeUtils: not enough allowance"
+        );
 
         require(
             _DATASTORE.readUintForId(poolId, "surplus") >=
@@ -1188,32 +1179,34 @@ library StakeUtils {
             pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
         );
 
-        uint256[2] memory fees = [
-            getMaintainerFee(self, _DATASTORE, poolId),
-            getMaintainerFee(self, _DATASTORE, operatorId)
-        ];
-        bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
-            poolId,
-            "withdrawalCredential"
-        );
-
-        for (uint256 i; i < pubkeys.length; ++i) {
-            // TODO: discuss this alienated to be checked or not
-            // possibly not needed since if the proposeStakeTimeStamp is 0
-            // then there is no possibility that it is alienated
-            require(
-                self.Validators[pubkeys[i]].state == 0,
-                "StakeUtils: Pubkey is already used or alienated"
+        {
+            uint256 poolFee = getMaintainerFee(self, _DATASTORE, poolId);
+            uint256 operatorFee = getMaintainerFee(
+                self,
+                _DATASTORE,
+                operatorId
             );
-            require(
-                pubkeys[i].length == DCU.PUBKEY_LENGTH,
-                "StakeUtils: PUBKEY_LENGTH ERROR"
+            bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
+                poolId,
+                "withdrawalCredential"
             );
-            require(
-                signatures[i].length == DCU.SIGNATURE_LENGTH,
-                "StakeUtils: SIGNATURE_LENGTH ERROR"
-            );
-            {
+            uint256 nextValidatorsIndex = self.VALIDATORS_INDEX + 1;
+            for (uint256 i; i < pubkeys.length; ++i) {
+                // TODO: discuss this alienated to be checked or not
+                // possibly not needed since if the proposeStakeTimeStamp is 0
+                // then there is no possibility that it is alienated
+                require(
+                    self.Validators[pubkeys[i]].state == 0,
+                    "StakeUtils: Pubkey is already used or alienated"
+                );
+                require(
+                    pubkeys[i].length == DCU.PUBKEY_LENGTH,
+                    "StakeUtils: PUBKEY_LENGTH ERROR"
+                );
+                require(
+                    signatures[i].length == DCU.SIGNATURE_LENGTH,
+                    "StakeUtils: SIGNATURE_LENGTH ERROR"
+                );
                 // TODO: there is no deposit contract, solve and open this comment
                 // DCU.depositValidator(
                 //     pubkeys[i],
@@ -1221,39 +1214,41 @@ library StakeUtils {
                 //     signatures[i],
                 //     DCU.DEPOSIT_AMOUNT_PRESTAKE
                 // );
-            }
 
-            self.Validators[pubkeys[i]] = Validator(
-                1,
-                self.VALIDATORS_INDEX + i + 1,
-                poolId,
-                operatorId,
-                fees[0],
-                fees[1],
-                signatures[i]
-            );
-            emit PreStaked(pubkeys[i], poolId, operatorId);
+                self.Validators[pubkeys[i]] = Validator(
+                    1,
+                    nextValidatorsIndex + i,
+                    poolId,
+                    operatorId,
+                    poolFee,
+                    operatorFee,
+                    signatures[i]
+                );
+                emit PreStaked(pubkeys[i], poolId, operatorId);
+            }
         }
+
         _DATASTORE.addUintForId(
             poolId,
-            _getKey(operatorId, "createdValidators"),
+            _getKey(operatorId, "proposedValidators"),
             pubkeys.length
         );
         _DATASTORE.addUintForId(
             operatorId,
-            "proposedValidators",
+            "totalProposedValidators",
             pubkeys.length
         );
         _DATASTORE.subUintForId(
             poolId,
             "surplus",
-            DCU.DEPOSIT_AMOUNT * pubkeys.length
+            (DCU.DEPOSIT_AMOUNT * pubkeys.length)
         );
         _DATASTORE.addUintForId(
             poolId,
             "secured",
-            (DCU.DEPOSIT_AMOUNT) * pubkeys.length
+            (DCU.DEPOSIT_AMOUNT * pubkeys.length)
         );
+
         self.VALIDATORS_INDEX += pubkeys.length;
     }
 

@@ -1043,6 +1043,7 @@ describe("StakeUtils", async () => {
           testContract.connect(user1).proposeStake(planetId, operatorId, [], [])
         ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
       });
+
       it("reverts if monopoly", async () => {
         await testContract.setMONOPOLY_THRESHOLD(1);
         await expect(
@@ -1056,6 +1057,7 @@ describe("StakeUtils", async () => {
             )
         ).to.be.revertedWith("StakeUtils: Ice Bear doesn't like monopolies");
       });
+
       // TODO: also make this test after a success state to check the calculation of allowance there
       it("not enough allowance", async () => {
         await expect(
@@ -1159,7 +1161,8 @@ describe("StakeUtils", async () => {
         let prevSecured;
         let prevAllowance;
         let prevWalletBalance;
-        let prevCreatedValidators;
+        let prevProposedValidators;
+        let prevTotalProposedValidators;
         let prevContractBalance;
 
         beforeEach(async () => {
@@ -1184,10 +1187,12 @@ describe("StakeUtils", async () => {
           prevWalletBalance = await testContract.getOperatorWalletBalance(
             operatorId
           );
-          prevCreatedValidators = await testContract.createdValidatorsById(
+          prevProposedValidators = await testContract.proposedValidatorsById(
             planetId,
             operatorId
           );
+          prevTotalProposedValidators =
+            await testContract.totalProposedValidatorsById(operatorId);
           prevContractBalance = await testContract.getContractBalance();
           await testContract
             .connect(user1)
@@ -1258,10 +1263,16 @@ describe("StakeUtils", async () => {
           ).to.be.eq(prevWalletBalance.sub(String(2e18)));
         });
 
-        it("createdValidators increased accordingly", async () => {
+        it("proposedValidators increased accordingly", async () => {
           expect(
-            await testContract.createdValidatorsById(planetId, operatorId)
-          ).to.be.eq(prevCreatedValidators + 2);
+            await testContract.proposedValidatorsById(planetId, operatorId)
+          ).to.be.eq(prevProposedValidators + 2);
+        });
+
+        it("totalProposedValidators increased accordingly", async () => {
+          expect(
+            await testContract.totalProposedValidatorsById(operatorId)
+          ).to.be.eq(prevTotalProposedValidators + 2);
         });
 
         it("reverts if pubKey is already created", async () => {

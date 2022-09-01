@@ -324,7 +324,7 @@ contract TestStakeUtils is ERC1155Holder {
         return DATASTORE.readUintForId(_planetId, "secured");
     }
 
-    function createdValidatorsById(uint256 _planetId, uint256 _operatorId)
+    function proposedValidatorsById(uint256 _planetId, uint256 _operatorId)
         external
         view
         returns (uint256)
@@ -332,8 +332,16 @@ contract TestStakeUtils is ERC1155Holder {
         return
             DATASTORE.readUintForId(
                 _planetId,
-                StakeUtils._getKey(_operatorId, "createdValidators")
+                StakeUtils._getKey(_operatorId, "proposedValidators")
             );
+    }
+
+    function totalProposedValidatorsById(uint256 _operatorId)
+        external
+        view
+        returns (uint256)
+    {
+        return DATASTORE.readUintForId(_operatorId, "totalProposedValidators");
     }
 
     function activeValidatorsById(uint256 _planetId, uint256 _operatorId)
