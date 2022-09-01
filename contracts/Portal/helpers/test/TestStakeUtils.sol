@@ -480,19 +480,37 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function sanityCheck(uint256 _id, uint256 _newPrice) external view {
-        STAKEPOOL._sanityCheck(_id, _newPrice);
+        STAKEPOOL._sanityCheck(
+            _id,
+            (block.timestamp +
+                StakeUtils.ORACLE_ACTIVE_PERIOD -
+                STAKEPOOL.ORACLE_UPDATE_TIMESTAMP) / StakeUtils.ORACLE_PERIOD,
+            _newPrice
+        );
     }
 
     function priceSync(
         bytes32 merkleRoot,
         uint256 index,
         uint256 poolId,
-        uint256 oraclePrice,
-        bytes32[] calldata priceProofs,
-        uint256 price
+        uint256 beaconBalance,
+        uint256 periodsSinceUpdate,
+        bytes32[] calldata priceProofs
     ) external virtual {
+        bytes32 dailyBufferKey = StakeUtils._getKey(
+            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            "mintBuffer"
+        );
         STAKEPOOL.PRICE_MERKLE_ROOT = merkleRoot;
-        STAKEPOOL.priceSync(index, poolId, oraclePrice, priceProofs, price);
+        STAKEPOOL._priceSync(
+            DATASTORE,
+            dailyBufferKey,
+            index,
+            poolId,
+            beaconBalance,
+            periodsSinceUpdate,
+            priceProofs
+        );
     }
 
     uint256 lastRealPrice;
@@ -508,6 +526,10 @@ contract TestStakeUtils is ERC1155Holder {
     {
         (real, expected) = STAKEPOOL._findPrices_ClearBuffer(
             DATASTORE,
+            StakeUtils._getKey(
+                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+                "mintBuffer"
+            ),
             poolId,
             beaconBalance
         );

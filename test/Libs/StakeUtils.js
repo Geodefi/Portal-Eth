@@ -1799,7 +1799,20 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("priceSync = not required", async () => {});
+    describe("_priceSync", async () => {
+      describe("needs update with merkle", async () => {
+        const isThisPartUpdated = false;
+        beforeEach(async () => {
+          // continue here and make isThisPartUpdated when done.
+          // ----
+          //
+          // ----
+        });
+        it("needs update with merkle", async () => {
+          expect(isThisPartUpdated).to.be.eq(true);
+        });
+      });
+    });
 
     describe("_findPrices_ClearBuffer", async () => {
       beforeEach(async () => {

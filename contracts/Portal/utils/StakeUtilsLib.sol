@@ -792,10 +792,10 @@ library StakeUtils {
                 self.Validators[alienPubkeys[i]].state == 1,
                 "StakeUtils: NOT all alienPubkeys are pending"
             );
-            self.Validators[alienPubkeys[i]].state = 69;
             planetId = self.Validators[alienPubkeys[i]].planetId;
             _DATASTORE.subUintForId(planetId, "secured", DCU.DEPOSIT_AMOUNT);
             _DATASTORE.addUintForId(planetId, "surplus", DCU.DEPOSIT_AMOUNT);
+            self.Validators[alienPubkeys[i]].state = 69;
             emit Alienation(alienPubkeys[i], true);
         }
 
@@ -809,7 +809,6 @@ library StakeUtils {
                 _DATASTORE.readUintForId(planetId, "surplus") >=
                 (DCU.DEPOSIT_AMOUNT)
             ) {
-                self.Validators[curedPubkeys[j]].state = 1;
                 _DATASTORE.addUintForId(
                     planetId,
                     "secured",
@@ -820,6 +819,7 @@ library StakeUtils {
                     "surplus",
                     DCU.DEPOSIT_AMOUNT
                 );
+                self.Validators[curedPubkeys[j]].state = 1;
                 emit Alienation(curedPubkeys[j], false);
             }
         }
@@ -897,12 +897,10 @@ library StakeUtils {
     function _sanityCheck(
         StakePool storage self,
         uint256 _id,
+        uint256 periodsSinceUpdate,
         uint256 _newPrice
     ) internal view {
         // need to put the lastPriceUpdate to DATASTORE to check if price is updated already for that day
-        uint256 periodsSinceUpdate = (block.timestamp +
-            ORACLE_ACTIVE_PERIOD -
-            self.ORACLE_UPDATE_TIMESTAMP) / ORACLE_PERIOD;
         uint256 curPrice = _getPricePerShare(self, _id);
         uint256 maxPrice = curPrice +
             ((curPrice *
@@ -912,14 +910,24 @@ library StakeUtils {
         require(_newPrice <= maxPrice, "StakeUtils: price is insane");
     }
 
-    function priceSync(
+    function _priceSync(
         StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        bytes32 dailyBufferKey,
         uint256 index,
         uint256 poolId,
-        uint256 oraclePrice,
-        bytes32[] calldata priceProofs,
-        uint256 price
-    ) public {
+        uint256 beaconBalance,
+        uint256 periodsSinceUpdate, // calculation for this changes for private pools
+        bytes32[] calldata priceProofs // uint256 prices[]
+    ) internal {
+        (uint256 oraclePrice, uint256 price) = _findPrices_ClearBuffer(
+            self,
+            _DATASTORE,
+            dailyBufferKey,
+            poolId,
+            beaconBalance
+        );
+        _sanityCheck(self, poolId, periodsSinceUpdate, oraclePrice);
         bytes32 node = keccak256(abi.encodePacked(index, poolId, oraclePrice));
         require(
             MerkleProof.verify(priceProofs, self.PRICE_MERKLE_ROOT, node),
@@ -931,14 +939,10 @@ library StakeUtils {
     function _findPrices_ClearBuffer(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
+        bytes32 dailyBufferKey,
         uint256 poolId,
         uint256 beaconBalance
     ) internal returns (uint256, uint256) {
-        bytes32 dailyBufferKey = _getKey(
-            block.timestamp - (block.timestamp % ORACLE_PERIOD),
-            "mintBuffer"
-        );
-
         uint256 totalEther = beaconBalance +
             _DATASTORE.readUintForId(poolId, "secured") +
             _DATASTORE.readUintForId(poolId, "surplus");
@@ -980,26 +984,25 @@ library StakeUtils {
 
         self.PRICE_MERKLE_ROOT = merkleRoot;
 
-        uint256 poolId;
+        uint256 periodsSinceUpdate = (block.timestamp +
+            ORACLE_ACTIVE_PERIOD -
+            self.ORACLE_UPDATE_TIMESTAMP) / ORACLE_PERIOD;
+
+        bytes32 dailyBufferKey = _getKey(
+            block.timestamp - (block.timestamp % ORACLE_PERIOD),
+            "mintBuffer"
+        );
+
         for (uint256 i = 0; i < beaconBalances.length; i++) {
-            poolId = _DATASTORE.allIdsByType[5][i];
-            (
-                uint256 currentPrice,
-                uint256 expectedPrice
-            ) = _findPrices_ClearBuffer(
-                    self,
-                    _DATASTORE,
-                    poolId,
-                    beaconBalances[i]
-                );
-            _sanityCheck(self, poolId, currentPrice);
-            priceSync(
+            _priceSync(
                 self,
+                _DATASTORE,
+                dailyBufferKey,
                 i,
                 _DATASTORE.allIdsByType[5][i],
-                expectedPrice,
-                priceProofs[i],
-                currentPrice
+                beaconBalances[i],
+                periodsSinceUpdate,
+                priceProofs[i]
             );
         }
 
