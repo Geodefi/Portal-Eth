@@ -252,15 +252,67 @@ describe("StakeUtils", async () => {
       expect(await gETH.balanceOf(user2.address, randId)).to.eq(String(2e18));
     });
 
-    it("_setInterface", async () => {
-      await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE, true);
-      expect(await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)).to.eq(
-        true
-      );
-      await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE, false);
-      expect(await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)).to.eq(
-        false
-      );
+    describe("interfaces", async () => {
+      describe("setInterface", async () => {
+        it("reverts if already an interface", async () => {
+          await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
+          expect(
+            testContract.setInterface(randId, DEFAULT_GETH_INTERFACE)
+          ).to.be.revertedWith("StakeUtils: already an interface");
+        });
+        describe("success", async () => {
+          beforeEach(async () => {
+            await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
+          });
+          it("gEth.isinterface=true", async () => {
+            expect(
+              await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)
+            ).to.eq(true);
+          });
+          it("added to interfaces", async () => {
+            expect((await testContract.allInterfaces(randId))[0]).to.eq(
+              DEFAULT_GETH_INTERFACE
+            );
+          });
+        });
+      });
+      describe("unsetInterface", async () => {
+        beforeEach(async () => {
+          await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
+        });
+        it("reverts if already NOT an interface", async () => {
+          await testContract.unsetInterface(randId, 0);
+          expect(testContract.unsetInterface(randId, 0)).to.be.revertedWith(
+            "StakeUtils: already NOT an interface"
+          );
+        });
+        describe("success", async () => {
+          beforeEach(async () => {
+            await testContract.unsetInterface(randId, 0);
+          });
+          it("gEth.isinterface=false", async () => {
+            expect(
+              await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)
+            ).to.eq(false);
+          });
+          it("removed from to interfaces", async () => {
+            expect((await testContract.allInterfaces(randId))[0]).to.eq(
+              ZERO_ADDRESS
+            );
+            await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
+            expect((await testContract.allInterfaces(randId))[1]).to.eq(
+              DEFAULT_GETH_INTERFACE
+            );
+            await testContract.unsetInterface(randId, 1);
+            expect((await testContract.allInterfaces(randId))[0]).to.eq(
+              ZERO_ADDRESS
+            );
+            expect((await testContract.allInterfaces(randId))[1]).to.eq(
+              ZERO_ADDRESS
+            );
+          });
+        });
+      });
     });
   });
 
@@ -415,7 +467,7 @@ describe("StakeUtils", async () => {
     });
 
     it("check given interface's name and symbol is correctly initialized", async () => {
-      const currentInterface = await testContract.currentInterface(randId);
+      const currentInterface = (await testContract.allInterfaces(randId))[0];
       const erc20interface = await ethers.getContractAt(
         "ERC20InterfacePermitUpgradable",
         currentInterface

@@ -17,7 +17,12 @@ import "./helpers/ERC1155SupplyMinterPauser.sol";
 
 contract gETH is ERC1155SupplyMinterPauser {
     using Address for address;
-    event InterfaceChanged(address indexed newInterface, uint256 ID);
+    event InterfaceChanged(
+        address indexed newInterface,
+        uint256 id,
+        bool isSet
+    );
+    event InterfacesAvoided(address indexed avoider, bool isAvoid);
 
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     string public constant name = "Geode Staked ETH";
@@ -29,6 +34,13 @@ contract gETH is ERC1155SupplyMinterPauser {
      * There can be multiple Interfaces for 1 planet(staking pool).
      **/
     mapping(uint256 => mapping(address => bool)) private _interfaces;
+
+    /**
+     * @dev ADDED for gETH
+     * @notice
+     * TODO: explanatory comment
+     **/
+    mapping(address => bool) private _interfaceAvoiders;
 
     /**
      * @dev ADDED for gETH
@@ -94,7 +106,26 @@ contract gETH is ERC1155SupplyMinterPauser {
 
         _setInterface(_Interface, _id, isSet);
 
-        emit InterfaceChanged(_Interface, _id);
+        emit InterfaceChanged(_Interface, _id, isSet);
+    }
+
+    /**
+     * @dev ADDED for gETH
+     * @notice
+     * TODO: explanatory comment
+     **/
+    function isAvoider(address account) public view virtual returns (bool) {
+        return _interfaceAvoiders[account];
+    }
+
+    /**
+     * @dev ADDED for gETH
+     * @notice
+     * TODO: explanatory comment
+     **/
+    function avoidInterfaces(bool isAvoid) external virtual {
+        _interfaceAvoiders[_msgSender()] = isAvoid;
+        emit InterfacesAvoided(_msgSender(), isAvoid);
     }
 
     /**
@@ -172,7 +203,7 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @dev See {IERC1155-safeTransferFrom}.
      * @dev CHANGED for gETH
      * @dev interfaces can move your tokens without asking you.
-     * @dev ADDED "|| isInterface(_msgSender(),id))"
+     * @dev ADDED "|| (isInterface(_msgSender(), id) && !isAvoider(from))"
      */
     function safeTransferFrom(
         address from,
@@ -183,9 +214,9 @@ contract gETH is ERC1155SupplyMinterPauser {
     ) public virtual override {
         require(
             from == _msgSender() ||
-                (isApprovedForAll(from, _msgSender()) ||
-                    isInterface(_msgSender(), id)),
-            "ERC1155: caller is not owner nor interface nor approved"
+                isApprovedForAll(from, _msgSender()) ||
+                (isInterface(_msgSender(), id) && !isAvoider(from)),
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
 
         _safeTransferFrom(from, to, id, amount, data);
@@ -194,7 +225,7 @@ contract gETH is ERC1155SupplyMinterPauser {
     /**
      * @dev See {IERC1155-safeTransferFrom}.
      * @dev CHANGED for gETH
-     * @dev ADDED "|| isInterface(_msgSender(),id))"
+     * @dev ADDED "|| (isInterface(_msgSender(), id) && !isAvoider(account))"
      */
     function burn(
         address account,
@@ -203,9 +234,9 @@ contract gETH is ERC1155SupplyMinterPauser {
     ) public virtual override {
         require(
             account == _msgSender() ||
-                (isApprovedForAll(account, _msgSender()) ||
-                    isInterface(_msgSender(), id)),
-            "ERC1155: caller is not owner nor interface nor approved"
+                isApprovedForAll(account, _msgSender()) ||
+                (isInterface(_msgSender(), id) && !isAvoider(account)),
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
 
         _burn(account, id, value);
