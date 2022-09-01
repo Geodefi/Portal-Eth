@@ -436,11 +436,7 @@ library GeodeUtils {
             1
         );
         emit Vote(proposalId, electorId);
-        _DATASTORE.writeUintForId(
-            proposalId,
-            "approvalCount",
-            _DATASTORE.readUintForId(proposalId, "approvalCount") + 1
-        );
+        _DATASTORE.addUintForId(proposalId, "approvalCount", 1);
         if (
             _DATASTORE.readUintForId(proposalId, "approvalCount") >=
             ((self._electorCount + 1) * 2) / 3
