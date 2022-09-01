@@ -1252,15 +1252,6 @@ library StakeUtils {
         self.VALIDATORS_INDEX += pubkeys.length;
     }
 
-    //helper struct for Stack too deep and contract size
-    // struct StakeMemory {
-    //     uint256 planetId;
-    //     uint256 secured;
-    //     uint256 activeValidators;
-    //     bytes signature;
-    //     bytes withdrawalCredential;
-    // }
-
     /**
      *  @notice Sends 31 Eth from staking pool to validators that are previously created with PreStake.
      *  1 Eth per successful validator boostraping is returned back to OperatorWallet.
@@ -1300,71 +1291,61 @@ library StakeUtils {
                 "StakeUtils: NOT all pubkeys are stakeable"
             );
         }
-        bytes32 activeValKey = _getKey(operatorId, "activeValidators");
+        {
+            bytes32 activeValKey = _getKey(operatorId, "activeValidators");
 
-        uint256 planetId = self.Validators[pubkeys[0]].planetId;
+            uint256 planetId = self.Validators[pubkeys[0]].planetId;
+            bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
+                planetId,
+                "withdrawalCredential"
+            );
 
-        // {
-        // StakeMemory memory sm;
-        //     sm = StakeMemory(
-        //         planetId,
-        //         _DATASTORE.readUintForId(planetId, "secured"),
-        //         _DATASTORE.readUintForId(planetId, activeValKey),
-        //         self.Validators[pubkeys[0]].signature,
-        //         _DATASTORE.readBytesForId(planetId, "withdrawalCredential")
-        //     );
-        // }
+            uint256 lastPlanetChange;
+            for (uint256 i; i < pubkeys.length; ++i) {
+                if (planetId != self.Validators[pubkeys[i]].planetId) {
+                    _DATASTORE.subUintForId(
+                        planetId,
+                        "secured",
+                        (DCU.DEPOSIT_AMOUNT * (i - lastPlanetChange))
+                    );
+                    _DATASTORE.addUintForId(
+                        planetId,
+                        activeValKey,
+                        (i - lastPlanetChange)
+                    );
 
-        uint256 lastPlanetChange;
-        for (uint256 i; i < pubkeys.length; ++i) {
-            if (planetId != self.Validators[pubkeys[i]].planetId) {
-                _DATASTORE.subUintForId(
-                    planetId,
-                    "secured",
-                    (DCU.DEPOSIT_AMOUNT) * (i - lastPlanetChange)
-                );
-                _DATASTORE.addUintForId(
-                    planetId,
-                    activeValKey,
-                    (i - lastPlanetChange)
-                );
+                    lastPlanetChange = i;
+                    planetId = self.Validators[pubkeys[i]].planetId;
+                    withdrawalCredential = _DATASTORE.readBytesForId(
+                        planetId,
+                        "withdrawalCredential"
+                    );
+                }
 
-                lastPlanetChange = i;
-                planetId = self.Validators[pubkeys[i]].planetId;
-                // sm.activeValidators = _DATASTORE.readUintForId(
-                //     planetId,
-                //     "activeValidators"
-                // );
-                // sm.withdrawalCredential = _DATASTORE.readBytesForId(
-                //     planetId,
-                //     "withdrawalCredential"
-                // );
-            }
-            {
                 // bytes memory signature = self.Validators[pubkeys[i]].signature;
                 // TODO: there is no deposit contract, solve and open this comment
                 // DCU.depositValidator(
                 //     pubkeys[i],
-                //     sm.withdrawalCredential,
+                //     withdrawalCredential,
                 //     signature,
                 //     DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
                 // );
+
+                self.Validators[pubkeys[i]].state = 2;
+                emit BeaconStaked(pubkeys[i]);
             }
 
-            self.Validators[pubkeys[i]].state = 2;
-            emit BeaconStaked(pubkeys[i]);
+            _DATASTORE.subUintForId(
+                planetId,
+                "secured",
+                DCU.DEPOSIT_AMOUNT * (pubkeys.length - lastPlanetChange)
+            );
+            _DATASTORE.addUintForId(
+                planetId,
+                activeValKey,
+                pubkeys.length - lastPlanetChange
+            );
         }
-
-        _DATASTORE.subUintForId(
-            planetId,
-            "secured",
-            DCU.DEPOSIT_AMOUNT * (pubkeys.length - lastPlanetChange)
-        );
-        _DATASTORE.addUintForId(
-            planetId,
-            activeValKey,
-            pubkeys.length - lastPlanetChange
-        );
 
         _increaseOperatorWallet(
             _DATASTORE,
