@@ -65,6 +65,10 @@ const PERIOD_PRICE_INCREASE_LIMIT = 2e7;
 const MAX_MAINTAINER_FEE = 1e9;
 
 describe("StakeUtils", async () => {
+  // test for 10 am gmt so it doesn't fail when tested on gmt midnight :)
+  // to find where settimestamp is used set 90000 to 110000 and test :)
+  await setTimestamp(24 * 60 * 60 * 90000 + 60 * 60 * 10 + 10);
+
   let gETH;
   let deployer;
   let oracle;
@@ -172,12 +176,12 @@ describe("StakeUtils", async () => {
         let effectTS;
         beforeEach(async () => {
           await testContract.connect(user1).switchMaintainerFee(randId, 12345);
-          effectTS = (await getCurrentBlockTimestamp()) + 24 * 60 * 60 - 1;
+          effectTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60 - 1;
         });
         it("returns old value", async () => {
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
         });
-        it("switches after a day", async () => {
+        it("switches after a week", async () => {
           await setTimestamp(effectTS);
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
           await setTimestamp(effectTS + 1);
@@ -372,7 +376,7 @@ describe("StakeUtils", async () => {
       // check fee is set correctly
       it("check fee is correct after a day", async () => {
         await setTimestamp(
-          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 + 1
+          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 7 + 1
         );
         setFee = await testContract.getMaintainerFee(randId);
         expect(setFee).to.be.eq(1e5);
@@ -433,7 +437,9 @@ describe("StakeUtils", async () => {
     });
 
     it("fee is correct after a day", async () => {
-      await setTimestamp((await getCurrentBlockTimestamp()) + 24 * 60 * 60 + 1);
+      await setTimestamp(
+        (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60 + 1
+      );
       setFee = await testContract.getMaintainerFee(randId);
       expect(setFee).to.be.eq(1e6);
     });
@@ -798,8 +804,11 @@ describe("StakeUtils", async () => {
       describe("succeeds", () => {
         let gasUsed;
 
-        describe("when NO buyback (no pause, no debt)", () => {
+        describe("when NO buyback (no pause, no debt), and while oracle active", () => {
           beforeEach(async () => {
+            await setTimestamp(24 * 60 * 60 * 100000 + 100);
+            // ensure that it starts as zero.
+            expect(await testContract.dailyMintBuffer(randId)).to.be.eq(0);
             const tx = await testContract
               .connect(user1)
               .stakePlanet(randId, 0, MAX_UINT256, {
@@ -840,6 +849,14 @@ describe("StakeUtils", async () => {
             const newSur = await testContract.surplusById(randId);
             expect(newSur.toString()).to.be.eq(
               String(preSurplus.add(String(1e18)))
+            );
+          });
+
+          it("mintBuffer increased = minted gETH ", async () => {
+            const dailyMintBuffer = await testContract.dailyMintBuffer(randId);
+            const price = await testContract.getPricePerShare(randId);
+            expect(dailyMintBuffer).to.be.eq(
+              ethers.BigNumber.from(String(1e18)).div(price).mul(String(1e18))
             );
           });
 
@@ -1138,7 +1155,7 @@ describe("StakeUtils", async () => {
 
         beforeEach(async () => {
           await setTimestamp(
-            (await getCurrentBlockTimestamp()) + 24 * 60 * 60 + 1
+            (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 7 + 1
           );
           await testContract
             .connect(user2)
@@ -1302,6 +1319,14 @@ describe("StakeUtils", async () => {
         await testContract.connect(user1).increaseOperatorWallet(operatorId, {
           value: String(5e18),
         });
+      });
+
+      it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
+        await expect(
+          testContract
+            .connect(oracle)
+            .updateVerificationIndex(2, [pubkey4], [], [])
+        ).to.be.reverted;
       });
 
       it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
@@ -1557,6 +1582,15 @@ describe("StakeUtils", async () => {
         prevOperatorWallet = await testContract
           .connect(user1)
           .getOperatorWalletBalance(operatorId);
+      });
+
+      it("reverts if Oracle is active", async () => {
+        await setTimestamp(24 * 60 * 60 * 100000 + 10);
+        await expect(
+          testContract
+            .connect(user1)
+            .stakeBeacon(operatorId, Array(1).fill(pubkey1))
+        ).to.be.revertedWith("StakeUtils: oracle is active");
       });
 
       it("1 to 64 nodes per transaction", async () => {

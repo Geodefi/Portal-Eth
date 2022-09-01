@@ -317,6 +317,14 @@ contract TestStakeUtils is ERC1155Holder {
         return address(StakeUtils.LPTokenById(DATASTORE, _id));
     }
 
+    function dailyMintBuffer(uint256 poolId) external view returns (uint256) {
+        bytes32 dailyBufferKey = StakeUtils._getKey(
+            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            "mintBuffer"
+        );
+        return DATASTORE.readUintForId(poolId, dailyBufferKey);
+    }
+
     function surplusById(uint256 _planetId) external view returns (uint256) {
         return DATASTORE.readUintForId(_planetId, "surplus");
     }
