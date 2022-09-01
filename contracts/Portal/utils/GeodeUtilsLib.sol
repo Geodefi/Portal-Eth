@@ -66,7 +66,6 @@ library GeodeUtils {
      * Note SENATE is proposed by Governance and voted by all planets, if 2/3 approves.
      * @param OPERATION_FEE operation fee of the given contract, acquired by GOVERNANCE. Limited by MAX_OPERATION_FEE
      * @param MAX_OPERATION_FEE set by SENATE, limited by FEE_DENOMINATOR
-     * @param FEE_DENOMINATOR represents 100%
      * @param SENATE_EXPIRE_TIMESTAMP refers to the last timestamp that SENATE can continue operating. Enforces a new election, limited by MAX_SENATE_PERIOD
      * @param approvedUpgrade only 1(one) implementation contract can be "approved" at any given time. @dev Should set to address(0) after every upgrade
      * @param _electorCount increased when a new id is added with _electorTypes[id] == true
@@ -78,7 +77,6 @@ library GeodeUtils {
         address GOVERNANCE;
         uint256 OPERATION_FEE;
         uint256 MAX_OPERATION_FEE;
-        uint256 FEE_DENOMINATOR;
         uint256 SENATE_EXPIRE_TIMESTAMP;
         address approvedUpgrade;
         uint256 _electorCount;
@@ -89,6 +87,9 @@ library GeodeUtils {
     uint32 public constant MIN_PROPOSAL_DURATION = 1 days;
     uint32 public constant MAX_PROPOSAL_DURATION = 1 weeks;
     uint32 public constant MAX_SENATE_PERIOD = 365 days; // 1 year
+
+    /// @notice FEE_DENOMINATOR represents 100%
+    uint256 public constant FEE_DENOMINATOR = 10**10;
 
     modifier onlySenate(Universe storage self) {
         require(msg.sender == self.SENATE, "GeodeUtils: SENATE role needed");
@@ -189,7 +190,7 @@ library GeodeUtils {
         returns (bool)
     {
         require(
-            _newMaxFee <= self.FEE_DENOMINATOR,
+            _newMaxFee <= FEE_DENOMINATOR,
             "GeodeUtils: fee more than 100%"
         );
         self.MAX_OPERATION_FEE = _newMaxFee;

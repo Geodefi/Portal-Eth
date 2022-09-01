@@ -137,15 +137,6 @@ describe("StakeUtils", async () => {
     it("correct DEFAULT_LP_TOKEN", async () => {
       expect(stakepool.DEFAULT_LP_TOKEN).to.eq(DEFAULT_LP_TOKEN);
     });
-    it("correct DEFAULT_A", async () => {
-      expect(stakepool.DEFAULT_A).to.eq(INITIAL_A_VALUE);
-    });
-    it("correct DEFAULT_FEE", async () => {
-      expect(stakepool.DEFAULT_FEE).to.eq(SWAP_FEE);
-    });
-    it("correct DEFAULT_ADMIN_FEE", async () => {
-      expect(stakepool.DEFAULT_ADMIN_FEE).to.eq(ADMIN_FEE);
-    });
     it("correct PERIOD_PRICE_INCREASE_LIMIT", async () => {
       expect(stakepool.PERIOD_PRICE_INCREASE_LIMIT).to.eq(
         PERIOD_PRICE_INCREASE_LIMIT

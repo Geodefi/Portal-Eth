@@ -24,9 +24,6 @@ contract TestStakeUtils is ERC1155Holder {
         STAKEPOOL.DEFAULT_DWP = _DEFAULT_DWP;
         STAKEPOOL.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
         STAKEPOOL.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
-        STAKEPOOL.DEFAULT_A = 60;
-        STAKEPOOL.DEFAULT_FEE = 4e6;
-        STAKEPOOL.DEFAULT_ADMIN_FEE = 5e9;
         STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT = (2 * FEE_DENOMINATOR) / 1e3;
         STAKEPOOL.MAX_MAINTAINER_FEE = (10 * FEE_DENOMINATOR) / 1e2; //10%
         STAKEPOOL.VERIFICATION_INDEX = 0;
@@ -43,9 +40,6 @@ contract TestStakeUtils is ERC1155Holder {
             address DEFAULT_gETH_INTERFACE,
             address DEFAULT_DWP,
             address DEFAULT_LP_TOKEN,
-            uint256 DEFAULT_A,
-            uint256 DEFAULT_FEE,
-            uint256 DEFAULT_ADMIN_FEE,
             uint256 PERIOD_PRICE_INCREASE_LIMIT,
             uint256 MAX_MAINTAINER_FEE,
             uint256 VERIFICATION_INDEX,
@@ -57,9 +51,6 @@ contract TestStakeUtils is ERC1155Holder {
         DEFAULT_gETH_INTERFACE = STAKEPOOL.DEFAULT_gETH_INTERFACE;
         DEFAULT_DWP = STAKEPOOL.DEFAULT_DWP;
         DEFAULT_LP_TOKEN = STAKEPOOL.DEFAULT_LP_TOKEN;
-        DEFAULT_A = STAKEPOOL.DEFAULT_A;
-        DEFAULT_FEE = STAKEPOOL.DEFAULT_FEE;
-        DEFAULT_ADMIN_FEE = STAKEPOOL.DEFAULT_ADMIN_FEE;
         PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT;
         MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
         VERIFICATION_INDEX = STAKEPOOL.VERIFICATION_INDEX;
@@ -141,7 +132,7 @@ contract TestStakeUtils is ERC1155Holder {
         external
         virtual
     {
-        STAKEPOOL.setMaxMaintainerFee(_governance, FEE_DENOMINATOR, _newMaxFee);
+        STAKEPOOL.setMaxMaintainerFee(_governance, _newMaxFee);
     }
 
     function getMaintainerFee(uint256 _id)
@@ -483,7 +474,7 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function sanityCheck(uint256 _id, uint256 _newPrice) external view {
-        STAKEPOOL._sanityCheck(FEE_DENOMINATOR, _id, _newPrice);
+        STAKEPOOL._sanityCheck(_id, _newPrice);
     }
 
     function priceSync(
@@ -524,7 +515,6 @@ contract TestStakeUtils is ERC1155Holder {
     ) external {
         STAKEPOOL.reportOracle(
             DATASTORE,
-            FEE_DENOMINATOR,
             merkleRoot,
             beaconBalances,
             priceProofs

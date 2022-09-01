@@ -85,9 +85,6 @@ library StakeUtils {
      * @param DEFAULT_gETH_INTERFACE
      * @param DEFAULT_DWP Dynamic Withdrawal Pool, a STABLESWAP pool that will be cloned to be used for given ID
      * @param DEFAULT_LP_TOKEN LP token implementation that will be cloned to be used for DWP of given ID
-     * @param DEFAULT_A DWP parameter
-     * @param DEFAULT_FEE DWP parameter
-     * @param DEFAULT_ADMIN_FEE DWP parameter
      * @param MAX_MAINTAINER_FEE : limits fees, set by GOVERNANCE
      * @param VERIFICATION_INDEX the highest index of the validators that are verified to be activated. Updated by Telescope. set to 0 at start
      * @param VALIDATORS_INDEX total number of validators that are proposed at some point. includes all states of validators. set to 0 at start
@@ -100,9 +97,6 @@ library StakeUtils {
         address DEFAULT_gETH_INTERFACE;
         address DEFAULT_DWP;
         address DEFAULT_LP_TOKEN;
-        uint256 DEFAULT_A;
-        uint256 DEFAULT_FEE;
-        uint256 DEFAULT_ADMIN_FEE;
         uint256 MAX_MAINTAINER_FEE;
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 VERIFICATION_INDEX;
@@ -111,6 +105,8 @@ library StakeUtils {
         uint256 ORACLE_UPDATE_TIMESTAMP;
         mapping(bytes => Validator) Validators;
     }
+    /// @notice FEE_DENOMINATOR represents 100%
+    uint256 public constant FEE_DENOMINATOR = 10**10;
 
     /**
      * @notice gETH lacks *decimals*,
@@ -125,6 +121,11 @@ library StakeUtils {
     /// @notice Oracle is active for the first 30 min for a day
     uint256 public constant ORACLE_PERIOD = 1 days;
     uint256 public constant ORACLE_ACTIVE_PERIOD = 30 minutes;
+
+    /// @notice default DWP parameters
+    uint256 public constant DEFAULT_A = 60;
+    uint256 public constant DEFAULT_FEE = (4 * FEE_DENOMINATOR) / 10000;
+    uint256 public constant DEFAULT_ADMIN_FEE = (5 * FEE_DENOMINATOR) / 10;
 
     // TODO: type check?
     modifier onlyMaintainer(
@@ -430,11 +431,10 @@ library StakeUtils {
     function setMaxMaintainerFee(
         StakePool storage self,
         address _GOVERNANCE,
-        uint256 _FEE_DENOMINATOR,
         uint256 _newMaxFee
     ) external onlyGovernance(_GOVERNANCE) {
         require(
-            _newMaxFee <= _FEE_DENOMINATOR,
+            _newMaxFee <= FEE_DENOMINATOR,
             "StakeUtils: fee more than 100%"
         );
         self.MAX_MAINTAINER_FEE = _newMaxFee;
@@ -699,9 +699,9 @@ library StakeUtils {
             string(
                 abi.encodePacked(_DATASTORE.readBytesForId(_id, "name"), "-WP")
             ),
-            self.DEFAULT_A,
-            self.DEFAULT_FEE,
-            self.DEFAULT_ADMIN_FEE,
+            DEFAULT_A,
+            DEFAULT_FEE,
+            DEFAULT_ADMIN_FEE,
             self.DEFAULT_LP_TOKEN
         );
         _DATASTORE.writeAddressForId(_id, "withdrawalPool", WithdrawalPool);
@@ -898,7 +898,6 @@ library StakeUtils {
      */
     function _sanityCheck(
         StakePool storage self,
-        uint256 _FEE_DENOMINATOR,
         uint256 _id,
         uint256 _newPrice
     ) internal view {
@@ -910,7 +909,7 @@ library StakeUtils {
         uint256 maxPrice = curPrice +
             ((curPrice *
                 self.PERIOD_PRICE_INCREASE_LIMIT *
-                periodsSinceUpdate) / _FEE_DENOMINATOR);
+                periodsSinceUpdate) / FEE_DENOMINATOR);
 
         require(_newPrice <= maxPrice, "StakeUtils: price is insane");
     }
@@ -964,7 +963,6 @@ library StakeUtils {
     function reportOracle(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _FEE_DENOMINATOR,
         bytes32 merkleRoot,
         uint256[] calldata beaconBalances,
         bytes32[][] calldata priceProofs
@@ -996,7 +994,7 @@ library StakeUtils {
                     poolId,
                     beaconBalances[i]
                 );
-            _sanityCheck(self, _FEE_DENOMINATOR, poolId, currentPrice);
+            _sanityCheck(self, poolId, currentPrice);
             priceSync(
                 self,
                 i,
