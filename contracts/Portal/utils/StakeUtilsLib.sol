@@ -98,9 +98,10 @@ library StakeUtils {
         address DEFAULT_DWP;
         address DEFAULT_LP_TOKEN;
         uint256 MAX_MAINTAINER_FEE;
+        uint256 MONOPOLY_THRESHOLD;
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
-        uint256 VERIFICATION_INDEX;
         uint256 VALIDATORS_INDEX;
+        uint256 VERIFICATION_INDEX;
         bytes32 PRICE_MERKLE_ROOT;
         uint256 ORACLE_UPDATE_TIMESTAMP;
         mapping(bytes => Validator) Validators;
