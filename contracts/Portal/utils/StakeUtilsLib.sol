@@ -98,7 +98,7 @@ library StakeUtils {
         address DEFAULT_DWP;
         address DEFAULT_LP_TOKEN;
         uint256 MAX_MAINTAINER_FEE;
-        uint256 MONOPOLY_THRESHOLD;
+        uint256 MONOPOLY_THRESHOLD; // max number of validators an operator is allowed to operate.
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 VALIDATORS_INDEX;
         uint256 VERIFICATION_INDEX;
@@ -116,12 +116,15 @@ library StakeUtils {
     uint256 public constant gETH_DENOMINATOR = 1 ether;
     uint256 public constant IGNORABLE_DEBT = 1 ether;
 
-    uint256 public constant FEE_SWITCH_LATENCY = 7 days;
-    uint256 public constant PRISON_SENTENCE = 7 days;
-
     /// @notice Oracle is active for the first 30 min for a day
     uint256 public constant ORACLE_PERIOD = 1 days;
     uint256 public constant ORACLE_ACTIVE_PERIOD = 30 minutes;
+
+    /// @notice comments here
+    uint256 public constant FEE_SWITCH_LATENCY = 7 days;
+    uint256 public constant PRISON_SENTENCE = 7 days;
+    // as a percentage while FEE_DENOMINATOR = 100%, set by governance
+    uint256 public constant MONOPOLY_RATIO = (5 * FEE_DENOMINATOR) / 100;
 
     /// @notice default DWP parameters
     uint256 public constant DEFAULT_A = 60;
@@ -762,21 +765,29 @@ library StakeUtils {
     /**
      * @notice Updating VERIFICATION_INDEX, signaling that it is safe to allow
      * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds.
-     * @param new_index index of the highest validator that is verified to be activated
+     * @param new_verification_index index of the highest validator that is verified to be activated
      * @param alienPubkeys array of validator pubkeys that are lower than new_index which also
      * either frontrunned proposeStake function thus alienated OR proven to be mistakenly alienated.
      */
     function regulateOperators(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 new_index,
+        uint256 all_validators_count,
+        uint256 new_verification_index,
         bytes[] calldata alienPubkeys,
         bytes[] calldata curedPubkeys,
         uint256[] calldata prisonedIds
     ) external onlyOracle(self) {
         require(!_isOracleActive(self), "StakeUtils: oracle is active");
-        require(self.VALIDATORS_INDEX >= new_index);
-        require(new_index >= self.VERIFICATION_INDEX);
+        require(all_validators_count > 1000, "StakeUtils: low validator count");
+        require(
+            self.VALIDATORS_INDEX >= new_verification_index,
+            "StakeUtils: high VERIFICATION_INDEX"
+        );
+        require(
+            new_verification_index >= self.VERIFICATION_INDEX,
+            "StakeUtils: low VERIFICATION_INDEX"
+        );
 
         uint256 planetId;
         for (uint256 i; i < alienPubkeys.length; ++i) {
@@ -790,14 +801,16 @@ library StakeUtils {
                 uint256 newSecured = _DATASTORE.readUintForId(
                     planetId,
                     "secured"
-                ) - (DCU.DEPOSIT_AMOUNT);
+                );
+                newSecured -= (DCU.DEPOSIT_AMOUNT);
                 _DATASTORE.writeUintForId(planetId, "secured", newSecured);
             }
             {
                 uint256 newSurplus = _DATASTORE.readUintForId(
                     planetId,
                     "surplus"
-                ) + (DCU.DEPOSIT_AMOUNT);
+                );
+                newSurplus += (DCU.DEPOSIT_AMOUNT);
                 _DATASTORE.writeUintForId(planetId, "surplus", newSurplus);
             }
             emit Alienation(alienPubkeys[i], true);
@@ -818,14 +831,16 @@ library StakeUtils {
                     uint256 newSecured = _DATASTORE.readUintForId(
                         planetId,
                         "secured"
-                    ) + (DCU.DEPOSIT_AMOUNT);
+                    );
+                    newSecured += (DCU.DEPOSIT_AMOUNT);
                     _DATASTORE.writeUintForId(planetId, "secured", newSecured);
                 }
                 {
                     uint256 newSurplus = _DATASTORE.readUintForId(
                         planetId,
                         "surplus"
-                    ) - (DCU.DEPOSIT_AMOUNT);
+                    );
+                    newSurplus -= (DCU.DEPOSIT_AMOUNT);
                     _DATASTORE.writeUintForId(planetId, "surplus", newSurplus);
                 }
                 emit Alienation(curedPubkeys[j], false);
@@ -838,10 +853,15 @@ library StakeUtils {
                 "released",
                 block.timestamp + PRISON_SENTENCE
             );
+            // event here
         }
 
-        self.VERIFICATION_INDEX = new_index;
-        emit VerificationIndexUpdated(new_index);
+        self.MONOPOLY_THRESHOLD =
+            (all_validators_count * MONOPOLY_RATIO) /
+            FEE_DENOMINATOR;
+
+        self.VERIFICATION_INDEX = new_verification_index;
+        emit VerificationIndexUpdated(new_verification_index);
     }
 
     /**
@@ -1138,7 +1158,7 @@ library StakeUtils {
     function proposeStake(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 planetId,
+        uint256 poolId,
         uint256 operatorId,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
@@ -1148,8 +1168,8 @@ library StakeUtils {
             "StakeUtils: you are in prison, get in touch with governance"
         );
         require(
-            _DATASTORE.readUintForId(planetId, "TYPE") == 5 ||
-                _DATASTORE.readUintForId(planetId, "TYPE") == 6,
+            _DATASTORE.readUintForId(poolId, "TYPE") == 5 ||
+                _DATASTORE.readUintForId(poolId, "TYPE") == 6,
             "StakeUtils: There is no pool with id"
         );
         require(
@@ -1161,19 +1181,28 @@ library StakeUtils {
             "StakeUtils: 1 to 64 nodes per transaction"
         );
         {
+            uint256 proposedValidators = _DATASTORE.readUintForId(
+                operatorId,
+                "proposedValidators"
+            );
+            require(
+                (proposedValidators + pubkeys.length) <= self.MONOPOLY_THRESHOLD
+            );
+        }
+        {
             uint256 createdValidators = _DATASTORE.readUintForId(
-                planetId,
+                poolId,
                 _getKey(operatorId, "createdValidators")
             );
             require(
-                operatorAllowance(_DATASTORE, planetId, operatorId) >=
+                operatorAllowance(_DATASTORE, poolId, operatorId) >=
                     pubkeys.length + createdValidators,
                 "StakeUtils: not enough allowance"
             );
         }
 
         require(
-            _DATASTORE.readUintForId(planetId, "surplus") >=
+            _DATASTORE.readUintForId(poolId, "surplus") >=
                 DCU.DEPOSIT_AMOUNT * pubkeys.length,
             "StakeUtils: not enough surplus"
         );
@@ -1185,11 +1214,11 @@ library StakeUtils {
         );
 
         uint256[2] memory fees = [
-            getMaintainerFee(self, _DATASTORE, planetId),
+            getMaintainerFee(self, _DATASTORE, poolId),
             getMaintainerFee(self, _DATASTORE, operatorId)
         ];
         bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
-            planetId,
+            poolId,
             "withdrawalCredential"
         );
 
@@ -1222,38 +1251,49 @@ library StakeUtils {
             self.Validators[pubkeys[i]] = Validator(
                 1,
                 self.VALIDATORS_INDEX + i + 1,
-                planetId,
+                poolId,
                 operatorId,
                 fees[0],
                 fees[1],
                 signatures[i]
             );
-            emit PreStaked(pubkeys[i], planetId, operatorId);
+            emit PreStaked(pubkeys[i], poolId, operatorId);
         }
         {
             uint256 createdValidators = _DATASTORE.readUintForId(
-                planetId,
+                poolId,
                 _getKey(operatorId, "createdValidators")
             );
             _DATASTORE.writeUintForId(
-                planetId,
+                poolId,
                 _getKey(operatorId, "createdValidators"),
                 createdValidators + pubkeys.length
             );
         }
         {
-            uint256 surplus = _DATASTORE.readUintForId(planetId, "surplus");
+            uint256 proposedValidators = _DATASTORE.readUintForId(
+                operatorId,
+                "proposedValidators"
+            );
             _DATASTORE.writeUintForId(
-                planetId,
+                operatorId,
+                "proposedValidators",
+                proposedValidators + pubkeys.length
+            );
+        }
+        {
+            uint256 surplus = _DATASTORE.readUintForId(poolId, "surplus");
+            _DATASTORE.writeUintForId(
+                poolId,
                 "surplus",
                 surplus - DCU.DEPOSIT_AMOUNT * pubkeys.length
             );
         }
         {
-            uint256 secured = _DATASTORE.readUintForId(planetId, "secured") +
+            uint256 secured = _DATASTORE.readUintForId(poolId, "secured") +
                 (DCU.DEPOSIT_AMOUNT) *
                 pubkeys.length;
-            _DATASTORE.writeUintForId(planetId, "secured", secured);
+            _DATASTORE.writeUintForId(poolId, "secured", secured);
         }
         self.VALIDATORS_INDEX += pubkeys.length;
     }

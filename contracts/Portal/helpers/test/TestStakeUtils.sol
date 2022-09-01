@@ -410,14 +410,16 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function regulateOperators(
-        uint256 new_index,
+        uint256 all_validators_count,
+        uint256 new_verification_index,
         bytes[] calldata alienPubkeys,
         bytes[] calldata curedPubkeys,
         uint256[] calldata prisonedIds
     ) external virtual {
         STAKEPOOL.regulateOperators(
             DATASTORE,
-            new_index,
+            all_validators_count,
+            new_verification_index,
             alienPubkeys,
             curedPubkeys,
             prisonedIds
