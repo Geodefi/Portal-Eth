@@ -1183,7 +1183,7 @@ describe("StakeUtils", async () => {
 
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(0, [], [], [operatorId]);
+              .regulateOperators(0, [], [], [operatorId]);
             releaseTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
           });
 
@@ -1288,7 +1288,7 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("updateVerificationIndex", () => {
+    describe("regulateOperators", () => {
       beforeEach(async () => {
         await testContract.beController(operatorId);
         await testContract.changeIdMaintainer(operatorId, user1.address);
@@ -1308,17 +1308,13 @@ describe("StakeUtils", async () => {
 
       it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
         await expect(
-          testContract
-            .connect(oracle)
-            .updateVerificationIndex(2, [pubkey4], [], [])
+          testContract.connect(oracle).regulateOperators(2, [pubkey4], [], [])
         ).to.be.reverted;
       });
 
       it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
         await expect(
-          testContract
-            .connect(oracle)
-            .updateVerificationIndex(2, [pubkey4], [], [])
+          testContract.connect(oracle).regulateOperators(2, [pubkey4], [], [])
         ).to.be.reverted;
       });
 
@@ -1333,10 +1329,10 @@ describe("StakeUtils", async () => {
           );
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(2, [pubkey3], [], []);
+          .regulateOperators(2, [pubkey3], [], []);
 
         await expect(
-          testContract.connect(oracle).updateVerificationIndex(1, [], [], [])
+          testContract.connect(oracle).regulateOperators(1, [], [], [])
         ).to.be.reverted;
       });
 
@@ -1350,9 +1346,7 @@ describe("StakeUtils", async () => {
             [signature1, signature2]
           );
         await expect(
-          testContract
-            .connect(oracle)
-            .updateVerificationIndex(2, [pubkey3], [], [])
+          testContract.connect(oracle).regulateOperators(2, [pubkey3], [], [])
         ).to.be.revertedWith("StakeUtils: NOT all alienPubkeys are pending");
       });
 
@@ -1366,9 +1360,7 @@ describe("StakeUtils", async () => {
             [signature1, signature2]
           );
         await expect(
-          testContract
-            .connect(oracle)
-            .updateVerificationIndex(2, [], [pubkey3], [])
+          testContract.connect(oracle).regulateOperators(2, [], [pubkey3], [])
         ).to.be.revertedWith("StakeUtils: NOT all curedPubkeys are alienated");
       });
       it("cant cure if not enough surplus", async () => {
@@ -1377,11 +1369,11 @@ describe("StakeUtils", async () => {
           .preStake(planetId, operatorId, [pubkey1], [signature1]);
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(1, [pubkey1], [], []);
+          .regulateOperators(1, [pubkey1], [], []);
         await testContract.setSurplus(planetId, 0);
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(1, [], [pubkey1], []);
+          .regulateOperators(1, [], [pubkey1], []);
         expect((await testContract.getValidatorData(pubkey1)).state).to.be.eq(
           69
         );
@@ -1401,7 +1393,7 @@ describe("StakeUtils", async () => {
           beforeEach(async () => {
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(1, [pubkey1], [], []);
+              .regulateOperators(1, [pubkey1], [], []);
             expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
           });
           it("check validator.state", async () => {
@@ -1428,10 +1420,10 @@ describe("StakeUtils", async () => {
             secured = await testContract.securedById(planetId);
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(1, [pubkey1], [], []);
+              .regulateOperators(1, [pubkey1], [], []);
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(1, [], [pubkey1], []);
+              .regulateOperators(1, [], [pubkey1], []);
             expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
           });
           it("check validator.state", async () => {
@@ -1457,7 +1449,7 @@ describe("StakeUtils", async () => {
             await testContract.Receive({ value: String(1e20) });
             await testContract
               .connect(oracle)
-              .updateVerificationIndex(1, [], [], [operatorId]);
+              .regulateOperators(1, [], [], [operatorId]);
             releaseTs = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
           });
           it("released after 7 days", async () => {
@@ -1516,16 +1508,12 @@ describe("StakeUtils", async () => {
       });
 
       it("returns false if VERIFICATION_INDEX is smaller than validator's index", async () => {
-        await testContract
-          .connect(oracle)
-          .updateVerificationIndex(1, [], [], []);
+        await testContract.connect(oracle).regulateOperators(1, [], [], []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(false);
       });
 
       it("returns true", async () => {
-        await testContract
-          .connect(oracle)
-          .updateVerificationIndex(2, [], [], []);
+        await testContract.connect(oracle).regulateOperators(2, [], [], []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(true);
       });
     });
@@ -1599,7 +1587,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(oracle)
-          .updateVerificationIndex(2, [], [], [operatorId]);
+          .regulateOperators(2, [], [], [operatorId]);
 
         await expect(
           testContract
@@ -1627,9 +1615,7 @@ describe("StakeUtils", async () => {
             });
           prevSecured = await testContract.securedById(planetId);
 
-          await testContract
-            .connect(oracle)
-            .updateVerificationIndex(2, [], [], []);
+          await testContract.connect(oracle).regulateOperators(2, [], [], []);
 
           prevContractBalance = await testContract.getContractBalance();
           await testContract
@@ -1799,9 +1785,7 @@ describe("StakeUtils", async () => {
             [pubkey1, pubkey2, pubkey3, pubkey4],
             [signature1, signature2, signature3, signature4]
           );
-        await testContract
-          .connect(oracle)
-          .updateVerificationIndex(2, [], [], []);
+        await testContract.connect(oracle).regulateOperators(2, [], [], []);
 
         await testContract.setORACLE_UPDATE_TIMESTAMP(
           24 * 60 * 60 * 100000 + 0 * 60 + 1
@@ -1847,9 +1831,7 @@ describe("StakeUtils", async () => {
       it("works when oracle missed 1 day", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
 
-        await testContract
-          .connect(oracle)
-          .updateVerificationIndex(4, [], [], []);
+        await testContract.connect(oracle).regulateOperators(4, [], [], []);
 
         await testContract
           .connect(user1)
@@ -1891,9 +1873,7 @@ describe("StakeUtils", async () => {
       it("works when oracle missed 20 days", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
 
-        await testContract
-          .connect(oracle)
-          .updateVerificationIndex(4, [], [], []);
+        await testContract.connect(oracle).regulateOperators(4, [], [], []);
 
         await testContract
           .connect(user1)

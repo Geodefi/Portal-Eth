@@ -409,13 +409,13 @@ contract TestStakeUtils is ERC1155Holder {
         DATASTORE.writeUintForId(_id, "surplus", _surplus);
     }
 
-    function updateVerificationIndex(
+    function regulateOperators(
         uint256 new_index,
         bytes[] calldata alienPubkeys,
         bytes[] calldata curedPubkeys,
         uint256[] calldata prisonedIds
     ) external virtual {
-        STAKEPOOL.updateVerificationIndex(
+        STAKEPOOL.regulateOperators(
             DATASTORE,
             new_index,
             alienPubkeys,

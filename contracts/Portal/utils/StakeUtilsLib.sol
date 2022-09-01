@@ -765,7 +765,7 @@ library StakeUtils {
      * @param alienPubkeys array of validator pubkeys that are lower than new_index which also
      * either frontrunned preStake function thus alienated OR proven to be mistakenly alienated.
      */
-    function updateVerificationIndex(
+    function regulateOperators(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 new_index,
