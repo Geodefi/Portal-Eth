@@ -148,23 +148,6 @@ library StakeUtils {
         );
         _;
     }
-    modifier onlyTYPE(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id,
-        bool[3] memory _typeFlags
-    ) {
-        uint256 idType = _DATASTORE.readUintForId(_id, "TYPE");
-        if (idType == 4) {
-            require(_typeFlags[0], "StakeUtils: id is NOT operator");
-            _;
-        } else if (idType == 5) {
-            require(_typeFlags[1], "StakeUtils: id is NOT planet");
-            _;
-        } else if (idType == 6) {
-            require(_typeFlags[2], "StakeUtils: id is NOT comet");
-            _;
-        }
-    }
 
     modifier onlyOracle(StakePool storage self) {
         require(msg.sender == self.ORACLE, "StakeUtils: sender is NOT ORACLE");
@@ -305,8 +288,8 @@ library StakeUtils {
     /**
      * @notice initiates ID as an node operator
      * @dev requires ID to be approved as a node operator with a specific CONTROLLER
-     * @param _id TODO
-     * @param _cometPeriod TODO
+     * @param _id --
+     * @param _cometPeriod --
      */
     function initiateOperator(
         StakePool storage self,
@@ -327,7 +310,7 @@ library StakeUtils {
     /**
      * @notice initiates ID as a planet (public pool)
      * @dev requires ID to be approved as a planet with a specific CONTROLLER
-     * @param _id TODO
+     * @param _id --
      */
     function initiatePlanet(
         StakePool storage self,
@@ -373,7 +356,7 @@ library StakeUtils {
     /**
      * @notice initiates ID as a comet (private pool)
      * @dev requires ID to be approved as comet with a specific CONTROLLER
-     * @param _id TODO
+     * @param _id --
      */
     function initiateComet(
         StakePool storage self,
@@ -590,12 +573,7 @@ library StakeUtils {
         uint256 _planetId,
         uint256 _operatorId,
         uint256 _allowance
-    )
-        external
-        onlyMaintainer(_DATASTORE, _planetId)
-        onlyTYPE(_DATASTORE, _planetId, [false, true, true])
-        returns (bool)
-    {
+    ) external onlyMaintainer(_DATASTORE, _planetId) returns (bool) {
         _DATASTORE.writeUintForId(
             _planetId,
             _getKey(_operatorId, "allowance"),
@@ -642,12 +620,7 @@ library StakeUtils {
     function increaseOperatorWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId
-    )
-        external
-        onlyMaintainer(_DATASTORE, _operatorId)
-        onlyTYPE(_DATASTORE, _operatorId, [true, true, false])
-        returns (bool success)
-    {
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
         return _increaseOperatorWallet(_DATASTORE, _operatorId, msg.value);
     }
 
@@ -678,12 +651,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    )
-        external
-        onlyMaintainer(_DATASTORE, _operatorId)
-        onlyTYPE(_DATASTORE, _operatorId, [true, true, false])
-        returns (bool success)
-    {
+    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
         require(
             address(this).balance >= value,
             "StakeUtils: Not enough resources in Portal"
@@ -710,11 +678,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 _newPeriod
-    )
-        external
-        onlyMaintainer(_DATASTORE, _operatorId)
-        onlyTYPE(_DATASTORE, _operatorId, [true, true, false])
-    {
+    ) external onlyMaintainer(_DATASTORE, _operatorId) {
         _DATASTORE.writeUintForId(_operatorId, "cometPeriod", _newPeriod);
     }
 
@@ -837,11 +801,7 @@ library StakeUtils {
     function pauseStakingForPool(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
-    )
-        external
-        onlyMaintainer(_DATASTORE, _id)
-        onlyTYPE(_DATASTORE, _id, [false, true, true])
-    {
+    ) external onlyMaintainer(_DATASTORE, _id) {
         require(
             !isStakingPausedForPool(_DATASTORE, _id),
             "StakeUtils: staking is already paused for pool"
@@ -856,11 +816,7 @@ library StakeUtils {
     function unpauseStakingForPool(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
-    )
-        external
-        onlyMaintainer(_DATASTORE, _id)
-        onlyTYPE(_DATASTORE, _id, [false, true, true])
-    {
+    ) external onlyMaintainer(_DATASTORE, _id) {
         require(
             isStakingPausedForPool(_DATASTORE, _id),
             "StakeUtils: staking is already NOT paused for pool"
@@ -1252,11 +1208,7 @@ library StakeUtils {
         uint256 operatorId,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
-    )
-        external
-        onlyMaintainer(_DATASTORE, operatorId)
-        onlyTYPE(_DATASTORE, operatorId, [true, true, false])
-    {
+    ) external onlyMaintainer(_DATASTORE, operatorId) {
         require(
             !isPrisoned(_DATASTORE, operatorId),
             "StakeUtils: you are in prison, get in touch with governance"
@@ -1301,21 +1253,16 @@ library StakeUtils {
         );
 
         {
-            uint256 poolFee = getMaintainerFee(self, _DATASTORE, poolId);
-            uint256 operatorFee = getMaintainerFee(
-                self,
-                _DATASTORE,
-                operatorId
-            );
-            bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
-                poolId,
-                "withdrawalCredential"
-            );
+            uint256[2] memory fees = [
+                getMaintainerFee(self, _DATASTORE, poolId),
+                getMaintainerFee(self, _DATASTORE, operatorId)
+            ];
+            // bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
+            //     poolId,
+            //     "withdrawalCredential"
+            // );
             uint256 nextValidatorsIndex = self.VALIDATORS_INDEX + 1;
             for (uint256 i; i < pubkeys.length; i++) {
-                // TODO: discuss this alienated to be checked or not
-                // possibly not needed since if the proposeStakeTimeStamp is 0
-                // then there is no possibility that it is alienated
                 require(
                     self.Validators[pubkeys[i]].state == 0,
                     "StakeUtils: Pubkey is already used or alienated"
@@ -1341,8 +1288,8 @@ library StakeUtils {
                     nextValidatorsIndex + i,
                     poolId,
                     operatorId,
-                    poolFee,
-                    operatorFee,
+                    fees[0],
+                    fees[1],
                     signatures[i]
                 );
                 emit PreStaked(pubkeys[i], poolId, operatorId);
@@ -1394,11 +1341,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 operatorId,
         bytes[] calldata pubkeys
-    )
-        external
-        onlyMaintainer(_DATASTORE, operatorId)
-        onlyTYPE(_DATASTORE, operatorId, [true, true, false])
-    {
+    ) external onlyMaintainer(_DATASTORE, operatorId) {
         require(!_isOracleActive(self), "StakeUtils: oracle is active");
         require(
             !isPrisoned(_DATASTORE, operatorId),

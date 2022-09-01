@@ -1284,7 +1284,6 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith("StakeUtils: Ice Bear doesn't like monopolies");
       });
 
-      // TODO: also make this test after a success state to check the calculation of allowance there
       it("not enough allowance", async () => {
         await expect(
           testContract
