@@ -58,6 +58,13 @@ library StakeUtils {
     event VerificationIndexUpdated(uint256 newIndex);
     event PreStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
+    event governanceParamsUpdated(
+        address DEFAULT_gETH_INTERFACE_,
+        address DEFAULT_DWP_,
+        address DEFAULT_LP_TOKEN_,
+        uint256 MAX_MAINTAINER_FEE_,
+        uint256 PERIOD_PRICE_INCREASE_LIMIT_
+    );
 
     /**
      * @param state 0: inactive, 1: proposed, 2: active, 3: withdrawn, 69: alien (https://bit.ly/3Tkc6UC)
@@ -98,8 +105,8 @@ library StakeUtils {
         address DEFAULT_DWP;
         address DEFAULT_LP_TOKEN;
         uint256 MAX_MAINTAINER_FEE;
-        uint256 MONOPOLY_THRESHOLD; // max number of validators an operator is allowed to operate.
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
+        uint256 MONOPOLY_THRESHOLD; // max number of validators an operator is allowed to operate.
         uint256 VALIDATORS_INDEX;
         uint256 VERIFICATION_INDEX;
         bytes32 PRICE_MERKLE_ROOT;
@@ -471,23 +478,49 @@ library StakeUtils {
      * @notice                      ** Governance specific functions **
      */
 
-    /**
-     * @notice Changes MAX_MAINTAINER_FEE, limits "fee" parameter of every ID.
-     * @dev to achieve 100% fee send FEE_DENOMINATOR
-     * @param _newMaxFee new fee percentage in terms of FEE_DENOMINATOR, reverts if more than FEE_DENOMINATOR
-     * note onlyGovernance check
-     */
-    function setMaxMaintainerFee(
+    function updateGovernanceParams(
         StakePool storage self,
         address _GOVERNANCE,
-        uint256 _newMaxFee
+        address _DEFAULT_gETH_INTERFACE, // contract?
+        address _DEFAULT_DWP, // contract?
+        address _DEFAULT_LP_TOKEN, // contract?
+        uint256 _MAX_MAINTAINER_FEE, // < 100
+        uint256 _PERIOD_PRICE_INCREASE_LIMIT
     ) external onlyGovernance(_GOVERNANCE) {
         require(
-            _newMaxFee <= FEE_DENOMINATOR,
-            "StakeUtils: fee more than 100%"
+            _DEFAULT_gETH_INTERFACE.code.length > 0,
+            "StakeUtils: DEFAULT_gETH_INTERFACE should be a contract"
         );
-        self.MAX_MAINTAINER_FEE = _newMaxFee;
-        emit MaxMaintainerFeeUpdated(_newMaxFee);
+        require(
+            _DEFAULT_DWP.code.length > 0,
+            "StakeUtils: DEFAULT_DWP should be a contract"
+        );
+        require(
+            _DEFAULT_LP_TOKEN.code.length > 0,
+            "StakeUtils: DEFAULT_LP_TOKEN should be a contract"
+        );
+        require(
+            _PERIOD_PRICE_INCREASE_LIMIT > 0,
+            "StakeUtils: incorrect PERIOD_PRICE_INCREASE_LIMIT"
+        );
+        require(
+            _MAX_MAINTAINER_FEE > 0 && _MAX_MAINTAINER_FEE <= FEE_DENOMINATOR,
+            "StakeUtils: incorrect MAX_MAINTAINER_FEE"
+        );
+
+        self.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
+        self.DEFAULT_DWP = _DEFAULT_DWP;
+        self.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
+        self.MAX_MAINTAINER_FEE = _MAX_MAINTAINER_FEE;
+        self.PERIOD_PRICE_INCREASE_LIMIT = _PERIOD_PRICE_INCREASE_LIMIT;
+
+        emit governanceParamsUpdated(
+            _DEFAULT_gETH_INTERFACE,
+            _DEFAULT_DWP,
+            _DEFAULT_LP_TOKEN,
+            _MAX_MAINTAINER_FEE,
+            _PERIOD_PRICE_INCREASE_LIMIT
+        );
     }
 
     /**

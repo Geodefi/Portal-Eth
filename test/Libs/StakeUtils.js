@@ -154,94 +154,6 @@ describe("StakeUtils", async () => {
     });
   });
 
-  describe("Maintainer Logic", () => {
-    beforeEach(async () => {
-      await testContract.connect(user1).beController(randId);
-      await testContract
-        .connect(user1)
-        .changeIdMaintainer(randId, user1.address);
-    });
-
-    describe("get/set MaintainerFee", () => {
-      describe("Succeeds set", async () => {
-        let effectTS;
-        beforeEach(async () => {
-          await testContract.connect(user1).switchMaintainerFee(randId, 12345);
-          effectTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60 - 1;
-        });
-        it("returns old value", async () => {
-          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
-        });
-        it("switches after a week", async () => {
-          await setTimestamp(effectTS);
-          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
-          await setTimestamp(effectTS + 1);
-          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
-          await setTimestamp(effectTS + 2);
-          expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
-        });
-      });
-      it("Reverts if > MAX", async () => {
-        await testContract.connect(user1).switchMaintainerFee(randId, 10 ** 9);
-        await expect(
-          testContract.connect(user1).switchMaintainerFee(randId, 10 ** 9 + 1)
-        ).to.be.revertedWith("StakeUtils: MAX_MAINTAINER_FEE ERROR");
-      });
-      it("Reverts if not maintainer", async () => {
-        await expect(
-          testContract.switchMaintainerFee(randId, 10 ** 9 + 1)
-        ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
-      });
-    });
-
-    describe("setMaxMaintainerFee", () => {
-      it("succeeds", async () => {
-        await testContract.setMaxMaintainerFee(0, deployer.address);
-        expect(
-          (await testContract.getStakePoolParams()).MAX_MAINTAINER_FEE
-        ).to.be.eq(0);
-
-        await testContract.setMaxMaintainerFee(10 ** 10, deployer.address);
-        expect(
-          (await testContract.getStakePoolParams()).MAX_MAINTAINER_FEE
-        ).to.be.eq(10 ** 10);
-      });
-      it("Reverts if > 100%", async () => {
-        await expect(
-          testContract.setMaxMaintainerFee(10 ** 10 + 1, deployer.address)
-        ).to.be.revertedWith("StakeUtils: fee more than 100%");
-      });
-      it("Reverts if not governance", async () => {
-        await expect(
-          testContract
-            .connect(user1)
-            .setMaxMaintainerFee(10 ** 10 + 1, deployer.address)
-        ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
-      });
-    });
-
-    describe("changeMaintainer", () => {
-      it("Succeeds", async () => {
-        await testContract
-          .connect(user1)
-          .changeIdMaintainer(randId, user2.address);
-        expect(await testContract.getMaintainerFromId(randId)).to.be.eq(
-          user2.address
-        );
-      });
-      it("Reverts if not controller", async () => {
-        await expect(
-          testContract.changeIdMaintainer(randId, user2.address)
-        ).to.be.revertedWith("StakeUtils: sender is NOT CONTROLLER");
-      });
-      it("Reverts if ZERO ADDRESS", async () => {
-        await expect(
-          testContract.connect(user1).changeIdMaintainer(randId, ZERO_ADDRESS)
-        ).to.be.revertedWith("StakeUtils: maintainer can NOT be zero");
-      });
-    });
-  });
-
   describe("Helper functions", () => {
     it("getgETH", async () => {
       expect(await testContract.getERC1155()).to.eq(gETH.address);
@@ -313,6 +225,250 @@ describe("StakeUtils", async () => {
           });
         });
       });
+    });
+  });
+
+  describe("Maintainer Logic", () => {
+    beforeEach(async () => {
+      await testContract.connect(user1).beController(randId);
+      await testContract
+        .connect(user1)
+        .changeIdMaintainer(randId, user1.address);
+    });
+
+    describe("get/set MaintainerFee", () => {
+      describe("Succeeds set", async () => {
+        let effectTS;
+        beforeEach(async () => {
+          await testContract.connect(user1).switchMaintainerFee(randId, 12345);
+          effectTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60 - 1;
+        });
+        it("returns old value", async () => {
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
+        });
+        it("switches after a week", async () => {
+          await setTimestamp(effectTS);
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
+          await setTimestamp(effectTS + 1);
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
+          await setTimestamp(effectTS + 2);
+          expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
+        });
+      });
+      it("Reverts if > MAX", async () => {
+        await testContract.connect(user1).switchMaintainerFee(randId, 10 ** 9);
+        await expect(
+          testContract.connect(user1).switchMaintainerFee(randId, 10 ** 9 + 1)
+        ).to.be.revertedWith("StakeUtils: MAX_MAINTAINER_FEE ERROR");
+      });
+      it("Reverts if not maintainer", async () => {
+        await expect(
+          testContract.switchMaintainerFee(randId, 10 ** 9 + 1)
+        ).to.be.revertedWith("StakeUtils: sender is NOT maintainer");
+      });
+    });
+
+    describe("changeMaintainer", () => {
+      it("Succeeds", async () => {
+        await testContract
+          .connect(user1)
+          .changeIdMaintainer(randId, user2.address);
+        expect(await testContract.getMaintainerFromId(randId)).to.be.eq(
+          user2.address
+        );
+      });
+      it("Reverts if not controller", async () => {
+        await expect(
+          testContract.changeIdMaintainer(randId, user2.address)
+        ).to.be.revertedWith("StakeUtils: sender is NOT CONTROLLER");
+      });
+      it("Reverts if ZERO ADDRESS", async () => {
+        await expect(
+          testContract.connect(user1).changeIdMaintainer(randId, ZERO_ADDRESS)
+        ).to.be.revertedWith("StakeUtils: maintainer can NOT be zero");
+      });
+    });
+  });
+
+  describe("updateGovernanceParams", () => {
+    it("Reverts if not governance", async () => {
+      await expect(
+        testContract
+          .connect(user1)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            DEFAULT_DWP,
+            DEFAULT_LP_TOKEN,
+            MAX_MAINTAINER_FEE,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
+    });
+
+    it("Reverts if DEFAULT_GETH_INTERFACE is 0 address", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            ZERO_ADDRESS,
+            DEFAULT_DWP,
+            DEFAULT_LP_TOKEN,
+            MAX_MAINTAINER_FEE,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith(
+        "StakeUtils: DEFAULT_gETH_INTERFACE should be a contract"
+      );
+    });
+
+    it("Reverts if DEFAULT_gETH_INTERFACE is NOT contract", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            user2.address,
+            DEFAULT_DWP,
+            DEFAULT_LP_TOKEN,
+            MAX_MAINTAINER_FEE,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith(
+        "StakeUtils: DEFAULT_gETH_INTERFACE should be a contract"
+      );
+    });
+
+    it("Reverts if DEFAULT_DWP is 0 address", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            ZERO_ADDRESS,
+            DEFAULT_LP_TOKEN,
+            MAX_MAINTAINER_FEE,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith("StakeUtils: DEFAULT_DWP should be a contract");
+    });
+
+    it("Reverts if DEFAULT_DWP is NOT contract", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            user2.address,
+            DEFAULT_LP_TOKEN,
+            MAX_MAINTAINER_FEE,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith("StakeUtils: DEFAULT_DWP should be a contract");
+    });
+
+    it("Reverts if DEFAULT_LP_TOKEN is 0 address", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            DEFAULT_DWP,
+            ZERO_ADDRESS,
+            MAX_MAINTAINER_FEE,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN should be a contract");
+    });
+
+    it("Reverts if DEFAULT_LP_TOKEN is NOT contract", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            DEFAULT_DWP,
+            user2.address,
+            MAX_MAINTAINER_FEE,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN should be a contract");
+    });
+
+    it("Reverts if Max Maintainer Fee > 100%", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            DEFAULT_DWP,
+            DEFAULT_LP_TOKEN,
+            10 ** 10 + 1,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
+    });
+
+    it("Reverts if Max Maintainer Fee == 0", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            DEFAULT_DWP,
+            DEFAULT_LP_TOKEN,
+            0,
+            PERIOD_PRICE_INCREASE_LIMIT
+          )
+      ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
+    });
+
+    it("Reverts if PERIOD_PRICE_INCREASE_LIMIT is zero", async () => {
+      await expect(
+        testContract
+          .connect(deployer)
+          .updateGovernanceParams(
+            deployer.address,
+            DEFAULT_GETH_INTERFACE,
+            DEFAULT_DWP,
+            DEFAULT_LP_TOKEN,
+            MAX_MAINTAINER_FEE,
+            0
+          )
+      ).to.be.revertedWith("StakeUtils: incorrect PERIOD_PRICE_INCREASE_LIMIT");
+    });
+
+    it("success, check params", async () => {
+      const { get } = deployments;
+      await testContract
+        .connect(deployer)
+        .updateGovernanceParams(
+          deployer.address,
+          DEFAULT_GETH_INTERFACE,
+          DEFAULT_DWP,
+          DEFAULT_LP_TOKEN,
+          MAX_MAINTAINER_FEE,
+          PERIOD_PRICE_INCREASE_LIMIT
+        );
+
+      const stakePoolParams = await testContract.getStakePoolParams();
+
+      expect(stakePoolParams.DEFAULT_gETH_INTERFACE).to.be.eq(
+        (await get("ERC20InterfacePermitUpgradable")).address
+      );
+      expect(stakePoolParams.DEFAULT_DWP).to.be.eq((await get("Swap")).address);
+      expect(stakePoolParams.DEFAULT_LP_TOKEN).to.be.eq(
+        (await get("LPToken")).address
+      );
+      expect(stakePoolParams.MAX_MAINTAINER_FEE).to.be.eq(1e9);
+      expect(stakePoolParams.PERIOD_PRICE_INCREASE_LIMIT).to.be.eq(2e7);
     });
   });
 
@@ -1045,6 +1201,7 @@ describe("StakeUtils", async () => {
         await testContract.initiatePlanet(
           planetId, // _id
           1e5, // _fee
+          5e2,
           user2.address, // _maintainer
           deployer.address, // _governance
           "beautiful-planet", // _interfaceName

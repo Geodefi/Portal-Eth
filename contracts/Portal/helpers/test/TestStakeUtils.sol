@@ -128,11 +128,22 @@ contract TestStakeUtils is ERC1155Holder {
         STAKEPOOL.switchMaintainerFee(DATASTORE, _id, _newFee);
     }
 
-    function setMaxMaintainerFee(uint256 _newMaxFee, address _governance)
-        external
-        virtual
-    {
-        STAKEPOOL.setMaxMaintainerFee(_governance, _newMaxFee);
+    function updateGovernanceParams(
+        address _GOVERNANCE,
+        address _DEFAULT_gETH_INTERFACE, // contract?
+        address _DEFAULT_DWP, // contract?
+        address _DEFAULT_LP_TOKEN, // contract?
+        uint256 _MAX_MAINTAINER_FEE, // < 100
+        uint256 _PERIOD_PRICE_INCREASE_LIMIT
+    ) external virtual {
+        STAKEPOOL.updateGovernanceParams(
+            _GOVERNANCE,
+            _DEFAULT_gETH_INTERFACE,
+            _DEFAULT_DWP,
+            _DEFAULT_LP_TOKEN,
+            _MAX_MAINTAINER_FEE,
+            _PERIOD_PRICE_INCREASE_LIMIT
+        );
     }
 
     function getMaintainerFee(uint256 _id)
