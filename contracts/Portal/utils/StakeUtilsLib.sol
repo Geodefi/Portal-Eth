@@ -1097,7 +1097,7 @@ library StakeUtils {
      */
 
     /**
-     *  @notice Creation of a Validator takes 3 steps. Before entering stakeBeacon function,
+     *  @notice Creation of a Validator takes 3 steps. Before entering beaconStake function,
      *  canStake verifies the eligibility of given pubKey that is proposed by an operator
      *  with Prestake function. Eligibility is defined by alienation, check alienate() for info.
      *
@@ -1282,7 +1282,7 @@ library StakeUtils {
      *  @dev Max number of validators to boostrap is MAX_DEPOSITS_PER_CALL (currently 64)
      *  @dev A pubkey that is alienated will not get through. Do not frontrun during PreStake.
      */
-    function stakeBeacon(
+    function beaconStake(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 operatorId,

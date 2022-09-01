@@ -1528,7 +1528,7 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("stakeBeacon", () => {
+    describe("beaconStake", () => {
       let prevSecured;
       let prevActiveValidators;
       let prevOperatorWallet;
@@ -1572,7 +1572,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .stakeBeacon(operatorId, Array(1).fill(pubkey1))
+            .beaconStake(operatorId, Array(1).fill(pubkey1))
         ).to.be.revertedWith("StakeUtils: oracle is active");
       });
 
@@ -1580,11 +1580,11 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .stakeBeacon(operatorId, Array(65).fill(pubkey1))
+            .beaconStake(operatorId, Array(65).fill(pubkey1))
         ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
 
         await expect(
-          testContract.connect(user1).stakeBeacon(operatorId, [])
+          testContract.connect(user1).beaconStake(operatorId, [])
         ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
       });
 
@@ -1602,7 +1602,7 @@ describe("StakeUtils", async () => {
         await expect(
           testContract
             .connect(user1)
-            .stakeBeacon(operatorId, [pubkey1, pubkey2])
+            .beaconStake(operatorId, [pubkey1, pubkey2])
         ).to.be.revertedWith(
           "StakeUtils: you are in prison, get in touch with governance"
         );
@@ -1613,7 +1613,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(user1)
-          .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+          .beaconStake(operatorId, [pubkey1, pubkey2]);
       });
 
       describe("success, check params", async () => {
@@ -1630,7 +1630,7 @@ describe("StakeUtils", async () => {
           prevContractBalance = await testContract.getContractBalance();
           await testContract
             .connect(user1)
-            .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+            .beaconStake(operatorId, [pubkey1, pubkey2]);
         });
 
         it("OperatorWalletBalance", async () => {
@@ -1807,7 +1807,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(user1)
-          .stakeBeacon(operatorId, [pubkey1, pubkey2]);
+          .beaconStake(operatorId, [pubkey1, pubkey2]);
 
         await setTimestamp(24 * 60 * 60 * 100001 + 0 * 60 + 10);
 
@@ -1845,7 +1845,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(user1)
-          .stakeBeacon(operatorId, [pubkey3, pubkey4]);
+          .beaconStake(operatorId, [pubkey3, pubkey4]);
 
         await testContract
           .connect(user1)
@@ -1887,7 +1887,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(user1)
-          .stakeBeacon(operatorId, [pubkey3, pubkey4]);
+          .beaconStake(operatorId, [pubkey3, pubkey4]);
 
         await testContract
           .connect(user1)

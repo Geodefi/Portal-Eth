@@ -398,11 +398,11 @@ contract TestStakeUtils is ERC1155Holder {
         );
     }
 
-    function stakeBeacon(uint256 operatorId, bytes[] calldata pubkeys)
+    function beaconStake(uint256 operatorId, bytes[] calldata pubkeys)
         external
         virtual
     {
-        STAKEPOOL.stakeBeacon(DATASTORE, operatorId, pubkeys);
+        STAKEPOOL.beaconStake(DATASTORE, operatorId, pubkeys);
     }
 
     function setSurplus(uint256 _id, uint256 _surplus) external {
