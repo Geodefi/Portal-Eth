@@ -533,11 +533,7 @@ library StakeUtils {
         uint256 _operatorId,
         uint256 value
     ) internal returns (bool success) {
-        _DATASTORE.writeUintForId(
-            _operatorId,
-            "wallet",
-            _DATASTORE.readUintForId(_operatorId, "wallet") + value
-        );
+        _DATASTORE.addUintForId(_operatorId, "wallet", value);
         return true;
     }
 
@@ -563,13 +559,11 @@ library StakeUtils {
         uint256 _operatorId,
         uint256 value
     ) internal returns (bool success) {
-        uint256 _balance = _DATASTORE.readUintForId(_operatorId, "wallet");
         require(
-            _balance >= value,
+            _DATASTORE.readUintForId(_operatorId, "wallet") >= value,
             "StakeUtils: Not enough resources in operatorWallet"
         );
-        _balance -= value;
-        _DATASTORE.writeUintForId(_operatorId, "wallet", _balance);
+        _DATASTORE.subUintForId(_operatorId, "wallet", value);
         return true;
     }
 
@@ -779,7 +773,10 @@ library StakeUtils {
         uint256[] calldata prisonedIds
     ) external onlyOracle(self) {
         require(!_isOracleActive(self), "StakeUtils: oracle is active");
-        require(all_validators_count > 1000, "StakeUtils: low validator count");
+        require(
+            all_validators_count >= 1000,
+            "StakeUtils: low validator count"
+        );
         require(
             self.VALIDATORS_INDEX >= new_verification_index,
             "StakeUtils: high VERIFICATION_INDEX"
@@ -797,22 +794,8 @@ library StakeUtils {
             );
             self.Validators[alienPubkeys[i]].state = 69;
             planetId = self.Validators[alienPubkeys[i]].planetId;
-            {
-                uint256 newSecured = _DATASTORE.readUintForId(
-                    planetId,
-                    "secured"
-                );
-                newSecured -= (DCU.DEPOSIT_AMOUNT);
-                _DATASTORE.writeUintForId(planetId, "secured", newSecured);
-            }
-            {
-                uint256 newSurplus = _DATASTORE.readUintForId(
-                    planetId,
-                    "surplus"
-                );
-                newSurplus += (DCU.DEPOSIT_AMOUNT);
-                _DATASTORE.writeUintForId(planetId, "surplus", newSurplus);
-            }
+            _DATASTORE.subUintForId(planetId, "secured", DCU.DEPOSIT_AMOUNT);
+            _DATASTORE.addUintForId(planetId, "surplus", DCU.DEPOSIT_AMOUNT);
             emit Alienation(alienPubkeys[i], true);
         }
 
@@ -827,22 +810,16 @@ library StakeUtils {
                 (DCU.DEPOSIT_AMOUNT)
             ) {
                 self.Validators[curedPubkeys[j]].state = 1;
-                {
-                    uint256 newSecured = _DATASTORE.readUintForId(
-                        planetId,
-                        "secured"
-                    );
-                    newSecured += (DCU.DEPOSIT_AMOUNT);
-                    _DATASTORE.writeUintForId(planetId, "secured", newSecured);
-                }
-                {
-                    uint256 newSurplus = _DATASTORE.readUintForId(
-                        planetId,
-                        "surplus"
-                    );
-                    newSurplus -= (DCU.DEPOSIT_AMOUNT);
-                    _DATASTORE.writeUintForId(planetId, "surplus", newSurplus);
-                }
+                _DATASTORE.addUintForId(
+                    planetId,
+                    "secured",
+                    DCU.DEPOSIT_AMOUNT
+                );
+                _DATASTORE.subUintForId(
+                    planetId,
+                    "surplus",
+                    DCU.DEPOSIT_AMOUNT
+                );
                 emit Alienation(curedPubkeys[j], false);
             }
         }
@@ -1089,11 +1066,8 @@ library StakeUtils {
                 ((remEth * gETH_DENOMINATOR) / _getPricePerShare(self, poolId))
             );
             _mint(self.gETH, msg.sender, poolId, mintgETH);
-            _DATASTORE.writeUintForId(
-                poolId,
-                "surplus",
-                _DATASTORE.readUintForId(poolId, "surplus") + remEth
-            );
+            _DATASTORE.addUintForId(poolId, "surplus", remEth);
+
             require(
                 boughtgETH + mintgETH >= mingETH,
                 "StakeUtils: less than mingETH"
@@ -1103,11 +1077,7 @@ library StakeUtils {
                     block.timestamp - (block.timestamp % ORACLE_PERIOD),
                     "mintBuffer"
                 );
-                uint256 mintBuffer = _DATASTORE.readUintForId(
-                    poolId,
-                    dailyBufferKey
-                ) + mintgETH;
-                _DATASTORE.writeUintForId(poolId, dailyBufferKey, mintBuffer);
+                _DATASTORE.addUintForId(poolId, dailyBufferKey, mintgETH);
             }
             return boughtgETH + mintgETH;
         }
@@ -1143,7 +1113,7 @@ library StakeUtils {
     /**
      *  @notice Validator Credentials Proposal function, first step of crating validators. Once a pubKey is proposed and not alienated for some time,
      *  it is optimistically allowed to take funds from staking pools.
-     *  @param planetId the id of the staking pool whose TYPE can be 5 or 6.
+     *  @param poolId the id of the staking pool whose TYPE can be 5 or 6.
      *  @param operatorId the id of the Operator whose maintainer calling this function
      *  @param pubkeys  Array of BLS12-381 public keys of the validators that will be proposed
      *  @param signatures Array of BLS12-381 signatures of the validators that will be proposed
@@ -1186,7 +1156,9 @@ library StakeUtils {
                 "proposedValidators"
             );
             require(
-                (proposedValidators + pubkeys.length) <= self.MONOPOLY_THRESHOLD
+                (proposedValidators + pubkeys.length) <=
+                    self.MONOPOLY_THRESHOLD,
+                "StakeUtils: Ice Bear doesn't like monopolies"
             );
         }
         {
@@ -1259,53 +1231,37 @@ library StakeUtils {
             );
             emit PreStaked(pubkeys[i], poolId, operatorId);
         }
-        {
-            uint256 createdValidators = _DATASTORE.readUintForId(
-                poolId,
-                _getKey(operatorId, "createdValidators")
-            );
-            _DATASTORE.writeUintForId(
-                poolId,
-                _getKey(operatorId, "createdValidators"),
-                createdValidators + pubkeys.length
-            );
-        }
-        {
-            uint256 proposedValidators = _DATASTORE.readUintForId(
-                operatorId,
-                "proposedValidators"
-            );
-            _DATASTORE.writeUintForId(
-                operatorId,
-                "proposedValidators",
-                proposedValidators + pubkeys.length
-            );
-        }
-        {
-            uint256 surplus = _DATASTORE.readUintForId(poolId, "surplus");
-            _DATASTORE.writeUintForId(
-                poolId,
-                "surplus",
-                surplus - DCU.DEPOSIT_AMOUNT * pubkeys.length
-            );
-        }
-        {
-            uint256 secured = _DATASTORE.readUintForId(poolId, "secured") +
-                (DCU.DEPOSIT_AMOUNT) *
-                pubkeys.length;
-            _DATASTORE.writeUintForId(poolId, "secured", secured);
-        }
+        _DATASTORE.addUintForId(
+            poolId,
+            _getKey(operatorId, "createdValidators"),
+            pubkeys.length
+        );
+        _DATASTORE.addUintForId(
+            operatorId,
+            "proposedValidators",
+            pubkeys.length
+        );
+        _DATASTORE.subUintForId(
+            poolId,
+            "surplus",
+            DCU.DEPOSIT_AMOUNT * pubkeys.length
+        );
+        _DATASTORE.addUintForId(
+            poolId,
+            "secured",
+            (DCU.DEPOSIT_AMOUNT) * pubkeys.length
+        );
         self.VALIDATORS_INDEX += pubkeys.length;
     }
 
     //helper struct for Stack too deep and contract size
-    struct StakeMemory {
-        uint256 planetId;
-        uint256 secured;
-        uint256 activeValidators;
-        bytes signature;
-        bytes withdrawalCredential;
-    }
+    // struct StakeMemory {
+    //     uint256 planetId;
+    //     uint256 secured;
+    //     uint256 activeValidators;
+    //     bytes signature;
+    //     bytes withdrawalCredential;
+    // }
 
     /**
      *  @notice Sends 31 Eth from staking pool to validators that are previously created with PreStake.
@@ -1348,69 +1304,68 @@ library StakeUtils {
         }
         bytes32 activeValKey = _getKey(operatorId, "activeValidators");
 
-        StakeMemory memory sm;
-        {
-            uint256 planetId = self.Validators[pubkeys[0]].planetId;
-            sm = StakeMemory(
-                planetId,
-                _DATASTORE.readUintForId(planetId, "secured"),
-                _DATASTORE.readUintForId(planetId, activeValKey),
-                self.Validators[pubkeys[0]].signature,
-                _DATASTORE.readBytesForId(planetId, "withdrawalCredential")
-            );
-        }
+        uint256 planetId = self.Validators[pubkeys[0]].planetId;
+
+        // {
+        // StakeMemory memory sm;
+        //     sm = StakeMemory(
+        //         planetId,
+        //         _DATASTORE.readUintForId(planetId, "secured"),
+        //         _DATASTORE.readUintForId(planetId, activeValKey),
+        //         self.Validators[pubkeys[0]].signature,
+        //         _DATASTORE.readBytesForId(planetId, "withdrawalCredential")
+        //     );
+        // }
 
         uint256 lastPlanetChange;
         for (uint256 i; i < pubkeys.length; ++i) {
-            if (sm.planetId != self.Validators[pubkeys[i]].planetId) {
-                _DATASTORE.writeUintForId(
-                    sm.planetId,
+            if (planetId != self.Validators[pubkeys[i]].planetId) {
+                _DATASTORE.subUintForId(
+                    planetId,
                     "secured",
-                    sm.secured - (DCU.DEPOSIT_AMOUNT) * (i - lastPlanetChange)
+                    (DCU.DEPOSIT_AMOUNT) * (i - lastPlanetChange)
                 );
-                _DATASTORE.writeUintForId(
-                    sm.planetId,
+                _DATASTORE.addUintForId(
+                    planetId,
                     activeValKey,
-                    sm.activeValidators + (i - lastPlanetChange)
+                    (i - lastPlanetChange)
                 );
 
                 lastPlanetChange = i;
-                sm.planetId = self.Validators[pubkeys[i]].planetId;
-                sm.activeValidators = _DATASTORE.readUintForId(
-                    sm.planetId,
-                    "activeValidators"
-                );
-                sm.withdrawalCredential = _DATASTORE.readBytesForId(
-                    sm.planetId,
-                    "withdrawalCredential"
-                );
+                planetId = self.Validators[pubkeys[i]].planetId;
+                // sm.activeValidators = _DATASTORE.readUintForId(
+                //     planetId,
+                //     "activeValidators"
+                // );
+                // sm.withdrawalCredential = _DATASTORE.readBytesForId(
+                //     planetId,
+                //     "withdrawalCredential"
+                // );
             }
-
-            sm.signature = self.Validators[pubkeys[i]].signature;
-
-            // TODO: there is no deposit contract, solve and open this comment
-            // DCU.depositValidator(
-            //     pubkeys[i],
-            //     sm.withdrawalCredential,
-            //     sm.signature,
-            //     DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
-            // );
+            {
+                // bytes memory signature = self.Validators[pubkeys[i]].signature;
+                // TODO: there is no deposit contract, solve and open this comment
+                // DCU.depositValidator(
+                //     pubkeys[i],
+                //     sm.withdrawalCredential,
+                //     signature,
+                //     DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
+                // );
+            }
 
             self.Validators[pubkeys[i]].state = 2;
             emit BeaconStaked(pubkeys[i]);
         }
 
-        _DATASTORE.writeUintForId(
-            sm.planetId,
+        _DATASTORE.subUintForId(
+            planetId,
             "secured",
-            sm.secured -
-                DCU.DEPOSIT_AMOUNT *
-                (pubkeys.length - lastPlanetChange)
+            DCU.DEPOSIT_AMOUNT * (pubkeys.length - lastPlanetChange)
         );
-        _DATASTORE.writeUintForId(
-            sm.planetId,
+        _DATASTORE.addUintForId(
+            planetId,
             activeValKey,
-            sm.activeValidators + pubkeys.length - lastPlanetChange
+            pubkeys.length - lastPlanetChange
         );
 
         _increaseOperatorWallet(
