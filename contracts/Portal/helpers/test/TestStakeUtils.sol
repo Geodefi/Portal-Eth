@@ -409,6 +409,10 @@ contract TestStakeUtils is ERC1155Holder {
         DATASTORE.writeUintForId(_id, "surplus", _surplus);
     }
 
+    function setMONOPOLY_THRESHOLD(uint256 threshold) external virtual {
+        STAKEPOOL.MONOPOLY_THRESHOLD = threshold;
+    }
+
     function regulateOperators(
         uint256 all_validators_count,
         uint256 new_verification_index,

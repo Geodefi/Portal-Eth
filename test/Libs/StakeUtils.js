@@ -711,6 +711,7 @@ describe("StakeUtils", async () => {
       );
     });
   });
+
   describe("Staking Operations ", () => {
     let wpoolContract;
     let preContBal;
@@ -960,6 +961,7 @@ describe("StakeUtils", async () => {
 
     describe("proposeStake", () => {
       beforeEach(async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
         await testContract.setType(operatorId, 4);
         await testContract.beController(operatorId);
         await testContract.initiateOperator(
@@ -1041,7 +1043,19 @@ describe("StakeUtils", async () => {
           testContract.connect(user1).proposeStake(planetId, operatorId, [], [])
         ).to.be.revertedWith("StakeUtils: 1 to 64 nodes per transaction");
       });
-
+      it("reverts if monopoly", async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1);
+        await expect(
+          testContract
+            .connect(user1)
+            .proposeStake(
+              planetId,
+              operatorId,
+              [pubkey1, pubkey2],
+              [signature1, signature2]
+            )
+        ).to.be.revertedWith("StakeUtils: Ice Bear doesn't like monopolies");
+      });
       // TODO: also make this test after a success state to check the calculation of allowance there
       it("not enough allowance", async () => {
         await expect(
@@ -1193,7 +1207,7 @@ describe("StakeUtils", async () => {
 
             await testContract
               .connect(oracle)
-              .regulateOperators(0, [], [], [operatorId]);
+              .regulateOperators(1000, 0, [], [], [operatorId]);
             releaseTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
           });
 
@@ -1298,196 +1312,9 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("regulateOperators", () => {
-      beforeEach(async () => {
-        await testContract.beController(operatorId);
-        await testContract.changeIdMaintainer(operatorId, user1.address);
-        await testContract.beController(planetId);
-        await testContract.changeIdMaintainer(planetId, user2.address);
-        await testContract.setType(operatorId, 4);
-        await testContract.setType(planetId, 5);
-        await testContract.setSurplus(planetId, String(1e20));
-        await testContract
-          .connect(user2)
-          .approveOperator(planetId, operatorId, 3);
-
-        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
-          value: String(5e18),
-        });
-      });
-
-      it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
-        await expect(
-          testContract.connect(oracle).regulateOperators(2, [pubkey4], [], [])
-        ).to.be.reverted;
-      });
-
-      it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
-        await expect(
-          testContract.connect(oracle).regulateOperators(2, [pubkey4], [], [])
-        ).to.be.reverted;
-      });
-
-      it("reverts if VERIFICATION_INDEX is bigger than new index point", async () => {
-        await testContract
-          .connect(user1)
-          .proposeStake(
-            planetId,
-            operatorId,
-            [pubkey1, pubkey2, pubkey3],
-            [signature1, signature2, signature3]
-          );
-        await testContract
-          .connect(oracle)
-          .regulateOperators(2, [pubkey3], [], []);
-
-        await expect(
-          testContract.connect(oracle).regulateOperators(1, [], [], [])
-        ).to.be.reverted;
-      });
-
-      it("reverts if not pending validator tried to be alienated", async () => {
-        await testContract
-          .connect(user1)
-          .proposeStake(
-            planetId,
-            operatorId,
-            [pubkey1, pubkey2],
-            [signature1, signature2]
-          );
-        await expect(
-          testContract.connect(oracle).regulateOperators(2, [pubkey3], [], [])
-        ).to.be.revertedWith("StakeUtils: NOT all alienPubkeys are pending");
-      });
-
-      it("reverts if not alienated validator tried to be cured", async () => {
-        await testContract
-          .connect(user1)
-          .proposeStake(
-            planetId,
-            operatorId,
-            [pubkey1, pubkey2],
-            [signature1, signature2]
-          );
-        await expect(
-          testContract.connect(oracle).regulateOperators(2, [], [pubkey3], [])
-        ).to.be.revertedWith("StakeUtils: NOT all curedPubkeys are alienated");
-      });
-      it("cant cure if not enough surplus", async () => {
-        await testContract
-          .connect(user1)
-          .proposeStake(planetId, operatorId, [pubkey1], [signature1]);
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1, [pubkey1], [], []);
-        await testContract.setSurplus(planetId, 0);
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1, [], [pubkey1], []);
-        expect((await testContract.getValidatorData(pubkey1)).state).to.be.eq(
-          69
-        );
-      });
-      describe("success", async () => {
-        let surplus;
-        let secured;
-        beforeEach(async () => {
-          await testContract
-            .connect(user1)
-            .proposeStake(planetId, operatorId, [pubkey1], [signature1]);
-          expect(await testContract.getVALIDATORS_INDEX()).to.be.eq(1);
-          surplus = await testContract.surplusById(planetId);
-          secured = await testContract.securedById(planetId);
-        });
-        describe("Alienated", async () => {
-          beforeEach(async () => {
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1, [pubkey1], [], []);
-            expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
-          });
-          it("check validator.state", async () => {
-            expect(
-              (await testContract.getValidatorData(pubkey1)).state
-            ).to.be.eq(69);
-          });
-          it("check surplus", async () => {
-            expect(await testContract.surplusById(planetId)).to.be.eq(
-              surplus.add(String(32e18))
-            );
-          });
-          it("check secured", async () => {
-            expect(await testContract.securedById(planetId)).to.be.eq(
-              secured.sub(String(32e18))
-            );
-          });
-        });
-        describe("Cured", async () => {
-          beforeEach(async () => {
-            await testContract.setSurplus(planetId, String(1e20));
-            await testContract.Receive({ value: String(1e20) });
-            surplus = await testContract.surplusById(planetId);
-            secured = await testContract.securedById(planetId);
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1, [pubkey1], [], []);
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1, [], [pubkey1], []);
-            expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
-          });
-          it("check validator.state", async () => {
-            expect(
-              (await testContract.getValidatorData(pubkey1)).state
-            ).to.be.eq(1);
-          });
-          it("check surplus", async () => {
-            expect(0).to.be.eq(
-              surplus.sub(await testContract.surplusById(planetId))
-            );
-          });
-          it("check secured", async () => {
-            expect(String(0)).to.be.eq(
-              (await testContract.securedById(planetId)).sub(secured)
-            );
-          });
-        });
-        describe("Prisoned", async () => {
-          let releaseTs;
-          beforeEach(async () => {
-            await testContract.setSurplus(planetId, String(1e20));
-            await testContract.Receive({ value: String(1e20) });
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1, [], [], [operatorId]);
-            releaseTs = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
-          });
-          it("released after 7 days", async () => {
-            expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
-            await setTimestamp(releaseTs + 1);
-            expect(await testContract.isPrisoned(operatorId)).to.be.eq(false);
-          });
-          describe("releasePrisoned", async () => {
-            it("reverts when not called by Governance", async () => {
-              await expect(
-                testContract
-                  .connect(user1)
-                  .releasePrisoned(operatorId, deployer.address)
-              ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
-            });
-            it("success", async () => {
-              await testContract
-                .connect(deployer)
-                .releasePrisoned(operatorId, deployer.address);
-              expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
-            });
-          });
-        });
-      });
-    });
-
     describe("canStake", () => {
       beforeEach(async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
         await testContract.beController(operatorId);
         await testContract.changeIdMaintainer(operatorId, user1.address);
         await testContract.beController(planetId);
@@ -1518,12 +1345,16 @@ describe("StakeUtils", async () => {
       });
 
       it("returns false if VERIFICATION_INDEX is smaller than validator's index", async () => {
-        await testContract.connect(oracle).regulateOperators(1, [], [], []);
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 1, [], [], []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(false);
       });
 
       it("returns true", async () => {
-        await testContract.connect(oracle).regulateOperators(2, [], [], []);
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 2, [], [], []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(true);
       });
     });
@@ -1534,6 +1365,7 @@ describe("StakeUtils", async () => {
       let prevOperatorWallet;
       let prevContractBalance;
       beforeEach(async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
         await testContract.beController(operatorId);
         await testContract.changeIdMaintainer(operatorId, user1.address);
         await testContract.beController(planetId);
@@ -1597,7 +1429,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(oracle)
-          .regulateOperators(2, [], [], [operatorId]);
+          .regulateOperators(1000, 2, [], [], [operatorId]);
 
         await expect(
           testContract
@@ -1625,7 +1457,9 @@ describe("StakeUtils", async () => {
             });
           prevSecured = await testContract.securedById(planetId);
 
-          await testContract.connect(oracle).regulateOperators(2, [], [], []);
+          await testContract
+            .connect(oracle)
+            .regulateOperators(1000, 2, [], [], []);
 
           prevContractBalance = await testContract.getContractBalance();
           await testContract
@@ -1674,6 +1508,207 @@ describe("StakeUtils", async () => {
   });
 
   describe("Oracle Operations", async () => {
+    describe("regulateOperators", () => {
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.changeIdMaintainer(operatorId, user1.address);
+        await testContract.beController(planetId);
+        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+        await testContract.setSurplus(planetId, String(1e20));
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 3);
+
+        await testContract.connect(user1).increaseOperatorWallet(operatorId, {
+          value: String(5e18),
+        });
+      });
+
+      it("reverts if low validator count", async () => {
+        await expect(
+          testContract
+            .connect(oracle)
+            .regulateOperators(999, 2, [pubkey4], [], [])
+        ).to.be.revertedWith("StakeUtils: low validator count");
+      });
+
+      it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
+        await expect(
+          testContract
+            .connect(oracle)
+            .regulateOperators(1000, 2, [pubkey4], [], [])
+        ).to.be.revertedWith("StakeUtils: high VERIFICATION_INDEX");
+      });
+
+      it("reverts if VERIFICATION_INDEX is bigger than new index point", async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
+        await testContract
+          .connect(user1)
+          .proposeStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2, pubkey3],
+            [signature1, signature2, signature3]
+          );
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 2, [pubkey3], [], []);
+
+        await expect(
+          testContract.connect(oracle).regulateOperators(1000, 1, [], [], [])
+        ).to.be.revertedWith("StakeUtils: low VERIFICATION_INDEX");
+      });
+
+      it("reverts if not pending validator tried to be alienated", async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
+        await testContract
+          .connect(user1)
+          .proposeStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2],
+            [signature1, signature2]
+          );
+        await expect(
+          testContract
+            .connect(oracle)
+            .regulateOperators(1000, 2, [pubkey3], [], [])
+        ).to.be.revertedWith("StakeUtils: NOT all alienPubkeys are pending");
+      });
+
+      it("reverts if not alienated validator tried to be cured", async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
+        await testContract
+          .connect(user1)
+          .proposeStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2],
+            [signature1, signature2]
+          );
+        await expect(
+          testContract
+            .connect(oracle)
+            .regulateOperators(1000, 2, [], [pubkey3], [])
+        ).to.be.revertedWith("StakeUtils: NOT all curedPubkeys are alienated");
+      });
+      it("cant cure if not enough surplus", async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
+        await testContract
+          .connect(user1)
+          .proposeStake(planetId, operatorId, [pubkey1], [signature1]);
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 1, [pubkey1], [], []);
+        await testContract.setSurplus(planetId, 0);
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 1, [], [pubkey1], []);
+        expect((await testContract.getValidatorData(pubkey1)).state).to.be.eq(
+          69
+        );
+      });
+      describe("success", async () => {
+        let surplus;
+        let secured;
+        beforeEach(async () => {
+          await testContract.setMONOPOLY_THRESHOLD(1000);
+          await testContract
+            .connect(user1)
+            .proposeStake(planetId, operatorId, [pubkey1], [signature1]);
+          expect(await testContract.getVALIDATORS_INDEX()).to.be.eq(1);
+          surplus = await testContract.surplusById(planetId);
+          secured = await testContract.securedById(planetId);
+        });
+        describe("Alienated", async () => {
+          beforeEach(async () => {
+            await testContract
+              .connect(oracle)
+              .regulateOperators(1000, 1, [pubkey1], [], []);
+            expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
+          });
+          it("check validator.state", async () => {
+            expect(
+              (await testContract.getValidatorData(pubkey1)).state
+            ).to.be.eq(69);
+          });
+          it("check surplus", async () => {
+            expect(await testContract.surplusById(planetId)).to.be.eq(
+              surplus.add(String(32e18))
+            );
+          });
+          it("check secured", async () => {
+            expect(await testContract.securedById(planetId)).to.be.eq(
+              secured.sub(String(32e18))
+            );
+          });
+        });
+        describe("Cured", async () => {
+          beforeEach(async () => {
+            await testContract.setSurplus(planetId, String(1e20));
+            await testContract.Receive({ value: String(1e20) });
+            surplus = await testContract.surplusById(planetId);
+            secured = await testContract.securedById(planetId);
+            await testContract
+              .connect(oracle)
+              .regulateOperators(1000, 1, [pubkey1], [], []);
+            await testContract
+              .connect(oracle)
+              .regulateOperators(1000, 1, [], [pubkey1], []);
+            expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
+          });
+          it("check validator.state", async () => {
+            expect(
+              (await testContract.getValidatorData(pubkey1)).state
+            ).to.be.eq(1);
+          });
+          it("check surplus", async () => {
+            expect(0).to.be.eq(
+              surplus.sub(await testContract.surplusById(planetId))
+            );
+          });
+          it("check secured", async () => {
+            expect(String(0)).to.be.eq(
+              (await testContract.securedById(planetId)).sub(secured)
+            );
+          });
+        });
+        describe("Prisoned", async () => {
+          let releaseTs;
+          beforeEach(async () => {
+            await testContract.setSurplus(planetId, String(1e20));
+            await testContract.Receive({ value: String(1e20) });
+            await testContract
+              .connect(oracle)
+              .regulateOperators(1000, 1, [], [], [operatorId]);
+            releaseTs = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
+          });
+          it("released after 7 days", async () => {
+            expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
+            await setTimestamp(releaseTs + 1);
+            expect(await testContract.isPrisoned(operatorId)).to.be.eq(false);
+          });
+          describe("releasePrisoned", async () => {
+            it("reverts when not called by Governance", async () => {
+              await expect(
+                testContract
+                  .connect(user1)
+                  .releasePrisoned(operatorId, deployer.address)
+              ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
+            });
+            it("success", async () => {
+              await testContract
+                .connect(deployer)
+                .releasePrisoned(operatorId, deployer.address);
+              expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
+            });
+          });
+        });
+      });
+    });
+
     it("_setPricePerShare", async () => {
       await testContract.setPricePerShare(String(1e20), randId);
       expect(await gETH.pricePerShare(randId)).to.eq(String(1e20));
@@ -1768,6 +1803,7 @@ describe("StakeUtils", async () => {
 
     describe("_findPrices_ClearBuffer", async () => {
       beforeEach(async () => {
+        await testContract.setMONOPOLY_THRESHOLD(1000);
         await testContract.setPricePerShare(String(1e18), planetId);
         await testContract.beController(operatorId);
         await testContract.changeIdMaintainer(operatorId, user1.address);
@@ -1795,7 +1831,9 @@ describe("StakeUtils", async () => {
             [pubkey1, pubkey2, pubkey3, pubkey4],
             [signature1, signature2, signature3, signature4]
           );
-        await testContract.connect(oracle).regulateOperators(2, [], [], []);
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 2, [], [], []);
 
         await testContract.setORACLE_UPDATE_TIMESTAMP(
           24 * 60 * 60 * 100000 + 0 * 60 + 1
@@ -1841,7 +1879,9 @@ describe("StakeUtils", async () => {
       it("works when oracle missed 1 day", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
 
-        await testContract.connect(oracle).regulateOperators(4, [], [], []);
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 4, [], [], []);
 
         await testContract
           .connect(user1)
@@ -1883,7 +1923,9 @@ describe("StakeUtils", async () => {
       it("works when oracle missed 20 days", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
 
-        await testContract.connect(oracle).regulateOperators(4, [], [], []);
+        await testContract
+          .connect(oracle)
+          .regulateOperators(1000, 4, [], [], []);
 
         await testContract
           .connect(user1)
