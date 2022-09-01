@@ -38,6 +38,22 @@ contract DataStoreUtilsTest {
         DATASTORE.writeUintForId(_id, _key, data);
     }
 
+    function addUintForId(
+        uint256 _id,
+        bytes32 _key,
+        uint256 addend
+    ) public {
+        DATASTORE.addUintForId(_id, _key, addend);
+    }
+
+    function subUintForId(
+        uint256 _id,
+        bytes32 _key,
+        uint256 minuend
+    ) public {
+        DATASTORE.subUintForId(_id, _key, minuend);
+    }
+
     function writeBytesForId(
         uint256 _id,
         bytes32 _key,

@@ -75,6 +75,24 @@ library DataStoreUtils {
         self.uintData[keccak256(abi.encodePacked(_id, _key))] = data;
     }
 
+    function addUintForId(
+        DataStore storage self,
+        uint256 _id,
+        bytes32 _key,
+        uint256 addend
+    ) internal {
+        self.uintData[keccak256(abi.encodePacked(_id, _key))] += addend;
+    }
+
+    function subUintForId(
+        DataStore storage self,
+        uint256 _id,
+        bytes32 _key,
+        uint256 minuend
+    ) internal {
+        self.uintData[keccak256(abi.encodePacked(_id, _key))] -= minuend;
+    }
+
     function writeBytesForId(
         DataStore storage self,
         uint256 _id,
