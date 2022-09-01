@@ -138,7 +138,6 @@ library StakeUtils {
     uint256 public constant DEFAULT_FEE = (4 * FEE_DENOMINATOR) / 10000;
     uint256 public constant DEFAULT_ADMIN_FEE = (5 * FEE_DENOMINATOR) / 10;
 
-    // TODO: type check?
     modifier onlyMaintainer(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
@@ -148,6 +147,23 @@ library StakeUtils {
             "StakeUtils: sender is NOT maintainer"
         );
         _;
+    }
+    modifier onlyTYPE(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        bool[3] memory _typeFlags
+    ) {
+        uint256 idType = _DATASTORE.readUintForId(_id, "TYPE");
+        if (idType == 4) {
+            require(_typeFlags[0], "StakeUtils: id is NOT operator");
+            _;
+        } else if (idType == 5) {
+            require(_typeFlags[1], "StakeUtils: id is NOT planet");
+            _;
+        } else if (idType == 6) {
+            require(_typeFlags[2], "StakeUtils: id is NOT comet");
+            _;
+        }
     }
 
     modifier onlyOracle(StakePool storage self) {
@@ -574,7 +590,12 @@ library StakeUtils {
         uint256 _planetId,
         uint256 _operatorId,
         uint256 _allowance
-    ) external onlyMaintainer(_DATASTORE, _planetId) returns (bool) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, _planetId)
+        onlyTYPE(_DATASTORE, _planetId, [false, true, true])
+        returns (bool)
+    {
         _DATASTORE.writeUintForId(
             _planetId,
             _getKey(_operatorId, "allowance"),
@@ -621,7 +642,12 @@ library StakeUtils {
     function increaseOperatorWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId
-    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, _operatorId)
+        onlyTYPE(_DATASTORE, _operatorId, [true, true, false])
+        returns (bool success)
+    {
         return _increaseOperatorWallet(_DATASTORE, _operatorId, msg.value);
     }
 
@@ -652,7 +678,12 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, _operatorId)
+        onlyTYPE(_DATASTORE, _operatorId, [true, true, false])
+        returns (bool success)
+    {
         require(
             address(this).balance >= value,
             "StakeUtils: Not enough resources in Portal"
@@ -679,7 +710,11 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 _newPeriod
-    ) external onlyMaintainer(_DATASTORE, _operatorId) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, _operatorId)
+        onlyTYPE(_DATASTORE, _operatorId, [true, true, false])
+    {
         _DATASTORE.writeUintForId(_operatorId, "cometPeriod", _newPeriod);
     }
 
@@ -802,7 +837,11 @@ library StakeUtils {
     function pauseStakingForPool(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
-    ) external onlyMaintainer(_DATASTORE, _id) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, _id)
+        onlyTYPE(_DATASTORE, _id, [false, true, true])
+    {
         require(
             !isStakingPausedForPool(_DATASTORE, _id),
             "StakeUtils: staking is already paused for pool"
@@ -817,7 +856,11 @@ library StakeUtils {
     function unpauseStakingForPool(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
-    ) external onlyMaintainer(_DATASTORE, _id) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, _id)
+        onlyTYPE(_DATASTORE, _id, [false, true, true])
+    {
         require(
             isStakingPausedForPool(_DATASTORE, _id),
             "StakeUtils: staking is already NOT paused for pool"
@@ -1209,7 +1252,11 @@ library StakeUtils {
         uint256 operatorId,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
-    ) external onlyMaintainer(_DATASTORE, operatorId) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, operatorId)
+        onlyTYPE(_DATASTORE, operatorId, [true, true, false])
+    {
         require(
             !isPrisoned(_DATASTORE, operatorId),
             "StakeUtils: you are in prison, get in touch with governance"
@@ -1347,7 +1394,11 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 operatorId,
         bytes[] calldata pubkeys
-    ) external onlyMaintainer(_DATASTORE, operatorId) {
+    )
+        external
+        onlyMaintainer(_DATASTORE, operatorId)
+        onlyTYPE(_DATASTORE, operatorId, [true, true, false])
+    {
         require(!_isOracleActive(self), "StakeUtils: oracle is active");
         require(
             !isPrisoned(_DATASTORE, operatorId),
