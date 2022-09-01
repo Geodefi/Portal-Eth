@@ -216,24 +216,63 @@ library StakeUtils {
 
     /**
      *  @notice if a planet did not unset an old Interface, before setting a new one;
-     *  & if new interface is unset, the old one will not be remembered!!
-     *  use gETH.isInterface(interface,  id)
      * @param _Interface address of the new gETH ERC1155 interface for given ID
-     * @param isSet true if new interface is going to be set, false if old interface is being unset
      */
-    function _setInterface(
+    function setInterface(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
-        address _Interface,
-        bool isSet
-    ) internal {
-        getgETH(self).setInterface(_Interface, _id, isSet);
-        if (isSet)
-            _DATASTORE.writeAddressForId(_id, "currentInterface", _Interface);
-        else if (
-            _DATASTORE.readAddressForId(_id, "currentInterface") == _Interface
-        ) _DATASTORE.writeAddressForId(_id, "currentInterface", address(0));
+        address _Interface
+    ) public {
+        uint256 IL = _DATASTORE.readUintForId(_id, "interfacesLength");
+        require(
+            getgETH(self).isInterface(_Interface, _id),
+            "StakeUtils: already an interface"
+        );
+        _DATASTORE.writeAddressForId(
+            _id,
+            _getKey(IL, "interfaces"),
+            _Interface
+        );
+        _DATASTORE.addUintForId(_id, "interfacesLength", 1);
+        getgETH(self).setInterface(_Interface, _id, true);
+    }
+
+    function unsetInterface(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        uint256 _index
+    ) external {
+        address _Interface = _DATASTORE.readAddressForId(
+            _id,
+            _getKey(_index, "interfaces")
+        );
+        require(
+            !getgETH(self).isInterface(_Interface, _id),
+            "StakeUtils: already NOT an interface"
+        );
+        _DATASTORE.writeAddressForId(
+            _id,
+            _getKey(_index, "interfaces"),
+            address(0)
+        );
+        getgETH(self).setInterface(_Interface, _id, false);
+    }
+
+    function allInterfaces(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) external view returns (address[] memory) {
+        uint256 IL = _DATASTORE.readUintForId(_id, "interfacesLength");
+        address[] memory interfaces = new address[](IL);
+        for (uint256 i = 0; i < IL; i++) {
+            interfaces[i] = _DATASTORE.readAddressForId(
+                _id,
+                _getKey(i, "interfaces")
+            );
+        }
+        return interfaces;
     }
 
     /**
@@ -282,15 +321,15 @@ library StakeUtils {
         );
         _DATASTORE.writeUintForId(_id, "fee", _fee);
         {
-            address currentInterface = _clone(self.DEFAULT_gETH_INTERFACE);
             address gEth = address(getgETH(self));
-            ERC20InterfacePermitUpgradable(currentInterface).initialize(
+            address gInterface = _clone(self.DEFAULT_gETH_INTERFACE);
+            ERC20InterfacePermitUpgradable(gInterface).initialize(
                 _id,
                 _interfaceName,
                 _interfaceSymbol,
                 gEth
             );
-            _setInterface(self, _DATASTORE, _id, currentInterface, true);
+            _setInterface(self, _DATASTORE, _id, gInterface);
         }
 
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
@@ -787,7 +826,7 @@ library StakeUtils {
         );
 
         uint256 planetId;
-        for (uint256 i; i < alienPubkeys.length; ++i) {
+        for (uint256 i; i < alienPubkeys.length; i++) {
             require(
                 self.Validators[alienPubkeys[i]].state == 1,
                 "StakeUtils: NOT all alienPubkeys are pending"
@@ -1005,7 +1044,6 @@ library StakeUtils {
                 priceProofs[i]
             );
         }
-
         self.ORACLE_UPDATE_TIMESTAMP =
             block.timestamp -
             (block.timestamp % ORACLE_PERIOD);
@@ -1191,7 +1229,7 @@ library StakeUtils {
                 "withdrawalCredential"
             );
             uint256 nextValidatorsIndex = self.VALIDATORS_INDEX + 1;
-            for (uint256 i; i < pubkeys.length; ++i) {
+            for (uint256 i; i < pubkeys.length; i++) {
                 // TODO: discuss this alienated to be checked or not
                 // possibly not needed since if the proposeStakeTimeStamp is 0
                 // then there is no possibility that it is alienated
@@ -1301,7 +1339,7 @@ library StakeUtils {
             );
 
             uint256 lastPlanetChange;
-            for (uint256 i; i < pubkeys.length; ++i) {
+            for (uint256 i; i < pubkeys.length; i++) {
                 if (planetId != self.Validators[pubkeys[i]].planetId) {
                     _DATASTORE.subUintForId(
                         planetId,
