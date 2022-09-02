@@ -229,7 +229,7 @@ contract Swap is
     }
 
     /**
-     * @notice Get Debt, The amount of buyback for stable pricing (1=1).
+     * @notice Debt, The amount of buyback for stable pricing (1=1).
      * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
      */
     function getDebt() external view virtual override returns (uint256) {
@@ -455,6 +455,14 @@ contract Swap is
         returns (uint256)
     {
         return swapStorage.removeLiquidityImbalance(amounts, maxBurnAmount);
+    }
+
+    /**
+     * @notice donate ether as fee, respecting the admin fee
+     * @return true if operation is successful
+     */
+    function donateEtherFees() external payable returns (bool) {
+        return swapStorage.donateEtherFees(msg.value);
     }
 
     /*** ADMIN FUNCTIONS ***/
