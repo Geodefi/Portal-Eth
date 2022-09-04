@@ -80,6 +80,7 @@ library StakeUtils {
         uint256 operatorId;
         uint256 planetFee;
         uint256 operatorFee;
+        // address withdrawalCredentialContract;
         bytes signature;
     }
     /**
@@ -1159,6 +1160,56 @@ library StakeUtils {
         }
     }
 
+    function withdrawPlanet(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 poolId,
+        uint256 withdrawAmount,
+        uint256 minETH,
+        uint256 deadline
+    ) external returns (uint256 totalgETH) {
+        {
+            require(
+                withdrawAmount <= getgETH(self).balanceOf(msg.sender, poolId),
+                "Cannot swap more than you own"
+            );
+
+            // Transfer tokens first
+            uint256 beforeBalance = getgETH(self).balanceOf(
+                address(this),
+                poolId
+            );
+            getgETH(self).safeTransferFrom(
+                msg.sender,
+                address(this),
+                poolId,
+                withdrawAmount,
+                ""
+            );
+
+            // Use the actual transferred amount
+            withdrawAmount =
+                getgETH(self).balanceOf(address(this), poolId) -
+                beforeBalance;
+        }
+        uint256 remWithdrawETH = (
+            ((withdrawAmount * _getPricePerShare(self, poolId)) /
+                gETH_DENOMINATOR)
+        );
+        uint256 surplus = _DATASTORE.readUintForId(poolId, "surplus");
+        if (surplus > remWithdrawETH) {
+            _DATASTORE.subUintForId(poolId, "surplus", remWithdrawETH);
+            //burn
+        } else {
+            _DATASTORE.writeUintForId(poolId, "surplus", 0);
+            // buyback and burn
+            // if oracle active organize dailyBufferKey
+        }
+
+        (bool sent, ) = payable(msg.sender).call{value: remWithdrawETH}("");
+        require(sent, "SwapUtils: Failed to send Ether");
+    }
+
     /**
      * @notice                      ** Validator Creation functions **
      */
@@ -1290,6 +1341,7 @@ library StakeUtils {
                     operatorId,
                     fees[0],
                     fees[1],
+                    // withdrawalContract(),
                     signatures[i]
                 );
                 emit PreStaked(pubkeys[i], poolId, operatorId);
