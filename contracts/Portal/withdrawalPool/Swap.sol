@@ -194,6 +194,10 @@ contract Swap is
      * @notice Return id of the pooled token
      * @return id of the pooled gEther token
      */
+    function getSwapFee() external view virtual override returns (uint256) {
+        return swapStorage.swapFee;
+    }
+
     function getToken() external view virtual override returns (uint256) {
         return swapStorage.pooledTokenId;
     }
@@ -459,10 +463,17 @@ contract Swap is
 
     /**
      * @notice donate ether as fee, respecting the admin fee
-     * @return true if operation is successful
+     * @return amount of fees paid, basically EthDonation and gEthDonation if successful
      */
-    function donateEtherFees() external payable returns (bool) {
-        return swapStorage.donateEtherFees(msg.value);
+    function donateBalancedFees(uint256 EthDonation, uint256 gEthDonation)
+        external
+        payable
+        override
+        nonReentrant
+        returns (uint256, uint256)
+    {
+        require(msg.value == EthDonation, "Swap: received less or more ETH than expected");
+        return swapStorage.donateBalancedFees(EthDonation, gEthDonation);
     }
 
     /*** ADMIN FUNCTIONS ***/

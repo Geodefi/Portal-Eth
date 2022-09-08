@@ -10,6 +10,7 @@ import "../gETHInterfaces/ERC20InterfacePermitUpgradable.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/ISwap.sol";
 import "../../interfaces/ILPToken.sol";
+import "hardhat/console.sol";
 
 /**
  * @title StakeUtils library
@@ -63,6 +64,7 @@ library StakeUtils {
         address DEFAULT_DWP_,
         address DEFAULT_LP_TOKEN_,
         uint256 MAX_MAINTAINER_FEE_,
+        uint256 BOOSTRAP_PERIOD_,
         uint256 PERIOD_PRICE_INCREASE_LIMIT_
     );
 
@@ -106,6 +108,7 @@ library StakeUtils {
         address DEFAULT_DWP;
         address DEFAULT_LP_TOKEN;
         uint256 MAX_MAINTAINER_FEE;
+        uint256 BOOSTRAP_PERIOD;
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 MONOPOLY_THRESHOLD; // max number of validators an operator is allowed to operate.
         uint256 VALIDATORS_INDEX;
@@ -187,7 +190,7 @@ library StakeUtils {
 
         _;
 
-        _DATASTORE.writeUintForId(_id, "initiated", 1);
+        _DATASTORE.writeUintForId(_id, "initiated", block.timestamp);
         emit IdInitiated(_id, _type);
     }
 
@@ -485,6 +488,7 @@ library StakeUtils {
         address _DEFAULT_DWP, // contract?
         address _DEFAULT_LP_TOKEN, // contract?
         uint256 _MAX_MAINTAINER_FEE, // < 100
+        uint256 _BOOSTRAP_PERIOD,
         uint256 _PERIOD_PRICE_INCREASE_LIMIT
     ) external onlyGovernance(_GOVERNANCE) {
         require(
@@ -512,6 +516,7 @@ library StakeUtils {
         self.DEFAULT_DWP = _DEFAULT_DWP;
         self.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
         self.MAX_MAINTAINER_FEE = _MAX_MAINTAINER_FEE;
+        self.BOOSTRAP_PERIOD = _BOOSTRAP_PERIOD;
         self.PERIOD_PRICE_INCREASE_LIMIT = _PERIOD_PRICE_INCREASE_LIMIT;
 
         emit governanceParamsUpdated(
@@ -519,6 +524,7 @@ library StakeUtils {
             _DEFAULT_DWP,
             _DEFAULT_LP_TOKEN,
             _MAX_MAINTAINER_FEE,
+            _BOOSTRAP_PERIOD,
             _PERIOD_PRICE_INCREASE_LIMIT
         );
     }
@@ -696,48 +702,6 @@ library StakeUtils {
      * @notice                      ** WITHDRAWAL POOL specific functions **
      */
 
-    /**
-     * @notice conducts a buyback using the given withdrawal pool,
-     * @param to address to send bought gETH(id). burns the tokens if to=address(0), transfers if not
-     * @param poolId id of the gETH that will be bought
-     * @param sellEth ETH amount to sell
-     * @param minToBuy TX is expected to revert by Swap.sol if not meet
-     * @param deadline TX is expected to revert by Swap.sol if deadline has past
-     * @dev this function assumes that pool is deployed by deployWithdrawalPool
-     * as index 0 is eth and index 1 is Geth
-     */
-    function _buyback(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage _DATASTORE,
-        address to,
-        uint256 poolId,
-        uint256 sellEth,
-        uint256 minToBuy,
-        uint256 deadline
-    ) internal returns (uint256 outAmount) {
-        // SWAP in WP
-        outAmount = withdrawalPoolById(_DATASTORE, poolId).swap{value: sellEth}(
-            0,
-            1,
-            sellEth,
-            minToBuy,
-            deadline
-        );
-        if (to == address(0)) {
-            // burn
-            getgETH(self).burn(address(this), poolId, outAmount);
-        } else {
-            // send back to user
-            getgETH(self).safeTransferFrom(
-                address(this),
-                to,
-                poolId,
-                outAmount,
-                ""
-            );
-        }
-    }
-
     function withdrawalPoolById(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
@@ -851,7 +815,7 @@ library StakeUtils {
         uint256[] calldata prisonedIds
     ) external onlyOracle(self) {
         require(!_isOracleActive(self), "StakeUtils: oracle is active");
-        require(allValidatorsCount >= 1000, "StakeUtils: low validator count");
+        require(allValidatorsCount > 999, "StakeUtils: low validator count");
         require(
             self.VALIDATORS_INDEX >= newVerificationIndex,
             "StakeUtils: high VERIFICATION_INDEX"
@@ -988,7 +952,7 @@ library StakeUtils {
     function _priceSync(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
-        bytes32 dailyBufferKey,
+        bytes32[2] memory dailyBufferKeys,
         uint256 index,
         uint256 poolId,
         uint256 beaconBalance,
@@ -998,7 +962,8 @@ library StakeUtils {
         (uint256 oraclePrice, uint256 price) = _findPrices_ClearBuffer(
             self,
             _DATASTORE,
-            dailyBufferKey,
+            dailyBufferKeys[0],
+            dailyBufferKeys[1],
             poolId,
             beaconBalance
         );
@@ -1014,7 +979,8 @@ library StakeUtils {
     function _findPrices_ClearBuffer(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
-        bytes32 dailyBufferKey,
+        bytes32 dailyBufferMintKey,
+        bytes32 dailyBufferBurnKey,
         uint256 poolId,
         uint256 beaconBalance
     ) internal returns (uint256, uint256) {
@@ -1025,15 +991,26 @@ library StakeUtils {
         uint256 supply = getgETH(self).totalSupply(poolId);
 
         uint256 unbufferedEther = totalEther -
-            (_DATASTORE.readUintForId(poolId, dailyBufferKey) *
+            (_DATASTORE.readUintForId(poolId, dailyBufferMintKey) *
+                getgETH(self).pricePerShare(poolId)) /
+            gETH_DENOMINATOR;
+
+        unbufferedEther +=
+            (_DATASTORE.readUintForId(poolId, dailyBufferBurnKey) *
                 getgETH(self).pricePerShare(poolId)) /
             gETH_DENOMINATOR;
 
         uint256 unbufferedSupply = supply -
-            _DATASTORE.readUintForId(poolId, dailyBufferKey);
+            _DATASTORE.readUintForId(poolId, dailyBufferMintKey);
+
+        unbufferedSupply += _DATASTORE.readUintForId(
+            poolId,
+            dailyBufferBurnKey
+        );
 
         // clears daily buffer for the gas refund
-        _DATASTORE.writeUintForId(poolId, dailyBufferKey, 0);
+        _DATASTORE.writeUintForId(poolId, dailyBufferMintKey, 0);
+        _DATASTORE.writeUintForId(poolId, dailyBufferBurnKey, 0);
         return (totalEther / supply, unbufferedEther / unbufferedSupply);
     }
 
@@ -1063,16 +1040,22 @@ library StakeUtils {
             ORACLE_ACTIVE_PERIOD -
             self.ORACLE_UPDATE_TIMESTAMP) / ORACLE_PERIOD;
 
-        bytes32 dailyBufferKey = _getKey(
-            block.timestamp - (block.timestamp % ORACLE_PERIOD),
-            "mintBuffer"
-        );
+        bytes32[2] memory dailyBufferKeys = [
+            _getKey(
+                block.timestamp - (block.timestamp % ORACLE_PERIOD),
+                "mintBuffer"
+            ),
+            _getKey(
+                block.timestamp - (block.timestamp % ORACLE_PERIOD),
+                "burnBuffer"
+            )
+        ];
 
         for (uint256 i = 0; i < beaconBalances.length; i++) {
             _priceSync(
                 self,
                 _DATASTORE,
-                dailyBufferKey,
+                dailyBufferKeys,
                 i,
                 _DATASTORE.allIdsByType[5][i],
                 beaconBalances[i],
@@ -1088,6 +1071,47 @@ library StakeUtils {
     /**
      * @notice                      * STAKING functions *
      */
+    /**
+     * @notice conducts a buyback using the given withdrawal pool,
+     * @param to address to send bought gETH(id). burns the tokens if to=address(0), transfers if not
+     * @param poolId id of the gETH that will be bought
+     * @param sellEth ETH amount to sell
+     * @param minToBuy TX is expected to revert by Swap.sol if not meet
+     * @param deadline TX is expected to revert by Swap.sol if deadline has past
+     * @dev this function assumes that pool is deployed by deployWithdrawalPool
+     * as index 0 is eth and index 1 is Geth
+     */
+    function _buyback(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        address to,
+        uint256 poolId,
+        uint256 sellEth,
+        uint256 minToBuy,
+        uint256 deadline
+    ) internal returns (uint256 outAmount) {
+        // SWAP in WP
+        outAmount = withdrawalPoolById(_DATASTORE, poolId).swap{value: sellEth}(
+            0,
+            1,
+            sellEth,
+            minToBuy,
+            deadline
+        );
+        if (to == address(0)) {
+            // burn
+            getgETH(self).burn(address(this), poolId, outAmount);
+        } else {
+            // send back to user
+            getgETH(self).safeTransferFrom(
+                address(this),
+                to,
+                poolId,
+                outAmount,
+                ""
+            );
+        }
+    }
 
     /**
      * @notice staking function. buys if price is low, mints new tokens if a surplus is sent (extra ETH through msg.value)
@@ -1100,14 +1124,15 @@ library StakeUtils {
      * // 10 100  =>  buyback + mint
      * // 0 x => mint
      */
-    function stakePlanet(
+    function depositPlanet(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 poolId,
         uint256 mingETH,
         uint256 deadline
     ) external returns (uint256 totalgETH) {
-        require(msg.value > 0, "StakeUtils: no eth given");
+        require(deadline > block.timestamp, "StakeUtils: deadline not met");
+        require(msg.value > 1e15, "StakeUtils: eth should be > 1e15");
         require(
             !isStakingPausedForPool(_DATASTORE, poolId),
             "StakeUtils: minting is paused"
@@ -1160,54 +1185,117 @@ library StakeUtils {
         }
     }
 
+    function _donateBalancedFees(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 poolId,
+        uint256 burnSurplus,
+        uint256 burnGeth
+    ) internal returns (uint256 EthDonation, uint256 gEthDonation) {
+        // find half of the fees to burn from surplus
+        uint256 fee = withdrawalPoolById(_DATASTORE, poolId).getSwapFee();
+        EthDonation = (burnSurplus * fee) / FEE_DENOMINATOR / 2;
+
+        // find the remaining half as gETH with respect to PPS
+        gEthDonation = (burnGeth * fee) / FEE_DENOMINATOR / 2;
+
+        //send both fees to DWP
+        withdrawalPoolById(_DATASTORE, poolId).donateBalancedFees{
+            value: EthDonation
+        }(EthDonation, gEthDonation);
+    }
+
+    // surplus >= ethtoburn => surplus -=ethtoburn
+    // surplus < ethtoburn => surplus -= surplus
+    function _burnSurplus(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 poolId,
+        uint256 gEthToWithdraw
+    ) internal returns (uint256, uint256) {
+        uint256 pps = _getPricePerShare(self, poolId);
+
+        uint256 spentGeth = gEthToWithdraw;
+        uint256 spentSurplus = ((spentGeth * pps) / gETH_DENOMINATOR);
+        uint256 surplus = _DATASTORE.readUintForId(poolId, "surplus");
+        if (spentSurplus >= surplus) {
+            spentSurplus = surplus;
+            spentGeth = ((spentSurplus * gETH_DENOMINATOR) / pps);
+        }
+
+        (uint256 EthDonation, uint256 gEthDonation) = _donateBalancedFees(
+            _DATASTORE,
+            poolId,
+            spentSurplus,
+            spentGeth
+        );
+
+        _DATASTORE.subUintForId(poolId, "surplus", spentSurplus);
+        getgETH(self).burn(address(this), poolId, spentGeth - gEthDonation);
+
+        if (_isOracleActive(self)) {
+            bytes32 dailyBufferKey = _getKey(
+                block.timestamp - (block.timestamp % ORACLE_PERIOD),
+                "burnBuffer"
+            );
+            _DATASTORE.addUintForId(poolId, dailyBufferKey, spentGeth);
+        }
+
+        return (spentSurplus - (EthDonation * 2), gEthToWithdraw - spentGeth);
+    }
+
     function withdrawPlanet(
         StakePool storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 poolId,
-        uint256 withdrawAmount,
+        uint256 gEthToWithdraw,
         uint256 minETH,
         uint256 deadline
-    ) external returns (uint256 totalgETH) {
-        {
-            require(
-                withdrawAmount <= getgETH(self).balanceOf(msg.sender, poolId),
-                "Cannot swap more than you own"
-            );
+    ) external returns (uint256 EthToSend) {
+        require(deadline > block.timestamp, "StakeUtils: deadline not met");
 
-            // Transfer tokens first
+        {
+            // transfer token first
             uint256 beforeBalance = getgETH(self).balanceOf(
                 address(this),
                 poolId
             );
+
             getgETH(self).safeTransferFrom(
                 msg.sender,
                 address(this),
                 poolId,
-                withdrawAmount,
+                gEthToWithdraw,
                 ""
             );
-
-            // Use the actual transferred amount
-            withdrawAmount =
+            // Use the transferred amount
+            gEthToWithdraw =
                 getgETH(self).balanceOf(address(this), poolId) -
                 beforeBalance;
         }
-        uint256 remWithdrawETH = (
-            ((withdrawAmount * _getPricePerShare(self, poolId)) /
-                gETH_DENOMINATOR)
-        );
-        uint256 surplus = _DATASTORE.readUintForId(poolId, "surplus");
-        if (surplus > remWithdrawETH) {
-            _DATASTORE.subUintForId(poolId, "surplus", remWithdrawETH);
-            //burn
-        } else {
-            _DATASTORE.writeUintForId(poolId, "surplus", 0);
-            // buyback and burn
-            // if oracle active organize dailyBufferKey
+
+        if (
+            block.timestamp >
+            _DATASTORE.readUintForId(poolId, "initiated") + self.BOOSTRAP_PERIOD
+        ) {
+            (EthToSend, gEthToWithdraw) = _burnSurplus(
+                self,
+                _DATASTORE,
+                poolId,
+                gEthToWithdraw
+            );
         }
 
-        (bool sent, ) = payable(msg.sender).call{value: remWithdrawETH}("");
-        require(sent, "SwapUtils: Failed to send Ether");
+        if (gEthToWithdraw > 0) {
+            EthToSend += withdrawalPoolById(_DATASTORE, poolId).swap(
+                1,
+                0,
+                gEthToWithdraw,
+                EthToSend >= minETH ? 0 : minETH - EthToSend,
+                deadline
+            );
+        }
+        (bool sent, ) = payable(msg.sender).call{value: EthToSend}("");
+        require(sent, "StakeUtils: Failed to send Ether");
     }
 
     /**

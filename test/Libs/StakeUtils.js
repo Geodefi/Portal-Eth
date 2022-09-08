@@ -50,6 +50,7 @@ const {
 
 const { solidity } = require("ethereum-waffle");
 const chai = require("chai");
+const { ethers } = require("hardhat");
 
 chai.use(solidity);
 const { expect } = chai;
@@ -62,6 +63,7 @@ const INITIAL_A_VALUE = 60;
 const SWAP_FEE = 4e6; // 4bps
 const ADMIN_FEE = 5e9; // 0
 const PERIOD_PRICE_INCREASE_LIMIT = 2e7;
+const BOOSTRAP_PERIOD = 3 * 30 * 24 * 60 * 60;
 const MAX_MAINTAINER_FEE = 1e9;
 
 describe("StakeUtils", async () => {
@@ -106,7 +108,8 @@ describe("StakeUtils", async () => {
       oracle.address,
       DEFAULT_DWP,
       DEFAULT_LP_TOKEN,
-      DEFAULT_GETH_INTERFACE
+      DEFAULT_GETH_INTERFACE,
+      BOOSTRAP_PERIOD
     );
     await gETH.updateMinterRole(testContract.address);
     await gETH.updateOracleRole(testContract.address);
@@ -149,6 +152,11 @@ describe("StakeUtils", async () => {
     it("correct VERIFICATION_INDEX", async () => {
       expect(stakepool.VERIFICATION_INDEX).to.eq(String(0));
     });
+
+    it("correct BOOSTRAP_PERIOD", async () => {
+      expect(stakepool.BOOSTRAP_PERIOD).to.eq(BOOSTRAP_PERIOD);
+    });
+
     it("correct VALIDATORS_INDEX", async () => {
       expect(stakepool.VALIDATORS_INDEX).to.eq(String(0));
     });
@@ -301,6 +309,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             DEFAULT_LP_TOKEN,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith("StakeUtils: sender is NOT GOVERNANCE");
@@ -316,6 +325,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             DEFAULT_LP_TOKEN,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith(
@@ -333,6 +343,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             DEFAULT_LP_TOKEN,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith(
@@ -350,6 +361,7 @@ describe("StakeUtils", async () => {
             ZERO_ADDRESS,
             DEFAULT_LP_TOKEN,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith("StakeUtils: DEFAULT_DWP should be a contract");
@@ -365,6 +377,7 @@ describe("StakeUtils", async () => {
             user2.address,
             DEFAULT_LP_TOKEN,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith("StakeUtils: DEFAULT_DWP should be a contract");
@@ -380,6 +393,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             ZERO_ADDRESS,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN should be a contract");
@@ -395,6 +409,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             user2.address,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN should be a contract");
@@ -410,6 +425,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             DEFAULT_LP_TOKEN,
             10 ** 10 + 1,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
@@ -425,6 +441,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             DEFAULT_LP_TOKEN,
             0,
+            BOOSTRAP_PERIOD,
             PERIOD_PRICE_INCREASE_LIMIT
           )
       ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
@@ -440,6 +457,7 @@ describe("StakeUtils", async () => {
             DEFAULT_DWP,
             DEFAULT_LP_TOKEN,
             MAX_MAINTAINER_FEE,
+            BOOSTRAP_PERIOD,
             0
           )
       ).to.be.revertedWith("StakeUtils: incorrect PERIOD_PRICE_INCREASE_LIMIT");
@@ -455,6 +473,7 @@ describe("StakeUtils", async () => {
           DEFAULT_DWP,
           DEFAULT_LP_TOKEN,
           MAX_MAINTAINER_FEE,
+          BOOSTRAP_PERIOD,
           PERIOD_PRICE_INCREASE_LIMIT
         );
 
@@ -468,6 +487,7 @@ describe("StakeUtils", async () => {
         (await get("LPToken")).address
       );
       expect(stakePoolParams.MAX_MAINTAINER_FEE).to.be.eq(1e9);
+      expect(stakePoolParams.BOOSTRAP_PERIOD).to.be.eq(3 * 30 * 24 * 60 * 60);
       expect(stakePoolParams.PERIOD_PRICE_INCREASE_LIMIT).to.be.eq(2e7);
     });
   });
@@ -550,6 +570,7 @@ describe("StakeUtils", async () => {
     });
 
     describe("success", async () => {
+      let timestamp;
       beforeEach(async () => {
         await testContract.connect(user1).initiateOperator(
           randId, // _id
@@ -557,19 +578,18 @@ describe("StakeUtils", async () => {
           user1.address, // _maintainer
           69 // _cometPeriod
         );
-      });
-      // check initiated parameter is set as 1
-      it("check initiated parameter is set as 1", async () => {
-        expect(await testContract.isInitiated(randId)).to.be.eq(1);
+        timestamp = await getCurrentBlockTimestamp();
       });
 
-      // check maintainer is set correctly
+      it("check initiated parameter is set as timestamp", async () => {
+        expect(await testContract.whenInitiated(randId)).to.be.eq(timestamp);
+      });
+
       it("check maintainer is set correctly", async () => {
         setMaintainer = await testContract.getMaintainerFromId(randId);
         expect(setMaintainer).to.be.eq(user1.address);
       });
 
-      // check fee is set correctly
       it("check fee is correct", async () => {
         setFee = await testContract.getMaintainerFee(randId);
         expect(setFee).to.be.eq(1e5);
@@ -949,236 +969,610 @@ describe("StakeUtils", async () => {
     let preTotSup;
     let debt;
     let preSwapBals;
+    let preSwapFees;
 
     beforeEach(async () => {
       await testContract.beController(randId);
       await testContract.changeIdMaintainer(randId, user1.address);
     });
 
-    describe("StakePlanet", () => {
+    // describe("depositPlanet", () => {
+    //   beforeEach(async () => {
+    //     await testContract.deployWithdrawalPool(randId);
+    //     const wpool = await testContract.withdrawalPoolById(randId);
+    //     wpoolContract = await ethers.getContractAt("Swap", wpool);
+
+    //     await testContract.setPricePerShare(String(1e18), randId);
+
+    //     await testContract
+    //       .connect(deployer)
+    //       .mintgETH(deployer.address, randId, String(1e20));
+
+    //     await gETH.connect(deployer).setApprovalForAll(wpool, true);
+
+    //     // initially there is no debt
+    //     await wpoolContract
+    //       .connect(deployer)
+    //       .addLiquidity([String(1e20), String(1e20)], 0, MAX_UINT256, {
+    //         value: String(1e20),
+    //       });
+
+    //     debt = await wpoolContract.getDebt();
+    //     expect(debt).to.be.eq(0);
+    //     preUserBal = await provider.getBalance(user1.address);
+    //     preUsergETHBal = await gETH.balanceOf(user1.address, randId);
+
+    //     preContBal = await provider.getBalance(testContract.address);
+    //     preContgETHBal = await gETH.balanceOf(testContract.address, randId);
+
+    //     preSurplus = ethers.BigNumber.from(
+    //       await testContract.surplusById(randId)
+    //     );
+    //     preTotSup = await gETH.totalSupply(randId);
+
+    //     preSwapBals = [
+    //       await wpoolContract.getTokenBalance(0),
+    //       await wpoolContract.getTokenBalance(1),
+    //     ];
+    //   });
+
+    //   it("reverts when wrongId is given", async () => {
+    //     await expect(
+    //       testContract.connect(user1).depositPlanet(wrongId, 0, MAX_UINT256, {
+    //         value: String(1e18),
+    //       })
+    //     ).to.be.reverted;
+    //   });
+
+    //   it("reverts when pool is paused", async () => {
+    //     await testContract.connect(user1).pauseStakingForPool(randId);
+    //     await expect(
+    //       testContract.depositPlanet(randId, 0, MAX_UINT256, {
+    //         value: String(2e18),
+    //       })
+    //     ).to.be.revertedWith("StakeUtils: minting is paused");
+    //   });
+
+    //   describe("succeeds", () => {
+    //     let gasUsed;
+
+    //     describe("when NO buyback (no pause, no debt), and while oracle active", () => {
+    //       beforeEach(async () => {
+    //         await setTimestamp(24 * 60 * 60 * 100000 + 100);
+    //         // ensure that it starts as zero.
+    //         expect(await testContract.dailyMintBuffer(randId)).to.be.eq(0);
+    //         const tx = await testContract
+    //           .connect(user1)
+    //           .depositPlanet(randId, 0, MAX_UINT256, {
+    //             value: String(1e18),
+    //           });
+    //         const receipt = await tx.wait();
+    //         gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
+    //       });
+
+    //       it("user lost ether more than stake (+gas) ", async () => {
+    //         const newBal = await provider.getBalance(user1.address);
+    //         expect(newBal.add(gasUsed)).to.be.eq(
+    //           ethers.BigNumber.from(String(preUserBal)).sub(String(1e18))
+    //         );
+    //       });
+
+    //       it("user gained gETH (mintedAmount)", async () => {
+    //         const price = await testContract.getPricePerShare(randId);
+    //         expect(price).to.be.eq(String(1e18));
+    //         const mintedAmount = ethers.BigNumber.from(String(1e18))
+    //           .div(price)
+    //           .mul(String(1e18));
+    //         const newBal = await gETH.balanceOf(user1.address, randId);
+    //         expect(newBal).to.be.eq(preUsergETHBal.add(mintedAmount));
+    //       });
+
+    //       it("contract gained ether = minted gETH", async () => {
+    //         const newBal = await provider.getBalance(testContract.address);
+    //         expect(newBal).to.be.eq(String(preContBal.add(String(1e18))));
+    //       });
+
+    //       it("contract gEth bal did not change", async () => {
+    //         const newBal = await gETH.balanceOf(testContract.address, randId);
+    //         expect(newBal).to.be.eq(preContgETHBal);
+    //       });
+
+    //       it("id surplus increased", async () => {
+    //         const newSur = await testContract.surplusById(randId);
+    //         expect(newSur.toString()).to.be.eq(
+    //           String(preSurplus.add(String(1e18)))
+    //         );
+    //       });
+
+    //       it("mintBuffer increased = minted gETH ", async () => {
+    //         const dailyMintBuffer = await testContract.dailyMintBuffer(randId);
+    //         const price = await testContract.getPricePerShare(randId);
+    //         expect(dailyMintBuffer).to.be.eq(
+    //           ethers.BigNumber.from(String(1e18)).div(price).mul(String(1e18))
+    //         );
+    //       });
+
+    //       it("gETH minted ", async () => {
+    //         // minted amount from ORACLE PRICE
+    //         const price = await testContract.getPricePerShare(randId);
+    //         expect(price).to.be.eq(String(1e18));
+    //         const mintedAmount = ethers.BigNumber.from(String(1e18))
+    //           .div(price)
+    //           .mul(String(1e18));
+    //         const TotSup = await gETH.totalSupply(randId);
+    //         expect(TotSup.toString()).to.be.eq(
+    //           String(preTotSup.add(mintedAmount))
+    //         );
+    //       });
+
+    //       it("swapContract gETH balances NOT changed", async () => {
+    //         const swapBals = [
+    //           await wpoolContract.getTokenBalance(0),
+    //           await wpoolContract.getTokenBalance(1),
+    //         ];
+    //         expect(swapBals[0]).to.be.eq(preSwapBals[0]);
+    //         expect(swapBals[1]).to.be.eq(preSwapBals[1]);
+    //       });
+    //     });
+
+    //     describe("when paused pool is unpaused and not balanced", async () => {
+    //       let gasUsed;
+    //       let newPreUserBal;
+
+    //       beforeEach(async () => {
+    //         await testContract.connect(user1).pauseStakingForPool(randId);
+    //         await testContract.connect(user1).unpauseStakingForPool(randId);
+    //         newPreUserBal = await provider.getBalance(user1.address);
+    //         await testContract
+    //           .connect(deployer)
+    //           .depositPlanet(randId, 0, MAX_UINT256, {
+    //             value: String(1e20),
+    //           });
+    //         await wpoolContract
+    //           .connect(deployer)
+    //           .addLiquidity([String(0), String(1e20)], 0, MAX_UINT256);
+    //         debt = await wpoolContract.getDebt();
+    //         preSwapBals = [
+    //           await wpoolContract.getTokenBalance(0),
+    //           await wpoolContract.getTokenBalance(1),
+    //         ];
+    //         preContBal = await provider.getBalance(testContract.address);
+    //         preSurplus = ethers.BigNumber.from(
+    //           await testContract.surplusById(randId)
+    //         );
+    //         const tx = await testContract
+    //           .connect(user1)
+    //           .depositPlanet(randId, 0, MAX_UINT256, {
+    //             value: String(5e20),
+    //           });
+    //         const receipt = await tx.wait();
+    //         gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
+    //       });
+
+    //       it("user lost ether more than stake (+gas) ", async () => {
+    //         const newBal = await provider.getBalance(user1.address);
+    //         expect(newBal).to.be.eq(
+    //           ethers.BigNumber.from(String(newPreUserBal))
+    //             .sub(String(5e20))
+    //             .sub(gasUsed)
+    //         );
+    //       });
+
+    //       it("user gained gether more than minted amount (+ wrapped) ", async () => {
+    //         const price = await testContract.getPricePerShare(randId);
+    //         expect(price).to.be.eq(String(1e18));
+    //         const mintedAmount = ethers.BigNumber.from(String(1e18))
+    //           .div(price)
+    //           .mul(String(1e18));
+    //         const newBal = await gETH.balanceOf(user1.address, randId);
+    //         expect(newBal).to.be.gt(preUsergETHBal.add(mintedAmount));
+    //       });
+
+    //       it("contract gained ether = minted ", async () => {
+    //         const newBal = await provider.getBalance(testContract.address);
+    //         expect(newBal).to.be.eq(
+    //           String(
+    //             preContBal.add(ethers.BigNumber.from("450143212807943082239")) // lower than 5e20 since wp got its part
+    //           )
+    //         );
+    //       });
+
+    //       it("contract gEth bal did not change", async () => {
+    //         const newBal = await gETH.balanceOf(testContract.address, randId);
+    //         expect(newBal).to.be.eq(preContgETHBal);
+    //       });
+
+    //       it("id surplus increased", async () => {
+    //         const newSur = await testContract.surplusById(randId);
+    //         expect(newSur).to.be.eq(
+    //           String(
+    //             preSurplus.add(ethers.BigNumber.from("450143212807943082239")) // lower than 5e20 since wp got its part
+    //           )
+    //         );
+    //       });
+
+    //       it("swapContract gETH and Ether balance changed accordingly", async () => {
+    //         const swapBals = [
+    //           await wpoolContract.getTokenBalance(0),
+    //           await wpoolContract.getTokenBalance(1),
+    //         ];
+    //         expect(swapBals[0]).to.be.eq(
+    //           ethers.BigNumber.from(String(preSwapBals[0])).add(debt)
+    //         );
+    //         expect(swapBals[1]).to.be.lt(preSwapBals[1]); // gEth
+    //       });
+    //     });
+    //   });
+    // });
+
+    describe("Withdrawals", () => {
       beforeEach(async () => {
         await testContract.deployWithdrawalPool(randId);
+        await testContract.setType(randId, 5);
+        await testContract.beController(randId);
+        await testContract.initiatePlanet(
+          randId, // _id
+          1e5, // _fee
+          5e2,
+          user2.address, // _maintainer
+          deployer.address, // _governance
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
+        );
+
         const wpool = await testContract.withdrawalPoolById(randId);
         wpoolContract = await ethers.getContractAt("Swap", wpool);
-
-        await testContract.setPricePerShare(String(1e18), randId);
+        await gETH.connect(deployer).setApprovalForAll(wpool, true);
+        await gETH.connect(user1).setApprovalForAll(wpool, true);
 
         await testContract
           .connect(deployer)
-          .mintgETH(deployer.address, randId, String(1e20));
-
-        await gETH.connect(deployer).setApprovalForAll(wpool, true);
+          .depositPlanet(randId, 0, MAX_UINT256, { value: String(1e20) });
 
         // initially there is no debt
         await wpoolContract
           .connect(deployer)
-          .addLiquidity([String(1e20), String(1e20)], 0, MAX_UINT256, {
-            value: String(1e20),
+          .addLiquidity([String(1e19), String(1e19)], 0, MAX_UINT256, {
+            value: String(1e19),
           });
 
         debt = await wpoolContract.getDebt();
         expect(debt).to.be.eq(0);
         preUserBal = await provider.getBalance(user1.address);
         preUsergETHBal = await gETH.balanceOf(user1.address, randId);
+        expect(preUsergETHBal).to.be.eq(0);
 
         preContBal = await provider.getBalance(testContract.address);
+        expect(preContBal).to.be.eq(String(1e20));
         preContgETHBal = await gETH.balanceOf(testContract.address, randId);
+        expect(preContgETHBal).to.be.eq(0);
 
         preSurplus = ethers.BigNumber.from(
           await testContract.surplusById(randId)
         );
+        expect(preSurplus).to.be.eq(String(1e20));
         preTotSup = await gETH.totalSupply(randId);
+        expect(preTotSup).to.be.eq(String(1e20));
 
         preSwapBals = [
           await wpoolContract.getTokenBalance(0),
           await wpoolContract.getTokenBalance(1),
         ];
+        expect(preSwapBals[0]).to.be.eq(String(1e19));
+        expect(preSwapBals[1]).to.be.eq(String(1e19));
+
+        preSwapFees = [
+          await wpoolContract.getAdminBalance(0),
+          await wpoolContract.getAdminBalance(1),
+        ];
+        expect(preSwapFees[0]).to.be.eq(0);
+        expect(preSwapFees[1]).to.be.eq(0);
       });
 
-      it("reverts when wrongId is given", async () => {
-        await expect(
-          testContract.connect(user1).stakePlanet(wrongId, 0, MAX_UINT256, {
-            value: String(1e18),
-          })
-        ).to.be.reverted;
-      });
-
-      it("reverts when pool is paused", async () => {
-        await testContract.connect(user1).pauseStakingForPool(randId);
-        await expect(
-          testContract.stakePlanet(randId, 0, MAX_UINT256, {
-            value: String(2e18),
-          })
-        ).to.be.revertedWith("StakeUtils: minting is paused");
-      });
-
-      describe("succeeds", () => {
-        let gasUsed;
-
-        describe("when NO buyback (no pause, no debt), and while oracle active", () => {
-          beforeEach(async () => {
-            await setTimestamp(24 * 60 * 60 * 100000 + 100);
-            // ensure that it starts as zero.
-            expect(await testContract.dailyMintBuffer(randId)).to.be.eq(0);
-            const tx = await testContract
+      describe("donateBalancedFees", () => {
+        it("reverts if not enough gETH", async () => {
+          await expect(
+            testContract
               .connect(user1)
-              .stakePlanet(randId, 0, MAX_UINT256, {
-                value: String(1e18),
-              });
-            const receipt = await tx.wait();
-            gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
-          });
+              .donateBalancedFees(randId, String(1e19), String(1e19))
+          ).to.be.revertedWith("ERC1155: insufficient balance for transfer");
+        });
+        it("reverts if burnSurplus, burnGeth doesn't respect the oracle price", async () => {
+          await gETH.safeTransferFrom(
+            deployer.address,
+            testContract.address,
+            randId,
+            String(1e19),
+            "0x"
+          );
+          await expect(
+            testContract
+              .connect(user1)
+              .donateBalancedFees(randId, String(2e19), String(1e19))
+          ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
 
-          it("user lost ether more than stake (+gas) ", async () => {
-            const newBal = await provider.getBalance(user1.address);
-            expect(newBal.add(gasUsed)).to.be.eq(
-              ethers.BigNumber.from(String(preUserBal)).sub(String(1e18))
+          await testContract.setPricePerShare(String(2e18), randId);
+          await expect(
+            testContract
+              .connect(user1)
+              .donateBalancedFees(randId, String(1e19), String(1e19))
+          ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
+        });
+        describe("success", async () => {
+          beforeEach(async () => {
+            await gETH.safeTransferFrom(
+              deployer.address,
+              testContract.address,
+              randId,
+              String(1e19),
+              "0x"
             );
+            preContgETHBal = await gETH.balanceOf(testContract.address, randId);
+            await testContract
+              .connect(user1)
+              .donateBalancedFees(randId, String(1e19), String(1e19));
+            // 1e19 * 0.04% =
+            // 4e15/4 => goes as Eth to LP,
+            // 4e15/4 => goes as gEth to LP,
+            // 4e15/4 => goes as Eth to admin,
+            // 4e15/4 => goes as gEth to admin,
           });
-
-          it("user gained gETH (mintedAmount)", async () => {
-            const price = await testContract.getPricePerShare(randId);
-            expect(price).to.be.eq(String(1e18));
-            const mintedAmount = ethers.BigNumber.from(String(1e18))
-              .div(price)
-              .mul(String(1e18));
-            const newBal = await gETH.balanceOf(user1.address, randId);
-            expect(newBal).to.be.eq(preUsergETHBal.add(mintedAmount));
-          });
-
-          it("contract gained ether = minted gETH", async () => {
-            const newBal = await provider.getBalance(testContract.address);
-            expect(newBal).to.be.eq(String(preContBal.add(String(1e18))));
-          });
-
-          it("contract gEth bal did not change", async () => {
-            const newBal = await gETH.balanceOf(testContract.address, randId);
-            expect(newBal).to.be.eq(preContgETHBal);
-          });
-
-          it("id surplus increased", async () => {
-            const newSur = await testContract.surplusById(randId);
-            expect(newSur.toString()).to.be.eq(
-              String(preSurplus.add(String(1e18)))
-            );
-          });
-
-          it("mintBuffer increased = minted gETH ", async () => {
-            const dailyMintBuffer = await testContract.dailyMintBuffer(randId);
-            const price = await testContract.getPricePerShare(randId);
-            expect(dailyMintBuffer).to.be.eq(
-              ethers.BigNumber.from(String(1e18)).div(price).mul(String(1e18))
-            );
-          });
-
-          it("gETH minted ", async () => {
-            // minted amount from ORACLE PRICE
-            const price = await testContract.getPricePerShare(randId);
-            expect(price).to.be.eq(String(1e18));
-            const mintedAmount = ethers.BigNumber.from(String(1e18))
-              .div(price)
-              .mul(String(1e18));
-            const TotSup = await gETH.totalSupply(randId);
-            expect(TotSup.toString()).to.be.eq(
-              String(preTotSup.add(mintedAmount))
-            );
-          });
-
-          it("swapContract gETH balances NOT changed", async () => {
-            const swapBals = [
+          it("DWP balances increased accordingly", async () => {
+            const postSwapBals = [
               await wpoolContract.getTokenBalance(0),
               await wpoolContract.getTokenBalance(1),
             ];
-            expect(swapBals[0]).to.be.eq(preSwapBals[0]);
-            expect(swapBals[1]).to.be.eq(preSwapBals[1]);
+            expect(postSwapBals[0]).to.be.eq(preSwapBals[0].add(String(1e15)));
+            expect(postSwapBals[1]).to.be.eq(preSwapBals[1].add(String(1e15)));
+          });
+          it("DWP fees increased accordingly", async () => {
+            const postSwapFees = [
+              await wpoolContract.getAdminBalance(0),
+              await wpoolContract.getAdminBalance(1),
+            ];
+            expect(postSwapFees[0]).to.be.eq(preSwapFees[0].add(String(1e15)));
+            expect(postSwapFees[1]).to.be.eq(preSwapFees[1].add(String(1e15)));
+          });
+          it("contract ETH balance decreased accordingly", async () => {
+            expect(await provider.getBalance(testContract.address)).to.be.eq(
+              preContBal.sub(String(2e15))
+            );
+          });
+          it("contract gETH balance decreased accordingly", async () => {
+            expect(await gETH.balanceOf(testContract.address, randId)).to.be.eq(
+              preContgETHBal.sub(String(2e15))
+            );
+          });
+          it("surplus stands still", async () => {
+            expect(await testContract.surplusById(randId)).to.be.eq(preSurplus);
+          });
+          it("debt stands still", async () => {
+            expect(await wpoolContract.getDebt()).to.be.eq(debt);
+          });
+        });
+      });
+
+      describe("burnSurplus", () => {
+        let prevBurnBuffer;
+        it("reverts if not enough gETH", async () => {
+          await expect(
+            testContract.connect(user1).burnSurplus(randId, String(1e19))
+          ).to.be.revertedWith("ERC1155: insufficient balance for transfer");
+        });
+        describe("success", async () => {
+          beforeEach(async () => {
+            await setTimestamp(100000 * 24 * 3600);
+            expect(await testContract.isOracleActive()).to.be.eq(true);
+          });
+          describe("g-price = 1", async () => {
+            beforeEach(async () => {
+              await gETH.safeTransferFrom(
+                deployer.address,
+                testContract.address,
+                randId,
+                String(1e19),
+                "0x"
+              );
+              preContgETHBal = await gETH.balanceOf(
+                testContract.address,
+                randId
+              );
+              prevBurnBuffer = await testContract.dailyMintBuffer(randId);
+              await testContract
+                .connect(user1)
+                .burnSurplus(randId, String(1e19));
+            });
+            it("decreased TS accordingly", async () => {
+              expect(await gETH.totalSupply(randId)).to.be.eq(
+                preTotSup.sub(String(1e19)).add(String(2e15))
+              );
+            });
+            it("decreased contract gETH accordingly", async () => {
+              expect(
+                await gETH.balanceOf(testContract.address, randId)
+              ).to.be.eq(preContgETHBal.sub(String(1e19)));
+            });
+            it("decreased surplus accordingly", async () => {
+              expect(await testContract.surplusById(randId)).to.be.eq(
+                preSurplus.sub(String(1e19))
+              );
+            });
+            it("donated correct amount as fees", async () => {
+              const postBals = [
+                await wpoolContract.getTokenBalance(0),
+                await wpoolContract.getTokenBalance(1),
+              ];
+              expect(postBals[0]).to.be.eq(preSwapBals[0].add(String(1e15)));
+              expect(postBals[1]).to.be.eq(preSwapBals[1].add(String(1e15)));
+            });
+            it("increased burnBuffer accordingly", async () => {
+              expect(await testContract.dailyBurnBuffer(randId)).to.be.eq(
+                prevBurnBuffer.add(String(1e19))
+              );
+            });
+          });
+          describe("g-price = 5", async () => {
+            beforeEach(async () => {
+              await testContract.setPricePerShare(String(5e18), randId);
+              await gETH.safeTransferFrom(
+                deployer.address,
+                testContract.address,
+                randId,
+                String(1e19),
+                "0x"
+              );
+              preContgETHBal = await gETH.balanceOf(
+                testContract.address,
+                randId
+              );
+              await testContract
+                .connect(user1)
+                .burnSurplus(randId, String(1e19));
+            });
+            it("decreased TS accordingly", async () => {
+              expect(await gETH.totalSupply(randId)).to.be.eq(
+                preTotSup.sub(String(1e19)).add(String(2e15))
+              );
+            });
+            it("decreased contract gETH accordingly", async () => {
+              expect(
+                await gETH.balanceOf(testContract.address, randId)
+              ).to.be.eq(preContgETHBal.sub(String(1e19)));
+            });
+            it("decreased surplus accordingly", async () => {
+              expect(await testContract.surplusById(randId)).to.be.eq(
+                preSurplus.sub(String(5e19))
+              );
+            });
+            it("donated correct amount as fees", async () => {
+              const postBals = [
+                await wpoolContract.getTokenBalance(0),
+                await wpoolContract.getTokenBalance(1),
+              ];
+              expect(postBals[0]).to.be.eq(preSwapBals[0].add(String(5e15)));
+              expect(postBals[1]).to.be.eq(preSwapBals[1].add(String(1e15)));
+            });
+            it("increased burnBuffer accordingly", async () => {
+              expect(await testContract.dailyBurnBuffer(randId)).to.be.eq(
+                prevBurnBuffer.add(String(1e19))
+              );
+            });
+          });
+        });
+      });
+
+      describe("withdrawPlanet", () => {
+        it("reverts if deadline did not met", async () => {
+          await expect(
+            testContract.withdrawPlanet(randId, String(9e20), 0, 0)
+          ).to.be.revertedWith("StakeUtils: deadline not met");
+        });
+        it("reverts if not allowed for gETH", async () => {
+          await expect(
+            testContract.withdrawPlanet(randId, String(1e18), 0, MAX_UINT256)
+          ).to.be.revertedWith(
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
+          );
+        });
+        it("reverts if not enough gETH", async () => {
+          await gETH
+            .connect(deployer)
+            .setApprovalForAll(testContract.address, true);
+          await expect(
+            testContract.withdrawPlanet(randId, String(9e20), 0, MAX_UINT256)
+          ).to.be.revertedWith("ERC1155: insufficient balance for transfer");
+        });
+
+        describe("before BOOSTRAP_PERIOD", async () => {
+          it("reverts if minETH did not met", async () => {
+            await gETH
+              .connect(deployer)
+              .setApprovalForAll(testContract.address, true);
+            await expect(
+              testContract.withdrawPlanet(
+                randId,
+                String(1e18),
+                MAX_UINT256,
+                MAX_UINT256
+              )
+            ).to.be.revertedWith("Swap didn't result in min tokens");
+          });
+
+          describe("success", async () => {
+            let calcPay;
+            beforeEach(async () => {
+              await gETH
+                .connect(deployer)
+                .setApprovalForAll(testContract.address, true);
+              calcPay = await wpoolContract.calculateSwap(1, 0, String(1e18));
+              preSurplus = await testContract.surplusById(randId);
+              await testContract.withdrawPlanet(
+                randId,
+                String(1e18),
+                0,
+                MAX_UINT256
+              );
+            });
+            it("correct EthToSend", async () => {
+              expect(await testContract.lastEthToSend()).to.be.eq(calcPay);
+            });
+            it("surplus did not change", async () => {
+              expect(await testContract.surplusById(randId)).to.be.eq(
+                preSurplus
+              );
+            });
           });
         });
 
-        describe("when paused pool is unpaused and not balanced", async () => {
-          let gasUsed;
-          let newPreUserBal;
-
+        describe("after BOOSTRAP_PERIOD", async () => {
           beforeEach(async () => {
-            await testContract.connect(user1).pauseStakingForPool(randId);
-            await testContract.connect(user1).unpauseStakingForPool(randId);
-            newPreUserBal = await provider.getBalance(user1.address);
-            await testContract
-              .connect(deployer)
-              .stakePlanet(randId, 0, MAX_UINT256, {
-                value: String(1e20),
-              });
-            await wpoolContract
-              .connect(deployer)
-              .addLiquidity([String(0), String(1e20)], 0, MAX_UINT256);
-            debt = await wpoolContract.getDebt();
-            preSwapBals = [
-              await wpoolContract.getTokenBalance(0),
-              await wpoolContract.getTokenBalance(1),
-            ];
-            preContBal = await provider.getBalance(testContract.address);
-            preSurplus = ethers.BigNumber.from(
-              await testContract.surplusById(randId)
+            await setTimestamp(
+              (await getCurrentBlockTimestamp()) + BOOSTRAP_PERIOD + 30 * 60 + 1
             );
-            const tx = await testContract
+            expect(await testContract.isOracleActive()).to.be.eq(false);
+            await testContract.mintgETH(user1.address, randId, String(2e20));
+            await gETH
               .connect(user1)
-              .stakePlanet(randId, 0, MAX_UINT256, {
-                value: String(5e20),
-              });
-            const receipt = await tx.wait();
-            gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
+              .setApprovalForAll(testContract.address, true);
           });
 
-          it("user lost ether more than stake (+gas) ", async () => {
-            const newBal = await provider.getBalance(user1.address);
-            expect(newBal).to.be.eq(
-              ethers.BigNumber.from(String(newPreUserBal))
-                .sub(String(5e20))
-                .sub(gasUsed)
-            );
+          describe("success: withdrawnGeth <= surplus", async () => {
+            beforeEach(async () => {
+              await testContract
+                .connect(user1)
+                .withdrawPlanet(randId, String(1e18), 0, MAX_UINT256);
+            });
+            it("correct EthToSend", async () => {
+              expect(await testContract.lastEthToSend()).to.be.eq(
+                ethers.BigNumber.from(String(1e18))
+                  .mul(String(9996))
+                  .div(String(10000)) // sub fee
+              );
+            });
+            it("surplus decreased", async () => {
+              expect(await testContract.surplusById(randId)).to.be.eq(
+                preSurplus.sub(String(1e18))
+              );
+            });
           });
 
-          it("user gained gether more than minted amount (+ wrapped) ", async () => {
-            const price = await testContract.getPricePerShare(randId);
-            expect(price).to.be.eq(String(1e18));
-            const mintedAmount = ethers.BigNumber.from(String(1e18))
-              .div(price)
-              .mul(String(1e18));
-            const newBal = await gETH.balanceOf(user1.address, randId);
-            expect(newBal).to.be.gt(preUsergETHBal.add(mintedAmount));
-          });
-
-          it("contract gained ether = minted ", async () => {
-            const newBal = await provider.getBalance(testContract.address);
-            expect(newBal).to.be.eq(
-              String(
-                preContBal.add(ethers.BigNumber.from("450143212807943082239")) // lower than 5e20 since wp got its part
-              )
-            );
-          });
-
-          it("contract gEth bal did not change", async () => {
-            const newBal = await gETH.balanceOf(testContract.address, randId);
-            expect(newBal).to.be.eq(preContgETHBal);
-          });
-
-          it("id surplus increased", async () => {
-            const newSur = await testContract.surplusById(randId);
-            expect(newSur).to.be.eq(
-              String(
-                preSurplus.add(ethers.BigNumber.from("450143212807943082239")) // lower than 5e20 since wp got its part
-              )
-            );
-          });
-
-          it("swapContract gETH and Ether balance changed accordingly", async () => {
-            const swapBals = [
-              await wpoolContract.getTokenBalance(0),
-              await wpoolContract.getTokenBalance(1),
-            ];
-            expect(swapBals[0]).to.be.eq(
-              ethers.BigNumber.from(String(preSwapBals[0])).add(debt)
-            );
-            expect(swapBals[1]).to.be.lt(preSwapBals[1]); // gEth
+          describe("success: withdrawnGeth > surplus", async () => {
+            let calcPay;
+            beforeEach(async () => {
+              calcPay = ethers.BigNumber.from(String(1e20))
+                .mul(String(9996))
+                .div(String(10000))
+                .add(await wpoolContract.calculateSwap(1, 0, String(1e20)));
+              await testContract
+                .connect(user1)
+                .withdrawPlanet(randId, String(2e20), 0, MAX_UINT256);
+            });
+            it("more Eth received than calculated in balanced pool", async () => {
+              expect(await testContract.lastEthToSend()).to.be.gt(calcPay);
+            });
+            it("surplus drained", async () => {
+              expect(await testContract.surplusById(randId)).to.be.eq(0);
+            });
           });
         });
       });
@@ -1659,7 +2053,7 @@ describe("StakeUtils", async () => {
       it("reverts if prisoned, can stake after released", async () => {
         await testContract
           .connect(user1)
-          .stakePlanet(planetId, 0, MAX_UINT256, {
+          .depositPlanet(planetId, 0, MAX_UINT256, {
             value: String(1e20),
           });
 
@@ -1688,7 +2082,7 @@ describe("StakeUtils", async () => {
         beforeEach(async () => {
           await testContract
             .connect(user1)
-            .stakePlanet(planetId, 0, MAX_UINT256, {
+            .depositPlanet(planetId, 0, MAX_UINT256, {
               value: String(1e20),
             });
           prevSecured = await testContract.securedById(planetId);
@@ -2069,7 +2463,7 @@ describe("StakeUtils", async () => {
         });
         await testContract
           .connect(user1)
-          .stakePlanet(planetId, 0, MAX_UINT256, {
+          .depositPlanet(planetId, 0, MAX_UINT256, {
             value: String(160e18),
           });
         await testContract
@@ -2101,7 +2495,7 @@ describe("StakeUtils", async () => {
         // do macig: mint buffer increase
         await testContract
           .connect(user1)
-          .stakePlanet(planetId, 0, MAX_UINT256, {
+          .depositPlanet(planetId, 0, MAX_UINT256, {
             value: String(32e18),
           });
       });
@@ -2138,7 +2532,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(user1)
-          .stakePlanet(planetId, 0, MAX_UINT256, {
+          .depositPlanet(planetId, 0, MAX_UINT256, {
             value: String(32e18),
           });
 
@@ -2147,7 +2541,7 @@ describe("StakeUtils", async () => {
         // do macig: mint buffer increase
         await testContract
           .connect(user1)
-          .stakePlanet(planetId, 0, MAX_UINT256, {
+          .depositPlanet(planetId, 0, MAX_UINT256, {
             value: String(64e18),
           });
 
@@ -2182,7 +2576,7 @@ describe("StakeUtils", async () => {
 
         await testContract
           .connect(user1)
-          .stakePlanet(planetId, 0, MAX_UINT256, {
+          .depositPlanet(planetId, 0, MAX_UINT256, {
             value: String(32e18),
           });
 
@@ -2191,7 +2585,7 @@ describe("StakeUtils", async () => {
         // do macig: mint buffer increase
         await testContract
           .connect(user1)
-          .stakePlanet(planetId, 0, MAX_UINT256, {
+          .depositPlanet(planetId, 0, MAX_UINT256, {
             value: String(64e18),
           });
 

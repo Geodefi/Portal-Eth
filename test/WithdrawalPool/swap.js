@@ -76,10 +76,7 @@ describe("Swap", async () => {
           expect(new_balance_1).to.be.eq(String(1e20));
         }
       );
-      new_balance_1 = await gETHReference.setPricePerShare(
-        String(1e18),
-        randId
-      );
+      await gETHReference.setPricePerShare(String(1e18), randId);
       swap = await ethers.getContract("Swap");
 
       await swap.initialize(
@@ -2350,6 +2347,232 @@ describe("Swap", async () => {
             tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(2)
           ).to.be.gt(BigNumber.from(String(2e18)).sub(1e15));
           expect(await test_pool.getDebt()).to.be.lte(1e15);
+        });
+      });
+    });
+  });
+
+  describe("donateBalancedFees", async () => {
+    let prevEthBal;
+    let prevGethBal;
+    let prevEthFee;
+    let prevGethFee;
+    beforeEach(async () => {
+      prevEthBal = await test_pool.getTokenBalance(0);
+      prevGethBal = await test_pool.getTokenBalance(1);
+      prevEthFee = await test_pool.getAdminBalance(0);
+      prevGethFee = await test_pool.getAdminBalance(1);
+      await test_pool.setAdminFee(1e9); // 10%
+    });
+
+    it("reverts if contract not allowed on gETH", async () => {
+      await gETHReference
+        .connect(user1)
+        .setApprovalForAll(test_pool.address, false);
+      await expect(
+        test_pool
+          .connect(user1)
+          .donateBalancedFees(String(1e18), String(1e18), {
+            value: ethers.utils.parseEther("1"),
+          })
+      ).to.be.revertedWith(
+        "ERC1155: caller is not owner nor approved nor an allowed interface"
+      );
+    });
+    it("reverts if ether was not sent", async () => {
+      await expect(
+        test_pool.connect(user1).donateBalancedFees(String(1e18), String(1e18))
+      ).to.be.revertedWith("Swap: received less or more ETH than expected");
+    });
+
+    describe("Pool balanced, no debt & surplus, g-price=1:1", async () => {
+      it("reverts if did not respect to derivative price", async () => {
+        await expect(
+          test_pool
+            .connect(user1)
+            .donateBalancedFees(String(2e18), String(1e18), {
+              value: ethers.utils.parseEther("2"),
+            })
+        ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
+        await expect(
+          test_pool
+            .connect(user1)
+            .donateBalancedFees(String(1e18), String(2e18), {
+              value: ethers.utils.parseEther("1"),
+            })
+        ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
+      });
+      describe("NOT reverts if admin fee is 0 (zero)", async () => {
+        beforeEach(async () => {
+          await test_pool.setAdminFee(0); // 0%
+          await test_pool
+            .connect(user1)
+            .donateBalancedFees(String(1e18), String(1e18), {
+              value: ethers.utils.parseEther("1"),
+            });
+        });
+        it("admin fee did not increase", async () => {
+          expect(await test_pool.getAdminBalance(0)).to.be.eq(
+            BigNumber.from(prevEthFee)
+          );
+          expect(await test_pool.getAdminBalance(1)).to.be.eq(
+            BigNumber.from(prevGethFee)
+          );
+        });
+      });
+      describe("success", async () => {
+        beforeEach(async () => {
+          await test_pool
+            .connect(user1)
+            .donateBalancedFees(String(2e18), String(2e18), {
+              value: ethers.utils.parseEther("2"),
+            });
+        });
+        it("debt still 0 (zero)", async () => {
+          const debt = await test_pool.getDebt();
+          expect(debt).to.be.eq("0");
+        });
+        it("increased balances accordingly", async () => {
+          expect(await test_pool.getTokenBalance(0)).to.be.eq(
+            BigNumber.from(prevEthBal.add(String(18e17)))
+          );
+          expect(await test_pool.getTokenBalance(1)).to.be.eq(
+            BigNumber.from(prevGethBal.add(String(18e17)))
+          );
+        });
+        it("increased admin balances accordingly", async () => {
+          expect(await test_pool.getAdminBalance(0)).to.be.eq(
+            BigNumber.from(prevEthFee.add(String(2e17)))
+          );
+          expect(await test_pool.getAdminBalance(1)).to.be.eq(
+            BigNumber.from(prevGethFee.add(String(2e17)))
+          );
+        });
+      });
+    });
+
+    describe("+Surplus, g-price=1/2", async () => {
+      beforeEach(async () => {
+        await test_pool.addLiquidity([String(10e18), 0], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("10"),
+        });
+        expect(await test_pool.getDebt()).to.be.eq(0);
+        prevEthBal = await test_pool.getTokenBalance(0);
+        prevGethBal = await test_pool.getTokenBalance(1);
+        prevEthFee = await test_pool.getAdminBalance(0);
+        prevGethFee = await test_pool.getAdminBalance(1);
+        await gETHReference.setPricePerShare(String(5e17), randId);
+      });
+      it("reverts if did not respect to derivative price", async () => {
+        await expect(
+          test_pool
+            .connect(user1)
+            .donateBalancedFees(String(1e18), String(1e18), {
+              value: ethers.utils.parseEther("1"),
+            })
+        ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
+        await expect(
+          test_pool
+            .connect(user1)
+            .donateBalancedFees(String(2e18), String(1e18), {
+              value: ethers.utils.parseEther("2"),
+            })
+        ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
+      });
+
+      describe("success", async () => {
+        beforeEach(async () => {
+          await test_pool
+            .connect(user1)
+            .donateBalancedFees(String(1e18), String(2e18), {
+              value: ethers.utils.parseEther("1"),
+            });
+        });
+        it("debt still 0 (zero)", async () => {
+          const debt = await test_pool.getDebt();
+          expect(debt).to.be.eq("0");
+        });
+        it("increased balances accordingly", async () => {
+          expect(await test_pool.getTokenBalance(0)).to.be.eq(
+            BigNumber.from(prevEthBal.add(String(9e17)))
+          );
+          expect(await test_pool.getTokenBalance(1)).to.be.eq(
+            BigNumber.from(prevGethBal.add(String(18e17)))
+          );
+        });
+        it("increased admin balances accordingly", async () => {
+          expect(await test_pool.getAdminBalance(0)).to.be.eq(
+            BigNumber.from(prevEthFee.add(String(1e17)))
+          );
+          expect(await test_pool.getAdminBalance(1)).to.be.eq(
+            BigNumber.from(prevGethFee.add(String(2e17)))
+          );
+        });
+      });
+    });
+
+    describe("+Debt, g-price=2", async () => {
+      let debt;
+      beforeEach(async () => {
+        debt = await test_pool.getDebt();
+        expect(debt).to.be.eq(0);
+        await gETHReference.setPricePerShare(String(2e18), randId);
+        await test_pool.addLiquidity([0, String(10e18)], 0, MAX_UINT256);
+        prevEthBal = await test_pool.getTokenBalance(0);
+        prevGethBal = await test_pool.getTokenBalance(1);
+        prevEthFee = await test_pool.getAdminBalance(0);
+        prevGethFee = await test_pool.getAdminBalance(1);
+        expect(await test_pool.getDebt()).to.be.gt(debt);
+        debt = await test_pool.getDebt();
+      });
+      it("reverts if did not respect to derivative price", async () => {
+        await expect(
+          test_pool
+            .connect(user1)
+            .donateBalancedFees(String(1e18), String(1e18), {
+              value: ethers.utils.parseEther("1"),
+            })
+        ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
+        await expect(
+          test_pool
+            .connect(user1)
+            .donateBalancedFees(String(1e18), String(2e18), {
+              value: ethers.utils.parseEther("1"),
+            })
+        ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
+      });
+      describe("success", async () => {
+        beforeEach(async () => {
+          await test_pool
+            .connect(user1)
+            .donateBalancedFees(String(2e18), String(1e18), {
+              value: ethers.utils.parseEther("2"),
+            });
+        });
+        it("debt still works", async () => {
+          debt = await test_pool.getDebt();
+
+          await test_pool.connect(user1).swap(0, 1, debt, 0, MAX_UINT256, {
+            value: debt,
+          });
+
+          expect(await test_pool.getDebt()).to.be.lte(10);
+        });
+        it("increased balances accordingly", async () => {
+          expect(await test_pool.getTokenBalance(0)).to.be.eq(
+            BigNumber.from(prevEthBal.add(String(18e17)))
+          );
+          expect(await test_pool.getTokenBalance(1)).to.be.eq(
+            BigNumber.from(prevGethBal.add(String(9e17)))
+          );
+        });
+        it("increased admin balances accordingly", async () => {
+          expect(await test_pool.getAdminBalance(0)).to.be.eq(
+            BigNumber.from(prevEthFee.add(String(2e17)))
+          );
+          expect(await test_pool.getAdminBalance(1)).to.be.eq(
+            BigNumber.from(prevGethFee.add(String(1e17)))
+          );
         });
       });
     });

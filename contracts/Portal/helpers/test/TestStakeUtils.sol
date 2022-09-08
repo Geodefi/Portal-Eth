@@ -17,13 +17,15 @@ contract TestStakeUtils is ERC1155Holder {
         address _ORACLE,
         address _DEFAULT_DWP,
         address _DEFAULT_LP_TOKEN,
-        address _DEFAULT_gETH_INTERFACE
+        address _DEFAULT_gETH_INTERFACE,
+        uint256 BOOSTRAP_PERIOD_
     ) {
         STAKEPOOL.ORACLE = _ORACLE;
         STAKEPOOL.gETH = _gETH;
         STAKEPOOL.DEFAULT_DWP = _DEFAULT_DWP;
         STAKEPOOL.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
         STAKEPOOL.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
+        STAKEPOOL.BOOSTRAP_PERIOD = BOOSTRAP_PERIOD_; //10%
         STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT = (2 * FEE_DENOMINATOR) / 1e3;
         STAKEPOOL.MAX_MAINTAINER_FEE = (10 * FEE_DENOMINATOR) / 1e2; //10%
         STAKEPOOL.VERIFICATION_INDEX = 0;
@@ -43,6 +45,7 @@ contract TestStakeUtils is ERC1155Holder {
             uint256 PERIOD_PRICE_INCREASE_LIMIT,
             uint256 MAX_MAINTAINER_FEE,
             uint256 VERIFICATION_INDEX,
+            uint256 BOOSTRAP_PERIOD,
             uint256 VALIDATORS_INDEX
         )
     {
@@ -54,6 +57,7 @@ contract TestStakeUtils is ERC1155Holder {
         PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT;
         MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
         VERIFICATION_INDEX = STAKEPOOL.VERIFICATION_INDEX;
+        BOOSTRAP_PERIOD = STAKEPOOL.BOOSTRAP_PERIOD;
         VALIDATORS_INDEX = STAKEPOOL.VALIDATORS_INDEX;
     }
 
@@ -134,6 +138,7 @@ contract TestStakeUtils is ERC1155Holder {
         address _DEFAULT_DWP, // contract?
         address _DEFAULT_LP_TOKEN, // contract?
         uint256 _MAX_MAINTAINER_FEE, // < 100
+        uint256 _BOOSTRAP_PERIOD,
         uint256 _PERIOD_PRICE_INCREASE_LIMIT
     ) external virtual {
         STAKEPOOL.updateGovernanceParams(
@@ -142,6 +147,7 @@ contract TestStakeUtils is ERC1155Holder {
             _DEFAULT_DWP,
             _DEFAULT_LP_TOKEN,
             _MAX_MAINTAINER_FEE,
+            _BOOSTRAP_PERIOD,
             _PERIOD_PRICE_INCREASE_LIMIT
         );
     }
@@ -208,7 +214,7 @@ contract TestStakeUtils is ERC1155Holder {
         return DATASTORE.readUintForId(_id, "withdrawalBoost");
     }
 
-    function isInitiated(uint256 _planetId)
+    function whenInitiated(uint256 _planetId)
         external
         view
         virtual
@@ -337,6 +343,14 @@ contract TestStakeUtils is ERC1155Holder {
         return DATASTORE.readUintForId(poolId, dailyBufferKey);
     }
 
+    function dailyBurnBuffer(uint256 poolId) external view returns (uint256) {
+        bytes32 dailyBufferKey = StakeUtils._getKey(
+            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            "burnBuffer"
+        );
+        return DATASTORE.readUintForId(poolId, dailyBufferKey);
+    }
+
     function surplusById(uint256 _planetId) external view returns (uint256) {
         return DATASTORE.readUintForId(_planetId, "surplus");
     }
@@ -389,18 +403,60 @@ contract TestStakeUtils is ERC1155Holder {
         StakeUtils.unpauseStakingForPool(DATASTORE, id);
     }
 
-    function stakePlanet(
+    function donateBalancedFees(
+        uint256 poolId,
+        uint256 burnSurplus_,
+        uint256 burnGeth
+    ) external returns (uint256 ethDonation, uint256 gEthDonation) {
+        return
+            StakeUtils._donateBalancedFees(
+                DATASTORE,
+                poolId,
+                burnSurplus_,
+                burnGeth
+            );
+    }
+
+    function burnSurplus(uint256 poolId, uint256 withdrawnGeth)
+        external
+        returns (uint256, uint256)
+    {
+        return STAKEPOOL._burnSurplus(DATASTORE, poolId, withdrawnGeth);
+    }
+
+    uint256 public ethToSend;
+
+    function lastEthToSend() external view virtual returns (uint256) {
+        return ethToSend;
+    }
+
+    function withdrawPlanet(
+        uint256 poolId,
+        uint256 withdrawnGeth,
+        uint256 minETH,
+        uint256 deadline
+    ) external virtual {
+        ethToSend = STAKEPOOL.withdrawPlanet(
+            DATASTORE,
+            poolId,
+            withdrawnGeth,
+            minETH,
+            deadline
+        );
+    }
+
+    function depositPlanet(
         uint256 planetId,
         uint256 minGavax,
         uint256 deadline
     ) external payable virtual returns (uint256 totalgAvax) {
-        totalgAvax = STAKEPOOL.stakePlanet(
+        totalgAvax = STAKEPOOL.depositPlanet(
             DATASTORE,
             planetId,
             minGavax,
             deadline
         );
-        require(totalgAvax > 0, "Portal: unsuccesful deposit");
+        require(totalgAvax > minGavax, "Portal: unsuccesful deposit");
     }
 
     function canStake(bytes calldata pubkey)
@@ -526,14 +582,20 @@ contract TestStakeUtils is ERC1155Holder {
         uint256 periodsSinceUpdate,
         bytes32[] calldata priceProofs
     ) external virtual {
-        bytes32 dailyBufferKey = StakeUtils._getKey(
-            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
-            "mintBuffer"
-        );
+        bytes32[2] memory dailyBufferKeys = [
+            StakeUtils._getKey(
+                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+                "mintBuffer"
+            ),
+            StakeUtils._getKey(
+                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+                "burnBuffer"
+            )
+        ];
         STAKEPOOL.PRICE_MERKLE_ROOT = merkleRoot;
         STAKEPOOL._priceSync(
             DATASTORE,
-            dailyBufferKey,
+            dailyBufferKeys,
             index,
             poolId,
             beaconBalance,
@@ -559,6 +621,10 @@ contract TestStakeUtils is ERC1155Holder {
                 block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
                 "mintBuffer"
             ),
+            StakeUtils._getKey(
+                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+                "burnBuffer"
+            ),
             poolId,
             beaconBalance
         );
@@ -579,4 +645,6 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function Receive() external payable {}
+
+    receive() external payable {}
 }
