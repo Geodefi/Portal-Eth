@@ -19,6 +19,8 @@ require("./scripts");
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+// increase "runs" as much as possible
+
 const config = {
   solidity: {
     compilers: [
@@ -27,7 +29,7 @@ const config = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 1000,
           },
         },
       },

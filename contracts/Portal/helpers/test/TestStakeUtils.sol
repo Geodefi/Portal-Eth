@@ -1,35 +1,51 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
-import "../../utils/DataStoreLib.sol";
-import "../../utils/StakeUtilsLib.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "../../utils/DataStoreLib.sol";
+import "../../utils/OracleUtilsLib.sol";
+import "../../utils/StakeUtilsLib.sol";
 import "../../../interfaces/IgETH.sol";
 
 contract TestStakeUtils is ERC1155Holder {
     using DataStoreUtils for DataStoreUtils.DataStore;
+    using OracleUtils for OracleUtils.Oracle;
     using StakeUtils for StakeUtils.StakePool;
+
     DataStoreUtils.DataStore private DATASTORE;
     StakeUtils.StakePool private STAKEPOOL;
-    uint256 public FEE_DENOMINATOR = 10**10;
 
     constructor(
         address _gETH,
-        address _ORACLE,
+        address _GOVERNANCE,
         address _DEFAULT_DWP,
         address _DEFAULT_LP_TOKEN,
         address _DEFAULT_gETH_INTERFACE,
-        uint256 BOOSTRAP_PERIOD_
+        uint256 _BOOSTRAP_PERIOD,
+        uint256 _WITHDRAWAL_DELAY,
+        address _ORACLE_POSITION
     ) {
-        STAKEPOOL.ORACLE = _ORACLE;
-        STAKEPOOL.gETH = _gETH;
+        STAKEPOOL.gETH = IgETH(_gETH);
+        STAKEPOOL.GOVERNANCE = _GOVERNANCE;
         STAKEPOOL.DEFAULT_DWP = _DEFAULT_DWP;
         STAKEPOOL.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
         STAKEPOOL.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
-        STAKEPOOL.BOOSTRAP_PERIOD = BOOSTRAP_PERIOD_; //10%
-        STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT = (2 * FEE_DENOMINATOR) / 1e3;
-        STAKEPOOL.MAX_MAINTAINER_FEE = (10 * FEE_DENOMINATOR) / 1e2; //10%
-        STAKEPOOL.VERIFICATION_INDEX = 0;
-        STAKEPOOL.VALIDATORS_INDEX = 0;
+        STAKEPOOL.BOOSTRAP_PERIOD = _BOOSTRAP_PERIOD; //10%
+        STAKEPOOL.MAX_MAINTAINER_FEE = (10 * StakeUtils.FEE_DENOMINATOR) / 1e2; //10%
+        STAKEPOOL.WITHDRAWAL_DELAY = _WITHDRAWAL_DELAY;
+
+        STAKEPOOL.TELESCOPE.gETH = IgETH(_gETH);
+        STAKEPOOL.TELESCOPE.ORACLE_POSITION = _ORACLE_POSITION;
+        STAKEPOOL.TELESCOPE.ORACLE_UPDATE_TIMESTAMP = 0;
+        STAKEPOOL.TELESCOPE.MONOPOLY_THRESHOLD = 0;
+        STAKEPOOL.TELESCOPE.VALIDATORS_INDEX = 0;
+        STAKEPOOL.TELESCOPE.VERIFICATION_INDEX = 0;
+        STAKEPOOL.TELESCOPE.PERIOD_PRICE_INCREASE_LIMIT =
+            (2 * StakeUtils.FEE_DENOMINATOR) /
+            1e3;
+        STAKEPOOL.TELESCOPE.PERIOD_PRICE_DECREASE_LIMIT =
+            (2 * StakeUtils.FEE_DENOMINATOR) /
+            1e3;
+        STAKEPOOL.TELESCOPE.PRICE_MERKLE_ROOT = "";
     }
 
     function getStakePoolParams()
@@ -37,36 +53,57 @@ contract TestStakeUtils is ERC1155Holder {
         view
         virtual
         returns (
-            address ORACLE,
             address gETH,
+            address GOVERNANCE,
             address DEFAULT_gETH_INTERFACE,
             address DEFAULT_DWP,
             address DEFAULT_LP_TOKEN,
-            uint256 PERIOD_PRICE_INCREASE_LIMIT,
             uint256 MAX_MAINTAINER_FEE,
-            uint256 VERIFICATION_INDEX,
             uint256 BOOSTRAP_PERIOD,
-            uint256 VALIDATORS_INDEX
+            uint256 WITHDRAWAL_DELAY
         )
     {
-        ORACLE = STAKEPOOL.ORACLE;
-        gETH = STAKEPOOL.gETH;
+        gETH = address(STAKEPOOL.gETH);
+        GOVERNANCE = STAKEPOOL.GOVERNANCE;
         DEFAULT_gETH_INTERFACE = STAKEPOOL.DEFAULT_gETH_INTERFACE;
         DEFAULT_DWP = STAKEPOOL.DEFAULT_DWP;
         DEFAULT_LP_TOKEN = STAKEPOOL.DEFAULT_LP_TOKEN;
-        PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL.PERIOD_PRICE_INCREASE_LIMIT;
         MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
-        VERIFICATION_INDEX = STAKEPOOL.VERIFICATION_INDEX;
         BOOSTRAP_PERIOD = STAKEPOOL.BOOSTRAP_PERIOD;
-        VALIDATORS_INDEX = STAKEPOOL.VALIDATORS_INDEX;
+        WITHDRAWAL_DELAY = STAKEPOOL.WITHDRAWAL_DELAY;
     }
 
-    function getgETH() public view virtual returns (IgETH) {
-        return STAKEPOOL.getgETH();
+    function getOracleParams()
+        external
+        view
+        virtual
+        returns (
+            address ORACLE,
+            uint256 ORACLE_UPDATE_TIMESTAMP,
+            uint256 MONOPOLY_THRESHOLD, // max number of validators an operator is allowed to operate.
+            uint256 VALIDATORS_INDEX,
+            uint256 VERIFICATION_INDEX,
+            uint256 PERIOD_PRICE_INCREASE_LIMIT,
+            uint256 PERIOD_PRICE_DECREASE_LIMIT,
+            bytes32 PRICE_MERKLE_ROOT
+        )
+    {
+        ORACLE = STAKEPOOL.TELESCOPE.ORACLE_POSITION;
+        ORACLE_UPDATE_TIMESTAMP = STAKEPOOL.TELESCOPE.ORACLE_UPDATE_TIMESTAMP;
+        MONOPOLY_THRESHOLD = STAKEPOOL.TELESCOPE.MONOPOLY_THRESHOLD;
+        VALIDATORS_INDEX = STAKEPOOL.TELESCOPE.VALIDATORS_INDEX;
+        VERIFICATION_INDEX = STAKEPOOL.TELESCOPE.VERIFICATION_INDEX;
+        PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL
+            .TELESCOPE
+            .PERIOD_PRICE_INCREASE_LIMIT;
+        PERIOD_PRICE_DECREASE_LIMIT = STAKEPOOL
+            .TELESCOPE
+            .PERIOD_PRICE_DECREASE_LIMIT;
+        PRICE_MERKLE_ROOT = STAKEPOOL.TELESCOPE.PRICE_MERKLE_ROOT;
     }
 
     function changeOracle() public {
-        STAKEPOOL.getgETH().updateOracleRole(msg.sender);
+        STAKEPOOL.gETH.updateOracleRole(msg.sender);
     }
 
     /**
@@ -89,16 +126,12 @@ contract TestStakeUtils is ERC1155Holder {
         DATASTORE.writeUintForId(_id, "TYPE", _type);
     }
 
-    function getERC1155() external view virtual returns (IgETH) {
-        return STAKEPOOL.getgETH();
-    }
-
     function mintgETH(
         address _to,
         uint256 _id,
         uint256 _amount
     ) external virtual {
-        StakeUtils._mint(address(STAKEPOOL.getgETH()), _to, _id, _amount);
+        STAKEPOOL.gETH.mint(_to, _id, _amount, "");
     }
 
     function buyback(
@@ -133,22 +166,22 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function updateGovernanceParams(
-        address _GOVERNANCE,
         address _DEFAULT_gETH_INTERFACE, // contract?
         address _DEFAULT_DWP, // contract?
         address _DEFAULT_LP_TOKEN, // contract?
         uint256 _MAX_MAINTAINER_FEE, // < 100
         uint256 _BOOSTRAP_PERIOD,
-        uint256 _PERIOD_PRICE_INCREASE_LIMIT
+        uint256 _PERIOD_PRICE_INCREASE_LIMIT,
+        uint256 _PERIOD_PRICE_DECREASE_LIMIT
     ) external virtual {
         STAKEPOOL.updateGovernanceParams(
-            _GOVERNANCE,
             _DEFAULT_gETH_INTERFACE,
             _DEFAULT_DWP,
             _DEFAULT_LP_TOKEN,
             _MAX_MAINTAINER_FEE,
             _BOOSTRAP_PERIOD,
-            _PERIOD_PRICE_INCREASE_LIMIT
+            _PERIOD_PRICE_INCREASE_LIMIT,
+            _PERIOD_PRICE_DECREASE_LIMIT
         );
     }
 
@@ -178,7 +211,7 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function setPricePerShare(uint256 price, uint256 _planetId) external {
-        STAKEPOOL._setPricePerShare(price, _planetId);
+        STAKEPOOL.gETH.setPricePerShare(price, _planetId);
     }
 
     function getPricePerShare(uint256 _planetId)
@@ -186,7 +219,7 @@ contract TestStakeUtils is ERC1155Holder {
         view
         returns (uint256)
     {
-        return STAKEPOOL._getPricePerShare(_planetId);
+        return STAKEPOOL.gETH.pricePerShare(_planetId);
     }
 
     function setInterface(uint256 _planetId, address _interface) external {
@@ -243,7 +276,6 @@ contract TestStakeUtils is ERC1155Holder {
         uint256 _fee,
         uint256 _withdrawalBoost,
         address _maintainer,
-        address _governance,
         string memory _interfaceName,
         string memory _interfaceSymbol
     ) external {
@@ -253,9 +285,7 @@ contract TestStakeUtils is ERC1155Holder {
             _fee,
             _withdrawalBoost,
             _maintainer,
-            _governance,
-            _interfaceName,
-            _interfaceSymbol
+            [_interfaceName, _interfaceSymbol]
         );
     }
 
@@ -337,7 +367,7 @@ contract TestStakeUtils is ERC1155Holder {
 
     function dailyMintBuffer(uint256 poolId) external view returns (uint256) {
         bytes32 dailyBufferKey = StakeUtils._getKey(
-            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
             "mintBuffer"
         );
         return DATASTORE.readUintForId(poolId, dailyBufferKey);
@@ -345,7 +375,7 @@ contract TestStakeUtils is ERC1155Holder {
 
     function dailyBurnBuffer(uint256 poolId) external view returns (uint256) {
         bytes32 dailyBufferKey = StakeUtils._getKey(
-            block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
             "burnBuffer"
         );
         return DATASTORE.readUintForId(poolId, dailyBufferKey);
@@ -465,7 +495,7 @@ contract TestStakeUtils is ERC1155Holder {
         virtual
         returns (bool)
     {
-        return STAKEPOOL.canStake(pubkey);
+        return STAKEPOOL.TELESCOPE.canStake(pubkey);
     }
 
     function proposeStake(
@@ -495,22 +525,20 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function setMONOPOLY_THRESHOLD(uint256 threshold) external virtual {
-        STAKEPOOL.MONOPOLY_THRESHOLD = threshold;
+        STAKEPOOL.TELESCOPE.MONOPOLY_THRESHOLD = threshold;
     }
 
     function regulateOperators(
         uint256 all_validators_count,
         uint256 new_verification_index,
-        bytes[] calldata alienPubkeys,
-        bytes[] calldata curedPubkeys,
+        bytes[][] calldata regulatedPubkeys, //i = 0: alienated, 1: cured, 2: busted, 3: released
         uint256[] calldata prisonedIds
     ) external virtual {
         STAKEPOOL.regulateOperators(
             DATASTORE,
             all_validators_count,
             new_verification_index,
-            alienPubkeys,
-            curedPubkeys,
+            regulatedPubkeys,
             prisonedIds
         );
     }
@@ -524,32 +552,29 @@ contract TestStakeUtils is ERC1155Holder {
         return StakeUtils.isPrisoned(DATASTORE, operatorId);
     }
 
-    function releasePrisoned(uint256 operatorId, address governance)
-        external
-        virtual
-    {
-        StakeUtils.releasePrisoned(DATASTORE, governance, operatorId);
+    function releasePrisoned(uint256 operatorId) external virtual {
+        STAKEPOOL.releasePrisoned(DATASTORE, operatorId);
     }
 
     function alienatePubKey(bytes calldata pubkey) external virtual {
-        STAKEPOOL.Validators[pubkey].state = 69;
+        STAKEPOOL.TELESCOPE.Validators[pubkey].state = 69;
     }
 
     function getValidatorData(bytes calldata pubkey)
         external
         view
         virtual
-        returns (StakeUtils.Validator memory)
+        returns (OracleUtils.Validator memory)
     {
-        return STAKEPOOL.Validators[pubkey];
+        return STAKEPOOL.TELESCOPE.Validators[pubkey];
     }
 
     function getVALIDATORS_INDEX() external view virtual returns (uint256) {
-        return STAKEPOOL.VALIDATORS_INDEX;
+        return STAKEPOOL.TELESCOPE.VALIDATORS_INDEX;
     }
 
     function getVERIFICATION_INDEX() external view virtual returns (uint256) {
-        return STAKEPOOL.VERIFICATION_INDEX;
+        return STAKEPOOL.TELESCOPE.VERIFICATION_INDEX;
     }
 
     function getContractBalance() external view virtual returns (uint256) {
@@ -557,19 +582,20 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     function setORACLE_UPDATE_TIMESTAMP(uint256 ts) external virtual {
-        STAKEPOOL.ORACLE_UPDATE_TIMESTAMP = ts;
+        STAKEPOOL.TELESCOPE.ORACLE_UPDATE_TIMESTAMP = ts;
     }
 
     function isOracleActive() external view virtual returns (bool) {
-        return STAKEPOOL._isOracleActive();
+        return STAKEPOOL.TELESCOPE._isOracleActive();
     }
 
     function sanityCheck(uint256 _id, uint256 _newPrice) external view {
-        STAKEPOOL._sanityCheck(
+        STAKEPOOL.TELESCOPE._sanityCheck(
             _id,
             (block.timestamp +
-                StakeUtils.ORACLE_ACTIVE_PERIOD -
-                STAKEPOOL.ORACLE_UPDATE_TIMESTAMP) / StakeUtils.ORACLE_PERIOD,
+                OracleUtils.ORACLE_ACTIVE_PERIOD -
+                STAKEPOOL.TELESCOPE.ORACLE_UPDATE_TIMESTAMP) /
+                OracleUtils.ORACLE_PERIOD,
             _newPrice
         );
     }
@@ -583,17 +609,17 @@ contract TestStakeUtils is ERC1155Holder {
         bytes32[] calldata priceProofs
     ) external virtual {
         bytes32[2] memory dailyBufferKeys = [
-            StakeUtils._getKey(
-                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            OracleUtils._getKey(
+                block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
                 "mintBuffer"
             ),
-            StakeUtils._getKey(
-                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            OracleUtils._getKey(
+                block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
                 "burnBuffer"
             )
         ];
-        STAKEPOOL.PRICE_MERKLE_ROOT = merkleRoot;
-        STAKEPOOL._priceSync(
+        STAKEPOOL.TELESCOPE.PRICE_MERKLE_ROOT = merkleRoot;
+        STAKEPOOL.TELESCOPE._priceSync(
             DATASTORE,
             dailyBufferKeys,
             index,
@@ -615,14 +641,14 @@ contract TestStakeUtils is ERC1155Holder {
         external
         returns (uint256 real, uint256 expected)
     {
-        (real, expected) = STAKEPOOL._findPrices_ClearBuffer(
+        (real, expected) = STAKEPOOL.TELESCOPE._findPrices_ClearBuffer(
             DATASTORE,
-            StakeUtils._getKey(
-                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            OracleUtils._getKey(
+                block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
                 "mintBuffer"
             ),
-            StakeUtils._getKey(
-                block.timestamp - (block.timestamp % StakeUtils.ORACLE_PERIOD),
+            OracleUtils._getKey(
+                block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
                 "burnBuffer"
             ),
             poolId,

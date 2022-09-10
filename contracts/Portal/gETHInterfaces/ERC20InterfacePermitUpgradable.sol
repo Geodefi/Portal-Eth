@@ -56,8 +56,8 @@ contract ERC20InterfacePermitUpgradable is
      */
     function initialize(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         IgETH gETH_1155
     ) public virtual initializer {
         __ERC20interfacePermit_init(id_, name_, symbol_, gETH_1155);
@@ -70,8 +70,8 @@ contract ERC20InterfacePermitUpgradable is
      */
     function __ERC20interfacePermit_init(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         IgETH gETH_1155
     ) internal onlyInitializing {
         __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);

@@ -82,8 +82,8 @@ contract ERC20InterfaceUpgradable is
 
     function __ERC20interface_init(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         IgETH gETH_1155
     ) internal onlyInitializing {
         __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);
@@ -91,8 +91,8 @@ contract ERC20InterfaceUpgradable is
 
     function __ERC20interface_init_unchained(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         IgETH gETH_1155
     ) internal onlyInitializing {
         _id = id_;

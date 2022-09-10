@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./DataStoreLib.sol";
+import "./OracleUtilsLib.sol";
 import {DepositContractUtils as DCU} from "./DepositContractUtilsLib.sol";
 import {IERC20InterfacePermitUpgradable as IgETHInterface} from "../../interfaces/IERC20InterfacePermitUpgradable.sol";
 import "../../interfaces/IgETH.sol";
@@ -42,7 +43,6 @@ import "../../interfaces/ILPToken.sol";
  */
 
 library StakeUtils {
-    using DataStoreUtils for DataStoreUtils.DataStore;
     event IdInitiated(uint256 id, uint256 _type);
     event PriceChanged(uint256 id, uint256 pricePerShare);
     event MaintainerFeeUpdated(uint256 id, uint256 fee);
@@ -54,8 +54,6 @@ library StakeUtils {
         uint256 operatorId,
         uint256 allowance
     );
-    event Alienation(bytes pubkey, bool isAlien);
-    event VerificationIndexUpdated(uint256 newIndex);
     event PreStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
     event governanceParamsUpdated(
@@ -64,92 +62,55 @@ library StakeUtils {
         address DEFAULT_LP_TOKEN_,
         uint256 MAX_MAINTAINER_FEE_,
         uint256 BOOSTRAP_PERIOD_,
-        uint256 PERIOD_PRICE_INCREASE_LIMIT_
+        uint256 PERIOD_PRICE_INCREASE_LIMIT_,
+        uint256 PERIOD_PRICE_DECREASE_LIMIT_
     );
 
-    /**
-     * @param state 0: inactive, 1: proposed, 2: active, 3: withdrawn, 69: alien (https://bit.ly/3Tkc6UC)
-     * @param index representing this validators placement on the chronological order of the proposed validators
-     * @param planetId needed for withdrawal_credential
-     * @param operatorId needed for staking after allowence
-     * @param signature BLS12-381 signature of the validator
-     **/
-    struct Validator {
-        uint8 state;
-        uint256 index;
-        uint256 planetId;
-        uint256 operatorId;
-        uint256 planetFee;
-        uint256 operatorFee;
-        // address withdrawalCredentialContract;
-        bytes signature;
-    }
+    using DataStoreUtils for DataStoreUtils.DataStore;
+    using OracleUtils for OracleUtils.Oracle;
+
     /**
      * @notice StakePool includes the parameters related to multiple Staking Pool Contracts.
      * @notice Dynamic Staking Pool contains a staking pool that works with a *bound* Withdrawal Pool (DWP) to create best pricing
      * for the staking derivative. Withdrawal Pools (DWP) uses StableSwap algorithm with Dynamic Pegs.
      * @dev  gETH should not be changed, ever!
-     * @param ORACLE https://github.com/Geodefi/Telescope-Eth
      * @param gETH ERC1155 contract that keeps the totalSupply, pricePerShare and balances of all StakingPools by ID
      * @param DEFAULT_gETH_INTERFACE
      * @param DEFAULT_DWP Dynamic Withdrawal Pool, a STABLESWAP pool that will be cloned to be used for given ID
      * @param DEFAULT_LP_TOKEN LP token implementation that will be cloned to be used for DWP of given ID
      * @param MAX_MAINTAINER_FEE : limits fees, set by GOVERNANCE
-     * @param VERIFICATION_INDEX the highest index of the validators that are verified to be activated. Updated by Telescope. set to 0 at start
-     * @param VALIDATORS_INDEX total number of validators that are proposed at some point. includes all states of validators. set to 0 at start
      * @param Validators : pubKey to Validator
-     * @dev changing any of address parameters (gETH, ORACLE, DEFAULT_DWP, DEFAULT_LP_TOKEN) MUST require a contract upgrade to ensure security. We can change this in the future with a better GeodeUtils design.
+     * @dev changing any of address parameters (gETH, ORACLE) MUST require a contract upgrade to ensure security. We can change this in the future with a better GeodeUtils design.
      **/
     struct StakePool {
-        address ORACLE;
-        address gETH;
+        IgETH gETH;
+        OracleUtils.Oracle TELESCOPE;
+        address GOVERNANCE;
         address DEFAULT_gETH_INTERFACE;
         address DEFAULT_DWP;
         address DEFAULT_LP_TOKEN;
         uint256 MAX_MAINTAINER_FEE;
         uint256 BOOSTRAP_PERIOD;
-        uint256 PERIOD_PRICE_INCREASE_LIMIT;
-        uint256 MONOPOLY_THRESHOLD; // max number of validators an operator is allowed to operate.
-        uint256 VALIDATORS_INDEX;
-        uint256 VERIFICATION_INDEX;
-        bytes32 PRICE_MERKLE_ROOT;
-        uint256 ORACLE_UPDATE_TIMESTAMP;
-        mapping(bytes => Validator) Validators;
+        uint256 WITHDRAWAL_DELAY;
     }
+
     /// @notice FEE_DENOMINATOR represents 100%
     uint256 public constant FEE_DENOMINATOR = 10**10;
 
-    /**
-     * @notice gETH lacks *decimals*,
-     * @dev gETH_DENOMINATOR makes sure that we are taking care of decimals on calculations related to gETH
-     */
-    uint256 public constant gETH_DENOMINATOR = 1 ether;
     uint256 public constant IGNORABLE_DEBT = 1 ether;
-
-    /// @notice Oracle is active for the first 30 min for a day
-    uint256 public constant ORACLE_PERIOD = 1 days;
-    uint256 public constant ORACLE_ACTIVE_PERIOD = 30 minutes;
 
     /// @notice comments here
     uint256 public constant FEE_SWITCH_LATENCY = 7 days;
-    uint256 public constant PRISON_SENTENCE = 7 days;
-    // as a percentage while FEE_DENOMINATOR = 100%, set by governance
-    uint256 public constant MONOPOLY_RATIO = (5 * FEE_DENOMINATOR) / 100;
 
     /// @notice default DWP parameters
     uint256 public constant DEFAULT_A = 60;
     uint256 public constant DEFAULT_FEE = (4 * FEE_DENOMINATOR) / 10000;
     uint256 public constant DEFAULT_ADMIN_FEE = (5 * FEE_DENOMINATOR) / 10;
 
-    modifier onlyOracle(StakePool storage self) {
-        require(msg.sender == self.ORACLE, "StakeUtils: sender is NOT ORACLE");
-        _;
-    }
-
-    modifier onlyGovernance(address GOVERNANCE) {
+    modifier onlyGovernance(StakePool storage self) {
         require(
-            msg.sender == GOVERNANCE,
-            "StakeUtils: sender is NOT GOVERNANCE"
+            msg.sender == self.GOVERNANCE,
+            "StakeUtils: sender NOT GOVERNANCE"
         );
         _;
     }
@@ -162,12 +123,12 @@ library StakeUtils {
     ) {
         require(
             msg.sender == _DATASTORE.readAddressForId(_id, "CONTROLLER"),
-            "StakeUtils: sender is NOT CONTROLLER"
+            "StakeUtils: sender NOT CONTROLLER"
         );
 
         require(
             _DATASTORE.readUintForId(_id, "TYPE") == _type,
-            "StakeUtils: id is NOT correct TYPE"
+            "StakeUtils: id NOT correct TYPE"
         );
         require(
             _DATASTORE.readUintForId(_id, "initiated") == 0,
@@ -185,9 +146,6 @@ library StakeUtils {
     /**
      * @notice                      ** HELPER functions **
      */
-    function _clone(address target) public returns (address) {
-        return Clones.clone(target);
-    }
 
     function _getKey(uint256 _id, string memory _param)
         internal
@@ -206,53 +164,27 @@ library StakeUtils {
         if (expectMaintainer) {
             require(
                 msg.sender == _DATASTORE.readAddressForId(_id, "maintainer"),
-                "StakeUtils: sender is NOT maintainer"
+                "StakeUtils: sender NOT maintainer"
             );
         }
 
         uint256 typeOfId = _DATASTORE.readUintForId(_id, "TYPE");
         if (typeOfId == 4) {
-            require(
-                restrictionMap[0] == true,
-                "StakeUtils: TYPE is NOT allowed"
-            );
+            require(restrictionMap[0] == true, "StakeUtils: TYPE NOT allowed");
             require(
                 !isPrisoned(_DATASTORE, _id),
                 "StakeUtils: operator is in prison, get in touch with governance"
             );
         } else if (typeOfId == 5) {
-            require(
-                restrictionMap[1] == true,
-                "StakeUtils: TYPE is NOT allowed"
-            );
+            require(restrictionMap[1] == true, "StakeUtils: TYPE NOT allowed");
         } else if (typeOfId == 6) {
-            require(
-                restrictionMap[2] == true,
-                "StakeUtils: TYPE is NOT allowed"
-            );
-        } else revert("StakeUtils: unknown TYPE");
+            require(restrictionMap[2] == true, "StakeUtils: TYPE NOT allowed");
+        } else revert("StakeUtils: invalid TYPE");
     }
 
     /**
      * @notice                      ** gETH functions **
      */
-    function getgETH(StakePool storage self) public view returns (IgETH) {
-        return IgETH(self.gETH);
-    }
-
-    /**
-     * @notice mints gETH tokens with given ID and amount.
-     * @dev shouldn't be accesible publicly
-     */
-    function _mint(
-        address _gETH,
-        address _to,
-        uint256 _id,
-        uint256 _amount
-    ) internal {
-        require(_id > 0, "StakeUtils: _mint id should be > 0");
-        IgETH(_gETH).mint(_to, _id, _amount, "");
-    }
 
     /**
      *  @notice if a planet did not unset an old Interface, before setting a new one;
@@ -266,8 +198,8 @@ library StakeUtils {
     ) public {
         uint256 IL = _DATASTORE.readUintForId(_id, "interfacesLength");
         require(
-            !getgETH(self).isInterface(_Interface, _id),
-            "StakeUtils: already an interface"
+            !self.gETH.isInterface(_Interface, _id),
+            "StakeUtils: already interface"
         );
         _DATASTORE.writeAddressForId(
             _id,
@@ -275,7 +207,7 @@ library StakeUtils {
             _Interface
         );
         _DATASTORE.addUintForId(_id, "interfacesLength", 1);
-        getgETH(self).setInterface(_Interface, _id, true);
+        self.gETH.setInterface(_Interface, _id, true);
     }
 
     function unsetInterface(
@@ -289,16 +221,15 @@ library StakeUtils {
             _getKey(_index, "interfaces")
         );
         require(
-            _Interface != address(0) &&
-                getgETH(self).isInterface(_Interface, _id),
-            "StakeUtils: already NOT an interface"
+            _Interface != address(0) && self.gETH.isInterface(_Interface, _id),
+            "StakeUtils: already NOT interface"
         );
         _DATASTORE.writeAddressForId(
             _id,
             _getKey(_index, "interfaces"),
             address(0)
         );
-        getgETH(self).setInterface(_Interface, _id, false);
+        self.gETH.setInterface(_Interface, _id, false);
     }
 
     function allInterfaces(
@@ -353,9 +284,7 @@ library StakeUtils {
         uint256 _fee,
         uint256 _withdrawalBoost,
         address _maintainer,
-        address _GOVERNANCE,
-        string memory _interfaceName,
-        string memory _interfaceSymbol
+        string[2] calldata _interfaceSpecs
     ) external initiator(_DATASTORE, 5, _id, _maintainer) {
         require(
             _fee <= self.MAX_MAINTAINER_FEE,
@@ -363,28 +292,30 @@ library StakeUtils {
         );
         require(
             _withdrawalBoost <= FEE_DENOMINATOR,
-            "StakeUtils: withdrawalBoost more than 100%"
+            "StakeUtils: withdrawalBoost > 100%"
         );
         _DATASTORE.writeUintForId(_id, "fee", _fee);
         _DATASTORE.writeUintForId(_id, "withdrawalBoost", _withdrawalBoost);
         {
-            address gEth = address(getgETH(self));
-            address gInterface = _clone(self.DEFAULT_gETH_INTERFACE);
-            IgETHInterface(gInterface).initialize(
+            IgETH gEth = self.gETH;
+            IgETHInterface gInterface = IgETHInterface(
+                Clones.clone(self.DEFAULT_gETH_INTERFACE)
+            );
+            gInterface.initialize(
                 _id,
-                _interfaceName,
-                _interfaceSymbol,
+                _interfaceSpecs[0],
+                _interfaceSpecs[1],
                 gEth
             );
-            setInterface(self, _DATASTORE, _id, gInterface);
+            setInterface(self, _DATASTORE, _id, address(gInterface));
         }
         address WithdrawalPool = _deployWithdrawalPool(self, _DATASTORE, _id);
         // transfer ownership of DWP to GEODE.GOVERNANCE
-        Ownable(WithdrawalPool).transferOwnership(_GOVERNANCE);
+        Ownable(WithdrawalPool).transferOwnership(self.GOVERNANCE);
         // approve token so we can use it in buybacks
-        getgETH(self).setApprovalForAll(WithdrawalPool, true);
+        self.gETH.setApprovalForAll(WithdrawalPool, true);
         // initially 1 ETHER = 1 ETHER
-        _setPricePerShare(self, 1 ether, _id);
+        self.gETH.setPricePerShare(1 ether, _id);
     }
 
     /**
@@ -404,6 +335,83 @@ library StakeUtils {
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
         );
         _DATASTORE.writeUintForId(_id, "fee", _fee);
+    }
+
+    /**
+     * @notice                      ** Governance specific functions **
+     */
+
+    function updateGovernanceParams(
+        StakePool storage self,
+        address _DEFAULT_gETH_INTERFACE, // contract?
+        address _DEFAULT_DWP, // contract?
+        address _DEFAULT_LP_TOKEN, // contract?
+        uint256 _MAX_MAINTAINER_FEE, // < 100
+        uint256 _BOOSTRAP_PERIOD,
+        uint256 _PERIOD_PRICE_INCREASE_LIMIT,
+        uint256 _PERIOD_PRICE_DECREASE_LIMIT
+    ) external onlyGovernance(self) {
+        require(
+            _DEFAULT_gETH_INTERFACE.code.length > 0,
+            "StakeUtils: DEFAULT_gETH_INTERFACE NOT contract"
+        );
+        require(
+            _DEFAULT_DWP.code.length > 0,
+            "StakeUtils: DEFAULT_DWP NOT contract"
+        );
+        require(
+            _DEFAULT_LP_TOKEN.code.length > 0,
+            "StakeUtils: DEFAULT_LP_TOKEN NOT contract"
+        );
+        require(
+            _PERIOD_PRICE_INCREASE_LIMIT > 0,
+            "StakeUtils: incorrect PERIOD_PRICE_INCREASE_LIMIT"
+        );
+        require(
+            _PERIOD_PRICE_DECREASE_LIMIT > 0,
+            "StakeUtils: incorrect PERIOD_PRICE_DECREASE_LIMIT"
+        );
+        require(
+            _MAX_MAINTAINER_FEE > 0 && _MAX_MAINTAINER_FEE <= FEE_DENOMINATOR,
+            "StakeUtils: incorrect MAX_MAINTAINER_FEE"
+        );
+
+        self.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
+        self.DEFAULT_DWP = _DEFAULT_DWP;
+        self.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
+        self.MAX_MAINTAINER_FEE = _MAX_MAINTAINER_FEE;
+        self.BOOSTRAP_PERIOD = _BOOSTRAP_PERIOD;
+        self
+            .TELESCOPE
+            .PERIOD_PRICE_INCREASE_LIMIT = _PERIOD_PRICE_INCREASE_LIMIT;
+        self
+            .TELESCOPE
+            .PERIOD_PRICE_DECREASE_LIMIT = _PERIOD_PRICE_DECREASE_LIMIT;
+
+        emit governanceParamsUpdated(
+            _DEFAULT_gETH_INTERFACE,
+            _DEFAULT_DWP,
+            _DEFAULT_LP_TOKEN,
+            _MAX_MAINTAINER_FEE,
+            _BOOSTRAP_PERIOD,
+            _PERIOD_PRICE_INCREASE_LIMIT,
+            _PERIOD_PRICE_DECREASE_LIMIT
+        );
+    }
+
+    /**
+     * note onlyGovernance check
+     */
+    function releasePrisoned(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 operatorId
+    ) external onlyGovernance(self) {
+        require(
+            isPrisoned(_DATASTORE, operatorId),
+            "StakeUtils: NOT in prison"
+        );
+        _DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
     }
 
     /**
@@ -437,7 +445,7 @@ library StakeUtils {
     ) external {
         require(
             msg.sender == _DATASTORE.readAddressForId(_id, "CONTROLLER"),
-            "StakeUtils: sender is NOT CONTROLLER"
+            "StakeUtils: sender NOT CONTROLLER"
         );
 
         require(
@@ -509,71 +517,106 @@ library StakeUtils {
     }
 
     /**
-     * @notice                      ** Governance specific functions **
+     * @notice Operator wallet keeps Ether put in Portal by Operator to make proposeStake easier, instead of sending n ETH to contract
+     * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
+     * and from there, ETHs can be used to proposeStake. Then when it is approved and staked, it will be
+     * added back to the wallet to be used for other proposeStake calls.
+     * @param _operatorId the id of the Operator
+     * @return walletBalance the balance of Operator with the given _operatorId has
      */
-
-    function updateGovernanceParams(
-        StakePool storage self,
-        address _GOVERNANCE,
-        address _DEFAULT_gETH_INTERFACE, // contract?
-        address _DEFAULT_DWP, // contract?
-        address _DEFAULT_LP_TOKEN, // contract?
-        uint256 _MAX_MAINTAINER_FEE, // < 100
-        uint256 _BOOSTRAP_PERIOD,
-        uint256 _PERIOD_PRICE_INCREASE_LIMIT
-    ) external onlyGovernance(_GOVERNANCE) {
-        require(
-            _DEFAULT_gETH_INTERFACE.code.length > 0,
-            "StakeUtils: DEFAULT_gETH_INTERFACE should be a contract"
-        );
-        require(
-            _DEFAULT_DWP.code.length > 0,
-            "StakeUtils: DEFAULT_DWP should be a contract"
-        );
-        require(
-            _DEFAULT_LP_TOKEN.code.length > 0,
-            "StakeUtils: DEFAULT_LP_TOKEN should be a contract"
-        );
-        require(
-            _PERIOD_PRICE_INCREASE_LIMIT > 0,
-            "StakeUtils: incorrect PERIOD_PRICE_INCREASE_LIMIT"
-        );
-        require(
-            _MAX_MAINTAINER_FEE > 0 && _MAX_MAINTAINER_FEE <= FEE_DENOMINATOR,
-            "StakeUtils: incorrect MAX_MAINTAINER_FEE"
-        );
-
-        self.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
-        self.DEFAULT_DWP = _DEFAULT_DWP;
-        self.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
-        self.MAX_MAINTAINER_FEE = _MAX_MAINTAINER_FEE;
-        self.BOOSTRAP_PERIOD = _BOOSTRAP_PERIOD;
-        self.PERIOD_PRICE_INCREASE_LIMIT = _PERIOD_PRICE_INCREASE_LIMIT;
-
-        emit governanceParamsUpdated(
-            _DEFAULT_gETH_INTERFACE,
-            _DEFAULT_DWP,
-            _DEFAULT_LP_TOKEN,
-            _MAX_MAINTAINER_FEE,
-            _BOOSTRAP_PERIOD,
-            _PERIOD_PRICE_INCREASE_LIMIT
-        );
-    }
-
-    /**
-     * note onlyGovernance check
-     */
-    function releasePrisoned(
+    function getMaintainerWalletBalance(
         DataStoreUtils.DataStore storage _DATASTORE,
-        address _GOVERNANCE,
-        uint256 operatorId
-    ) external onlyGovernance(_GOVERNANCE) {
-        _DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
+        uint256 _operatorId
+    ) external view returns (uint256 walletBalance) {
+        walletBalance = _DATASTORE.readUintForId(_operatorId, "wallet");
     }
 
     /**
-     * @notice                      ** Operator (TYPE 4) specific functions **
+     * @notice To increase the balance of an Operator's wallet
+     * @dev only maintainer can increase the balance
+     * @param _operatorId the id of the Operator
+     * @param value Ether (in Wei) amount to increase the wallet balance.
+     * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.
      */
+    function _increaseMaintainerWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 value
+    ) internal returns (bool success) {
+        _DATASTORE.addUintForId(_operatorId, "wallet", value);
+        return true;
+    }
+
+    /**
+     * @notice external version of _increaseMaintainerWallet()
+     */
+    function increaseMaintainerWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) external returns (bool success) {
+        _authenticate(_DATASTORE, _operatorId, true, [true, true, true]);
+
+        return _increaseMaintainerWallet(_DATASTORE, _operatorId, msg.value);
+    }
+
+    /**
+     * @notice To decrease the balance of an Operator's wallet
+     * @dev only maintainer can decrease the balance
+     * @param _operatorId the id of the Operator
+     * @param value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
+     * @return success boolean value which is "sent", should be used by Operator is Maintainer is a contract.
+     */
+    function _decreaseMaintainerWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 value
+    ) internal returns (bool success) {
+        require(
+            _DATASTORE.readUintForId(_operatorId, "wallet") >= value,
+            "StakeUtils: NOT enough balance in wallet"
+        );
+        _DATASTORE.subUintForId(_operatorId, "wallet", value);
+        return true;
+    }
+
+    /**
+     * @notice external version of _decreaseMaintainerWallet()
+     */
+    function decreaseMaintainerWallet(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId,
+        uint256 value
+    ) external returns (bool success) {
+        _authenticate(_DATASTORE, _operatorId, true, [true, true, true]);
+
+        require(
+            address(this).balance >= value,
+            "StakeUtils: not enough balance in Portal (?)"
+        );
+
+        bool decreased = _decreaseMaintainerWallet(
+            _DATASTORE,
+            _operatorId,
+            value
+        );
+
+        (bool sent, ) = msg.sender.call{value: value}("");
+        require(decreased && sent, "StakeUtils: Failed to send ETH");
+        return sent;
+    }
+
+    /**
+     * @notice                ** Operator and Planet (TYPE 4 and 5) specific functions **
+     */
+
+    function isPrisoned(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) public view returns (bool _isPrisoned) {
+        _isPrisoned =
+            block.timestamp <=
+            _DATASTORE.readUintForId(_operatorId, "released");
+    }
 
     /** *
      * @notice operatorAllowence is the number of validators that the given Operator is allowed to create on behalf of the Planet
@@ -625,95 +668,6 @@ library StakeUtils {
         return true;
     }
 
-    /**
-     * @notice Operator wallet keeps Ether put in Portal by Operator to make proposeStake easier, instead of sending n ETH to contract
-     * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
-     * and from there, ETHs can be used to proposeStake. Then when it is approved and staked, it will be
-     * added back to the wallet to be used for other proposeStake calls.
-     * @param _operatorId the id of the Operator
-     * @return walletBalance the balance of Operator with the given _operatorId has
-     */
-    function getMaintainerWalletBalance(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId
-    ) public view returns (uint256 walletBalance) {
-        walletBalance = _DATASTORE.readUintForId(_operatorId, "wallet");
-    }
-
-    /**
-     * @notice To increase the balance of an Operator's wallet
-     * @dev only maintainer can increase the balance
-     * @param _operatorId the id of the Operator
-     * @param value Ether (in Wei) amount to increase the wallet balance.
-     * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.
-     */
-    function _increaseMaintainerWallet(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId,
-        uint256 value
-    ) internal returns (bool success) {
-        _DATASTORE.addUintForId(_operatorId, "wallet", value);
-        return true;
-    }
-
-    /**
-     * @notice external version of _increaseMaintainerWallet()
-     */
-    function increaseMaintainerWallet(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId
-    ) external returns (bool success) {
-        _authenticate(_DATASTORE, _operatorId, true, [true, true, true]);
-
-        return _increaseMaintainerWallet(_DATASTORE, _operatorId, msg.value);
-    }
-
-    /**
-     * @notice To decrease the balance of an Operator's wallet
-     * @dev only maintainer can decrease the balance
-     * @param _operatorId the id of the Operator
-     * @param value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
-     * @return success boolean value which is "sent", should be used by Operator is Maintainer is a contract.
-     */
-    function _decreaseMaintainerWallet(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId,
-        uint256 value
-    ) internal returns (bool success) {
-        require(
-            _DATASTORE.readUintForId(_operatorId, "wallet") >= value,
-            "StakeUtils: Not enough resources in maintainerWallet"
-        );
-        _DATASTORE.subUintForId(_operatorId, "wallet", value);
-        return true;
-    }
-
-    /**
-     * @notice external version of _decreaseMaintainerWallet()
-     */
-    function decreaseMaintainerWallet(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId,
-        uint256 value
-    ) external returns (bool success) {
-        _authenticate(_DATASTORE, _operatorId, true, [true, true, true]);
-
-        require(
-            address(this).balance >= value,
-            "StakeUtils: Not enough resources in Portal (?)"
-        );
-
-        bool decreased = _decreaseMaintainerWallet(
-            _DATASTORE,
-            _operatorId,
-            value
-        );
-
-        (bool sent, ) = msg.sender.call{value: value}("");
-        require(decreased && sent, "StakeUtils: Failed to send ETH");
-        return sent;
-    }
-
     function getCometPeriod(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId
@@ -728,15 +682,6 @@ library StakeUtils {
     ) external {
         _authenticate(_DATASTORE, _operatorId, true, [true, true, false]);
         _DATASTORE.writeUintForId(_operatorId, "cometPeriod", _newPeriod);
-    }
-
-    function isPrisoned(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId
-    ) public view returns (bool _isPrisoned) {
-        _isPrisoned =
-            block.timestamp <=
-            _DATASTORE.readUintForId(_operatorId, "released");
     }
 
     /**
@@ -766,10 +711,10 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
     ) internal returns (address WithdrawalPool) {
-        WithdrawalPool = _clone(self.DEFAULT_DWP);
+        WithdrawalPool = Clones.clone(self.DEFAULT_DWP);
 
         address _WPToken = ISwap(WithdrawalPool).initialize(
-            address(getgETH(self)),
+            self.gETH,
             _id,
             string(
                 abi.encodePacked(
@@ -812,7 +757,7 @@ library StakeUtils {
 
         require(
             !isStakingPausedForPool(_DATASTORE, _id),
-            "StakeUtils: staking is already paused for pool"
+            "StakeUtils: staking already paused"
         );
 
         _DATASTORE.writeUintForId(_id, "stakePaused", 1); // meaning true
@@ -830,7 +775,7 @@ library StakeUtils {
 
         require(
             isStakingPausedForPool(_DATASTORE, _id),
-            "StakeUtils: staking is already NOT paused for pool"
+            "StakeUtils: staking already NOT paused"
         );
 
         _DATASTORE.writeUintForId(_id, "stakePaused", 0); // meaning false
@@ -849,7 +794,7 @@ library StakeUtils {
      * @notice Updating VERIFICATION_INDEX, signaling that it is safe to allow
      * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds.
      * @param newVerificationIndex index of the highest validator that is verified to be activated
-     * @param alienPubkeys array of validator pubkeys that are lower than new_index which also
+     * @param regulatedPubkeys array of validator pubkeys that are lower than new_index which also
      * either frontrunned proposeStake function thus alienated OR proven to be mistakenly alienated.
      */
     function regulateOperators(
@@ -857,209 +802,21 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 allValidatorsCount,
         uint256 newVerificationIndex,
-        bytes[] calldata alienPubkeys,
-        bytes[] calldata curedPubkeys,
+        bytes[][] calldata regulatedPubkeys,
         uint256[] calldata prisonedIds
-    ) external onlyOracle(self) {
-        require(!_isOracleActive(self), "StakeUtils: oracle is active");
-        require(allValidatorsCount > 999, "StakeUtils: low validator count");
-        require(
-            self.VALIDATORS_INDEX >= newVerificationIndex,
-            "StakeUtils: high VERIFICATION_INDEX"
+    ) external {
+        self.TELESCOPE.regulateOperators(
+            _DATASTORE,
+            allValidatorsCount,
+            newVerificationIndex,
+            regulatedPubkeys,
+            prisonedIds
         );
-        require(
-            newVerificationIndex >= self.VERIFICATION_INDEX,
-            "StakeUtils: low VERIFICATION_INDEX"
-        );
-
-        uint256 planetId;
-        for (uint256 i; i < alienPubkeys.length; i++) {
-            require(
-                self.Validators[alienPubkeys[i]].state == 1,
-                "StakeUtils: NOT all alienPubkeys are pending"
-            );
-            planetId = self.Validators[alienPubkeys[i]].planetId;
-            _DATASTORE.subUintForId(planetId, "secured", DCU.DEPOSIT_AMOUNT);
-            _DATASTORE.addUintForId(planetId, "surplus", DCU.DEPOSIT_AMOUNT);
-            self.Validators[alienPubkeys[i]].state = 69;
-            emit Alienation(alienPubkeys[i], true);
-        }
-
-        for (uint256 j; j < curedPubkeys.length; ++j) {
-            require(
-                self.Validators[curedPubkeys[j]].state == 69,
-                "StakeUtils: NOT all curedPubkeys are alienated"
-            );
-            planetId = self.Validators[curedPubkeys[j]].planetId;
-            if (
-                _DATASTORE.readUintForId(planetId, "surplus") >=
-                (DCU.DEPOSIT_AMOUNT)
-            ) {
-                _DATASTORE.addUintForId(
-                    planetId,
-                    "secured",
-                    DCU.DEPOSIT_AMOUNT
-                );
-                _DATASTORE.subUintForId(
-                    planetId,
-                    "surplus",
-                    DCU.DEPOSIT_AMOUNT
-                );
-                self.Validators[curedPubkeys[j]].state = 1;
-                emit Alienation(curedPubkeys[j], false);
-            }
-        }
-
-        for (uint256 k; k < prisonedIds.length; ++k) {
-            _DATASTORE.writeUintForId(
-                prisonedIds[k],
-                "released",
-                block.timestamp + PRISON_SENTENCE
-            );
-            // event here
-        }
-
-        self.MONOPOLY_THRESHOLD =
-            (allValidatorsCount * MONOPOLY_RATIO) /
-            FEE_DENOMINATOR;
-
-        self.VERIFICATION_INDEX = newVerificationIndex;
-        emit VerificationIndexUpdated(newVerificationIndex);
     }
 
     /**
      * @notice Updating PricePerShare
      */
-
-    /**
-     * @notice sets pricePerShare parameter of gETH(id)
-     * @dev only ORACLE should be able to reach this after sanity checks on a new price
-     */
-    function _setPricePerShare(
-        StakePool storage self,
-        uint256 pricePerShare_,
-        uint256 _id
-    ) internal {
-        require(_id > 0, "StakeUtils: id should be > 0");
-        getgETH(self).setPricePerShare(pricePerShare_, _id);
-        emit PriceChanged(_id, pricePerShare_);
-    }
-
-    /**
-     * @notice _getPricePerShare is a reliable source for any contract operation
-     * @dev aka *mint price*
-     */
-    function _getPricePerShare(StakePool storage self, uint256 _id)
-        internal
-        view
-        returns (uint256 _oraclePrice)
-    {
-        _oraclePrice = getgETH(self).pricePerShare(_id);
-    }
-
-    /**
-     * @notice Oracle is only allowed for a period every day & pool operations are stopped then
-     * @return false if the last oracle update happened already (within the current daily period)
-     */
-    function _isOracleActive(StakePool storage self)
-        internal
-        view
-        returns (bool)
-    {
-        return
-            (block.timestamp % ORACLE_PERIOD <= ORACLE_ACTIVE_PERIOD) &&
-            (self.ORACLE_UPDATE_TIMESTAMP <
-                block.timestamp - ORACLE_ACTIVE_PERIOD);
-    }
-
-    /**
-     * @notice in order to prevent attacks from malicious Oracle there are boundaries to price & fee updates.
-     * @dev checks:
-     * 1. Price should not be increased more than PERIOD_PRICE_INCREASE_LIMIT
-     *  with the factor of how many days since oracleUpdateTimestamp has past.
-     *  To encourage report oracle each day, price increase limit is not calculated by considering compound effect
-     *  for multiple days.
-     */
-    function _sanityCheck(
-        StakePool storage self,
-        uint256 _id,
-        uint256 periodsSinceUpdate,
-        uint256 _newPrice
-    ) internal view {
-        // need to put the lastPriceUpdate to DATASTORE to check if price is updated already for that day
-        uint256 curPrice = _getPricePerShare(self, _id);
-        uint256 maxPrice = curPrice +
-            ((curPrice *
-                self.PERIOD_PRICE_INCREASE_LIMIT *
-                periodsSinceUpdate) / FEE_DENOMINATOR);
-
-        require(_newPrice <= maxPrice, "StakeUtils: price is insane");
-    }
-
-    function _priceSync(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage _DATASTORE,
-        bytes32[2] memory dailyBufferKeys,
-        uint256 index,
-        uint256 poolId,
-        uint256 beaconBalance,
-        uint256 periodsSinceUpdate, // calculation for this changes for private pools
-        bytes32[] calldata priceProofs // uint256 prices[]
-    ) internal {
-        (uint256 oraclePrice, uint256 price) = _findPrices_ClearBuffer(
-            self,
-            _DATASTORE,
-            dailyBufferKeys[0],
-            dailyBufferKeys[1],
-            poolId,
-            beaconBalance
-        );
-        _sanityCheck(self, poolId, periodsSinceUpdate, oraclePrice);
-        bytes32 node = keccak256(abi.encodePacked(index, poolId, oraclePrice));
-        require(
-            MerkleProof.verify(priceProofs, self.PRICE_MERKLE_ROOT, node),
-            "MerkleDistributor: NOT all proofs are valid."
-        );
-        _setPricePerShare(self, price, poolId);
-    }
-
-    function _findPrices_ClearBuffer(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage _DATASTORE,
-        bytes32 dailyBufferMintKey,
-        bytes32 dailyBufferBurnKey,
-        uint256 poolId,
-        uint256 beaconBalance
-    ) internal returns (uint256, uint256) {
-        uint256 totalEther = beaconBalance +
-            _DATASTORE.readUintForId(poolId, "secured") +
-            _DATASTORE.readUintForId(poolId, "surplus");
-
-        uint256 supply = getgETH(self).totalSupply(poolId);
-
-        uint256 unbufferedEther = totalEther -
-            (_DATASTORE.readUintForId(poolId, dailyBufferMintKey) *
-                getgETH(self).pricePerShare(poolId)) /
-            gETH_DENOMINATOR;
-
-        unbufferedEther +=
-            (_DATASTORE.readUintForId(poolId, dailyBufferBurnKey) *
-                getgETH(self).pricePerShare(poolId)) /
-            gETH_DENOMINATOR;
-
-        uint256 unbufferedSupply = supply -
-            _DATASTORE.readUintForId(poolId, dailyBufferMintKey);
-
-        unbufferedSupply += _DATASTORE.readUintForId(
-            poolId,
-            dailyBufferBurnKey
-        );
-
-        // clears daily buffer for the gas refund
-        _DATASTORE.writeUintForId(poolId, dailyBufferMintKey, 0);
-        _DATASTORE.writeUintForId(poolId, dailyBufferBurnKey, 0);
-        return (totalEther / supply, unbufferedEther / unbufferedSupply);
-    }
 
     function reportOracle(
         StakePool storage self,
@@ -1067,57 +824,19 @@ library StakeUtils {
         bytes32 merkleRoot,
         uint256[] calldata beaconBalances,
         bytes32[][] calldata priceProofs
-    ) external onlyOracle(self) {
-        require(_isOracleActive(self), "StakeUtils: oracle is NOT active");
-        {
-            uint256 planetCount = _DATASTORE.allIdsByType[5].length;
-            require(
-                beaconBalances.length == planetCount,
-                "StakeUtils: incorrect beaconBalances length"
-            );
-            require(
-                priceProofs.length == planetCount,
-                "StakeUtils: incorrect priceProofs length"
-            );
-        }
-
-        self.PRICE_MERKLE_ROOT = merkleRoot;
-
-        uint256 periodsSinceUpdate = (block.timestamp +
-            ORACLE_ACTIVE_PERIOD -
-            self.ORACLE_UPDATE_TIMESTAMP) / ORACLE_PERIOD;
-
-        bytes32[2] memory dailyBufferKeys = [
-            _getKey(
-                block.timestamp - (block.timestamp % ORACLE_PERIOD),
-                "mintBuffer"
-            ),
-            _getKey(
-                block.timestamp - (block.timestamp % ORACLE_PERIOD),
-                "burnBuffer"
-            )
-        ];
-
-        for (uint256 i = 0; i < beaconBalances.length; i++) {
-            _priceSync(
-                self,
-                _DATASTORE,
-                dailyBufferKeys,
-                i,
-                _DATASTORE.allIdsByType[5][i],
-                beaconBalances[i],
-                periodsSinceUpdate,
-                priceProofs[i]
-            );
-        }
-        self.ORACLE_UPDATE_TIMESTAMP =
-            block.timestamp -
-            (block.timestamp % ORACLE_PERIOD);
+    ) external {
+        self.TELESCOPE.reportOracle(
+            _DATASTORE,
+            merkleRoot,
+            beaconBalances,
+            priceProofs
+        );
     }
 
     /**
      * @notice                      * STAKING functions *
      */
+
     /**
      * @notice conducts a buyback using the given withdrawal pool,
      * @param to address to send bought gETH(id). burns the tokens if to=address(0), transfers if not
@@ -1147,10 +866,10 @@ library StakeUtils {
         );
         if (to == address(0)) {
             // burn
-            getgETH(self).burn(address(this), poolId, outAmount);
+            self.gETH.burn(address(this), poolId, outAmount);
         } else {
             // send back to user
-            getgETH(self).safeTransferFrom(
+            self.gETH.safeTransferFrom(
                 address(this),
                 to,
                 poolId,
@@ -1184,7 +903,7 @@ library StakeUtils {
         require(deadline > block.timestamp, "StakeUtils: deadline not met");
         require(
             !isStakingPausedForPool(_DATASTORE, poolId),
-            "StakeUtils: minting is paused"
+            "StakeUtils: minting paused"
         );
         uint256 debt = withdrawalPoolById(_DATASTORE, poolId).getDebt();
         if (debt >= msg.value) {
@@ -1214,18 +933,20 @@ library StakeUtils {
                 remEth -= debt;
             }
             uint256 mintedgETH = (
-                ((remEth * gETH_DENOMINATOR) / _getPricePerShare(self, poolId))
+                ((remEth * self.gETH.denominator()) /
+                    self.gETH.pricePerShare(poolId))
             );
-            _mint(self.gETH, msg.sender, poolId, mintedgETH);
+            self.gETH.mint(msg.sender, poolId, mintedgETH, "");
             _DATASTORE.addUintForId(poolId, "surplus", remEth);
 
             require(
                 boughtgETH + mintedgETH >= mingETH,
                 "StakeUtils: less than mingETH"
             );
-            if (_isOracleActive(self)) {
+            if (self.TELESCOPE._isOracleActive()) {
                 bytes32 dailyBufferKey = _getKey(
-                    block.timestamp - (block.timestamp % ORACLE_PERIOD),
+                    block.timestamp -
+                        (block.timestamp % OracleUtils.ORACLE_PERIOD),
                     "mintBuffer"
                 );
                 _DATASTORE.addUintForId(poolId, dailyBufferKey, mintedgETH);
@@ -1261,14 +982,14 @@ library StakeUtils {
         uint256 poolId,
         uint256 gEthToWithdraw
     ) internal returns (uint256, uint256) {
-        uint256 pps = _getPricePerShare(self, poolId);
+        uint256 pps = self.gETH.pricePerShare(poolId);
 
         uint256 spentGeth = gEthToWithdraw;
-        uint256 spentSurplus = ((spentGeth * pps) / gETH_DENOMINATOR);
+        uint256 spentSurplus = ((spentGeth * pps) / self.gETH.denominator());
         uint256 surplus = _DATASTORE.readUintForId(poolId, "surplus");
         if (spentSurplus >= surplus) {
             spentSurplus = surplus;
-            spentGeth = ((spentSurplus * gETH_DENOMINATOR) / pps);
+            spentGeth = ((spentSurplus * self.gETH.denominator()) / pps);
         }
 
         (uint256 EthDonation, uint256 gEthDonation) = _donateBalancedFees(
@@ -1279,11 +1000,11 @@ library StakeUtils {
         );
 
         _DATASTORE.subUintForId(poolId, "surplus", spentSurplus);
-        getgETH(self).burn(address(this), poolId, spentGeth - gEthDonation);
+        self.gETH.burn(address(this), poolId, spentGeth - gEthDonation);
 
-        if (_isOracleActive(self)) {
+        if (self.TELESCOPE._isOracleActive()) {
             bytes32 dailyBufferKey = _getKey(
-                block.timestamp - (block.timestamp % ORACLE_PERIOD),
+                block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
                 "burnBuffer"
             );
             _DATASTORE.addUintForId(poolId, dailyBufferKey, spentGeth);
@@ -1305,12 +1026,9 @@ library StakeUtils {
         require(deadline > block.timestamp, "StakeUtils: deadline not met");
         {
             // transfer token first
-            uint256 beforeBalance = getgETH(self).balanceOf(
-                address(this),
-                poolId
-            );
+            uint256 beforeBalance = self.gETH.balanceOf(address(this), poolId);
 
-            getgETH(self).safeTransferFrom(
+            self.gETH.safeTransferFrom(
                 msg.sender,
                 address(this),
                 poolId,
@@ -1319,7 +1037,7 @@ library StakeUtils {
             );
             // Use the transferred amount
             gEthToWithdraw =
-                getgETH(self).balanceOf(address(this), poolId) -
+                self.gETH.balanceOf(address(this), poolId) -
                 beforeBalance;
         }
 
@@ -1353,29 +1071,6 @@ library StakeUtils {
      */
 
     /**
-     *  @notice Creation of a Validator takes 3 steps. Before entering beaconStake function,
-     *  canStake verifies the eligibility of given pubKey that is proposed by an operator
-     *  with Prestake function. Eligibility is defined by alienation, check alienate() for info.
-     *
-     *  @param pubkey BLS12-381 public key of the validator
-     *  @return true if:
-     *   - pubkey should be proposeStaked
-     *   - validator's index should be lower than VERIFICATION_INDEX, updated by TELESCOPE
-     *   - pubkey should not be alienated (https://bit.ly/3Tkc6UC)
-     *  else:
-     *      return false
-     */
-    function canStake(StakePool storage self, bytes calldata pubkey)
-        public
-        view
-        returns (bool)
-    {
-        return
-            self.Validators[pubkey].state == 1 &&
-            self.Validators[pubkey].index <= self.VERIFICATION_INDEX;
-    }
-
-    /**
      *  @notice Validator Credentials Proposal function, first step of crating validators. Once a pubKey is proposed and not alienated for some time,
      *  it is optimistically allowed to take funds from staking pools.
      *  @param poolId the id of the staking pool whose TYPE can be 5 or 6.
@@ -1403,16 +1098,16 @@ library StakeUtils {
 
         require(
             pubkeys.length == signatures.length,
-            "StakeUtils: pubkeys and signatures should be same length"
+            "StakeUtils: pubkeys and signatures NOT same length"
         );
         require(
             pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
-            "StakeUtils: 1 to 64 nodes per transaction"
+            "StakeUtils: MAX 64 nodes"
         );
         require(
             (_DATASTORE.readUintForId(operatorId, "totalProposedValidators") +
-                pubkeys.length) <= self.MONOPOLY_THRESHOLD,
-            "StakeUtils: Ice Bear doesn't like monopolies"
+                pubkeys.length) <= self.TELESCOPE.MONOPOLY_THRESHOLD,
+            "StakeUtils: IceBear does NOT like monopolies"
         );
         require(
             (_DATASTORE.readUintForId(
@@ -1420,19 +1115,25 @@ library StakeUtils {
                 _getKey(operatorId, "proposedValidators")
             ) + pubkeys.length) <=
                 operatorAllowance(_DATASTORE, poolId, operatorId),
-            "StakeUtils: not enough allowance"
+            "StakeUtils: NOT enough allowance"
         );
 
         require(
             _DATASTORE.readUintForId(poolId, "surplus") >=
                 DCU.DEPOSIT_AMOUNT * pubkeys.length,
-            "StakeUtils: not enough surplus"
+            "StakeUtils: NOT enough surplus"
         );
 
         _decreaseMaintainerWallet(
             _DATASTORE,
             operatorId,
             pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
+        );
+
+        _DATASTORE.subUintForId(
+            poolId,
+            "surplus",
+            (DCU.DEPOSIT_AMOUNT * pubkeys.length)
         );
 
         {
@@ -1444,11 +1145,11 @@ library StakeUtils {
             //     poolId,
             //     "withdrawalCredential"
             // );
-            uint256 nextValidatorsIndex = self.VALIDATORS_INDEX + 1;
+            uint256 nextValidatorsIndex = self.TELESCOPE.VALIDATORS_INDEX + 1;
             for (uint256 i; i < pubkeys.length; i++) {
                 require(
-                    self.Validators[pubkeys[i]].state == 0,
-                    "StakeUtils: Pubkey is already used or alienated"
+                    self.TELESCOPE.Validators[pubkeys[i]].state == 0,
+                    "StakeUtils: Pubkey already used or alienated"
                 );
                 require(
                     pubkeys[i].length == DCU.PUBKEY_LENGTH,
@@ -1466,7 +1167,7 @@ library StakeUtils {
                 //     DCU.DEPOSIT_AMOUNT_PRESTAKE
                 // );
 
-                self.Validators[pubkeys[i]] = Validator(
+                self.TELESCOPE.Validators[pubkeys[i]] = OracleUtils.Validator(
                     1,
                     nextValidatorsIndex + i,
                     poolId,
@@ -1490,18 +1191,13 @@ library StakeUtils {
             "totalProposedValidators",
             pubkeys.length
         );
-        _DATASTORE.subUintForId(
-            poolId,
-            "surplus",
-            (DCU.DEPOSIT_AMOUNT * pubkeys.length)
-        );
         _DATASTORE.addUintForId(
             poolId,
             "secured",
             (DCU.DEPOSIT_AMOUNT * pubkeys.length)
         );
 
-        self.VALIDATORS_INDEX += pubkeys.length;
+        self.TELESCOPE.VALIDATORS_INDEX += pubkeys.length;
     }
 
     /**
@@ -1528,22 +1224,25 @@ library StakeUtils {
     ) external {
         _authenticate(_DATASTORE, operatorId, true, [true, true, false]);
 
-        require(!_isOracleActive(self), "StakeUtils: oracle is active");
+        require(
+            !self.TELESCOPE._isOracleActive(),
+            "StakeUtils: oracle is active"
+        );
         require(
             pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
-            "StakeUtils: 1 to 64 nodes per transaction"
+            "StakeUtils: MAX 64 nodes"
         );
 
         for (uint256 j; j < pubkeys.length; ++j) {
             require(
-                canStake(self, pubkeys[j]),
+                self.TELESCOPE.canStake(pubkeys[j]),
                 "StakeUtils: NOT all pubkeys are stakeable"
             );
         }
         {
             bytes32 activeValKey = _getKey(operatorId, "activeValidators");
 
-            uint256 planetId = self.Validators[pubkeys[0]].planetId;
+            uint256 planetId = self.TELESCOPE.Validators[pubkeys[0]].poolId;
             bytes memory withdrawalCredential = _DATASTORE.readBytesForId(
                 planetId,
                 "withdrawalCredential"
@@ -1551,7 +1250,7 @@ library StakeUtils {
 
             uint256 lastPlanetChange;
             for (uint256 i; i < pubkeys.length; i++) {
-                if (planetId != self.Validators[pubkeys[i]].planetId) {
+                if (planetId != self.TELESCOPE.Validators[pubkeys[i]].poolId) {
                     _DATASTORE.subUintForId(
                         planetId,
                         "secured",
@@ -1564,14 +1263,14 @@ library StakeUtils {
                     );
 
                     lastPlanetChange = i;
-                    planetId = self.Validators[pubkeys[i]].planetId;
+                    planetId = self.TELESCOPE.Validators[pubkeys[i]].poolId;
                     withdrawalCredential = _DATASTORE.readBytesForId(
                         planetId,
                         "withdrawalCredential"
                     );
                 }
 
-                // bytes memory signature = self.Validators[pubkeys[i]].signature;
+                // bytes memory signature = self.TELESCOPE.Validators[pubkeys[i]].signature;
                 // TODO: there is no deposit contract, solve and open this comment
                 // DCU.depositValidator(
                 //     pubkeys[i],
@@ -1580,7 +1279,7 @@ library StakeUtils {
                 //     DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
                 // );
 
-                self.Validators[pubkeys[i]].state = 2;
+                self.TELESCOPE.Validators[pubkeys[i]].state = 2;
                 emit BeaconStaked(pubkeys[i]);
             }
 

@@ -3,11 +3,11 @@ const func = async function (hre) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("StakeUtils", {
+  await deploy("OracleUtils", {
     from: deployer,
     log: true,
     skipIfAlreadyDeployed: true,
   });
 };
 module.exports = func;
-module.exports.tags = ["StakeUtils"];
+module.exports.tags = ["OracleUtils"];
