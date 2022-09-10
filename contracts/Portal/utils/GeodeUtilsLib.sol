@@ -8,7 +8,7 @@ import "./DataStoreLib.sol";
  * @notice Exclusively contains functions responsible for administration of Geode Portal,
  * including functions related to "limited upgradability" with Senate & proposals.
  * @dev Contracts relying on this library must initialize GeodeUtils.Universe
- * @dev ALL "fee" variables are limited by FEE_DENOMINATOR = 100%
+ * @dev ALL "fee" variables are limited by PERCENTAGE_DENOMINATOR = 100%
  * @dev Admin functions are already protected.
  * Note that this library contains both functions called by users(ID) and admins(GOVERNANCE, SENATE )
  * Note refer to DataStoreUtils before reviewing
@@ -65,7 +65,7 @@ library GeodeUtils {
      * @param SENATE An address that controls the state of governance, updates and other users in the Geode Ecosystem
      * Note SENATE is proposed by Governance and voted by all planets, if 2/3 approves.
      * @param GOVERNANCE_TAX operation fee of the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_TAX
-     * @param MAX_GOVERNANCE_TAX set by SENATE, limited by FEE_DENOMINATOR
+     * @param MAX_GOVERNANCE_TAX set by SENATE, limited by PERCENTAGE_DENOMINATOR
      * @param SENATE_EXPIRE_TIMESTAMP refers to the last timestamp that SENATE can continue operating. Enforces a new election, limited by MAX_SENATE_PERIOD
      * @param approvedUpgrade only 1(one) implementation contract can be "approved" at any given time. @dev Should set to address(0) after every upgrade
      * @param _electorCount increased when a new id is added with _electorTypes[id] == true
@@ -88,8 +88,8 @@ library GeodeUtils {
     uint32 public constant MAX_PROPOSAL_DURATION = 1 weeks;
     uint32 public constant MAX_SENATE_PERIOD = 365 days; // 1 year
 
-    /// @notice FEE_DENOMINATOR represents 100%
-    uint256 public constant FEE_DENOMINATOR = 10**10;
+    /// @notice PERCENTAGE_DENOMINATOR represents 100%
+    uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     modifier onlySenate(Universe storage self) {
         require(msg.sender == self.SENATE, "GeodeUtils: SENATE role needed");
@@ -165,7 +165,7 @@ library GeodeUtils {
 
     /** @return true if the operation was succesful, might be helpful when governance rights are distributed
      * @dev can not set a fee more than MAX
-     * @dev no need to check FEE_DENOMINATOR
+     * @dev no need to check PERCENTAGE_DENOMINATOR
      */
     function setGovernanceTax(Universe storage self, uint256 _newFee)
         external
@@ -182,7 +182,7 @@ library GeodeUtils {
 
     /**
      * @return true if the operation was succesful
-     * @dev can not set a fee more than FEE_DENOMINATOR (100%)
+     * @dev can not set a fee more than PERCENTAGE_DENOMINATOR (100%)
      */
     function setMaxGovernanceTax(Universe storage self, uint256 _newMaxFee)
         external
@@ -190,7 +190,7 @@ library GeodeUtils {
         returns (bool)
     {
         require(
-            _newMaxFee <= FEE_DENOMINATOR,
+            _newMaxFee <= PERCENTAGE_DENOMINATOR,
             "GeodeUtils: fee more than 100%"
         );
         self.MAX_GOVERNANCE_TAX = _newMaxFee;

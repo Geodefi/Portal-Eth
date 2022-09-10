@@ -18,7 +18,7 @@ import "../../interfaces/ILPToken.sol";
  * @notice biggest part of the functionality is related to Withdrawal Pools
  * which relies on continuous buybacks for price peg with DEBT/SURPLUS calculations
  * @dev Contracts relying on this library must initialize StakeUtils.StakePool
- * @dev ALL "fee" variables are limited by FEE_DENOMINATOR. For ex, when fee is equal to FEE_DENOMINATOR/2, it means 50% fee
+ * @dev ALL "fee" variables are limited by PERCENTAGE_DENOMINATOR. For ex, when fee is equal to PERCENTAGE_DENOMINATOR/2, it means 50% fee
  * Note refer to DataStoreUtils before reviewing
  * Note *suggested* refer to GeodeUtils before reviewing
  * Note beware of the staking pool and operator implementations:
@@ -94,8 +94,8 @@ library StakeUtils {
         uint256 WITHDRAWAL_DELAY;
     }
 
-    /// @notice FEE_DENOMINATOR represents 100%
-    uint256 public constant FEE_DENOMINATOR = 10**10;
+    /// @notice PERCENTAGE_DENOMINATOR represents 100%
+    uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     uint256 public constant IGNORABLE_DEBT = 1 ether;
 
@@ -104,8 +104,9 @@ library StakeUtils {
 
     /// @notice default DWP parameters
     uint256 public constant DEFAULT_A = 60;
-    uint256 public constant DEFAULT_FEE = (4 * FEE_DENOMINATOR) / 10000;
-    uint256 public constant DEFAULT_ADMIN_FEE = (5 * FEE_DENOMINATOR) / 10;
+    uint256 public constant DEFAULT_FEE = (4 * PERCENTAGE_DENOMINATOR) / 10000;
+    uint256 public constant DEFAULT_ADMIN_FEE =
+        (5 * PERCENTAGE_DENOMINATOR) / 10;
 
     modifier onlyGovernance(StakePool storage self) {
         require(
@@ -291,7 +292,7 @@ library StakeUtils {
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
         );
         require(
-            _withdrawalBoost <= FEE_DENOMINATOR,
+            _withdrawalBoost <= PERCENTAGE_DENOMINATOR,
             "StakeUtils: withdrawalBoost > 100%"
         );
         _DATASTORE.writeUintForId(_id, "fee", _fee);
@@ -372,7 +373,8 @@ library StakeUtils {
             "StakeUtils: incorrect PERIOD_PRICE_DECREASE_LIMIT"
         );
         require(
-            _MAX_MAINTAINER_FEE > 0 && _MAX_MAINTAINER_FEE <= FEE_DENOMINATOR,
+            _MAX_MAINTAINER_FEE > 0 &&
+                _MAX_MAINTAINER_FEE <= PERCENTAGE_DENOMINATOR,
             "StakeUtils: incorrect MAX_MAINTAINER_FEE"
         );
 
@@ -457,10 +459,10 @@ library StakeUtils {
     }
 
     /**
-     * @notice Gets fee percentage in terms of FEE_DENOMINATOR.
+     * @notice Gets fee percentage in terms of PERCENTAGE_DENOMINATOR.
      * @dev even if MAX_MAINTAINER_FEE is decreased later, it returns limited maximum.
      * @param _id planet, comet or operator ID
-     * @return fee = percentage * FEE_DENOMINATOR / 100
+     * @return fee = percentage * PERCENTAGE_DENOMINATOR / 100
      */
     function getMaintainerFee(
         StakePool storage self,
@@ -478,9 +480,9 @@ library StakeUtils {
 
     /**
      * @notice Changes the fee that is applied by distributeFee on Oracle Updates.
-     * @dev to achieve 100% fee send FEE_DENOMINATOR
+     * @dev to achieve 100% fee send PERCENTAGE_DENOMINATOR
      * @param _id planet, comet or operator ID
-     * @param _newFee new fee percentage in terms of FEE_DENOMINATOR,reverts if given more than MAX_MAINTAINER_FEE
+     * @param _newFee new fee percentage in terms of PERCENTAGE_DENOMINATOR,reverts if given more than MAX_MAINTAINER_FEE
      */
     function _switchMaintainerFee(
         StakePool storage self,
@@ -963,10 +965,10 @@ library StakeUtils {
     ) internal returns (uint256 EthDonation, uint256 gEthDonation) {
         // find half of the fees to burn from surplus
         uint256 fee = withdrawalPoolById(_DATASTORE, poolId).getSwapFee();
-        EthDonation = (burnSurplus * fee) / FEE_DENOMINATOR / 2;
+        EthDonation = (burnSurplus * fee) / PERCENTAGE_DENOMINATOR / 2;
 
         // find the remaining half as gETH with respect to PPS
-        gEthDonation = (burnGeth * fee) / FEE_DENOMINATOR / 2;
+        gEthDonation = (burnGeth * fee) / PERCENTAGE_DENOMINATOR / 2;
 
         //send both fees to DWP
         withdrawalPoolById(_DATASTORE, poolId).donateBalancedFees{

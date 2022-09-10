@@ -38,8 +38,13 @@ contract TestGeodeUtils {
         return GEODE.getGovernanceTax();
     }
 
-    function getFeeDenominator() external view virtual returns (uint256) {
-        return GeodeUtils.FEE_DENOMINATOR;
+    function getPERCENTAGE_DENOMINATOR()
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return GeodeUtils.PERCENTAGE_DENOMINATOR;
     }
 
     function getMaxGovernanceTax() external view virtual returns (uint256) {

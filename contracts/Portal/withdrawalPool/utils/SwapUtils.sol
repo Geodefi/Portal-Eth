@@ -106,8 +106,8 @@ library SwapUtils {
     }
 
     // the denominator used to calculate admin and LP fees. For example, an
-    // LP fee is BoughtAmount.mul(fee).div(FEE_DENOMINATOR)
-    uint256 private constant FEE_DENOMINATOR = 10**10;
+    // LP fee is BoughtAmount.mul(fee).div(PERCENTAGE_DENOMINATOR)
+    uint256 private constant PERCENTAGE_DENOMINATOR = 10**10;
 
     // Max swap fee is 1% or 100bps of each swap
     uint256 public constant MAX_SWAP_FEE = 10**8;
@@ -309,7 +309,7 @@ library SwapUtils {
                     (i == tokenIndex)
                         ? (xpi * v.d1) / v.d0 - v.newY
                         : xpi - ((xpi * v.d1) / (v.d0))
-                ) * (v.feePerToken)) / (FEE_DENOMINATOR));
+                ) * (v.feePerToken)) / (PERCENTAGE_DENOMINATOR));
         }
 
         uint256 dy = xpReduced[tokenIndex] -
@@ -348,7 +348,7 @@ library SwapUtils {
             return 0;
         } else {
             uint256 dy = xp[1] - halfD;
-            uint256 feeHalf = (dy * self.swapFee) / FEE_DENOMINATOR / 2;
+            uint256 feeHalf = (dy * self.swapFee) / PERCENTAGE_DENOMINATOR / 2;
             uint256 debt = halfD - xp[0] + feeHalf;
             return debt;
         }
@@ -610,7 +610,7 @@ library SwapUtils {
             tokenIndexTo // => not id, index !!!
         );
         dy = balances[tokenIndexTo] - y - 1;
-        dyFee = (dy * self.swapFee) / (FEE_DENOMINATOR);
+        dyFee = (dy * self.swapFee) / (PERCENTAGE_DENOMINATOR);
         dy = dy - dyFee;
     }
 
@@ -793,7 +793,7 @@ library SwapUtils {
         );
 
         require(dy >= minDy, "Swap didn't result in min tokens");
-        uint256 dyAdminFee = (dyFee * self.adminFee) / FEE_DENOMINATOR;
+        uint256 dyAdminFee = (dyFee * self.adminFee) / PERCENTAGE_DENOMINATOR;
 
         // To prevent any Reentrancy, balances are updated before transfering the tokens.
         self.balances[tokenIndexFrom] = balances[tokenIndexFrom] + dx;
@@ -901,10 +901,10 @@ library SwapUtils {
                 uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
                 fees[i] =
                     (feePerToken * (idealBalance.difference(newBalances[i]))) /
-                    (FEE_DENOMINATOR);
+                    (PERCENTAGE_DENOMINATOR);
                 self.balances[i] =
                     newBalances[i] -
-                    ((fees[i] * (self.adminFee)) / (FEE_DENOMINATOR));
+                    ((fees[i] * (self.adminFee)) / (PERCENTAGE_DENOMINATOR));
                 newBalances[i] = newBalances[i] - (fees[i]);
             }
             v.d2 = getD(_pricedInBatch(self, newBalances), v.preciseA);
@@ -1023,7 +1023,7 @@ library SwapUtils {
         // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
         self.balances[tokenIndex] =
             self.balances[tokenIndex] -
-            (dy + ((dyFee * (self.adminFee)) / (FEE_DENOMINATOR)));
+            (dy + ((dyFee * (self.adminFee)) / (PERCENTAGE_DENOMINATOR)));
         lpToken.burnFrom(msg.sender, tokenAmount);
 
         if (tokenIndex == 0) {
@@ -1106,12 +1106,12 @@ library SwapUtils {
             for (uint256 i = 0; i < 2; i++) {
                 uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
                 uint256 difference = idealBalance.difference(balances1[i]);
-                fees[i] = (feePerToken * difference) / FEE_DENOMINATOR;
+                fees[i] = (feePerToken * difference) / PERCENTAGE_DENOMINATOR;
                 uint256 adminFee = self.adminFee;
                 {
                     self.balances[i] =
                         balances1[i] -
-                        ((fees[i] * adminFee) / FEE_DENOMINATOR);
+                        ((fees[i] * adminFee) / PERCENTAGE_DENOMINATOR);
                 }
                 balances1[i] = balances1[i] - fees[i];
             }
@@ -1188,11 +1188,11 @@ library SwapUtils {
         self.balances[0] +=
             EthDonation -
             (EthDonation * self.adminFee) /
-            FEE_DENOMINATOR;
+            PERCENTAGE_DENOMINATOR;
         self.balances[1] +=
             gEthDonation -
             (gEthDonation * self.adminFee) /
-            FEE_DENOMINATOR;
+            PERCENTAGE_DENOMINATOR;
         return (EthDonation, gEthDonation);
     }
 

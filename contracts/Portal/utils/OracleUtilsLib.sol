@@ -54,12 +54,12 @@ library OracleUtils {
     uint256 public constant ORACLE_PERIOD = 1 days;
     uint256 public constant ORACLE_ACTIVE_PERIOD = 30 minutes;
 
-    // as a percentage while FEE_DENOMINATOR = 100%, set by governance
-    uint256 public constant MONOPOLY_RATIO = (5 * FEE_DENOMINATOR) / 100;
+    // as a percentage while PERCENTAGE_DENOMINATOR = 100%, set by governance
+    uint256 public constant MONOPOLY_RATIO = (5 * PERCENTAGE_DENOMINATOR) / 100;
     uint256 public constant PRISON_SENTENCE = 7 days;
 
-    /// @notice FEE_DENOMINATOR represents 100%
-    uint256 public constant FEE_DENOMINATOR = 10**10;
+    /// @notice PERCENTAGE_DENOMINATOR represents 100%
+    uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     modifier onlyOracle(Oracle storage self) {
         require(
@@ -232,7 +232,7 @@ library OracleUtils {
 
         self.MONOPOLY_THRESHOLD =
             (allValidatorsCount * MONOPOLY_RATIO) /
-            FEE_DENOMINATOR;
+            PERCENTAGE_DENOMINATOR;
 
         self.VERIFICATION_INDEX = newVerificationIndex;
         emit VerificationIndexUpdated(newVerificationIndex);
@@ -260,13 +260,13 @@ library OracleUtils {
         uint256 maxPrice = curPrice +
             ((curPrice *
                 self.PERIOD_PRICE_INCREASE_LIMIT *
-                periodsSinceUpdate) / FEE_DENOMINATOR);
+                periodsSinceUpdate) / PERCENTAGE_DENOMINATOR);
         require(_newPrice <= maxPrice, "OracleUtils: price is insane");
 
         uint256 minPrice = curPrice -
             ((curPrice *
                 self.PERIOD_PRICE_DECREASE_LIMIT *
-                periodsSinceUpdate) / FEE_DENOMINATOR);
+                periodsSinceUpdate) / PERCENTAGE_DENOMINATOR);
         require(_newPrice >= minPrice, "OracleUtils: price is insane");
     }
 

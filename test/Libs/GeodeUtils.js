@@ -74,8 +74,8 @@ describe("GeodeUtils", async () => {
       response = await testContract.getMaxGovernanceTax();
       await expect(response).to.eq(_MAX_GOVERNANCE_TAX);
     });
-    it("correct FEE_DENOMINATOR", async () => {
-      response = await testContract.getFeeDenominator();
+    it("correct PERCENTAGE_DENOMINATOR", async () => {
+      response = await testContract.getPERCENTAGE_DENOMINATOR();
       await expect(response).to.eq(10 ** 10);
     });
     describe(" approvedUpgrade = false", async () => {
