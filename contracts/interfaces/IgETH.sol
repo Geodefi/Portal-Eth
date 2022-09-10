@@ -4,6 +4,8 @@ pragma solidity =0.8.7;
 interface IgETH {
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
+    function denominator() external view returns (uint256);
+
     function uri(uint256) external view returns (string memory);
 
     function balanceOf(address account, uint256 id)

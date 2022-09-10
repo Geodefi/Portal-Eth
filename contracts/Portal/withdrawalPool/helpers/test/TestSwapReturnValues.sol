@@ -13,7 +13,7 @@ contract TestSwapReturnValues is ERC1155Holder {
     using SafeMath for uint256;
 
     ISwap public swap;
-    IERC1155 public wETH2;
+    IERC1155 public gETH;
     IERC20 public lpToken;
     uint8 public n;
 
@@ -21,17 +21,17 @@ contract TestSwapReturnValues is ERC1155Holder {
 
     constructor(
         ISwap swapContract,
-        IERC1155 wETH2Reference,
+        IERC1155 gETHReference,
         IERC20 lpTokenContract,
         uint8 numOfTokens
     ) {
         swap = swapContract;
-        wETH2 = wETH2Reference;
+        gETH = gETHReference;
         lpToken = lpTokenContract;
         n = numOfTokens;
 
         // Pre-approve tokens
-        wETH2.setApprovalForAll(address(swap), true);
+        gETH.setApprovalForAll(address(swap), true);
         lpToken.approve(address(swap), MAX_INT);
     }
 
@@ -42,7 +42,7 @@ contract TestSwapReturnValues is ERC1155Holder {
         uint256 minDy
     ) public payable {
         uint256 etherbalanceBefore = address(this).balance;
-        uint256 getherbalanceBefore = wETH2.balanceOf(
+        uint256 getherbalanceBefore = gETH.balanceOf(
             address(this),
             swap.getToken()
         );
@@ -57,7 +57,7 @@ contract TestSwapReturnValues is ERC1155Holder {
                 block.timestamp
             );
 
-            uint256 getherbalanceAfter = wETH2.balanceOf(
+            uint256 getherbalanceAfter = gETH.balanceOf(
                 address(this),
                 swap.getToken()
             );
@@ -119,7 +119,7 @@ contract TestSwapReturnValues is ERC1155Holder {
         uint256[] memory balanceAfter = new uint256[](n);
 
         balanceBefore[0] = address(this).balance;
-        balanceBefore[1] = wETH2.balanceOf(address(this), swap.getToken());
+        balanceBefore[1] = gETH.balanceOf(address(this), swap.getToken());
 
         uint256[] memory returnValue = swap.removeLiquidity(
             amount,
@@ -127,7 +127,7 @@ contract TestSwapReturnValues is ERC1155Holder {
             MAX_INT
         );
         balanceAfter[0] = address(this).balance;
-        balanceAfter[1] = wETH2.balanceOf(address(this), swap.getToken());
+        balanceAfter[1] = gETH.balanceOf(address(this), swap.getToken());
 
         for (uint8 i = 0; i < n; i++) {
             console.log(
@@ -175,7 +175,7 @@ contract TestSwapReturnValues is ERC1155Holder {
         if (tokenIndex == 0) {
             balanceBefore = address(this).balance;
         } else {
-            balanceBefore = wETH2.balanceOf(address(this), swap.getToken());
+            balanceBefore = gETH.balanceOf(address(this), swap.getToken());
         }
         uint256 returnValue = swap.removeLiquidityOneToken(
             tokenAmount,
@@ -188,7 +188,7 @@ contract TestSwapReturnValues is ERC1155Holder {
         if (tokenIndex == 0) {
             balanceAfter = address(this).balance;
         } else {
-            balanceAfter = wETH2.balanceOf(address(this), swap.getToken());
+            balanceAfter = gETH.balanceOf(address(this), swap.getToken());
         }
         console.log(
             "removeLiquidityOneToken: Expected %s, got %s",

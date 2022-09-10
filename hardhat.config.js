@@ -37,11 +37,11 @@ const config = {
   networks: {
     hardhat: {
       deploy: ["./deploy"],
-      forking: process.env.FORK_MAINNET
-        ? {
-            url: process.env.FORK_URL,
-          }
-        : undefined,
+      // forking: process.env.FORK_MAINNET
+      //   ? {
+      //       url: process.env.FORK_URL,
+      //     }
+      //   : undefined,
       // allowUnlimitedContractSize: true,
     },
   },

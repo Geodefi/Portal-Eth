@@ -99,7 +99,7 @@ contract Swap is
      * LP positions. The owner of LPToken will be this contract - which means
      * only this contract is allowed to mint/burn tokens.
      *
-     * @param _gEther reference of the wETH2 ERC1155 contract
+     * @param _gETH reference of the ERC1155 contract
      * @param _pooledTokenId gEther ID that the Pool is operating with
      * @param lpTokenName the long-form name of the token to be deployed
      * @param lpTokenSymbol the short symbol for the token to be deployed
@@ -110,7 +110,7 @@ contract Swap is
      * @param lpTokenTargetAddress the address of an existing LPToken contract to use as a target
      */
     function initialize(
-        address _gEther,
+        IgETH _gETH,
         uint256 _pooledTokenId,
         string memory lpTokenName,
         string memory lpTokenSymbol,
@@ -127,7 +127,7 @@ contract Swap is
             lpTokenTargetAddress != address(0),
             "Swap: lpTokenTargetAddress can not be zero"
         );
-        require(_gEther != address(0), "Swap: _gEther can not be zero");
+        require(address(_gETH) != address(0), "Swap: _gETH can not be zero");
 
         // Check _a, _fee, _adminFee, _withdrawFee parameters
         require(_a < AmplificationUtils.MAX_A, "Swap: _a exceeds maximum");
@@ -138,15 +138,15 @@ contract Swap is
         );
 
         // Clone and initialize a LPToken contract
-        LPToken lpToken = LPToken(Clones.clone(lpTokenTargetAddress));
+        ILPToken lpToken = ILPToken(Clones.clone(lpTokenTargetAddress));
         require(
             lpToken.initialize(lpTokenName, lpTokenSymbol),
             "Swap: could not init lpToken clone"
         );
 
         // Initialize swapStorage struct
+        swapStorage.gETH = _gETH;
         swapStorage.lpToken = lpToken;
-        swapStorage.referenceForPooledTokens = IgETH(_gEther);
         swapStorage.pooledTokenId = _pooledTokenId;
         swapStorage.balances = new uint256[](2);
         swapStorage.initialA = _a * AmplificationUtils.A_PRECISION;
@@ -169,7 +169,7 @@ contract Swap is
 
     /*** VIEW FUNCTIONS ***/
     function getERC1155() external view virtual override returns (address) {
-        return address(swapStorage.referenceForPooledTokens);
+        return address(swapStorage.gETH);
     }
 
     /**
@@ -472,7 +472,10 @@ contract Swap is
         nonReentrant
         returns (uint256, uint256)
     {
-        require(msg.value == EthDonation, "Swap: received less or more ETH than expected");
+        require(
+            msg.value == EthDonation,
+            "Swap: received less or more ETH than expected"
+        );
         return swapStorage.donateBalancedFees(EthDonation, gEthDonation);
     }
 

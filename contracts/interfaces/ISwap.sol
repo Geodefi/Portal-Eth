@@ -53,7 +53,7 @@ interface ISwap {
 
     // state modifying functions
     function initialize(
-        address _gEth,
+        IgETH _gEth,
         uint256 _pooledTokenId,
         string memory lpTokenName,
         string memory lpTokenSymbol,

@@ -23,10 +23,12 @@ contract gETH is ERC1155SupplyMinterPauser {
         bool isSet
     );
     event InterfacesAvoided(address indexed avoider, bool isAvoid);
+    event PriceChanged(uint256 id, uint256 pricePerShare);
 
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     string public constant name = "Geode Staked ETH";
     string public constant symbol = "gETH";
+    uint256 private constant _denominator = 1 ether;
 
     /**
      * @dev ADDED for gETH
@@ -51,6 +53,14 @@ contract gETH is ERC1155SupplyMinterPauser {
 
     constructor(string memory uri) ERC1155SupplyMinterPauser(uri) {
         _setupRole(ORACLE_ROLE, _msgSender());
+    }
+
+    /**
+     * @dev ADDED for gETH
+     * @return a centralized denominator = 1e18
+     */
+    function denominator() external view virtual returns (uint256) {
+        return _denominator;
     }
 
     /**
@@ -153,8 +163,9 @@ contract gETH is ERC1155SupplyMinterPauser {
             hasRole(ORACLE_ROLE, _msgSender()),
             "gETH: must have ORACLE to set"
         );
-
+        require(_id != 0, "gETH: id == 0");
         _setPricePerShare(pricePerShare_, _id);
+        emit PriceChanged(_id, pricePerShare_);
     }
 
     /**
