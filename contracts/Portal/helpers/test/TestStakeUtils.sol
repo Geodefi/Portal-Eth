@@ -292,27 +292,27 @@ contract TestStakeUtils is ERC1155Holder {
         );
     }
 
-    function getOperatorWalletBalance(uint256 id)
+    function getMaintainerWalletBalance(uint256 id)
         external
         view
         returns (uint256 balance)
     {
-        balance = StakeUtils.getOperatorWalletBalance(DATASTORE, id);
+        balance = StakeUtils.getMaintainerWalletBalance(DATASTORE, id);
     }
 
-    function increaseOperatorWallet(uint256 id)
+    function increaseMaintainerWallet(uint256 id)
         external
         payable
         returns (bool success)
     {
-        success = StakeUtils.increaseOperatorWallet(DATASTORE, id);
+        success = StakeUtils.increaseMaintainerWallet(DATASTORE, id);
     }
 
-    function decreaseOperatorWallet(uint256 id, uint256 value)
+    function decreaseMaintainerWallet(uint256 id, uint256 value)
         external
         returns (bool success)
     {
-        success = StakeUtils.decreaseOperatorWallet(DATASTORE, id, value);
+        success = StakeUtils.decreaseMaintainerWallet(DATASTORE, id, value);
     }
 
     function deployWithdrawalPool(uint256 _id)

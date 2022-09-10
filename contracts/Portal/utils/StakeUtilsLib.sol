@@ -3,14 +3,13 @@ pragma solidity =0.8.7;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./DataStoreLib.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "./DataStoreLib.sol";
 import {DepositContractUtils as DCU} from "./DepositContractUtilsLib.sol";
-import "../gETHInterfaces/ERC20InterfacePermitUpgradable.sol";
+import {IERC20InterfacePermitUpgradable as IgETHInterface} from "../../interfaces/IERC20InterfacePermitUpgradable.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/ISwap.sol";
 import "../../interfaces/ILPToken.sol";
-import "hardhat/console.sol";
 
 /**
  * @title StakeUtils library
@@ -142,17 +141,6 @@ library StakeUtils {
     uint256 public constant DEFAULT_FEE = (4 * FEE_DENOMINATOR) / 10000;
     uint256 public constant DEFAULT_ADMIN_FEE = (5 * FEE_DENOMINATOR) / 10;
 
-    modifier onlyMaintainer(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id
-    ) {
-        require(
-            msg.sender == _DATASTORE.readAddressForId(_id, "maintainer"),
-            "StakeUtils: sender is NOT maintainer"
-        );
-        _;
-    }
-
     modifier onlyOracle(StakePool storage self) {
         require(msg.sender == self.ORACLE, "StakeUtils: sender is NOT ORACLE");
         _;
@@ -179,7 +167,7 @@ library StakeUtils {
 
         require(
             _DATASTORE.readUintForId(_id, "TYPE") == _type,
-            "StakeUtils: id should be Operator TYPE"
+            "StakeUtils: id is NOT correct TYPE"
         );
         require(
             _DATASTORE.readUintForId(_id, "initiated") == 0,
@@ -194,6 +182,9 @@ library StakeUtils {
         emit IdInitiated(_id, _type);
     }
 
+    /**
+     * @notice                      ** HELPER functions **
+     */
     function _clone(address target) public returns (address) {
         return Clones.clone(target);
     }
@@ -206,6 +197,45 @@ library StakeUtils {
         return bytes32(keccak256(abi.encodePacked(_id, _param)));
     }
 
+    function _authenticate(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id,
+        bool expectMaintainer,
+        bool[3] memory restrictionMap
+    ) internal view {
+        if (expectMaintainer) {
+            require(
+                msg.sender == _DATASTORE.readAddressForId(_id, "maintainer"),
+                "StakeUtils: sender is NOT maintainer"
+            );
+        }
+
+        uint256 typeOfId = _DATASTORE.readUintForId(_id, "TYPE");
+        if (typeOfId == 4) {
+            require(
+                restrictionMap[0] == true,
+                "StakeUtils: TYPE is NOT allowed"
+            );
+            require(
+                !isPrisoned(_DATASTORE, _id),
+                "StakeUtils: operator is in prison, get in touch with governance"
+            );
+        } else if (typeOfId == 5) {
+            require(
+                restrictionMap[1] == true,
+                "StakeUtils: TYPE is NOT allowed"
+            );
+        } else if (typeOfId == 6) {
+            require(
+                restrictionMap[2] == true,
+                "StakeUtils: TYPE is NOT allowed"
+            );
+        } else revert("StakeUtils: unknown TYPE");
+    }
+
+    /**
+     * @notice                      ** gETH functions **
+     */
     function getgETH(StakePool storage self) public view returns (IgETH) {
         return IgETH(self.gETH);
     }
@@ -340,7 +370,7 @@ library StakeUtils {
         {
             address gEth = address(getgETH(self));
             address gInterface = _clone(self.DEFAULT_gETH_INTERFACE);
-            ERC20InterfacePermitUpgradable(gInterface).initialize(
+            IgETHInterface(gInterface).initialize(
                 _id,
                 _interfaceName,
                 _interfaceSymbol,
@@ -473,7 +503,8 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
         uint256 _newFee
-    ) external onlyMaintainer(_DATASTORE, _id) {
+    ) external {
+        _authenticate(_DATASTORE, _id, true, [true, true, true]);
         _switchMaintainerFee(self, _DATASTORE, _id, _newFee);
     }
 
@@ -580,12 +611,16 @@ library StakeUtils {
         uint256 _planetId,
         uint256 _operatorId,
         uint256 _allowance
-    ) external onlyMaintainer(_DATASTORE, _planetId) returns (bool) {
+    ) external returns (bool) {
+        _authenticate(_DATASTORE, _planetId, true, [false, true, true]);
+        _authenticate(_DATASTORE, _operatorId, false, [true, true, false]);
+
         _DATASTORE.writeUintForId(
             _planetId,
             _getKey(_operatorId, "allowance"),
             _allowance
         );
+
         emit OperatorApproval(_planetId, _operatorId, _allowance);
         return true;
     }
@@ -598,7 +633,7 @@ library StakeUtils {
      * @param _operatorId the id of the Operator
      * @return walletBalance the balance of Operator with the given _operatorId has
      */
-    function getOperatorWalletBalance(
+    function getMaintainerWalletBalance(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId
     ) public view returns (uint256 walletBalance) {
@@ -612,7 +647,7 @@ library StakeUtils {
      * @param value Ether (in Wei) amount to increase the wallet balance.
      * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.
      */
-    function _increaseOperatorWallet(
+    function _increaseMaintainerWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
@@ -622,13 +657,15 @@ library StakeUtils {
     }
 
     /**
-     * @notice external version of _increaseOperatorWallet()
+     * @notice external version of _increaseMaintainerWallet()
      */
-    function increaseOperatorWallet(
+    function increaseMaintainerWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId
-    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
-        return _increaseOperatorWallet(_DATASTORE, _operatorId, msg.value);
+    ) external returns (bool success) {
+        _authenticate(_DATASTORE, _operatorId, true, [true, true, true]);
+
+        return _increaseMaintainerWallet(_DATASTORE, _operatorId, msg.value);
     }
 
     /**
@@ -638,32 +675,35 @@ library StakeUtils {
      * @param value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
      * @return success boolean value which is "sent", should be used by Operator is Maintainer is a contract.
      */
-    function _decreaseOperatorWallet(
+    function _decreaseMaintainerWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
     ) internal returns (bool success) {
         require(
             _DATASTORE.readUintForId(_operatorId, "wallet") >= value,
-            "StakeUtils: Not enough resources in operatorWallet"
+            "StakeUtils: Not enough resources in maintainerWallet"
         );
         _DATASTORE.subUintForId(_operatorId, "wallet", value);
         return true;
     }
 
     /**
-     * @notice external version of _decreaseOperatorWallet()
+     * @notice external version of _decreaseMaintainerWallet()
      */
-    function decreaseOperatorWallet(
+    function decreaseMaintainerWallet(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 value
-    ) external onlyMaintainer(_DATASTORE, _operatorId) returns (bool success) {
+    ) external returns (bool success) {
+        _authenticate(_DATASTORE, _operatorId, true, [true, true, true]);
+
         require(
             address(this).balance >= value,
-            "StakeUtils: Not enough resources in Portal"
+            "StakeUtils: Not enough resources in Portal (?)"
         );
-        bool decreased = _decreaseOperatorWallet(
+
+        bool decreased = _decreaseMaintainerWallet(
             _DATASTORE,
             _operatorId,
             value
@@ -685,7 +725,8 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _operatorId,
         uint256 _newPeriod
-    ) external onlyMaintainer(_DATASTORE, _operatorId) {
+    ) external {
+        _authenticate(_DATASTORE, _operatorId, true, [true, true, false]);
         _DATASTORE.writeUintForId(_operatorId, "cometPeriod", _newPeriod);
     }
 
@@ -766,11 +807,14 @@ library StakeUtils {
     function pauseStakingForPool(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
-    ) external onlyMaintainer(_DATASTORE, _id) {
+    ) external {
+        _authenticate(_DATASTORE, _id, true, [false, true, true]);
+
         require(
             !isStakingPausedForPool(_DATASTORE, _id),
             "StakeUtils: staking is already paused for pool"
         );
+
         _DATASTORE.writeUintForId(_id, "stakePaused", 1); // meaning true
         emit PausedPool(_id);
     }
@@ -781,11 +825,14 @@ library StakeUtils {
     function unpauseStakingForPool(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id
-    ) external onlyMaintainer(_DATASTORE, _id) {
+    ) external {
+        _authenticate(_DATASTORE, _id, true, [false, true, true]);
+
         require(
             isStakingPausedForPool(_DATASTORE, _id),
             "StakeUtils: staking is already NOT paused for pool"
         );
+
         _DATASTORE.writeUintForId(_id, "stakePaused", 0); // meaning false
         emit UnpausedPool(_id);
     }
@@ -1131,8 +1178,10 @@ library StakeUtils {
         uint256 mingETH,
         uint256 deadline
     ) external returns (uint256 totalgETH) {
+        _authenticate(_DATASTORE, poolId, false, [false, true, false]);
+
+        require(msg.value > 1e15, "StakeUtils: at least 0.001 eth ");
         require(deadline > block.timestamp, "StakeUtils: deadline not met");
-        require(msg.value > 1e15, "StakeUtils: eth should be > 1e15");
         require(
             !isStakingPausedForPool(_DATASTORE, poolId),
             "StakeUtils: minting is paused"
@@ -1251,8 +1300,9 @@ library StakeUtils {
         uint256 minETH,
         uint256 deadline
     ) external returns (uint256 EthToSend) {
-        require(deadline > block.timestamp, "StakeUtils: deadline not met");
+        _authenticate(_DATASTORE, poolId, false, [false, true, false]);
 
+        require(deadline > block.timestamp, "StakeUtils: deadline not met");
         {
             // transfer token first
             uint256 beforeBalance = getgETH(self).balanceOf(
@@ -1337,7 +1387,7 @@ library StakeUtils {
      *  31 Ether will be staked after verification of oracles. 32 in total.
      *  1 ether will e sent back to Node Operator when finalized deposit is successful.
      *  @dev Prestake requires enough allowance from Staking Pools to Operators.
-     *  @dev Prestake requires enough funds within operatorWallet.
+     *  @dev Prestake requires enough funds within maintainerWallet.
      *  @dev Max number of validators to propose is MAX_DEPOSITS_PER_CALL (currently 64)
      */
     function proposeStake(
@@ -1347,16 +1397,10 @@ library StakeUtils {
         uint256 operatorId,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
-    ) external onlyMaintainer(_DATASTORE, operatorId) {
-        require(
-            !isPrisoned(_DATASTORE, operatorId),
-            "StakeUtils: you are in prison, get in touch with governance"
-        );
-        require(
-            _DATASTORE.readUintForId(poolId, "TYPE") == 5 ||
-                _DATASTORE.readUintForId(poolId, "TYPE") == 6,
-            "StakeUtils: There is no pool with id"
-        );
+    ) external {
+        _authenticate(_DATASTORE, operatorId, true, [true, true, false]);
+        _authenticate(_DATASTORE, poolId, false, [false, true, true]);
+
         require(
             pubkeys.length == signatures.length,
             "StakeUtils: pubkeys and signatures should be same length"
@@ -1385,7 +1429,7 @@ library StakeUtils {
             "StakeUtils: not enough surplus"
         );
 
-        _decreaseOperatorWallet(
+        _decreaseMaintainerWallet(
             _DATASTORE,
             operatorId,
             pubkeys.length * DCU.DEPOSIT_AMOUNT_PRESTAKE
@@ -1462,7 +1506,7 @@ library StakeUtils {
 
     /**
      *  @notice Sends 31 Eth from staking pool to validators that are previously created with PreStake.
-     *  1 Eth per successful validator boostraping is returned back to OperatorWallet.
+     *  1 Eth per successful validator boostraping is returned back to MaintainerWallet.
      *
      *  @param operatorId the id of the Operator whose maintainer calling this function
      *  @param pubkeys  Array of BLS12-381 public keys of the validators that are already proposed with PreStake.
@@ -1481,13 +1525,10 @@ library StakeUtils {
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 operatorId,
         bytes[] calldata pubkeys
-    ) external onlyMaintainer(_DATASTORE, operatorId) {
-        require(!_isOracleActive(self), "StakeUtils: oracle is active");
-        require(
-            !isPrisoned(_DATASTORE, operatorId),
-            "StakeUtils: you are in prison, get in touch with governance"
-        );
+    ) external {
+        _authenticate(_DATASTORE, operatorId, true, [true, true, false]);
 
+        require(!_isOracleActive(self), "StakeUtils: oracle is active");
         require(
             pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
             "StakeUtils: 1 to 64 nodes per transaction"
@@ -1555,7 +1596,7 @@ library StakeUtils {
             );
         }
 
-        _increaseOperatorWallet(
+        _increaseMaintainerWallet(
             _DATASTORE,
             operatorId,
             DCU.DEPOSIT_AMOUNT_PRESTAKE * pubkeys.length
