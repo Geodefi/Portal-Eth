@@ -105,9 +105,6 @@ library SwapUtils {
         uint256[] balances;
     }
 
-    // the precision all pool tokens will be converted to
-    uint8 public constant POOL_PRECISION_DECIMALS = 18;
-
     // the denominator used to calculate admin and LP fees. For example, an
     // LP fee is BoughtAmount.mul(fee).div(FEE_DENOMINATOR)
     uint256 private constant FEE_DENOMINATOR = 10**10;
@@ -474,7 +471,7 @@ library SwapUtils {
     /**
      * @notice Get the virtual price, to help calculate profit
      * @param self Swap struct to read from
-     * @return the virtual price, scaled to precision of POOL_PRECISION_DECIMALS
+     * @return the virtual price
      */
     function getVirtualPrice(Swap storage self)
         external
@@ -488,7 +485,7 @@ library SwapUtils {
         ILPToken lpToken = self.lpToken;
         uint256 supply = lpToken.totalSupply();
         if (supply > 0) {
-            return (d * 10**uint256(POOL_PRECISION_DECIMALS)) / supply;
+            return (d * 10**18) / supply;
         }
         return 0;
     }

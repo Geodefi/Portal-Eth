@@ -220,7 +220,7 @@ contract Swap is
 
     /**
      * @notice Get the virtual price, to help calculate profit
-     * @return the virtual price, scaled to the POOL_PRECISION_DECIMALS
+     * @return the virtual price
      */
     function getVirtualPrice()
         external
