@@ -61,7 +61,7 @@ describe("GeodeUtils", async () => {
       response = await testContract.getSenate();
       await expect(response).to.eq(SENATE.address);
     });
-    it("correct SENATE_EXPIRE_TIMESTAMP", async () => {
+    it("correct SENATE_EXPIRY", async () => {
       creationTime = await getCurrentBlockTimestamp();
       response = await testContract.getSenateExpireTimestamp();
       await expect(response).to.eq(creationTime + 24 * 3600);

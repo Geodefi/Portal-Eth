@@ -17,7 +17,7 @@ contract TestGeodeUtils {
     ) {
         GEODE.GOVERNANCE = _GOVERNANCE;
         GEODE.SENATE = _SENATE;
-        GEODE.SENATE_EXPIRE_TIMESTAMP = block.timestamp + 1 days;
+        GEODE.SENATE_EXPIRY = block.timestamp + 1 days;
         GEODE.GOVERNANCE_TAX = _GOVERNANCE_TAX;
         GEODE.MAX_GOVERNANCE_TAX = _MAX_GOVERNANCE_TAX;
 
@@ -185,7 +185,7 @@ contract TestGeodeUtils {
         external
         virtual
     {
-        GEODE.setSenate(newSenate, senatePeriod);
+        GEODE._setSenate(newSenate, senatePeriod);
     }
 
     /// @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022.
