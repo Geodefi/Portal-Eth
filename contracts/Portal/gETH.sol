@@ -51,6 +51,8 @@ contract gETH is ERC1155SupplyMinterPauser {
      **/
     mapping(uint256 => uint256) private _pricePerShare;
 
+    mapping(uint256 => uint256) private _priceUpdateTimestamp;
+
     constructor(string memory uri) ERC1155SupplyMinterPauser(uri) {
         _setupRole(ORACLE_ROLE, _msgSender());
     }
@@ -148,11 +150,19 @@ contract gETH is ERC1155SupplyMinterPauser {
     /**
      * @dev ADDED for gETH
      */
+    function priceUpdateTimestamp(uint256 _id) external view returns (uint256) {
+        return _priceUpdateTimestamp[_id];
+    }
+
+    /**
+     * @dev ADDED for gETH
+     */
     function _setPricePerShare(uint256 pricePerShare_, uint256 _id)
         internal
         virtual
     {
         _pricePerShare[_id] = pricePerShare_;
+        _priceUpdateTimestamp[_id] = block.timestamp;
     }
 
     function setPricePerShare(uint256 pricePerShare_, uint256 _id)

@@ -77,6 +77,8 @@ interface IgETH {
 
     function pricePerShare(uint256 _id) external view returns (uint256);
 
+    function priceUpdateTimestamp(uint256 _id) external view returns (uint256);
+
     function setPricePerShare(uint256 pricePerShare_, uint256 _id) external;
 
     function isInterface(address operator, uint256 id)

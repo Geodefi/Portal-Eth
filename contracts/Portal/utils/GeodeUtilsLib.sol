@@ -23,12 +23,12 @@ library GeodeUtils {
         uint256 id,
         address CONTROLLER,
         uint256 TYPE,
-        uint256 duration
+        uint256 deadline
     );
     event ProposalApproved(uint256 id);
     event ElectorTypeSet(uint256 TYPE, bool _isElector);
     event Vote(uint256 proposalId, uint256 electorId);
-    event NewSenate(address senate, uint256 senate_expire_timestamp);
+    event NewSenate(address senate, uint256 senate_expiry);
 
     /**
 
@@ -66,7 +66,7 @@ library GeodeUtils {
      * Note SENATE is proposed by Governance and voted by all planets, if 2/3 approves.
      * @param GOVERNANCE_TAX operation fee of the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_TAX
      * @param MAX_GOVERNANCE_TAX set by SENATE, limited by PERCENTAGE_DENOMINATOR
-     * @param SENATE_EXPIRE_TIMESTAMP refers to the last timestamp that SENATE can continue operating. Enforces a new election, limited by MAX_SENATE_PERIOD
+     * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Enforces a new election, limited by MAX_SENATE_PERIOD
      * @param approvedUpgrade only 1(one) implementation contract can be "approved" at any given time. @dev Should set to address(0) after every upgrade
      * @param _electorCount increased when a new id is added with _electorTypes[id] == true
      * @param _electorTypes only given types can vote @dev must only be used at upgrades.
@@ -77,7 +77,7 @@ library GeodeUtils {
         address GOVERNANCE;
         uint256 GOVERNANCE_TAX;
         uint256 MAX_GOVERNANCE_TAX;
-        uint256 SENATE_EXPIRE_TIMESTAMP;
+        uint256 SENATE_EXPIRY;
         address approvedUpgrade;
         uint256 _electorCount;
         mapping(uint256 => bool) _electorTypes;
@@ -94,7 +94,7 @@ library GeodeUtils {
     modifier onlySenate(Universe storage self) {
         require(msg.sender == self.SENATE, "GeodeUtils: SENATE role needed");
         require(
-            block.timestamp < self.SENATE_EXPIRE_TIMESTAMP,
+            block.timestamp < self.SENATE_EXPIRY,
             "GeodeUtils: SENATE not active"
         );
         _;
@@ -156,7 +156,7 @@ library GeodeUtils {
         view
         returns (uint256)
     {
-        return self.SENATE_EXPIRE_TIMESTAMP;
+        return self.SENATE_EXPIRY;
     }
 
     /**
@@ -306,7 +306,7 @@ library GeodeUtils {
         );
         uint256 id = _generateId(_NAME, _TYPE);
         require(
-            self._proposalForId[id].deadline < block.timestamp,
+            self._proposalForId[id].deadline == 0,
             "GeodeUtils: NAME already proposed"
         );
         self._proposalForId[id] = Proposal({
@@ -315,7 +315,7 @@ library GeodeUtils {
             NAME: _NAME,
             deadline: block.timestamp + _duration
         });
-        emit Proposed(id, _CONTROLLER, _TYPE, _duration);
+        emit Proposed(id, _CONTROLLER, _TYPE, block.timestamp + _duration);
     }
 
     /**
@@ -442,7 +442,7 @@ library GeodeUtils {
             ((self._electorCount + 1) * 2) / 3
         ) {
             self._proposalForId[proposalId].deadline = block.timestamp;
-            setSenate(
+            _setSenate(
                 self,
                 self._proposalForId[proposalId].CONTROLLER,
                 MAX_SENATE_PERIOD
@@ -450,14 +450,14 @@ library GeodeUtils {
         }
     }
 
-    function setSenate(
+    function _setSenate(
         Universe storage self,
         address newSenate,
         uint256 senatePeriod
     ) internal {
         self.SENATE = newSenate;
-        self.SENATE_EXPIRE_TIMESTAMP = block.timestamp + senatePeriod;
-        emit NewSenate(self.SENATE, self.SENATE_EXPIRE_TIMESTAMP);
+        self.SENATE_EXPIRY = block.timestamp + senatePeriod;
+        emit NewSenate(self.SENATE, self.SENATE_EXPIRY);
     }
 
     /**

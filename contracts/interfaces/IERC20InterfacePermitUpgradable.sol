@@ -7,6 +7,6 @@ interface IERC20InterfacePermitUpgradable {
         uint256 id_,
         string memory name_,
         string memory symbol_,
-        IgETH gETH_1155
+        address gETH_1155
     ) external;
 }
