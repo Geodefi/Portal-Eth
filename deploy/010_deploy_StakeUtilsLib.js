@@ -9,6 +9,7 @@ const func = async function (hre) {
     skipIfAlreadyDeployed: true,
     libraries: {
       OracleUtils: (await get("OracleUtils")).address,
+      MaintainerUtils: (await get("MaintainerUtils")).address,
     },
   });
 };
