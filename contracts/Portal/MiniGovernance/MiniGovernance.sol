@@ -10,7 +10,7 @@ import "../../interfaces/IgETH.sol";
 import "../../interfaces/IPortal.sol";
 import "../../interfaces/IMiniGovernance.sol";
 
-contract MiniGovernances is
+contract MiniGovernance is
     IMiniGovernance,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,

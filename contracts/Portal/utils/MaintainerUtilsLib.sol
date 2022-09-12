@@ -149,8 +149,8 @@ library MaintainerUtils {
         {
             WithdrawalPool = _deployWithdrawalPool(
                 _DATASTORE,
-                addressSpecs[0],
                 uintSpecs[0],
+                addressSpecs[0],
                 addressSpecs[3],
                 addressSpecs[4]
             );
@@ -204,8 +204,8 @@ library MaintainerUtils {
      */
     function _deployWithdrawalPool(
         DataStoreUtils.DataStore storage _DATASTORE,
-        address gETH,
         uint256 _id,
+        address gETH,
         address DEFAULT_DWP,
         address DEFAULT_LP_TOKEN
     ) internal returns (address WithdrawalPool) {
@@ -230,6 +230,19 @@ library MaintainerUtils {
         );
         _DATASTORE.writeAddressForId(_id, "withdrawalPool", WithdrawalPool);
         _DATASTORE.writeAddressForId(_id, "LPToken", WPToken);
+    }
+
+    /**
+     * @notice "Maintainer" is a shared logic (like "name") by both operators and private or public pools.
+     * Maintainers have permissiones to maintain the given id like setting a new fee or interface as
+     * well as creating validators etc. for operators.
+     * @dev every ID has 1 maintainer that is set by CONTROLLER
+     */
+    function getMaintainerFromId(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _id
+    ) external view returns (address maintainer) {
+        maintainer = _DATASTORE.readAddressForId(_id, "maintainer");
     }
 
     /**
@@ -294,6 +307,21 @@ library MaintainerUtils {
         );
         _DATASTORE.writeUintForId(_id, "fee", _newFee);
         emit MaintainerFeeUpdated(_id, _newFee);
+    }
+
+    /**
+     * @notice Maintainer wallet keeps Ether put in Portal by Operator to make proposeStake easier, instead of sending n ETH to contract
+     * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
+     * and from there, ETHs can be used to proposeStake. Then when it is approved and staked, it will be
+     * added back to the wallet to be used for other proposeStake calls.
+     * @param _operatorId the id of the Operator
+     * @return walletBalance the balance of Operator with the given _operatorId has
+     */
+    function getMaintainerWalletBalance(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) external view returns (uint256 walletBalance) {
+        walletBalance = _DATASTORE.readUintForId(_operatorId, "wallet");
     }
 
     /**
