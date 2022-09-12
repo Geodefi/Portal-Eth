@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 /**
- * ERC1155SupplyMinterPauser is an ERC1155 implementation that inherites openzeppelin ERC1155PresetMinterPauser which also inherites ERC1155PresetMinterPauser
+ * ERC1155SupplyMinterPauser is an ERC1155 implementation that inherites 2 openzeppelin contracts: ERC1155Supply and ERC1155PresetMinterPauser
  *
  * @dev only difference between ERC1155SupplyMinterPauser and Openzeppelin's implementation is
  * _doSafeTransferAcceptanceCheck is being virtual.
