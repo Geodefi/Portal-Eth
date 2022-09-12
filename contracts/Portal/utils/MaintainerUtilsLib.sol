@@ -10,15 +10,30 @@ import {IERC20InterfacePermitUpgradable as IgETHInterface} from "../../interface
 import "../../interfaces/ISwap.sol";
 import "../../interfaces/ILPToken.sol";
 
+/**
+ * @title MaintainerUtils library to be used with a DataStore
+ * @notice for Geode, there are different TYPEs active within Staking operations.
+ * These types(4,5,6) always has a maintainer.
+ * The staking logic is shaped around the control of maintainers over pools.
+ *
+ * @dev ALL "fee" variables are limited by PERCENTAGE_DENOMINATOR = 100%
+ * Note refer to DataStoreUtils before reviewing
+ */
 library MaintainerUtils {
-    event IdInitiated(uint256 id, uint256 _type);
-    event MaintainerFeeUpdated(uint256 id, uint256 fee);
     using DataStoreUtils for DataStoreUtils.DataStore;
+
+    event IdInitiated(uint256 id, uint256 TYPE);
+    event MaintainerFeeSwitched(
+        uint256 id,
+        uint256 fee,
+        uint256 effectiveTimestamp // the timestamp when the fee will start to be used after switch
+    );
+    event MaintainerChanged(uint256 id, address newMaintainer);
 
     /// @notice PERCENTAGE_DENOMINATOR represents 100%
     uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
-    /// @notice comments here
+    /// @notice when a maintainer changes the fee, it is effective after a delay
     uint256 public constant FEE_SWITCH_LATENCY = 7 days;
 
     /// @notice default DWP parameters
@@ -28,45 +43,52 @@ library MaintainerUtils {
         (5 * PERCENTAGE_DENOMINATOR) / 10;
 
     modifier initiator(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _type,
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 _TYPE,
         uint256 _id,
         address _maintainer
     ) {
         require(
-            msg.sender == _DATASTORE.readAddressForId(_id, "CONTROLLER"),
+            msg.sender == DATASTORE.readAddressForId(_id, "CONTROLLER"),
             "StakeUtils: sender NOT CONTROLLER"
         );
-
         require(
-            _DATASTORE.readUintForId(_id, "TYPE") == _type,
+            DATASTORE.readUintForId(_id, "TYPE") == _TYPE,
             "StakeUtils: id NOT correct TYPE"
         );
         require(
-            _DATASTORE.readUintForId(_id, "initiated") == 0,
+            DATASTORE.readUintForId(_id, "initiated") == 0,
             "StakeUtils: already initiated"
         );
 
-        _DATASTORE.writeAddressForId(_id, "maintainer", _maintainer);
+        DATASTORE.writeAddressForId(_id, "maintainer", _maintainer);
+
         _;
 
-        _DATASTORE.writeUintForId(_id, "initiated", block.timestamp);
-        emit IdInitiated(_id, _type);
+        DATASTORE.writeUintForId(_id, "initiated", block.timestamp);
+
+        emit IdInitiated(_id, _TYPE);
     }
 
-    function _authenticate(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id,
+    /**
+     * @notice restricts the access to given function based on TYPE
+     * @notice also allows onlyMaintainer check whenever required
+     * @param expectMaintainer restricts the access to only maintainer
+     * @param restrictionMap 0: Operator = TYPE(4), Planet = TYPE(5), Comet = TYPE(6),
+     */
+    function authenticate(
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id,
         bool expectMaintainer,
         bool[3] memory restrictionMap
     ) internal view {
         if (expectMaintainer) {
             require(
-                msg.sender == _DATASTORE.readAddressForId(_id, "maintainer"),
+                msg.sender == DATASTORE.readAddressForId(id, "maintainer"),
                 "StakeUtils: sender NOT maintainer"
             );
         }
-        uint256 typeOfId = _DATASTORE.readUintForId(_id, "TYPE");
+        uint256 typeOfId = DATASTORE.readUintForId(id, "TYPE");
         if (typeOfId == 4) {
             require(restrictionMap[0] == true, "StakeUtils: TYPE NOT allowed");
         } else if (typeOfId == 5) {
@@ -79,41 +101,44 @@ library MaintainerUtils {
     /**
      * @notice                      ** Initiate ID functions **
      */
+
     /**
-     * @notice initiates ID as an node operator
+     * @notice initiates ID as a node operator
      * @dev requires ID to be approved as a node operator with a specific CONTROLLER
-     * @param _id --
-     * @param _validatorPeriod --
+     * @param validatorPeriod the expected maximum staking interval
+     * Operator can unstake at any given point before this period ends.
+     * If operator disobeys this rule, it will be prisoned
      */
     function initiateOperator(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id,
-        uint256 _fee,
-        address _maintainer,
-        uint256 _validatorPeriod
-    ) external initiator(_DATASTORE, 4, _id, _maintainer) {
-        _DATASTORE.writeUintForId(_id, "fee", _fee);
-        _DATASTORE.writeUintForId(_id, "validatorPeriod", _validatorPeriod);
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id,
+        uint256 fee,
+        address maintainer,
+        uint256 validatorPeriod
+    ) external initiator(DATASTORE, 4, id, maintainer) {
+        DATASTORE.writeUintForId(id, "fee", fee);
+        DATASTORE.writeUintForId(id, "validatorPeriod", validatorPeriod);
     }
 
     /**
-     * @notice initiates ID as a planet (public pool)
+     * @notice initiates ID as a planet (public pool): deploys a miniGovernance, a Dynamic Withdrawal Pool, an ERC1155Interface
      * @dev requires ID to be approved as a planet with a specific CONTROLLER
+     * @param uintSpecs 0:_id, 1:_fee, 2:_withdrawalBoost, 3:_MINI_GOVERNANCE_VERSION
+     * @param addressSpecs 0:gETH, 1:_maintainer, 2:DEFAULT_gETH_INTERFACE_, 3:DEFAULT_DWP, 4:DEFAULT_LP_TOKEN
+     * @param interfaceSpecs 0: interface name, 1: interface symbol
      */
-    // uintSpecs: 0:_id, 1:_fee, 2:_withdrawalBoost, 3:_MINI_GOVERNANCE_VERSION
-    // addressSpecs: 0:gETH, 1:_maintainer, 2:DEFAULT_gETH_INTERFACE_, 3:DEFAULT_DWP, 4:DEFAULT_LP_TOKEN
     function initiatePlanet(
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256[4] memory uintSpecs,
         address[5] memory addressSpecs,
-        string[2] calldata _interfaceSpecs
+        string[2] calldata interfaceSpecs
     )
         external
-        initiator(_DATASTORE, 5, uintSpecs[0], addressSpecs[1])
+        initiator(DATASTORE, 5, uintSpecs[0], addressSpecs[1])
         returns (
             address miniGovernance,
             address gInterface,
-            address WithdrawalPool
+            address withdrawalPool
         )
     {
         require(
@@ -121,16 +146,12 @@ library MaintainerUtils {
             "StakeUtils: withdrawalBoost > 100%"
         );
 
-        _DATASTORE.writeUintForId(uintSpecs[0], "fee", uintSpecs[1]);
-        _DATASTORE.writeUintForId(
-            uintSpecs[0],
-            "withdrawalBoost",
-            uintSpecs[2]
-        );
+        DATASTORE.writeUintForId(uintSpecs[0], "fee", uintSpecs[1]);
+        DATASTORE.writeUintForId(uintSpecs[0], "withdrawalBoost", uintSpecs[2]);
 
         {
             miniGovernance = _deployMiniGovernance(
-                _DATASTORE,
+                DATASTORE,
                 addressSpecs[0],
                 uintSpecs[0],
                 uintSpecs[3],
@@ -141,56 +162,60 @@ library MaintainerUtils {
             gInterface = Clones.clone(addressSpecs[2]);
             IgETHInterface(gInterface).initialize(
                 uintSpecs[0],
-                _interfaceSpecs[0],
-                _interfaceSpecs[1],
+                interfaceSpecs[0],
+                interfaceSpecs[1],
                 addressSpecs[0]
             );
         }
         {
-            WithdrawalPool = _deployWithdrawalPool(
-                _DATASTORE,
+            withdrawalPool = _deployWithdrawalPool(
+                DATASTORE,
                 uintSpecs[0],
                 addressSpecs[0],
                 addressSpecs[3],
                 addressSpecs[4]
             );
         }
-        // return (miniGovernance, address(newInterface), WithdrawalPool);
     }
 
     /**
      * @notice initiates ID as a comet (private pool)
-     * @dev requires ID to be approved as comet with a specific CONTROLLER
-     * @param _id --
+     * @dev requires ID to be approved as comet with a specific CONTROLLER,
+     * NOTE CONTROLLER check will be surpassed with portal.
      */
     function initiateComet(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id,
-        uint256 _fee,
-        address _maintainer
-    ) external initiator(_DATASTORE, 6, _id, _maintainer) {
-        _DATASTORE.writeUintForId(_id, "fee", _fee);
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id,
+        uint256 fee,
+        address maintainer
+    ) external initiator(DATASTORE, 6, id, maintainer) {
+        DATASTORE.writeUintForId(id, "fee", fee);
     }
 
+    /**
+     * @notice deploys a mini governance contract that will be used as a withdrawal credential
+     * using an approved MINI_GOVERNANCE_VERSION
+     * @return miniGovernance address which is deployed
+     */
     function _deployMiniGovernance(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        address gETH,
+        DataStoreUtils.DataStore storage DATASTORE,
+        address _gETH,
         uint256 _id,
         uint256 _versionId,
         address _maintainer
     ) internal returns (address miniGovernance) {
         ERC1967Proxy newGovernance = new ERC1967Proxy(
-            _DATASTORE.readAddressForId(_versionId, "CONTROLLER"),
+            DATASTORE.readAddressForId(_versionId, "CONTROLLER"),
             abi.encodeWithSelector(
                 IMiniGovernance(address(0)).initialize.selector,
-                gETH,
+                _gETH,
                 _id,
                 address(this),
                 _maintainer,
                 _versionId
             )
         );
-        _DATASTORE.writeAddressForId(
+        DATASTORE.writeAddressForId(
             _id,
             "miniGovernance",
             address(newGovernance)
@@ -201,162 +226,170 @@ library MaintainerUtils {
     /**
      * @notice deploys a new withdrawal pool using DEFAULT_DWP
      * @dev sets the withdrawal pool and LP token for id
+     * @return withdrawalPool address which is deployed
      */
     function _deployWithdrawalPool(
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256 _id,
-        address gETH,
-        address DEFAULT_DWP,
-        address DEFAULT_LP_TOKEN
-    ) internal returns (address WithdrawalPool) {
-        WithdrawalPool = Clones.clone(DEFAULT_DWP);
+        address _gETH,
+        address _DEFAULT_DWP,
+        address _DEFAULT_LP_TOKEN
+    ) internal returns (address withdrawalPool) {
+        withdrawalPool = Clones.clone(_DEFAULT_DWP);
 
-        address WPToken = ISwap(WithdrawalPool).initialize(
-            IgETH(gETH),
+        address WPToken = ISwap(withdrawalPool).initialize(
+            IgETH(_gETH),
             _id,
             string(
                 abi.encodePacked(
-                    _DATASTORE.readBytesForId(_id, "name"),
+                    DATASTORE.readBytesForId(_id, "name"),
                     "-Geode WP Token"
                 )
             ),
             string(
-                abi.encodePacked(_DATASTORE.readBytesForId(_id, "name"), "-WP")
+                abi.encodePacked(DATASTORE.readBytesForId(_id, "name"), "-WP")
             ),
             DEFAULT_A,
             DEFAULT_FEE,
             DEFAULT_ADMIN_FEE,
-            DEFAULT_LP_TOKEN
+            _DEFAULT_LP_TOKEN
         );
-        _DATASTORE.writeAddressForId(_id, "withdrawalPool", WithdrawalPool);
-        _DATASTORE.writeAddressForId(_id, "LPToken", WPToken);
+        DATASTORE.writeAddressForId(_id, "withdrawalPool", withdrawalPool);
+        DATASTORE.writeAddressForId(_id, "LPToken", WPToken);
     }
 
     /**
      * @notice "Maintainer" is a shared logic (like "name") by both operators and private or public pools.
      * Maintainers have permissiones to maintain the given id like setting a new fee or interface as
      * well as creating validators etc. for operators.
-     * @dev every ID has 1 maintainer that is set by CONTROLLER
+     * @dev every ID has one maintainer that is set by CONTROLLER
      */
     function getMaintainerFromId(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
     ) external view returns (address maintainer) {
-        maintainer = _DATASTORE.readAddressForId(_id, "maintainer");
+        maintainer = DATASTORE.readAddressForId(id, "maintainer");
     }
 
     /**
      * @notice CONTROLLER of the ID can change the maintainer to any address other than ZERO_ADDRESS
      * @dev it is wise to change the CONTROLLER before the maintainer, in case of any migration
      * @dev handle with care
-     * note, intended (suggested) usage is to set a contract address that will govern the id for maintainer,
+     * NOTE intended (suggested) usage is to set a contract address that will govern the id for maintainer,
      * while keeping the controller as a multisig or provide smt like 0x000000000000000000000000000000000000dEaD
      */
     function _changeMaintainer(
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256 _id,
         address _newMaintainer
     ) internal {
         require(
-            msg.sender == _DATASTORE.readAddressForId(_id, "CONTROLLER"),
+            msg.sender == DATASTORE.readAddressForId(_id, "CONTROLLER"),
             "StakeUtils: sender NOT CONTROLLER"
         );
         require(
             _newMaintainer != address(0),
             "StakeUtils: maintainer can NOT be zero"
         );
-        _DATASTORE.writeAddressForId(_id, "maintainer", _newMaintainer);
+
+        DATASTORE.writeAddressForId(_id, "maintainer", _newMaintainer);
+        emit MaintainerChanged(_id, _newMaintainer);
     }
 
     /**
      * @notice Gets fee percentage in terms of PERCENTAGE_DENOMINATOR.
      * @dev even if MAX_MAINTAINER_FEE is decreased later, it returns limited maximum.
-     * @param _id planet, comet or operator ID
-     * @return fee = percentage * PERCENTAGE_DENOMINATOR / 100
+     * @param id planet, comet or operator ID
+     * @return fee = percentage * PERCENTAGE_DENOMINATOR / 100 as a perfcentage
      */
     function getMaintainerFee(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id
-    ) public view returns (uint256 fee) {
-        fee = _DATASTORE.readUintForId(_id, "fee");
-        if (_DATASTORE.readUintForId(_id, "feeSwitch") >= block.timestamp) {
-            fee = _DATASTORE.readUintForId(_id, "priorFee");
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
+    ) external view returns (uint256 fee) {
+        fee = DATASTORE.readUintForId(id, "fee");
+        if (DATASTORE.readUintForId(id, "feeSwitch") >= block.timestamp) {
+            fee = DATASTORE.readUintForId(id, "priorFee");
         }
     }
 
     /**
      * @notice Changes the fee that is applied by distributeFee on Oracle Updates.
-     * @dev to achieve 100% fee send PERCENTAGE_DENOMINATOR
+     * @dev advise that 100% == PERCENTAGE_DENOMINATOR
      * @param _id planet, comet or operator ID
-     * @param _newFee new fee percentage in terms of PERCENTAGE_DENOMINATOR,reverts if given more than MAX_MAINTAINER_FEE
      */
     function _switchMaintainerFee(
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256 _id,
         uint256 _newFee
     ) internal {
-        _DATASTORE.writeUintForId(
+        DATASTORE.writeUintForId(
             _id,
             "priorFee",
-            _DATASTORE.readUintForId(_id, "fee")
+            DATASTORE.readUintForId(_id, "fee")
         );
-        _DATASTORE.writeUintForId(
+        DATASTORE.writeUintForId(
             _id,
             "feeSwitch",
             block.timestamp + FEE_SWITCH_LATENCY
         );
-        _DATASTORE.writeUintForId(_id, "fee", _newFee);
-        emit MaintainerFeeUpdated(_id, _newFee);
+        DATASTORE.writeUintForId(_id, "fee", _newFee);
+
+        emit MaintainerFeeSwitched(
+            _id,
+            _newFee,
+            block.timestamp + FEE_SWITCH_LATENCY
+        );
     }
 
     /**
-     * @notice Maintainer wallet keeps Ether put in Portal by Operator to make proposeStake easier, instead of sending n ETH to contract
+     * @notice When a fee is collected it is put in the maintainer's wallet
+     * @notice Maintainer wallet also keeps Ether put in Portal by Operator Maintainer to make proposeStake easier, instead of sending n ETH to contract
      * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
      * and from there, ETHs can be used to proposeStake. Then when it is approved and staked, it will be
      * added back to the wallet to be used for other proposeStake calls.
-     * @param _operatorId the id of the Operator
+     * @param id the id of the Maintainer
      * @return walletBalance the balance of Operator with the given _operatorId has
      */
     function getMaintainerWalletBalance(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
     ) external view returns (uint256 walletBalance) {
-        walletBalance = _DATASTORE.readUintForId(_operatorId, "wallet");
+        walletBalance = DATASTORE.readUintForId(id, "wallet");
     }
 
     /**
-     * @notice To increase the balance of an Operator's wallet
-     * @dev only maintainer can increase the balance
-     * @param _operatorId the id of the Operator
-     * @param value Ether (in Wei) amount to increase the wallet balance.
+     * @notice To increase the balance of an Maintainer's wallet
+     * @param _id the id of the Operator
+     * @param _value Ether (in Wei) amount to increase the wallet balance.
      * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.
      */
     function _increaseMaintainerWallet(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId,
-        uint256 value
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 _id,
+        uint256 _value
     ) internal returns (bool success) {
-        _DATASTORE.addUintForId(_operatorId, "wallet", value);
+        DATASTORE.addUintForId(_id, "wallet", _value);
         return true;
     }
 
     /**
      * @notice To decrease the balance of an Operator's wallet
      * @dev only maintainer can decrease the balance
-     * @param _operatorId the id of the Operator
-     * @param value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
+     * @param _id the id of the Operator
+     * @param _value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
      * @return success boolean value which is "sent", should be used by Operator is Maintainer is a contract.
      */
     function _decreaseMaintainerWallet(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId,
-        uint256 value
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 _id,
+        uint256 _value
     ) internal returns (bool success) {
         require(
-            _DATASTORE.readUintForId(_operatorId, "wallet") >= value,
+            DATASTORE.readUintForId(_id, "wallet") >= _value,
             "StakeUtils: NOT enough balance in wallet"
         );
-        _DATASTORE.subUintForId(_operatorId, "wallet", value);
+
+        DATASTORE.subUintForId(_id, "wallet", _value);
         return true;
     }
 }

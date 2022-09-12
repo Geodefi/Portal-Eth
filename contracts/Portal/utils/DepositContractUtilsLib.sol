@@ -99,7 +99,7 @@ library DepositContractUtils {
         return depositDataRoot;
     }
 
-    function addressToWC(address _wcAddress)
+    function addressToWC(address wcAddress)
         internal
         pure
         returns (bytes memory)
@@ -108,7 +108,7 @@ library DepositContractUtils {
 
         return
             abi.encodePacked(
-                bytes32(w) | bytes32(uint256(uint160(address(_wcAddress))))
+                bytes32(w) | bytes32(uint256(uint160(address(wcAddress))))
             );
     }
 
