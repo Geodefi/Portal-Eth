@@ -4,8 +4,6 @@ pragma solidity =0.8.7;
 interface IgETH {
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
-    function denominator() external view returns (uint256);
-
     function uri(uint256) external view returns (string memory);
 
     function balanceOf(address account, uint256 id)
@@ -75,20 +73,22 @@ interface IgETH {
 
     function unpause() external;
 
-    function pricePerShare(uint256 _id) external view returns (uint256);
+    function denominator() external view returns (uint256);
 
-    function priceUpdateTimestamp(uint256 _id) external view returns (uint256);
+    function pricePerShare(uint256 id) external view returns (uint256);
 
-    function setPricePerShare(uint256 pricePerShare_, uint256 _id) external;
+    function priceUpdateTimestamp(uint256 id) external view returns (uint256);
 
-    function isInterface(address operator, uint256 id)
+    function setPricePerShare(uint256 price, uint256 id) external;
+
+    function isInterface(address _interface, uint256 id)
         external
         view
         returns (bool);
 
     function setInterface(
-        address _Interface,
-        uint256 _id,
+        address _interface,
+        uint256 id,
         bool isSet
     ) external;
 
