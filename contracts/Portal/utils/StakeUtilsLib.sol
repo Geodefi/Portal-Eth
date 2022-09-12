@@ -4,8 +4,8 @@ pragma solidity =0.8.7;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./DataStoreLib.sol";
-import {MaintainerUtils} from "./MaintainerUtilsLib.sol";
 import {DepositContractUtils as DCU} from "./DepositContractUtilsLib.sol";
+import "./MaintainerUtilsLib.sol";
 import "./OracleUtilsLib.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/IMiniGovernance.sol";
@@ -92,6 +92,7 @@ library StakeUtils {
         uint256 MINI_GOVERNANCE_VERSION;
         uint256 MAX_MAINTAINER_FEE;
         uint256 BOOSTRAP_PERIOD;
+        uint256 COMET_TAX; //
     }
 
     /// @notice PERCENTAGE_DENOMINATOR represents 100%
@@ -256,7 +257,7 @@ library StakeUtils {
 
         setInterface(self, _DATASTORE, _id, gInterface);
 
-        // transfer ownership of DWP to GEODE.GOVERNANCE
+        // transfer ownership of DWP to GOVERNANCE
         Ownable(WithdrawalPool).transferOwnership(self.GOVERNANCE);
         // approve token so we can use it in buybacks
         self.gETH.setApprovalForAll(WithdrawalPool, true);
@@ -306,7 +307,8 @@ library StakeUtils {
     //     uint256 _BOOSTRAP_PERIOD,
     //     uint256 _PERIOD_PRICE_INCREASE_LIMIT,
     //     uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-    //     uint256 _WITHDRAWAL_DELAY
+    //     uint256 _WITHDRAWAL_DELAY,
+    //     uint256 _COMET_TAX
     // ) external onlyGovernance(self) {
     //     require(
     //         _DEFAULT_gETH_INTERFACE.code.length > 0,
@@ -333,7 +335,6 @@ library StakeUtils {
     //             _MAX_MAINTAINER_FEE <= PERCENTAGE_DENOMINATOR,
     //         "StakeUtils: incorrect MAX_MAINTAINER_FEE"
     //     );
-
     //     self.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
     //     self.DEFAULT_DWP = _DEFAULT_DWP;
     //     self.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
@@ -375,20 +376,6 @@ library StakeUtils {
      * @notice                      ** Maintainer specific functions **
      */
 
-    // DELETE THIS PUT ION GET PLANET PARAMS FUNCTION
-    /**
-     * @notice "Maintainer" is a shared logic (like "name") by both operators and private or public pools.
-     * Maintainers have permissiones to maintain the given id like setting a new fee or interface as
-     * well as creating validators etc. for operators.
-     * @dev every ID has 1 maintainer that is set by CONTROLLER
-     */
-    // function getMaintainerFromId(
-    //     DataStoreUtils.DataStore storage _DATASTORE,
-    //     uint256 _id
-    // ) external view returns (address maintainer) {
-    //     maintainer = _DATASTORE.readAddressForId(_id, "maintainer");
-    // }
-
     function changeOperatorMaintainer(
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 _id,
@@ -419,27 +406,12 @@ library StakeUtils {
         uint256 _id,
         uint256 _newFee
     ) external {
+        _DATASTORE._authenticate(_id, true, [true, true, true]);
         require(
             _newFee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
         );
-        _DATASTORE._authenticate(_id, true, [true, true, true]);
         _DATASTORE._switchMaintainerFee(_id, _newFee);
-    }
-
-    /**
-     * @notice Maintainer wallet keeps Ether put in Portal by Operator to make proposeStake easier, instead of sending n ETH to contract
-     * while preStaking for n validator(s) for each time. Operator can put some ETHs to their wallet
-     * and from there, ETHs can be used to proposeStake. Then when it is approved and staked, it will be
-     * added back to the wallet to be used for other proposeStake calls.
-     * @param _operatorId the id of the Operator
-     * @return walletBalance the balance of Operator with the given _operatorId has
-     */
-    function getMaintainerWalletBalance(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _operatorId
-    ) external view returns (uint256 walletBalance) {
-        walletBalance = _DATASTORE.readUintForId(_operatorId, "wallet");
     }
 
     /**
@@ -548,12 +520,12 @@ library StakeUtils {
     }
 
     // DELETE THIS AND PUT IN PORTAL GEToPERATORPARAMS
-    // function getValidatorPeriod(
-    //     DataStoreUtils.DataStore storage _DATASTORE,
-    //     uint256 _operatorId
-    // ) external view returns (uint256) {
-    //     return _DATASTORE.readUintForId(_operatorId, "validatorPeriod");
-    // }
+    function getValidatorPeriod(
+        DataStoreUtils.DataStore storage _DATASTORE,
+        uint256 _operatorId
+    ) external view returns (uint256) {
+        return _DATASTORE.readUintForId(_operatorId, "validatorPeriod");
+    }
 
     function updateValidatorPeriod(
         DataStoreUtils.DataStore storage _DATASTORE,
@@ -601,7 +573,7 @@ library StakeUtils {
     ) public view returns (bool) {
         return
             _DATASTORE.readUintForId(_id, "stakePaused") == 0 &&
-            !miniGovernanceById(_DATASTORE, _id).isolationMode();
+            !(miniGovernanceById(_DATASTORE, _id).isolationMode());
     }
 
     /**
@@ -1050,12 +1022,12 @@ library StakeUtils {
                     "StakeUtils: SIGNATURE_LENGTH ERROR"
                 );
                 // TODO: there is no deposit contract, solve and open this comment
-                DCU.depositValidator(
-                    pubkeys[i],
-                    withdrawalCredential,
-                    signatures[i],
-                    DCU.DEPOSIT_AMOUNT_PRESTAKE
-                );
+                // DCU.depositValidator(
+                //     pubkeys[i],
+                //     withdrawalCredential,
+                //     signatures[i],
+                //     DCU.DEPOSIT_AMOUNT_PRESTAKE
+                // );
 
                 self.TELESCOPE._validators[pubkeys[i]] = OracleUtils.Validator(
                     1,
@@ -1164,12 +1136,12 @@ library StakeUtils {
                     ._validators[pubkeys[i]]
                     .signature;
                 // TODO: there is no deposit contract, solve and open this comment
-                DCU.depositValidator(
-                    pubkeys[i],
-                    withdrawalCredential,
-                    signature,
-                    DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
-                );
+                // DCU.depositValidator(
+                //     pubkeys[i],
+                //     withdrawalCredential,
+                //     signature,
+                //     DCU.DEPOSIT_AMOUNT - DCU.DEPOSIT_AMOUNT_PRESTAKE
+                // );
 
                 self.TELESCOPE._validators[pubkeys[i]].state = 2;
                 emit BeaconStaked(pubkeys[i]);

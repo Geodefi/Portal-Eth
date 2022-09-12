@@ -1,14 +1,17 @@
 const func = async function (hre) {
   const { deployments, getNamedAccounts } = hre;
-  const { deploy } = deployments;
+  const { deploy, get } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("MaintainerUtils", {
+  await deploy("MiniGovernance", {
     from: deployer,
     log: true,
+    libraries: {
+      GeodeUtils: (await get("GeodeUtils")).address,
+    },
     skipIfAlreadyDeployed: true,
   });
 };
 module.exports = func;
-module.exports.tags = ["MaintainerUtils"];
+module.exports.tags = ["MiniGovernance"];
 module.exports.dependencies = ["DataStore"];
