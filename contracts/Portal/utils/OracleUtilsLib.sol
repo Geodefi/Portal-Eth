@@ -11,7 +11,10 @@ library OracleUtils {
 
     event Alienated(bytes pubkey, bool isAlien);
     event Busted(bytes pubkey, bool isBusted);
-    event VerificationIndexUpdated(uint256 newIndex);
+    event VerificationIndexUpdated(
+        uint256 validatorVerificationIndex,
+        uint256 unstakeVerificationIndex
+    );
 
     /**
      * @param state 0: inactive, 1: proposed/cured validator, 2: active validator, 3: signaled/released withdrawal,
@@ -28,8 +31,15 @@ library OracleUtils {
         uint256 operatorId;
         uint256 poolFee;
         uint256 operatorFee;
-        // bytes withdrawalCredential;
         bytes signature;
+    }
+
+    struct Signal {
+        uint256 index;
+        uint256 timestamp;
+        uint256 withdrawalBoost;
+        uint256 balance; // balance does not include fees
+        uint256[3] fees; // tax, poolFee, opFee
     }
 
     /**
@@ -43,11 +53,15 @@ library OracleUtils {
         uint256 ORACLE_UPDATE_TIMESTAMP;
         uint256 MONOPOLY_THRESHOLD; // max number of validators an operator is allowed to operate.
         uint256 VALIDATORS_INDEX;
-        uint256 VERIFICATION_INDEX;
+        uint256 UNSTAKES_INDEX;
+        uint256 VALIDATOR_VERIFICATION_INDEX;
+        uint256 UNSTAKE_VERIFICATION_INDEX;
         uint256 PERIOD_PRICE_INCREASE_LIMIT;
         uint256 PERIOD_PRICE_DECREASE_LIMIT;
+        uint256 WITHDRAWAL_DELAY;
         bytes32 PRICE_MERKLE_ROOT;
-        mapping(bytes => Validator) Validators;
+        mapping(bytes => Validator) _validators;
+        mapping(bytes => Signal) _unstakeSignals;
     }
 
     /// @notice Oracle is active for the first 30 min of every day
@@ -114,8 +128,20 @@ library OracleUtils {
         returns (bool)
     {
         return
-            self.Validators[pubkey].state == 1 &&
-            self.Validators[pubkey].index <= self.VERIFICATION_INDEX;
+            self._validators[pubkey].state == 1 &&
+            self._validators[pubkey].index <= self.VALIDATOR_VERIFICATION_INDEX;
+    }
+
+    function canUnstake(Oracle storage self, bytes memory pk)
+        external
+        view
+        returns (bool)
+    {
+        return
+            self._validators[pk].state == 3 &&
+            self._unstakeSignals[pk].index <= self.UNSTAKE_VERIFICATION_INDEX &&
+            block.timestamp >=
+            self._unstakeSignals[pk].timestamp + self.WITHDRAWAL_DELAY;
     }
 
     function _alienateValidator(
@@ -124,13 +150,13 @@ library OracleUtils {
         bytes calldata pk
     ) internal {
         require(
-            self.Validators[pk].state == 1,
+            self._validators[pk].state == 1,
             "OracleUtils: NOT all alienPubkeys are pending"
         );
-        uint256 planetId = self.Validators[pk].poolId;
+        uint256 planetId = self._validators[pk].poolId;
         _DATASTORE.subUintForId(planetId, "secured", DCU.DEPOSIT_AMOUNT);
         _DATASTORE.addUintForId(planetId, "surplus", DCU.DEPOSIT_AMOUNT);
-        self.Validators[pk].state = 69;
+        self._validators[pk].state = 69;
         emit Alienated(pk, true);
     }
 
@@ -140,27 +166,27 @@ library OracleUtils {
         bytes calldata pk
     ) internal {
         require(
-            self.Validators[pk].state == 69,
+            self._validators[pk].state == 69,
             "OracleUtils: NOT all curedPubkeys are alienated"
         );
-        uint256 planetId = self.Validators[pk].poolId;
+        uint256 planetId = self._validators[pk].poolId;
         if (
             _DATASTORE.readUintForId(planetId, "surplus") >=
             (DCU.DEPOSIT_AMOUNT)
         ) {
             _DATASTORE.addUintForId(planetId, "secured", DCU.DEPOSIT_AMOUNT);
             _DATASTORE.subUintForId(planetId, "surplus", DCU.DEPOSIT_AMOUNT);
-            self.Validators[pk].state = 1;
+            self._validators[pk].state = 1;
             emit Alienated(pk, false);
         }
     }
 
     function _bustValidator(Oracle storage self, bytes calldata pk) internal {
         require(
-            self.Validators[pk].state == 3,
+            self._validators[pk].state == 3,
             "OracleUtils: NOT all bustedPubkeys are signaled"
         );
-        self.Validators[pk].state = 58;
+        self._validators[pk].state = 58;
         emit Busted(pk, true);
     }
 
@@ -168,17 +194,17 @@ library OracleUtils {
         internal
     {
         require(
-            self.Validators[pk].state == 58,
+            self._validators[pk].state == 58,
             "OracleUtils: NOT all releasedPubkeys are busted"
         );
-        self.Validators[pk].state = 3;
+        self._validators[pk].state = 3;
         emit Busted(pk, false);
     }
 
     /**
      * @notice Updating VERIFICATION_INDEX, signaling that it is safe to allow
      * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds.
-     * @param newVerificationIndex index of the highest validator that is verified to be activated
+     * @param validatorVerificationIndex index of the highest validator that is verified to be activated
      * @param regulatedPubkeys matrix of validator pubkeys that are lower than new_index which also
      * either frontrunned proposeStake function thus alienated OR proven to be mistakenly alienated.
      */
@@ -186,19 +212,28 @@ library OracleUtils {
         Oracle storage self,
         DataStoreUtils.DataStore storage _DATASTORE,
         uint256 allValidatorsCount,
-        uint256 newVerificationIndex,
+        uint256 validatorVerificationIndex,
+        uint256 unstakeVerificationIndex,
         bytes[][] calldata regulatedPubkeys, //0: alienated, 1: cured, 2: busted, 3: released
         uint256[] calldata prisonedIds
     ) external onlyOracle(self) {
         require(!_isOracleActive(self), "OracleUtils: oracle is active");
         require(allValidatorsCount > 999, "OracleUtils: low validator count");
         require(
-            self.VALIDATORS_INDEX >= newVerificationIndex,
-            "OracleUtils: high VERIFICATION_INDEX"
+            self.VALIDATORS_INDEX >= validatorVerificationIndex,
+            "OracleUtils: high VALIDATOR_VERIFICATION_INDEX"
         );
         require(
-            newVerificationIndex >= self.VERIFICATION_INDEX,
-            "OracleUtils: low VERIFICATION_INDEX"
+            validatorVerificationIndex >= self.VALIDATOR_VERIFICATION_INDEX,
+            "OracleUtils: low VALIDATOR_VERIFICATION_INDEX"
+        );
+        require(
+            self.UNSTAKES_INDEX >= unstakeVerificationIndex,
+            "OracleUtils: high UNSTAKE_VERIFICATION_INDEX"
+        );
+        require(
+            unstakeVerificationIndex >= self.UNSTAKE_VERIFICATION_INDEX,
+            "OracleUtils: low UNSTAKE_VERIFICATION_INDEX"
         );
         require(
             regulatedPubkeys.length == 4,
@@ -234,8 +269,12 @@ library OracleUtils {
             (allValidatorsCount * MONOPOLY_RATIO) /
             PERCENTAGE_DENOMINATOR;
 
-        self.VERIFICATION_INDEX = newVerificationIndex;
-        emit VerificationIndexUpdated(newVerificationIndex);
+        self.VALIDATOR_VERIFICATION_INDEX = validatorVerificationIndex;
+        self.UNSTAKE_VERIFICATION_INDEX = unstakeVerificationIndex;
+        emit VerificationIndexUpdated(
+            validatorVerificationIndex,
+            unstakeVerificationIndex
+        );
     }
 
     /**
@@ -307,7 +346,8 @@ library OracleUtils {
     ) internal returns (uint256, uint256) {
         uint256 totalEther = beaconBalance +
             _DATASTORE.readUintForId(poolId, "secured") +
-            _DATASTORE.readUintForId(poolId, "surplus");
+            _DATASTORE.readUintForId(poolId, "surplus") +
+            _DATASTORE.readUintForId(poolId, "signaled");
 
         uint256 supply = self.gETH.totalSupply(poolId);
         uint256 price = self.gETH.pricePerShare(poolId);
