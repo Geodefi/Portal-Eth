@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "./DataStoreLib.sol";
+import "./DataStoreUtilsLib.sol";
 
 /**
  * @title GeodeUtils library
- * @notice Exclusively contains functions responsible for administration of Geode Portal,
+ * @notice Exclusively contains functions responsible for administration of DATASTORE,
  * including functions related to "limited upgradability" with Senate & proposals.
  * @dev Contracts relying on this library must initialize GeodeUtils.Universe
  * @dev ALL "fee" variables are limited by PERCENTAGE_DENOMINATOR = 100%
- * @dev Admin functions are already protected.
- * Note that this library contains both functions called by users(ID) and admins(GOVERNANCE, SENATE )
+ * @dev Admin functions are already protected
+ * Note this library contains both functions called by users(ID) (approveSenate) and admins(GOVERNANCE, SENATE)
  * Note refer to DataStoreUtils before reviewing
  */
 library GeodeUtils {
@@ -26,32 +26,31 @@ library GeodeUtils {
         uint256 deadline
     );
     event ProposalApproved(uint256 id);
-    event ElectorTypeSet(uint256 TYPE, bool _isElector);
+    event ElectorTypeSet(uint256 TYPE, bool isElector);
     event Vote(uint256 proposalId, uint256 electorId);
     event NewSenate(address senate, uint256 senate_expiry);
 
     /**
-
-   * @notice Proposal basically refers to give the control of an ID to a CONTROLLER.
-   *
-   * @notice A Proposal has 4 specs:
-   * @param TYPE: separates the proposals and related functionality between different ID types.
-   * * RESERVED TYPES on GeodeUtils:
-   * * * TYPE 0: inactive
-   * * * TYPE 1: Senate: controls state of governance, contract updates and other members of A Universe
-   * * * TYPE 2: Upgrade: address of the implementation for desired contract upgrade
-   * * * TYPE 3: **gap** : formally it represented the admin contract, however since UUPS is being used as a upgrade path,
-   * this TYPE is now reserved to make it easier for secondary contracts to add their own type.
-   *
-   * @param name: id is created by keccak(name)
-   *
-   * @param CONTROLLER: the address that refers to the change that is proposed by given proposal ID.
-   * * This slot can be given the control of an id to a user, a new implementation contract, a new Senate etc.
-   *
-   * @param deadline: refers to last timestamp until a proposal expires, limited by MAX_PROPOSAL_DURATION
-   * * Expired proposals can not be approved by Senate
-   * * Expired proposals can be overriden by new proposals
-   **/
+     * @notice Proposal basically refers to give the control of an ID to a CONTROLLER.
+     *
+     * @notice A Proposal has 4 specs:
+     * @param TYPE: separates the proposals and related functionality between different ID types.
+     * * RESERVED TYPES on GeodeUtils:
+     * * * TYPE 0: inactive
+     * * * TYPE 1: Senate: controls state of governance, contract updates and other members of A Universe
+     * * * TYPE 2: Upgrade: address of the implementation for desired contract upgrade
+     * * * TYPE 3: **gap** : formally it represented the admin contract, however since UUPS is being used as a upgrade path,
+     * this TYPE is now reserved.
+     *
+     * @param name: id is created by keccak(name, type)
+     *
+     * @param CONTROLLER: the address that refers to the change that is proposed by given proposal ID.
+     * * This slot can refer to the controller of an id, a new implementation contract, a new Senate etc.
+     *
+     * @param deadline: refers to last timestamp until a proposal expires, limited by MAX_PROPOSAL_DURATION
+     * * Expired proposals can not be approved by Senate
+     * * Expired proposals can not be overriden by new proposals
+     **/
     struct Proposal {
         address CONTROLLER;
         uint256 TYPE;
@@ -59,18 +58,18 @@ library GeodeUtils {
         uint256 deadline;
     }
     /**
-     * @notice Universe is A blockchain. In this case, it defines Avalanche
+     * @notice Universe is A blockchain. In this case, it defines Ethereum
      * @param GOVERNANCE a community that works to improve the core product and ensures its adoption in the DeFi ecosystem
-     * Suggests updates, such as new planets, operators, contract upgrades and new Senate, on the Ecosystem _without any permissions to force them_
+     * Suggests updates, such as new planets, operators, comets, contract upgrades and new Senate, on the Ecosystem -without any permission to force them-
      * @param SENATE An address that controls the state of governance, updates and other users in the Geode Ecosystem
-     * Note SENATE is proposed by Governance and voted by all planets, if 2/3 approves.
+     * Note SENATE is proposed by Governance and voted by all elector types, operates if ⌊2/3⌋ approves.
      * @param GOVERNANCE_TAX operation fee of the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_TAX
      * @param MAX_GOVERNANCE_TAX set by SENATE, limited by PERCENTAGE_DENOMINATOR
      * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Enforces a new election, limited by MAX_SENATE_PERIOD
-     * @param approvedUpgrade only 1(one) implementation contract can be "approved" at any given time. @dev Should set to address(0) after every upgrade
+     * @param approvedUpgrade only 1 implementation contract can be "approved" at any given time. @dev safe to set to address(0) after every upgrade
      * @param _electorCount increased when a new id is added with _electorTypes[id] == true
-     * @param _electorTypes only given types can vote @dev must only be used at upgrades.
-     * @param _proposalForId proposals are kept seperately instead of setting the parameters of id in DATASTORE, and then setting it's type; to allowe surpassing type checks to save gas cost
+     * @param _electorTypes only given types can vote @dev MUST only change during upgrades.
+     * @param _proposalForId proposals are kept seperately instead of setting the parameters of id in DATASTORE, and then setting it's type; to allow surpassing type checks to save gas cost
      **/
     struct Universe {
         address SENATE;
@@ -85,7 +84,7 @@ library GeodeUtils {
     }
 
     uint32 public constant MIN_PROPOSAL_DURATION = 1 days;
-    uint32 public constant MAX_PROPOSAL_DURATION = 1 weeks;
+    uint32 public constant MAX_PROPOSAL_DURATION = 2 weeks;
     uint32 public constant MAX_SENATE_PERIOD = 365 days; // 1 year
 
     /// @notice PERCENTAGE_DENOMINATOR represents 100%
@@ -100,22 +99,30 @@ library GeodeUtils {
         _;
     }
 
+    modifier onlyGovernance(Universe storage self) {
+        require(
+            msg.sender == self.GOVERNANCE,
+            "GeodeUtils: GOVERNANCE role needed"
+        );
+        _;
+    }
+
     /**
      *                                         ** UNIVERSE GETTERS **
      **/
 
     /**
-     * @return the address of SENATE
+     * @return address of SENATE
      **/
-    function getSenate(Universe storage self) public view returns (address) {
+    function getSenate(Universe storage self) external view returns (address) {
         return self.SENATE;
     }
 
     /**
-     * @return the address of GOVERNANCE
+     * @return address of GOVERNANCE
      **/
     function getGovernance(Universe storage self)
-        public
+        external
         view
         returns (address)
     {
@@ -124,10 +131,10 @@ library GeodeUtils {
 
     /**
      * @notice MAX_GOVERNANCE_TAX must limit GOVERNANCE_TAX even if MAX is changed
-     * @return active GOVERNANCE_TAX; limited by MAX_GOVERNANCE_TAX
+     * @return active GOVERNANCE_TAX, limited by MAX_GOVERNANCE_TAX
      */
     function getGovernanceTax(Universe storage self)
-        public
+        external
         view
         returns (uint256)
     {
@@ -141,7 +148,7 @@ library GeodeUtils {
      *  @return MAX_GOVERNANCE_TAX
      */
     function getMaxGovernanceTax(Universe storage self)
-        public
+        external
         view
         returns (uint256)
     {
@@ -152,7 +159,7 @@ library GeodeUtils {
      * @return the expiration date of current SENATE as a timestamp
      */
     function getSenateExpireTimestamp(Universe storage self)
-        public
+        external
         view
         returns (uint256)
     {
@@ -163,38 +170,46 @@ library GeodeUtils {
      *                                         ** UNIVERSE SETTERS **
      */
 
-    /** @return true if the operation was succesful, might be helpful when governance rights are distributed
-     * @dev can not set a fee more than MAX
-     * @dev no need to check PERCENTAGE_DENOMINATOR
+    /**
+     * @dev can not set the fee more than MAX_GOVERNANCE_TAX
+     * @dev no need to check PERCENTAGE_DENOMINATOR because MAX_GOVERNANCE_TAX is limited already
+     * @return true if the operation was succesful, might be helpful when governance rights are distributed
      */
-    function setGovernanceTax(Universe storage self, uint256 _newFee)
+    function setGovernanceTax(Universe storage self, uint256 newFee)
         external
+        onlyGovernance(self)
         returns (bool)
     {
         require(
-            _newFee <= self.MAX_GOVERNANCE_TAX,
-            "GeodeUtils: fee more than MAX"
+            newFee <= self.MAX_GOVERNANCE_TAX,
+            "GeodeUtils: cannot be more than MAX_GOVERNANCE_TAX"
         );
-        self.GOVERNANCE_TAX = _newFee;
-        emit GovernanceTaxUpdated(_newFee);
+
+        self.GOVERNANCE_TAX = newFee;
+
+        emit GovernanceTaxUpdated(newFee);
+
         return true;
     }
 
     /**
-     * @return true if the operation was succesful
      * @dev can not set a fee more than PERCENTAGE_DENOMINATOR (100%)
+     * @return true if the operation was succesful
      */
-    function setMaxGovernanceTax(Universe storage self, uint256 _newMaxFee)
+    function setMaxGovernanceTax(Universe storage self, uint256 newMaxFee)
         external
         onlySenate(self)
         returns (bool)
     {
         require(
-            _newMaxFee <= PERCENTAGE_DENOMINATOR,
+            newMaxFee <= PERCENTAGE_DENOMINATOR,
             "GeodeUtils: fee more than 100%"
         );
-        self.MAX_GOVERNANCE_TAX = _newMaxFee;
-        emit MaxGovernanceTaxUpdated(_newMaxFee);
+
+        self.MAX_GOVERNANCE_TAX = newMaxFee;
+
+        emit MaxGovernanceTaxUpdated(newMaxFee);
+
         return true;
     }
 
@@ -219,40 +234,40 @@ library GeodeUtils {
      * @dev returns address(0) for empty ids, mandatory
      */
     function getCONTROLLERFromId(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
     ) external view returns (address) {
-        return _DATASTORE.readAddressForId(_id, "CONTROLLER");
+        return DATASTORE.readAddressForId(id, "CONTROLLER");
     }
 
     /**
      * @dev returns uint(0) for empty ids, mandatory
      */
     function getTYPEFromId(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
     ) external view returns (uint256) {
-        return _DATASTORE.readUintForId(_id, "TYPE");
+        return DATASTORE.readUintForId(id, "TYPE");
     }
 
     /**
      * @dev returns bytes(0) for empty ids, mandatory
      */
     function getNAMEFromId(
-        DataStoreUtils.DataStore storage _DATASTORE,
-        uint256 _id
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
     ) external view returns (bytes memory) {
-        return _DATASTORE.readBytesForId(_id, "NAME");
+        return DATASTORE.readBytesForId(id, "NAME");
     }
 
     /**
      * @notice only the current CONTROLLER can change
-     * @dev this operation can not be reverted by an old CONTROLLER
+     * @dev this operation can not be reverted by the old CONTROLLER
      * @dev in case the current controller wants to remove the
-     * need to upgrade to NO Controller they should provide smt like 0x000000000000000000000000000000000000dEaD
+     * need to upgrade to Controller they should provide smt like 0x000000000000000000000000000000000000dEaD
      */
     function changeIdCONTROLLER(
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256 id,
         address newCONTROLLER
     ) external {
@@ -261,10 +276,12 @@ library GeodeUtils {
             "GeodeUtils: CONTROLLER can not be zero"
         );
         require(
-            _DATASTORE.readAddressForId(id, "CONTROLLER") == msg.sender,
+            DATASTORE.readAddressForId(id, "CONTROLLER") == msg.sender,
             "GeodeUtils: not CONTROLLER of given id"
         );
-        _DATASTORE.writeAddressForId(id, "CONTROLLER", newCONTROLLER);
+
+        DATASTORE.writeAddressForId(id, "CONTROLLER", newCONTROLLER);
+
         emit ControllerChanged(id, newCONTROLLER);
     }
 
@@ -285,8 +302,8 @@ library GeodeUtils {
     }
 
     /**
-     * @notice to ensure the flexibility of Governance-less upgrades in the future, Anyone can create a Proposal.
-     * @notice a proposal can be overriden if: expired OR approved. DATASTORE(id) will not be overriden until the proposal is approved.
+     * @notice a proposal can never be overriden.
+     * @notice DATASTORE(id) will not be updated until the proposal is approved.
      * @dev refer to structure of Proposal for explanations of params
      */
     function newProposal(
@@ -294,40 +311,45 @@ library GeodeUtils {
         address _CONTROLLER,
         uint256 _TYPE,
         bytes calldata _NAME,
-        uint256 _duration
-    ) external {
+        uint256 duration
+    ) external onlyGovernance(self) {
         require(
-            _duration >= MIN_PROPOSAL_DURATION,
-            "GeodeUtils: duration should be higher than min value"
+            duration >= MIN_PROPOSAL_DURATION,
+            "GeodeUtils: duration should be higher than MIN_PROPOSAL_DURATION"
         );
         require(
-            _duration <= MAX_PROPOSAL_DURATION,
-            "GeodeUtils: duration exceeds"
+            duration <= MAX_PROPOSAL_DURATION,
+            "GeodeUtils: duration exceeds MAX_PROPOSAL_DURATION"
         );
+
         uint256 id = _generateId(_NAME, _TYPE);
+
         require(
             self._proposalForId[id].deadline == 0,
             "GeodeUtils: NAME already proposed"
         );
+
         self._proposalForId[id] = Proposal({
             CONTROLLER: _CONTROLLER,
             TYPE: _TYPE,
             NAME: _NAME,
-            deadline: block.timestamp + _duration
+            deadline: block.timestamp + duration
         });
-        emit Proposed(id, _CONTROLLER, _TYPE, block.timestamp + _duration);
+
+        emit Proposed(id, _CONTROLLER, _TYPE, block.timestamp + duration);
     }
 
     /**
      *  @notice type specific changes for reserved_types(1,2,3) are implemented here,
      *  any other addition should take place in Portal, as not related
      *  @param id given ID proposal that has been approved by Senate
+     *  @dev Senate should not be able to approve approved proposals
      *  @dev Senate should not be able to approve expired proposals
      *  @dev Senate should not be able to approve SENATE proposals :)
      */
     function approveProposal(
         Universe storage self,
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
     ) external onlySenate(self) {
         require(
@@ -338,21 +360,25 @@ library GeodeUtils {
             self._proposalForId[id].TYPE != 1,
             "GeodeUtils: Senate can not approve Senate Proposal"
         );
-        _DATASTORE.writeBytesForId(id, "NAME", self._proposalForId[id].NAME);
-        _DATASTORE.writeAddressForId(
+
+        DATASTORE.writeAddressForId(
             id,
             "CONTROLLER",
             self._proposalForId[id].CONTROLLER
         );
-        _DATASTORE.writeUintForId(id, "TYPE", self._proposalForId[id].TYPE);
-        _DATASTORE.allIdsByType[self._proposalForId[id].TYPE].push(id);
+        DATASTORE.writeUintForId(id, "TYPE", self._proposalForId[id].TYPE);
+        DATASTORE.writeBytesForId(id, "NAME", self._proposalForId[id].NAME);
+        DATASTORE.allIdsByType[self._proposalForId[id].TYPE].push(id);
 
         if (self._proposalForId[id].TYPE == 2) {
             self.approvedUpgrade = self._proposalForId[id].CONTROLLER;
         }
-        self._proposalForId[id].deadline = block.timestamp;
-        if (self._electorTypes[_DATASTORE.readUintForId(id, "TYPE")])
+
+        if (self._electorTypes[DATASTORE.readUintForId(id, "TYPE")])
             self._electorCount += 1;
+
+        self._proposalForId[id].deadline = block.timestamp;
+
         emit ProposalApproved(id);
     }
 
@@ -361,41 +387,44 @@ library GeodeUtils {
      */
 
     /**
-     * @notice only selected types can vote for senate
+     * @notice only elector types can vote for senate
      * @param _TYPE selected type
-     * @param _isElector true if selected _type can vote for senate from now on
+     * @param isElector true if selected _type can vote for senate from now on
      * @dev can not set with the same value again, preventing double increment/decrements
      */
     function setElectorType(
         Universe storage self,
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256 _TYPE,
-        bool _isElector
-    ) external {
+        bool isElector
+    ) external onlyGovernance(self) {
         require(
-            self._electorTypes[_TYPE] != _isElector,
+            self._electorTypes[_TYPE] != isElector,
             "GeodeUtils: type already _isElector"
         );
         require(
             _TYPE != 0 && _TYPE != 1 && _TYPE != 2 && _TYPE != 3,
-            "GeodeUtils: 0, Senate, Upgrade, ProxyAdmin cannot be elector!"
+            "GeodeUtils: 0, Senate, Upgrade cannot be elector"
         );
-        self._electorTypes[_TYPE] = _isElector;
-        if (_isElector) {
-            self._electorCount += _DATASTORE.allIdsByType[_TYPE].length;
+
+        self._electorTypes[_TYPE] = isElector;
+
+        if (isElector) {
+            self._electorCount += DATASTORE.allIdsByType[_TYPE].length;
         } else {
-            self._electorCount -= _DATASTORE.allIdsByType[_TYPE].length;
+            self._electorCount -= DATASTORE.allIdsByType[_TYPE].length;
         }
-        emit ElectorTypeSet(_TYPE, _isElector);
+
+        emit ElectorTypeSet(_TYPE, isElector);
     }
 
     /**
-     * @notice Proposed CONTROLLER is the new Senate after 2/3 of the electors are approved
+     * @notice Proposed CONTROLLER is the new Senate after 2/3 of the electors approved
      * NOTE mathematically, min 4 elector is needed for (c+1)*2/3 to work properly
      * @notice id can not vote if:
      * - approved already
-     * - not its type is not elector
-     * - not proposal is expired
+     * - proposal is expired
+     * - not its type is elector
      * - not senate proposal
      * @param electorId should have the voting rights, msg.sender should be the CONTROLLER of given ID
      * @dev pins id as "voted" when approved
@@ -403,7 +432,7 @@ library GeodeUtils {
      */
     function approveSenate(
         Universe storage self,
-        DataStoreUtils.DataStore storage _DATASTORE,
+        DataStoreUtils.DataStore storage DATASTORE,
         uint256 proposalId,
         uint256 electorId
     ) external {
@@ -416,29 +445,30 @@ library GeodeUtils {
             "GeodeUtils: proposal expired"
         );
         require(
-            _DATASTORE.readAddressForId(electorId, "CONTROLLER") == msg.sender,
+            DATASTORE.readAddressForId(electorId, "CONTROLLER") == msg.sender,
             "GeodeUtils: msg.sender should be CONTROLLER of given electorId!"
         );
         require(
-            self._electorTypes[_DATASTORE.readUintForId(electorId, "TYPE")],
+            self._electorTypes[DATASTORE.readUintForId(electorId, "TYPE")],
             "GeodeUtils: NOT an elector"
         );
         require(
-            _DATASTORE.readUintForId(
+            DATASTORE.readUintForId(
                 proposalId,
-                bytes32(keccak256(abi.encodePacked(electorId, "voted")))
+                DataStoreUtils.getKey(electorId, "voted")
             ) == 0,
             " GeodeUtils: already approved"
         );
-        _DATASTORE.writeUintForId(
+
+        DATASTORE.writeUintForId(
             proposalId,
-            bytes32(keccak256(abi.encodePacked(electorId, "voted"))),
+            DataStoreUtils.getKey(electorId, "voted"),
             1
         );
-        emit Vote(proposalId, electorId);
-        _DATASTORE.addUintForId(proposalId, "approvalCount", 1);
+        DATASTORE.addUintForId(proposalId, "approvalCount", 1);
+
         if (
-            _DATASTORE.readUintForId(proposalId, "approvalCount") >=
+            DATASTORE.readUintForId(proposalId, "approvalCount") >=
             ((self._electorCount + 1) * 2) / 3
         ) {
             self._proposalForId[proposalId].deadline = block.timestamp;
@@ -448,15 +478,18 @@ library GeodeUtils {
                 MAX_SENATE_PERIOD
             );
         }
+
+        emit Vote(proposalId, electorId);
     }
 
     function _setSenate(
         Universe storage self,
-        address newSenate,
-        uint256 senatePeriod
+        address _newSenate,
+        uint256 _senatePeriod
     ) internal {
-        self.SENATE = newSenate;
-        self.SENATE_EXPIRY = block.timestamp + senatePeriod;
+        self.SENATE = _newSenate;
+        self.SENATE_EXPIRY = block.timestamp + _senatePeriod;
+
         emit NewSenate(self.SENATE, self.SENATE_EXPIRY);
     }
 
@@ -468,10 +501,10 @@ library GeodeUtils {
      **/
     function isUpgradeAllowed(
         Universe storage self,
-        address proposed_implementation
+        address proposedImplementation
     ) external view returns (bool) {
         return
             self.approvedUpgrade != address(0) &&
-            self.approvedUpgrade == proposed_implementation;
+            self.approvedUpgrade == proposedImplementation;
     }
 }
