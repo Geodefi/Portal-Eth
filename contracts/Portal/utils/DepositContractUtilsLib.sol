@@ -5,18 +5,14 @@ import "../../interfaces/IDepositContract.sol";
 import "../helpers/BytesLib.sol";
 
 library DepositContractUtils {
-    address internal constant DEPOSIT_CONTRACT_POSITION =
-        0x00000000219ab540356cBB839Cbe05303d7705Fa;
+    IDepositContract internal constant DEPOSIT_CONTRACT =
+        IDepositContract(0x00000000219ab540356cBB839Cbe05303d7705Fa);
     uint256 internal constant PUBKEY_LENGTH = 48;
     uint256 internal constant SIGNATURE_LENGTH = 96;
     uint256 internal constant WITHDRAWAL_CREDENTIALS_LENGTH = 32;
     uint256 internal constant DEPOSIT_AMOUNT = 32 ether;
     uint256 internal constant DEPOSIT_AMOUNT_PRESTAKE = 1 ether;
     uint256 internal constant MAX_DEPOSITS_PER_CALL = 64;
-
-    function getDepositContract() internal pure returns (IDepositContract) {
-        return IDepositContract(DEPOSIT_CONTRACT_POSITION);
-    }
 
     /**
      * @dev Padding memory array with zeroes up to 64 bytes on the right
@@ -60,35 +56,37 @@ library DepositContractUtils {
         result <<= (24 * 8);
     }
 
-    function getDepositDataRoot(
-        bytes memory pubkey,
-        bytes memory withdrawal_credentials,
-        bytes memory signature,
-        uint256 stakeAmount
+    function _getDepositDataRoot(
+        bytes memory _pubkey,
+        bytes memory _withdrawalCredentials,
+        bytes memory _signature,
+        uint256 _stakeAmount
     ) internal pure returns (bytes32) {
         require(
-            stakeAmount >= 1 ether,
+            _stakeAmount >= 1 ether,
             "DepositContract: deposit value too low"
         );
         require(
-            stakeAmount % 1 gwei == 0,
+            _stakeAmount % 1 gwei == 0,
             "DepositContract: deposit value not multiple of gwei"
         );
-        uint256 deposit_amount = stakeAmount / 1 gwei;
 
-        bytes32 pubkeyRoot = sha256(_pad64(pubkey));
+        uint256 deposit_amount = _stakeAmount / 1 gwei;
+        bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
-                sha256(BytesLib.slice(signature, 0, 64)),
+                sha256(BytesLib.slice(_signature, 0, 64)),
                 sha256(
-                    _pad64(BytesLib.slice(signature, 64, SIGNATURE_LENGTH - 64))
+                    _pad64(
+                        BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64)
+                    )
                 )
             )
         );
 
         bytes32 depositDataRoot = sha256(
             abi.encodePacked(
-                sha256(abi.encodePacked(pubkeyRoot, withdrawal_credentials)),
+                sha256(abi.encodePacked(pubkeyRoot, _withdrawalCredentials)),
                 sha256(
                     abi.encodePacked(
                         _toLittleEndian64(deposit_amount),
@@ -97,18 +95,20 @@ library DepositContractUtils {
                 )
             )
         );
+
         return depositDataRoot;
     }
 
-    function addressToWC(address wcAddress)
+    function addressToWC(address _wcAddress)
         internal
         pure
         returns (bytes memory)
     {
         uint256 w = 1 << 248;
+
         return
             abi.encodePacked(
-                bytes32(w) | bytes32(uint256(uint160(address(wcAddress))))
+                bytes32(w) | bytes32(uint256(uint160(address(_wcAddress))))
             );
     }
 
@@ -118,11 +118,11 @@ library DepositContractUtils {
         bytes memory signature,
         uint256 amount
     ) internal {
-        getDepositContract().deposit{value: amount}(
+        DEPOSIT_CONTRACT.deposit{value: amount}(
             pubkey,
             withdrawalCredential,
             signature,
-            getDepositDataRoot(pubkey, withdrawalCredential, signature, amount)
+            _getDepositDataRoot(pubkey, withdrawalCredential, signature, amount)
         );
     }
 }

@@ -28,7 +28,7 @@ library GeodeUtils {
     event ProposalApproved(uint256 id);
     event ElectorTypeSet(uint256 TYPE, bool isElector);
     event Vote(uint256 proposalId, uint256 electorId);
-    event NewSenate(address senate, uint256 senate_expiry);
+    event NewSenate(address senate, uint256 senateExpiry);
 
     /**
      * @notice Proposal basically refers to give the control of an ID to a CONTROLLER.
@@ -57,6 +57,7 @@ library GeodeUtils {
         bytes NAME;
         uint256 deadline;
     }
+
     /**
      * @notice Universe is A blockchain. In this case, it defines Ethereum
      * @param GOVERNANCE a community that works to improve the core product and ensures its adoption in the DeFi ecosystem

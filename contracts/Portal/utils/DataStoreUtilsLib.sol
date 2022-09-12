@@ -37,6 +37,22 @@ library DataStoreUtils {
     }
 
     /**
+     *                              ** HELPER **
+     **/
+
+    /**
+     * @notice hashes given id with parameter to be used as key in getters and setters
+     * @return key bytes32 hash of id and parameter to be stored
+     **/
+    function getKey(uint256 _id, string memory _param)
+        internal
+        pure
+        returns (bytes32 key)
+    {
+        key = bytes32(keccak256(abi.encodePacked(_id, _param)));
+    }
+
+    /**
      *                              **DATA GETTERS **
      **/
 

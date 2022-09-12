@@ -3,7 +3,7 @@ pragma solidity =0.8.7;
 
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "./DataStoreLib.sol";
+import "./DataStoreUtilsLib.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/IMiniGovernance.sol";
 import {IERC20InterfacePermitUpgradable as IgETHInterface} from "../../interfaces/IERC20InterfacePermitUpgradable.sol";

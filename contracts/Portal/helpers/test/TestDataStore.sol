@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
-import "../../utils/DataStoreLib.sol";
+import "../../utils/DataStoreUtilsLib.sol";
 
 contract DataStoreUtilsTest {
     using DataStoreUtils for DataStoreUtils.DataStore;
