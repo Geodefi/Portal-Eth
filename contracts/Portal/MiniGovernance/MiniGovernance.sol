@@ -4,12 +4,14 @@ pragma solidity =0.8.7;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "../utils/GeodeUtilsLib.sol";
 import "../utils/DataStoreLib.sol";
+import "../utils/GeodeUtilsLib.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/IPortal.sol";
+import "../../interfaces/IMiniGovernance.sol";
 
 contract MiniGovernances is
+    IMiniGovernance,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
     UUPSUpgradeable
@@ -32,6 +34,9 @@ contract MiniGovernances is
     GeodeUtils.Universe private GEM; // MiniGeode
     MiniGovernance private SELF;
 
+    uint256 SENATE_VALIDITY = 180 days;
+    uint256 PAUSE_LAPSE = 1 weeks;
+
     struct MiniGovernance {
         IgETH gETH;
         uint256 ID;
@@ -48,7 +53,7 @@ contract MiniGovernances is
         address _PORTAL,
         uint256 _VERSION,
         address _MAINTAINER
-    ) public initializer {
+    ) public virtual override initializer {
         __ReentrancyGuard_init();
         __Pausable_init();
         __UUPSUpgradeable_init();
@@ -93,27 +98,43 @@ contract MiniGovernances is
         );
     }
 
-    function pause() external virtual onlyMaintainer {
+    function pause() external virtual override onlyMaintainer {
         require(block.timestamp > SELF.whenPauseAllowed);
         _pause();
         SELF.lastPause = block.timestamp;
     }
 
     // can not spam pause / unpause
-    function unpause() external virtual onlyMaintainer {
+    function unpause() external virtual override onlyMaintainer {
         _unpause();
-        SELF.whenPauseAllowed = block.timestamp + 1 weeks;
+        SELF.whenPauseAllowed = block.timestamp + PAUSE_LAPSE;
         SELF.lastPause = type(uint256).max;
     }
 
-    function getVersion() external view virtual returns (uint256) {
+    function getCurrentVersion()
+        external
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return SELF.contractVersion;
+    }
+
+    function getProposedVersion()
+        external
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return SELF.contractVersion;
     }
 
     // currently only rule is being not updated OR SENATE expired
-    function isolationMode() public view virtual returns (bool) {
+    function isolationMode() public view virtual override returns (bool) {
         return
-            SELF.proposedVersion != SELF.contractVersion ||
+            SELF.contractVersion != SELF.proposedVersion ||
             block.timestamp > GEM.SENATE_EXPIRY;
     }
 
@@ -123,7 +144,7 @@ contract MiniGovernances is
 
     // anyone can fetch proposal from Portal, so  we don't need to call it.
     // note: timer for isAbandoned starts after catch.
-    function fetchUpgradeProposal() external virtual whenNotPaused {
+    function fetchUpgradeProposal() external virtual override whenNotPaused {
         uint256 id = getPortal().miniGovernanceVersion();
         require(id != SELF.contractVersion);
         GeodeUtils.Proposal memory proposal = getPortal().getProposal(id);
@@ -135,6 +156,7 @@ contract MiniGovernances is
     function approveProposal(uint256 _id)
         external
         virtual
+        override
         whenNotPaused
         onlyMaintainer
     {
@@ -145,11 +167,16 @@ contract MiniGovernances is
      *                                          ** SENATE & UPGRADE MANAGEMENT **
      */
     function _refreshSenate(address newSenate) internal virtual whenNotPaused {
-        GEM._setSenate(newSenate, block.timestamp + 180 days);
+        GEM._setSenate(newSenate, block.timestamp + SENATE_VALIDITY);
     }
 
     // changePassword(){refresh} onlySenate =>  no need old password
-    function refreshSenate(bytes32 newPassword) external onlyMaintainer {
+    function refreshSenate(bytes32 newPassword)
+        external
+        virtual
+        override
+        onlyMaintainer
+    {
         SELF.PASSWORD = newPassword;
         _refreshSenate(GEM.SENATE);
     }
@@ -159,7 +186,7 @@ contract MiniGovernances is
         bytes calldata password,
         bytes32 newPasswordHash,
         address newMaintainer
-    ) external onlyPortal whenNotPaused {
+    ) external virtual override onlyPortal whenNotPaused {
         require(
             keccak256(abi.encodePacked(SELF.ID, password)) == SELF.PASSWORD
         );
@@ -170,7 +197,10 @@ contract MiniGovernances is
 
     function claimUnstake(uint256 claim)
         external
+        virtual
+        override
         onlyPortal
+        nonReentrant
         returns (bool success)
     {
         (success, ) = payable(GEM.GOVERNANCE).call{value: claim}("");

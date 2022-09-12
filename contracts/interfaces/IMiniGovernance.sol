@@ -16,7 +16,9 @@ interface IMiniGovernance {
 
     function unpause() external;
 
-    function getVersion() external view returns (uint256);
+    function getCurrentVersion() external view returns (uint256);
+
+    function getProposedVersion() external view returns (uint256);
 
     function isolationMode() external view returns (bool);
 
