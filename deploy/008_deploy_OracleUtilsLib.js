@@ -11,4 +11,3 @@ const func = async function (hre) {
 };
 module.exports = func;
 module.exports.tags = ["OracleUtils"];
-module.exports.dependencies = ["DataStore", "DepositContractUtils"];

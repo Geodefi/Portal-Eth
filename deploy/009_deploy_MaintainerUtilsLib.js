@@ -11,4 +11,3 @@ const func = async function (hre) {
 };
 module.exports = func;
 module.exports.tags = ["MaintainerUtils"];
-module.exports.dependencies = ["DataStore"];

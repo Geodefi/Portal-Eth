@@ -6,7 +6,6 @@ const web3 = require("web3");
 
 const chai = require("chai");
 // const { shouldSupportInterfaces } = require("./SupportsInterface");
-
 chai.use(solidity);
 const { expect } = chai;
 const initialURI = "https://token-cdn-domain/{id}.json";
@@ -205,16 +204,6 @@ describe("gETH", async function () {
         expect(
           await tokenContract.isApprovedForAll(multiTokenHolder, proxy)
         ).to.be.equal(true);
-      });
-
-      it("emits an ApprovalForAll log", function () {
-        expect(
-          tokenContract.connect(signers[4]).setApprovalForAll(proxy, true)
-        ).to.emit("ApprovalForAll", {
-          account: multiTokenHolder,
-          operator: proxy,
-          approved: true,
-        });
       });
 
       it("can unset approval for an operator", async function () {
@@ -1444,7 +1433,7 @@ describe("gETH", async function () {
         it("reverts: id = 0", async function () {
           await expect(
             tokenContract.connect(signers[7]).setPricePerShare(firstAmount, 0)
-          ).to.be.revertedWith("gETH: id == 0");
+          ).to.be.revertedWith("gETH: price query for the zero address");
         });
       });
 
@@ -1665,7 +1654,7 @@ describe("gETH", async function () {
           tokenContract
             .connect(signers[0])
             .setInterface(ZERO_ADDRESS, unknownTokenId, true)
-        ).to.be.revertedWith("gETH: _Interface must be a contract");
+        ).to.be.revertedWith("gETH: _interface must be a contract");
       });
 
       it("interfaces can conduct transfers between non-erc1155Receiver contracts", async function () {

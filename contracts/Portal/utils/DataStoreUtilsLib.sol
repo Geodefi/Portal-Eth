@@ -3,6 +3,7 @@
 pragma solidity =0.8.7;
 
 /**
+ * @author Icebear & Crash Bandicoot
  * @title Storage Management Library for dynamic structs, based on data types and ids
  *
  * DataStoreUtils is a storage management tool designed to create a safe and scalable

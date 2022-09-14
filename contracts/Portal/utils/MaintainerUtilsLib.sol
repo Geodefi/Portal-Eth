@@ -11,6 +11,7 @@ import "../../interfaces/ISwap.sol";
 import "../../interfaces/ILPToken.sol";
 
 /**
+ * @author Icebear & Crash Bandicoot
  * @title MaintainerUtils library to be used with a DataStore
  * @notice for Geode, there are different TYPEs active within Staking operations.
  * These types(4,5,6) always has a maintainer.
@@ -23,12 +24,12 @@ library MaintainerUtils {
     using DataStoreUtils for DataStoreUtils.DataStore;
 
     event IdInitiated(uint256 id, uint256 TYPE);
+    event MaintainerChanged(uint256 id, address newMaintainer);
     event MaintainerFeeSwitched(
         uint256 id,
         uint256 fee,
         uint256 effectiveTimestamp // the timestamp when the fee will start to be used after switch
     );
-    event MaintainerChanged(uint256 id, address newMaintainer);
 
     /// @notice PERCENTAGE_DENOMINATOR represents 100%
     uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
@@ -50,15 +51,15 @@ library MaintainerUtils {
     ) {
         require(
             msg.sender == DATASTORE.readAddressForId(_id, "CONTROLLER"),
-            "StakeUtils: sender NOT CONTROLLER"
+            "MaintainerUtils: sender NOT CONTROLLER"
         );
         require(
             DATASTORE.readUintForId(_id, "TYPE") == _TYPE,
-            "StakeUtils: id NOT correct TYPE"
+            "MaintainerUtils: id NOT correct TYPE"
         );
         require(
             DATASTORE.readUintForId(_id, "initiated") == 0,
-            "StakeUtils: already initiated"
+            "MaintainerUtils: already initiated"
         );
 
         DATASTORE.writeAddressForId(_id, "maintainer", _maintainer);
@@ -85,17 +86,26 @@ library MaintainerUtils {
         if (expectMaintainer) {
             require(
                 msg.sender == DATASTORE.readAddressForId(id, "maintainer"),
-                "StakeUtils: sender NOT maintainer"
+                "MaintainerUtils: sender NOT maintainer"
             );
         }
         uint256 typeOfId = DATASTORE.readUintForId(id, "TYPE");
         if (typeOfId == 4) {
-            require(restrictionMap[0] == true, "StakeUtils: TYPE NOT allowed");
+            require(
+                restrictionMap[0] == true,
+                "MaintainerUtils: TYPE NOT allowed"
+            );
         } else if (typeOfId == 5) {
-            require(restrictionMap[1] == true, "StakeUtils: TYPE NOT allowed");
+            require(
+                restrictionMap[1] == true,
+                "MaintainerUtils: TYPE NOT allowed"
+            );
         } else if (typeOfId == 6) {
-            require(restrictionMap[2] == true, "StakeUtils: TYPE NOT allowed");
-        } else revert("StakeUtils: invalid TYPE");
+            require(
+                restrictionMap[2] == true,
+                "MaintainerUtils: TYPE NOT allowed"
+            );
+        } else revert("MaintainerUtils: invalid TYPE");
     }
 
     /**
@@ -105,19 +115,14 @@ library MaintainerUtils {
     /**
      * @notice initiates ID as a node operator
      * @dev requires ID to be approved as a node operator with a specific CONTROLLER
-     * @param validatorPeriod the expected maximum staking interval
-     * Operator can unstake at any given point before this period ends.
-     * If operator disobeys this rule, it will be prisoned
      */
     function initiateOperator(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id,
         uint256 fee,
-        address maintainer,
-        uint256 validatorPeriod
+        address maintainer
     ) external initiator(DATASTORE, 4, id, maintainer) {
         DATASTORE.writeUintForId(id, "fee", fee);
-        DATASTORE.writeUintForId(id, "validatorPeriod", validatorPeriod);
     }
 
     /**
@@ -143,7 +148,7 @@ library MaintainerUtils {
     {
         require(
             uintSpecs[2] <= PERCENTAGE_DENOMINATOR,
-            "StakeUtils: withdrawalBoost > 100%"
+            "MaintainerUtils: withdrawalBoost > 100%"
         );
 
         DATASTORE.writeUintForId(uintSpecs[0], "fee", uintSpecs[1]);
@@ -236,19 +241,12 @@ library MaintainerUtils {
         address _DEFAULT_LP_TOKEN
     ) internal returns (address withdrawalPool) {
         withdrawalPool = Clones.clone(_DEFAULT_DWP);
-
+        bytes memory NAME = DATASTORE.readBytesForId(_id, "NAME");
         address WPToken = ISwap(withdrawalPool).initialize(
             IgETH(_gETH),
             _id,
-            string(
-                abi.encodePacked(
-                    DATASTORE.readBytesForId(_id, "name"),
-                    "-Geode WP Token"
-                )
-            ),
-            string(
-                abi.encodePacked(DATASTORE.readBytesForId(_id, "name"), "-WP")
-            ),
+            string(abi.encodePacked(NAME, "-Geode LP Token")),
+            string(abi.encodePacked(NAME, "-LP")),
             DEFAULT_A,
             DEFAULT_FEE,
             DEFAULT_ADMIN_FEE,
@@ -259,7 +257,7 @@ library MaintainerUtils {
     }
 
     /**
-     * @notice "Maintainer" is a shared logic (like "name") by both operators and private or public pools.
+     * @notice "Maintainer" is a shared logic (like "NAME") by both operators and private or public pools.
      * Maintainers have permissiones to maintain the given id like setting a new fee or interface as
      * well as creating validators etc. for operators.
      * @dev every ID has one maintainer that is set by CONTROLLER
@@ -278,22 +276,22 @@ library MaintainerUtils {
      * NOTE intended (suggested) usage is to set a contract address that will govern the id for maintainer,
      * while keeping the controller as a multisig or provide smt like 0x000000000000000000000000000000000000dEaD
      */
-    function _changeMaintainer(
+    function changeMaintainer(
         DataStoreUtils.DataStore storage DATASTORE,
-        uint256 _id,
-        address _newMaintainer
-    ) internal {
+        uint256 id,
+        address newMaintainer
+    ) external {
         require(
-            msg.sender == DATASTORE.readAddressForId(_id, "CONTROLLER"),
-            "StakeUtils: sender NOT CONTROLLER"
+            msg.sender == DATASTORE.readAddressForId(id, "CONTROLLER"),
+            "MaintainerUtils: sender NOT CONTROLLER"
         );
         require(
-            _newMaintainer != address(0),
-            "StakeUtils: maintainer can NOT be zero"
+            newMaintainer != address(0),
+            "MaintainerUtils: maintainer can NOT be zero"
         );
 
-        DATASTORE.writeAddressForId(_id, "maintainer", _newMaintainer);
-        emit MaintainerChanged(_id, _newMaintainer);
+        DATASTORE.writeAddressForId(id, "maintainer", newMaintainer);
+        emit MaintainerChanged(id, newMaintainer);
     }
 
     /**
@@ -305,7 +303,7 @@ library MaintainerUtils {
     function getMaintainerFee(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
-    ) external view returns (uint256 fee) {
+    ) internal view returns (uint256 fee) {
         fee = DATASTORE.readUintForId(id, "fee");
         if (DATASTORE.readUintForId(id, "feeSwitch") >= block.timestamp) {
             fee = DATASTORE.readUintForId(id, "priorFee");
@@ -315,28 +313,28 @@ library MaintainerUtils {
     /**
      * @notice Changes the fee that is applied by distributeFee on Oracle Updates.
      * @dev advise that 100% == PERCENTAGE_DENOMINATOR
-     * @param _id planet, comet or operator ID
+     * @param id planet, comet or operator ID
      */
-    function _switchMaintainerFee(
+    function switchMaintainerFee(
         DataStoreUtils.DataStore storage DATASTORE,
-        uint256 _id,
-        uint256 _newFee
-    ) internal {
+        uint256 id,
+        uint256 newFee
+    ) external {
         DATASTORE.writeUintForId(
-            _id,
+            id,
             "priorFee",
-            DATASTORE.readUintForId(_id, "fee")
+            DATASTORE.readUintForId(id, "fee")
         );
         DATASTORE.writeUintForId(
-            _id,
+            id,
             "feeSwitch",
             block.timestamp + FEE_SWITCH_LATENCY
         );
-        DATASTORE.writeUintForId(_id, "fee", _newFee);
+        DATASTORE.writeUintForId(id, "fee", newFee);
 
         emit MaintainerFeeSwitched(
-            _id,
-            _newFee,
+            id,
+            newFee,
             block.timestamp + FEE_SWITCH_LATENCY
         );
     }
@@ -386,7 +384,7 @@ library MaintainerUtils {
     ) internal returns (bool success) {
         require(
             DATASTORE.readUintForId(_id, "wallet") >= _value,
-            "StakeUtils: NOT enough balance in wallet"
+            "MaintainerUtils: NOT enough balance in wallet"
         );
 
         DATASTORE.subUintForId(_id, "wallet", _value);

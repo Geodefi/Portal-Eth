@@ -4,6 +4,7 @@ pragma solidity =0.8.7;
 import "./DataStoreUtilsLib.sol";
 
 /**
+ * @author Icebear & Crash Bandicoot
  * @title GeodeUtils library
  * @notice Exclusively contains functions responsible for administration of DATASTORE,
  * including functions related to "limited upgradability" with Senate & proposals.
@@ -84,12 +85,12 @@ library GeodeUtils {
         mapping(uint256 => Proposal) _proposalForId;
     }
 
+    /// @notice PERCENTAGE_DENOMINATOR represents 100%
+    uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
+
     uint32 public constant MIN_PROPOSAL_DURATION = 1 days;
     uint32 public constant MAX_PROPOSAL_DURATION = 2 weeks;
     uint32 public constant MAX_SENATE_PERIOD = 365 days; // 1 year
-
-    /// @notice PERCENTAGE_DENOMINATOR represents 100%
-    uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     modifier onlySenate(Universe storage self) {
         require(msg.sender == self.SENATE, "GeodeUtils: SENATE role needed");
@@ -104,6 +105,17 @@ library GeodeUtils {
         require(
             msg.sender == self.GOVERNANCE,
             "GeodeUtils: GOVERNANCE role needed"
+        );
+        _;
+    }
+
+    modifier onlyController(
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
+    ) {
+        require(
+            msg.sender == DATASTORE.readAddressForId(id, "CONTROLLER"),
+            "GeodeUtils: CONTROLLER role needed"
         );
         _;
     }
@@ -139,10 +151,7 @@ library GeodeUtils {
         view
         returns (uint256)
     {
-        return
-            self.GOVERNANCE_TAX > self.MAX_GOVERNANCE_TAX
-                ? self.MAX_GOVERNANCE_TAX
-                : self.GOVERNANCE_TAX;
+        return self.GOVERNANCE_TAX;
     }
 
     /**
@@ -159,7 +168,7 @@ library GeodeUtils {
     /**
      * @return the expiration date of current SENATE as a timestamp
      */
-    function getSenateExpireTimestamp(Universe storage self)
+    function getSenateExpiry(Universe storage self)
         external
         view
         returns (uint256)
@@ -271,14 +280,10 @@ library GeodeUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id,
         address newCONTROLLER
-    ) external {
+    ) external onlyController(DATASTORE, id) {
         require(
             newCONTROLLER != address(0),
             "GeodeUtils: CONTROLLER can not be zero"
-        );
-        require(
-            DATASTORE.readAddressForId(id, "CONTROLLER") == msg.sender,
-            "GeodeUtils: not CONTROLLER of given id"
         );
 
         DATASTORE.writeAddressForId(id, "CONTROLLER", newCONTROLLER);
@@ -313,7 +318,7 @@ library GeodeUtils {
         uint256 _TYPE,
         bytes calldata _NAME,
         uint256 duration
-    ) external onlyGovernance(self) {
+    ) external onlyGovernance(self) returns (uint256 id) {
         require(
             duration >= MIN_PROPOSAL_DURATION,
             "GeodeUtils: duration should be higher than MIN_PROPOSAL_DURATION"
@@ -323,7 +328,7 @@ library GeodeUtils {
             "GeodeUtils: duration exceeds MAX_PROPOSAL_DURATION"
         );
 
-        uint256 id = _generateId(_NAME, _TYPE);
+        id = _generateId(_NAME, _TYPE);
 
         require(
             self._proposalForId[id].deadline == 0,
@@ -359,7 +364,7 @@ library GeodeUtils {
         );
         require(
             self._proposalForId[id].TYPE != 1,
-            "GeodeUtils: Senate can not approve Senate Proposal"
+            "GeodeUtils: Senate can not approve Senate Election"
         );
 
         DATASTORE.writeAddressForId(
@@ -369,15 +374,16 @@ library GeodeUtils {
         );
         DATASTORE.writeUintForId(id, "TYPE", self._proposalForId[id].TYPE);
         DATASTORE.writeBytesForId(id, "NAME", self._proposalForId[id].NAME);
-        DATASTORE.allIdsByType[self._proposalForId[id].TYPE].push(id);
 
         if (self._proposalForId[id].TYPE == 2) {
             self.approvedUpgrade = self._proposalForId[id].CONTROLLER;
         }
 
-        if (self._electorTypes[DATASTORE.readUintForId(id, "TYPE")])
+        if (self._electorTypes[DATASTORE.readUintForId(id, "TYPE")]) {
             self._electorCount += 1;
+        }
 
+        DATASTORE.allIdsByType[self._proposalForId[id].TYPE].push(id);
         self._proposalForId[id].deadline = block.timestamp;
 
         emit ProposalApproved(id);
@@ -436,7 +442,7 @@ library GeodeUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 proposalId,
         uint256 electorId
-    ) external {
+    ) external onlyController(DATASTORE, electorId) {
         require(
             self._proposalForId[proposalId].TYPE == 1,
             "GeodeUtils: NOT Senate Proposal"
@@ -444,10 +450,6 @@ library GeodeUtils {
         require(
             self._proposalForId[proposalId].deadline >= block.timestamp,
             "GeodeUtils: proposal expired"
-        );
-        require(
-            DATASTORE.readAddressForId(electorId, "CONTROLLER") == msg.sender,
-            "GeodeUtils: msg.sender should be CONTROLLER of given electorId!"
         );
         require(
             self._electorTypes[DATASTORE.readUintForId(electorId, "TYPE")],

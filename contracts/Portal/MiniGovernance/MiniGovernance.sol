@@ -4,12 +4,30 @@ pragma solidity =0.8.7;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "../utils/DataStoreLib.sol";
+import "../utils/DataStoreUtilsLib.sol";
 import "../utils/GeodeUtilsLib.sol";
 import "../../interfaces/IgETH.sol";
 import "../../interfaces/IPortal.sol";
 import "../../interfaces/IMiniGovernance.sol";
 
+/**
+ * @author Icebear & Crash Bandicoot
+ * @title MiniGovernance: local defense layer of the trustless Staking Derivatives
+ * @dev Global defense layer is the Portal
+ * @notice This contract is being used as the withdrawal credential of the validators,
+ * * that are maintained by the given IDs maintainer.
+ * @dev currently only defense mechanics this contract provides is the trustless updates that are
+ * * achieved with GeodeUtils and passwordHashes
+ * * 1. portal cannot change the maintainer without knowing the real password
+ * * 1. portal cannot upgrade the contract without Maintainer's approval
+ * *
+ * * However there are such improvements planned to be implemented to make
+ * * the staking environment more trustless.
+ * * * "isolationMode" is one of them, currently only rules of the isolation mode is Senate_Expiry and
+ * * * isUpgraded check. However, this is a good start to ensure that the future implementations will be
+ * * * enforced to incentivise the trustless behaviour! The end goal is to create mini-portals
+ * * * with different mechanics and allow auto-staking contracts...
+ */
 contract MiniGovernance is
     IMiniGovernance,
     ReentrancyGuardUpgradeable,
@@ -31,16 +49,27 @@ contract MiniGovernance is
     using GeodeUtils for GeodeUtils.Universe;
 
     DataStoreUtils.DataStore private DATASTORE;
-    GeodeUtils.Universe private GEM; // MiniGeode
-    MiniGovernance private SELF;
+    GeodeUtils.Universe private GEM; // MiniGeode :)
+    PoolGovernance private SELF;
 
+    /**
+     * @dev While there are currently no worry on if the pool will be abandoned,
+     * with the introduction of private pools, it can be a problem.
+     * Thus, we require senate to refresh it's validity time to time.
+     */
     uint256 SENATE_VALIDITY = 180 days;
+    /**
+     * @dev While there are currently no worry on what pausing will affect,
+     * with the next implementations, spamming stake/unstake can cause an issue.
+     * Thus, we require senate to wait a bit before pausing the contract again, allowing
+     * validator unstake(maybe).
+     */
     uint256 PAUSE_LAPSE = 1 weeks;
 
-    struct MiniGovernance {
+    struct PoolGovernance {
         IgETH gETH;
         uint256 ID;
-        bytes32 PASSWORD;
+        bytes32 PASSWORD_HASH;
         uint256 lastPause;
         uint256 whenPauseAllowed;
         uint256 contractVersion;
@@ -104,7 +133,7 @@ contract MiniGovernance is
         SELF.lastPause = block.timestamp;
     }
 
-    // can not spam pause / unpause
+    /// @dev cannot spam, be careful
     function unpause() external virtual override onlyMaintainer {
         _unpause();
         SELF.whenPauseAllowed = block.timestamp + PAUSE_LAPSE;
@@ -128,10 +157,9 @@ contract MiniGovernance is
         override
         returns (uint256)
     {
-        return SELF.contractVersion;
+        return SELF.proposedVersion;
     }
 
-    // currently only rule is being not updated OR SENATE expired
     function isolationMode() public view virtual override returns (bool) {
         return
             SELF.contractVersion != SELF.proposedVersion ||
@@ -142,9 +170,10 @@ contract MiniGovernance is
      *                                          ** PROPOSALS **
      */
 
-    // anyone can fetch proposal from Portal, so  we don't need to call it.
-    // note: timer for isAbandoned starts after catch.
-    function fetchUpgradeProposal() external virtual override whenNotPaused {
+    /**
+     * @notice anyone can fetch proposal from Portal, so  we don't need to call it.
+     */
+    function fetchUpgradeProposal() external virtual override {
         uint256 id = getPortal().miniGovernanceVersion();
         require(id != SELF.contractVersion);
         GeodeUtils.Proposal memory proposal = getPortal().getProposal(id);
@@ -170,31 +199,55 @@ contract MiniGovernance is
         GEM._setSenate(newSenate, block.timestamp + SENATE_VALIDITY);
     }
 
-    // changePassword(){refresh} onlySenate =>  no need old password
-    function refreshSenate(bytes32 newPassword)
+    /**
+     * @dev should change the password, every now and then
+     * @param newPasswordHash = keccak256(abi.encodePacked(SELF.ID, password))
+     */
+    function refreshSenate(bytes32 newPasswordHash)
         external
         virtual
         override
         onlyMaintainer
     {
-        SELF.PASSWORD = newPassword;
+        SELF.PASSWORD_HASH = newPasswordHash;
         _refreshSenate(GEM.SENATE);
     }
 
-    // changeSenate(){refresh} onlyPortal => needs old password
+    /**
+     * @notice Portal changing the Senate of Minigovernance when the maintainer of the pool is changed
+     * @dev (Senate+Governance) can access this function easily, even they working together is near impossible
+     * * Thus, access to this function requires a password.
+     * @param newPasswordHash = keccak256(abi.encodePacked(SELF.ID, password))
+     */
     function changeMaintainer(
         bytes calldata password,
         bytes32 newPasswordHash,
         address newMaintainer
-    ) external virtual override onlyPortal whenNotPaused {
+    )
+        external
+        virtual
+        override
+        onlyPortal
+        whenNotPaused
+        returns (bool success)
+    {
         require(
-            keccak256(abi.encodePacked(SELF.ID, password)) == SELF.PASSWORD
+            keccak256(abi.encodePacked(SELF.ID, password)) == SELF.PASSWORD_HASH
         );
-        SELF.PASSWORD = newPasswordHash;
+        SELF.PASSWORD_HASH = newPasswordHash;
 
         _refreshSenate(newMaintainer);
+
+        success = true;
     }
 
+    /**
+     * @notice according to eip-4895, the unstaked balances will be just happen to emerge within this contract.
+     * * Telescope (oracle) will be watching these events andn finalizing the unstakes.
+     * * This method even makes it possible to claim rewards without unstake, which we know is a possibility
+     * @param claim specified amount can be the unstaked balance or just a reward, ETH.
+     * @return success if claim was successful
+     */
     function claimUnstake(uint256 claim)
         external
         virtual
@@ -204,7 +257,7 @@ contract MiniGovernance is
         returns (bool success)
     {
         (success, ) = payable(GEM.GOVERNANCE).call{value: claim}("");
-        require(success, "StakeUtils: Failed to send Ether");
+        require(success, "MiniGovernance: Failed to send Ether");
     }
 
     uint256[47] private __gap;

@@ -51,13 +51,8 @@ contract TestGeodeUtils {
         return GEODE.getMaxGovernanceTax();
     }
 
-    function getSenateExpireTimestamp()
-        external
-        view
-        virtual
-        returns (uint256)
-    {
-        return GEODE.getSenateExpireTimestamp();
+    function getSenateExpiry() external view virtual returns (uint256) {
+        return GEODE.getSenateExpiry();
     }
 
     /**

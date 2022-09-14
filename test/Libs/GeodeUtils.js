@@ -63,7 +63,7 @@ describe("GeodeUtils", async () => {
     });
     it("correct SENATE_EXPIRY", async () => {
       creationTime = await getCurrentBlockTimestamp();
-      response = await testContract.getSenateExpireTimestamp();
+      response = await testContract.getSenateExpiry();
       await expect(response).to.eq(creationTime + 24 * 3600);
     });
     it("correct GOVERNANCE_TAX", async () => {
@@ -97,7 +97,9 @@ describe("GeodeUtils", async () => {
       response = await testContract.getGovernanceTax();
       await expect(
         testContract.connect(GOVERNANCE).setGovernanceTax(futureOpFee)
-      ).to.be.revertedWith("GeodeUtils: fee more than MAX");
+      ).to.be.revertedWith(
+        "GeodeUtils: cannot be more than MAX_GOVERNANCE_TAX"
+      );
     });
 
     it("success if <= MAX", async () => {
@@ -109,14 +111,6 @@ describe("GeodeUtils", async () => {
       const futureMaxOpFee = 29;
       await testContract.connect(SENATE).setMaxGovernanceTax(futureMaxOpFee);
       await testContract.connect(GOVERNANCE).setGovernanceTax(futureMaxOpFee);
-      response = await testContract.getGovernanceTax();
-      await expect(response).to.eq(futureMaxOpFee);
-    });
-    it("returns MAX, if MAX is decreased", async () => {
-      const futureOpFee = 20;
-      const futureMaxOpFee = 15;
-      await testContract.connect(GOVERNANCE).setGovernanceTax(futureOpFee);
-      await testContract.connect(SENATE).setMaxGovernanceTax(futureMaxOpFee);
       response = await testContract.getGovernanceTax();
       await expect(response).to.eq(futureMaxOpFee);
     });
@@ -192,26 +186,26 @@ describe("GeodeUtils", async () => {
           testContract
             .connect(GOVERNANCE)
             .changeIdCONTROLLER(id, newcontrollerAddress)
-        ).to.be.revertedWith("GeodeUtils: not CONTROLLER of given id");
+        ).to.be.revertedWith("GeodeUtils: CONTROLLER role needed");
       });
       it("by SENATE", async () => {
         await expect(
           testContract
             .connect(SENATE)
             .changeIdCONTROLLER(id, newcontrollerAddress)
-        ).to.be.revertedWith("GeodeUtils: not CONTROLLER of given id");
+        ).to.be.revertedWith("GeodeUtils: CONTROLLER role needed");
       });
       it("by anyone with any address", async () => {
         await expect(
           testContract
             .connect(userType5)
             .changeIdCONTROLLER(id, newcontrollerAddress)
-        ).to.be.revertedWith("GeodeUtils: not CONTROLLER of given id");
+        ).to.be.revertedWith("GeodeUtils: CONTROLLER role needed");
       });
       it("by anyone with ZERO_ADDRESS", async () => {
         await expect(
           testContract.connect(userType5).changeIdCONTROLLER(id, ZERO_ADDRESS)
-        ).to.be.revertedWith("GeodeUtils: CONTROLLER can not be zero");
+        ).to.be.revertedWith("GeodeUtils: CONTROLLER role needed");
       });
     });
     describe("if caller is CONTROLLER", async () => {
@@ -246,7 +240,7 @@ describe("GeodeUtils", async () => {
             controller.address,
             5,
             Web3.utils.asciiToHex("myLovelyPlanet"),
-            AWEEK + 1 // 1 weeks
+            AWEEK * 2 + 1 // 1 weeks
           )
         ).to.be.revertedWith("GeodeUtils: duration exceeds");
       });
@@ -385,9 +379,7 @@ describe("GeodeUtils", async () => {
         testContract
           .connect(controllers[1])
           .approveSenate(ids[ids.length - 1], ids[0])
-      ).to.be.revertedWith(
-        "GeodeUtils: msg.sender should be CONTROLLER of given electorId!"
-      );
+      ).to.be.revertedWith("GeodeUtils: CONTROLLER role needed");
     });
     it("approveSenate reverts when NOT Senate Proposal", async () => {
       await testContract.newProposal(
@@ -459,10 +451,9 @@ describe("GeodeUtils", async () => {
       const afterTimestamp = await getCurrentBlockTimestamp();
       afterSenate = await testContract.getSenate();
       expect(afterSenate).to.eq(userType4.address);
-      afterSenateExpireTimestamp =
-        await testContract.getSenateExpireTimestamp();
-      expect(afterSenateExpireTimestamp).to.gte(beforeTimestamp + 6969);
-      expect(afterSenateExpireTimestamp).to.lte(afterTimestamp + 6969);
+      aftergetSenateExpiry = await testContract.getSenateExpiry();
+      expect(aftergetSenateExpiry).to.gte(beforeTimestamp + 6969);
+      expect(aftergetSenateExpiry).to.lte(afterTimestamp + 6969);
     });
   });
 });

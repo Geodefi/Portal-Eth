@@ -32,7 +32,7 @@ interface IMiniGovernance {
         bytes calldata password,
         bytes32 newPasswordHash,
         address newMaintainer
-    ) external;
+    ) external returns (bool success);
 
     function claimUnstake(uint256 claim) external returns (bool success);
 }

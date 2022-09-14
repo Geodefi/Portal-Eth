@@ -14,4 +14,3 @@ const func = async function (hre) {
 };
 module.exports = func;
 module.exports.tags = ["MiniGovernance"];
-module.exports.dependencies = ["DataStore"];

@@ -5,12 +5,12 @@ require("hardhat-gas-reporter");
 require("solidity-coverage");
 require("hardhat-deploy");
 
+require("@openzeppelin/hardhat-upgrades");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
-// const ethers = require("ethers");
-
+require("ethers");
 require("./scripts");
 
 // You need to export an object to set up your config
@@ -19,7 +19,6 @@ require("./scripts");
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-// increase "runs" as much as possible
 
 const config = {
   solidity: {
@@ -29,7 +28,7 @@ const config = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1000,
+            runs: 200,
           },
         },
       },
@@ -67,8 +66,8 @@ const config = {
     cache: "./build/cache",
   },
   gasReporter: {
-    enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
+    gasPrice: 30,
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

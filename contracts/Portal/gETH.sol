@@ -3,7 +3,8 @@ pragma solidity =0.8.7;
 import "./helpers/ERC1155SupplyMinterPauser.sol";
 
 /**
- * @title Geode Finance geode-eth: gETH
+ * @author Icebear & Crash Bandicoot
+ * @title Geode Finance Liquid Staking derivatives(g-derivatives) : gETH
  *
  * gETH is a special ERC1155 contract with additional functionalities.
  * One of the unique functionalities are the included price logic that tracks the underlaying ratio with
