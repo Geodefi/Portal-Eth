@@ -117,6 +117,7 @@ library StakeUtils {
     uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     /// @notice limiting the operator.validatorPeriod, currently around 5 years
+    uint256 public constant MIN_VALIDATOR_PERIOD = 60 days;
     uint256 public constant MAX_VALIDATOR_PERIOD = 1825 days;
 
     /// @notice ignoring any buybacks if the DWP has a low debt
@@ -536,6 +537,10 @@ library StakeUtils {
         uint256 newPeriod
     ) public {
         DATASTORE.authenticate(operatorId, true, [true, true, false]);
+        require(
+            newPeriod <= MIN_VALIDATOR_PERIOD,
+            "StekeUtils: should be more than MIN_VALIDATOR_PERIOD"
+        );
         require(
             newPeriod <= MAX_VALIDATOR_PERIOD,
             "StekeUtils: should be less than MAX_VALIDATOR_PERIOD"
