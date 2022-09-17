@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MITs
 
-pragma solidity ^0.8.0;
+pragma solidity =0.8.7;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
@@ -14,10 +14,30 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
  * ERC1155SupplyMinterPauser is an ERC1155 implementation that inherites openzeppelin ERC1155PresetMinterPauser which also inherites ERC1155PresetMinterPauser
  *
  * @dev only difference between ERC1155SupplyMinterPauser and Openzeppelin's implementation is
- * _doSafeTransferAcceptanceCheck is being virtual:
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Supply.sol
- * diffchecker link: https://www.diffchecker.com/UOAdD16A
+ * _doSafeTransferAcceptanceCheck is being virtual.
+ *
+ * TO REPRODUCE the ERC1155SupplyMinterPauser on diffchecker link::
+ * Formatter: Prettier: https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode
+ * 0. Open a new file on vscode: ERC1155SupplyMinterPauser.sol (or name it whatever you want with .sol extension)
+ *
+ * 1. put ERC1155: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/ERC1155.sol
+ * 1.2 delete imports and comments on top of the contract.
+ *
+ * 2. put this under the file ERC1155Burnable: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Burnable.sol
+ * 2.2 delete imports and comments on top of the contract.
+ *
+ * 3. put this under the file ERC1155Pausable: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Pausable.sol
+ * 3.2 delete imports and comments on top of the contract.
+ *
+ * 4. put this under the file ERC1155Supply: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Supply.sol
+ * 4.2 delete imports and comments on top of the contract.
+ *
+ * 5. put this under the file ERC1155PresetMinterPauser: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol
+ * 5.2 delete imports and comments on top of the contract.
+ *
+ * 6. refactor the file with prettier
+ * 7. compare it with our local ERC1155SupplyMinterPauser.sol
+ * 8. only changes we did are the same with the https://www.diffchecker.com/UOAdD16A
  */
 
 contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {

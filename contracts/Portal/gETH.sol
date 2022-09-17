@@ -5,22 +5,24 @@ import "./helpers/ERC1155SupplyMinterPauser.sol";
 /**
  * @title Geode Finance geode-eth: gETH
  *
+ * gAVAX is a special ERC1155 contract with additional functionalities.
  * One of the unique functionalities are the included price logic that tracks the underlaying ratio with
  * staked asset, ETH.
  * Other and most important change is the implementation of ERC1155Interfaces.
  * This addition effectively result in changes in safeTransferFrom(), burn(), _doSafeTransferAcceptanceCheck()
  * functions, reasoning is in the comments.
  *
- * @dev only difference between ERC1155SupplyMinterPauser and Openzeppelin's implementation is
- * _doSafeTransferAcceptanceCheck is being virtual:
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol
- * // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cb3f2ab900e39c5ab6e0de6663edf06f573b834f/contracts/token/ERC1155/extensions/ERC1155Supply.sol
- * diffchecker link: https://www.diffchecker.com/UOAdD16A
+ * @dev recommended to check helpers/ERC1155SupplyMinterPauser.sol first
  */
 
 contract gETH is ERC1155SupplyMinterPauser {
     using Address for address;
-    event InterfaceChanged(address indexed newInterface, uint256 ID);
+    event InterfaceChanged(
+        address indexed newInterface,
+        uint256 id,
+        bool isSet
+    );
+    event InterfacesAvoided(address indexed avoider, bool isAvoid);
 
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     string public constant name = "Geode Staked ETH";
@@ -32,6 +34,13 @@ contract gETH is ERC1155SupplyMinterPauser {
      * There can be multiple Interfaces for 1 planet(staking pool).
      **/
     mapping(uint256 => mapping(address => bool)) private _interfaces;
+
+    /**
+     * @dev ADDED for gETH
+     * @notice
+     * TODO: explanatory comment
+     **/
+    mapping(address => bool) private _interfaceAvoiders;
 
     /**
      * @dev ADDED for gETH
@@ -97,7 +106,26 @@ contract gETH is ERC1155SupplyMinterPauser {
 
         _setInterface(_Interface, _id, isSet);
 
-        emit InterfaceChanged(_Interface, _id);
+        emit InterfaceChanged(_Interface, _id, isSet);
+    }
+
+    /**
+     * @dev ADDED for gETH
+     * @notice
+     * TODO: explanatory comment
+     **/
+    function isAvoider(address account) public view virtual returns (bool) {
+        return _interfaceAvoiders[account];
+    }
+
+    /**
+     * @dev ADDED for gETH
+     * @notice
+     * TODO: explanatory comment
+     **/
+    function avoidInterfaces(bool isAvoid) external virtual {
+        _interfaceAvoiders[_msgSender()] = isAvoid;
+        emit InterfacesAvoided(_msgSender(), isAvoid);
     }
 
     /**
@@ -130,31 +158,52 @@ contract gETH is ERC1155SupplyMinterPauser {
     }
 
     /**
-     * @notice updates the authorized party for all crucial operations related to
-     * minting, pricing and interfaces.
-     * @dev MinterPauserOracle is basically a superUser, there can be only 1 at a given time,
+     * @notice updates the authorized party for Minter operations related to minting.
+     * @dev Minter is basically a superUser, there can be only 1 at a given time,
      * intended as "Portal"
      */
-    function updateMinterPauserOracle(address Minter) external virtual {
+    function updateMinterRole(address Minter) external virtual {
         require(
             hasRole(MINTER_ROLE, _msgSender()),
             "gETH: must have MINTER_ROLE to set"
         );
-
         renounceRole(MINTER_ROLE, _msgSender());
-        renounceRole(PAUSER_ROLE, _msgSender());
-        renounceRole(ORACLE_ROLE, _msgSender());
-
         _setupRole(MINTER_ROLE, Minter);
-        _setupRole(PAUSER_ROLE, Minter);
-        _setupRole(ORACLE_ROLE, Minter);
+    }
+
+    /**
+     * @notice updates the authorized party for Pausing operations.
+     * @dev Pauser is basically a superUser, there can be only 1 at a given time,
+     * intended as "Portal"
+     */
+    function updatePauserRole(address Pauser) external virtual {
+        require(
+            hasRole(PAUSER_ROLE, _msgSender()),
+            "gETH: must have PAUSER_ROLE to set"
+        );
+        renounceRole(PAUSER_ROLE, _msgSender());
+        _setupRole(PAUSER_ROLE, Pauser);
+    }
+
+    /**
+     * @notice updates the authorized party for Oracle operations related to pricing.
+     * @dev Oracle is basically a superUser, there can be only 1 at a given time,
+     * intended as "Portal"
+     */
+    function updateOracleRole(address Oracle) external virtual {
+        require(
+            hasRole(ORACLE_ROLE, _msgSender()),
+            "gETH: must have ORACLE_ROLE to set"
+        );
+        renounceRole(ORACLE_ROLE, _msgSender());
+        _setupRole(ORACLE_ROLE, Oracle);
     }
 
     /**
      * @dev See {IERC1155-safeTransferFrom}.
      * @dev CHANGED for gETH
      * @dev interfaces can move your tokens without asking you.
-     * @dev ADDED "|| isInterface(_msgSender(),id))"
+     * @dev ADDED "|| (isInterface(_msgSender(), id) && !isAvoider(from))"
      */
     function safeTransferFrom(
         address from,
@@ -165,9 +214,9 @@ contract gETH is ERC1155SupplyMinterPauser {
     ) public virtual override {
         require(
             from == _msgSender() ||
-                (isApprovedForAll(from, _msgSender()) ||
-                    isInterface(_msgSender(), id)),
-            "ERC1155: caller is not owner nor interface nor approved"
+                isApprovedForAll(from, _msgSender()) ||
+                (isInterface(_msgSender(), id) && !isAvoider(from)),
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
 
         _safeTransferFrom(from, to, id, amount, data);
@@ -176,7 +225,7 @@ contract gETH is ERC1155SupplyMinterPauser {
     /**
      * @dev See {IERC1155-safeTransferFrom}.
      * @dev CHANGED for gETH
-     * @dev ADDED "|| isInterface(_msgSender(),id))"
+     * @dev ADDED "|| (isInterface(_msgSender(), id) && !isAvoider(account))"
      */
     function burn(
         address account,
@@ -185,9 +234,9 @@ contract gETH is ERC1155SupplyMinterPauser {
     ) public virtual override {
         require(
             account == _msgSender() ||
-                (isApprovedForAll(account, _msgSender()) ||
-                    isInterface(_msgSender(), id)),
-            "ERC1155: caller is not owner nor interface nor approved"
+                isApprovedForAll(account, _msgSender()) ||
+                (isInterface(_msgSender(), id) && !isAvoider(account)),
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
 
         _burn(account, id, value);
@@ -197,7 +246,7 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @notice interfaces should handle their own Checks in the contract
      * @dev See {IERC1155-safeTransferFrom}.
      * @dev CHANGED for gETH
-     * @dev ADDED "&& !isInterface(_msgSender(),id))"
+     * @dev ADDED "&& !isInterface(operator,id))"
      */
     function _doSafeTransferAcceptanceCheck(
         address operator,

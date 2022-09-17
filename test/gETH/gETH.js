@@ -55,7 +55,9 @@ describe("gETH ", async function () {
       "ERC1155ReceiverMock"
     );
     tokenContract = await gETH.deploy(initialURI);
-    await tokenContract.updateMinterPauserOracle(deployer);
+    await tokenContract.updateMinterRole(deployer);
+    await tokenContract.updateOracleRole(deployer);
+    await tokenContract.updatePauserRole(deployer);
   });
 
   beforeEach(async function () {
@@ -346,7 +348,7 @@ describe("gETH ", async function () {
                       "0x"
                     )
                 ).to.be.revertedWith(
-                  "ERC1155: caller is not owner nor interface nor approved"
+                  "ERC1155: caller is not owner nor approved nor an allowed interface"
                 );
               });
             }
@@ -1365,10 +1367,12 @@ describe("gETH ", async function () {
           );
         });
       });
-      describe("after new MinterPauserOracle setted", function () {
+      describe("after new MinterPauserOracle set", function () {
         beforeEach(async () => {
           minter = signers[7].address;
-          await tokenContract.updateMinterPauserOracle(minter);
+          await tokenContract.updateMinterRole(minter);
+          await tokenContract.updateOracleRole(minter);
+          await tokenContract.updatePauserRole(minter);
         });
         it("new minter has the minter role", async function () {
           expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq(
@@ -1400,7 +1404,8 @@ describe("gETH ", async function () {
     describe("setPricePerShare", function () {
       beforeEach(async () => {
         minter = signers[7].address;
-        await tokenContract.updateMinterPauserOracle(minter);
+        await tokenContract.updateMinterRole(minter);
+        await tokenContract.updateOracleRole(minter);
       });
 
       it("ZERO at the beginning", async function () {
@@ -1500,9 +1505,10 @@ describe("gETH ", async function () {
         await ERC20Interface.initialize(
           unknownTokenId,
           "name",
+          "SYMBOL",
           tokenContract.address
         );
-
+        // IMPORTANT LINE BELOW
         ERC20Interface.connect(signers[2]).approve(proxy, firstAmount);
 
         await tokenContract
@@ -1535,6 +1541,8 @@ describe("gETH ", async function () {
           );
         });
         it("succeeds as approved", async function () {
+          await tokenContract.connect(signers[2]).avoidInterfaces(true);
+          await tokenContract.connect(signers[2]).avoidInterfaces(false);
           await ERC20Interface.connect(signers[6]).transferFrom(
             firstTokenHolder,
             secondTokenHolder,
@@ -1555,6 +1563,24 @@ describe("gETH ", async function () {
               firstAmount
             )
           ).to.be.revertedWith("ERC20: insufficient allowance");
+        });
+        it("reverts: approved, but user avoided", async function () {
+          await tokenContract.connect(signers[2]).avoidInterfaces(true);
+          expect(
+            ERC20Interface.connect(signers[6]).transferFrom(
+              firstTokenHolder,
+              secondTokenHolder,
+              firstAmount
+            )
+          ).to.be.revertedWith(
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
+          );
+          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq(
+            firstAmount
+          );
+          expect(await ERC20Interface.balanceOf(secondTokenHolder)).to.be.eq(
+            "0"
+          );
         });
       });
 
@@ -1578,7 +1604,9 @@ describe("gETH ", async function () {
         });
 
         it("succeeds", async function () {
-          console.log(firstAmount, tokenHolder, firstTokenId);
+          await tokenContract.connect(signers[1]).avoidInterfaces(true);
+          await tokenContract.connect(signers[1]).avoidInterfaces(false);
+
           expect(
             await tokenContract.balanceOf(tokenHolder, firstTokenId)
           ).to.be.eq(firstAmount.toString());
@@ -1587,9 +1615,23 @@ describe("gETH ", async function () {
             await tokenContract.balanceOf(tokenHolder, firstTokenId)
           ).to.be.eq(BigNumber.from(0));
         });
+        it("reverts if avoided", async function () {
+          await tokenContract.connect(signers[1]).avoidInterfaces(true);
+          expect(
+            await tokenContract.balanceOf(tokenHolder, firstTokenId)
+          ).to.be.eq(firstAmount.toString());
+          await expect(
+            nonERC1155Receiver.connect(signers[1]).burn(firstAmount)
+          ).to.be.revertedWith(
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
+          );
+          expect(
+            await tokenContract.balanceOf(tokenHolder, firstTokenId)
+          ).to.be.eq(firstAmount.toString());
+        });
       });
 
-      describe("can not burn underlying tokens", async function () {
+      describe("can not burn OTHER underlying tokens", async function () {
         let nonERC1155Receiver;
         beforeEach(async () => {
           const nonERC1155ReceiverFac = await ethers.getContractFactory(
@@ -1612,7 +1654,7 @@ describe("gETH ", async function () {
           await expect(
             nonERC1155Receiver.connect(signers[1]).burn(firstAmount)
           ).to.be.revertedWith(
-            "ERC1155: caller is not owner nor interface nor approved"
+            "ERC1155: caller is not owner nor approved nor an allowed interface"
           );
         });
       });
@@ -1660,7 +1702,7 @@ describe("gETH ", async function () {
             .connect(signers[5])
             .transfer(secondTokenHolder, firstAmount)
         ).to.be.revertedWith(
-          "ERC1155: caller is not owner nor interface nor approved"
+          "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
       });
 
@@ -1677,11 +1719,11 @@ describe("gETH ", async function () {
             .connect(signers[5])
             .transfer(secondTokenHolder, firstAmount)
         ).to.be.revertedWith(
-          "ERC1155: caller is not owner nor interface nor approved"
+          "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
       });
 
-      it("unsetted(old) interfaces can NOT act", async function () {
+      it("unset(old) interfaces can NOT act", async function () {
         await tokenContract
           .connect(signers[0])
           .setInterface(ERC20Interface.address, unknownTokenId, false);
@@ -1692,7 +1734,7 @@ describe("gETH ", async function () {
             firstAmount
           )
         ).to.be.revertedWith(
-          "ERC1155: caller is not owner nor interface nor approved"
+          "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
       });
     });
