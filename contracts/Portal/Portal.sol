@@ -912,6 +912,7 @@ contract Portal is
         uint256 deadline
     )
         external
+        payable
         virtual
         override
         whenNotPaused
