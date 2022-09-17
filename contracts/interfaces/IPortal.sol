@@ -252,7 +252,7 @@ interface IPortal {
         uint256 poolId,
         uint256 mingETH,
         uint256 deadline
-    ) external returns (uint256 gEthToSend);
+    ) external payable returns (uint256 gEthToSend);
 
     function withdrawPlanet(
         uint256 poolId,
