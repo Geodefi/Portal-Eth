@@ -343,6 +343,10 @@ contract Portal is
         bytes calldata _NAME,
         uint256 duration
     ) external virtual override whenNotPaused {
+        require(
+            msg.sender == GEODE.GOVERNANCE,
+            "Portal: sender not GOVERNANCE"
+        );
         GEODE.newProposal(_CONTROLLER, _TYPE, _NAME, duration);
     }
 
@@ -1021,6 +1025,8 @@ contract Portal is
             isExit,
             GEODE.getGovernanceTax()
         );
+        (bool sent, ) = payable(GEODE.getGovernance()).call{value: tax}("");
+        require(sent, "Portal: Failed to pay tax");
     }
 
     /**

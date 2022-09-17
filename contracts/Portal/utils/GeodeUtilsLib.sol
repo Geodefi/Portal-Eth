@@ -318,7 +318,7 @@ library GeodeUtils {
         uint256 _TYPE,
         bytes calldata _NAME,
         uint256 duration
-    ) external onlyGovernance(self) returns (uint256 id) {
+    ) external returns (uint256 id) {
         require(
             duration >= MIN_PROPOSAL_DURATION,
             "GeodeUtils: duration should be higher than MIN_PROPOSAL_DURATION"

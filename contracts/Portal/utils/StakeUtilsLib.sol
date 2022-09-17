@@ -520,14 +520,6 @@ library StakeUtils {
      * @notice                ** Operator (TYPE 4 and 5) specific functions **
      */
 
-    // DELETE THIS AND PUT IN PORTAL GEToPERATORPARAMS
-    // function getValidatorPeriod(
-    //     DataStoreUtils.DataStore storage DATASTORE,
-    //     uint256 _operatorId
-    // ) external view returns (uint256) {
-    //     return DATASTORE.readUintForId(_operatorId, "validatorPeriod");
-    // }
-
     /**
      * @notice updates validatorPeriod for given operator, limited by MAX_VALIDATOR_PERIOD
      */
@@ -1143,7 +1135,6 @@ library StakeUtils {
                     .TELESCOPE
                     ._validators[pubkeys[i]]
                     .signature;
-                // TODO: there is no deposit contract, solve and open this comment
                 DCU.depositValidator(
                     pubkeys[i],
                     withdrawalCredential,

@@ -260,5 +260,5 @@ contract MiniGovernance is
         require(success, "MiniGovernance: Failed to send Ether");
     }
 
-    uint256[47] private __gap;
+    uint256[45] private __gap;
 }
