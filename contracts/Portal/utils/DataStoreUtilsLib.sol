@@ -3,7 +3,8 @@
 pragma solidity =0.8.7;
 
 /**
- * @title Storage Management library for dynamic structs based on data types
+ * @author Icebear & Crash Bandicoot
+ * @title Storage Management Library for dynamic structs, based on data types and ids
  *
  * DataStoreUtils is a storage management tool designed to create a safe and scalable
  * storage layout with the help of ids and keys.
@@ -27,7 +28,7 @@ library DataStoreUtils {
      * @param uintData keccak(id, key) =>  returns uint256
      * @param bytesData keccak(id, key) => returns bytes
      * @param addressData keccak(id, key) =>  returns address
-     * NOTE any other storage type can be expressed as bytes
+     * @dev any other storage type can be expressed as bytes
      */
     struct DataStore {
         mapping(uint256 => uint256[]) allIdsByType;
@@ -37,8 +38,25 @@ library DataStoreUtils {
     }
 
     /**
-     * **DATA GETTERS **
+     *                              ** HELPER **
      **/
+
+    /**
+     * @notice hashes given id with parameter to be used as key in getters and setters
+     * @return key bytes32 hash of id and parameter to be stored
+     **/
+    function getKey(uint256 _id, string memory _param)
+        internal
+        pure
+        returns (bytes32 key)
+    {
+        key = bytes32(keccak256(abi.encodePacked(_id, _param)));
+    }
+
+    /**
+     *                              **DATA GETTERS **
+     **/
+
     function readUintForId(
         DataStore storage self,
         uint256 _id,
@@ -64,50 +82,50 @@ library DataStoreUtils {
     }
 
     /**
-     * **DATA SETTERS **
+     *                              **DATA SETTERS **
      **/
     function writeUintForId(
         DataStore storage self,
         uint256 _id,
         bytes32 _key,
-        uint256 data
+        uint256 _data
     ) internal {
-        self.uintData[keccak256(abi.encodePacked(_id, _key))] = data;
+        self.uintData[keccak256(abi.encodePacked(_id, _key))] = _data;
     }
 
     function addUintForId(
         DataStore storage self,
         uint256 _id,
         bytes32 _key,
-        uint256 addend
+        uint256 _addend
     ) internal {
-        self.uintData[keccak256(abi.encodePacked(_id, _key))] += addend;
+        self.uintData[keccak256(abi.encodePacked(_id, _key))] += _addend;
     }
 
     function subUintForId(
         DataStore storage self,
         uint256 _id,
         bytes32 _key,
-        uint256 minuend
+        uint256 _minuend
     ) internal {
-        self.uintData[keccak256(abi.encodePacked(_id, _key))] -= minuend;
+        self.uintData[keccak256(abi.encodePacked(_id, _key))] -= _minuend;
     }
 
     function writeBytesForId(
         DataStore storage self,
         uint256 _id,
         bytes32 _key,
-        bytes memory data
+        bytes memory _data
     ) internal {
-        self.bytesData[keccak256(abi.encodePacked(_id, _key))] = data;
+        self.bytesData[keccak256(abi.encodePacked(_id, _key))] = _data;
     }
 
     function writeAddressForId(
         DataStore storage self,
         uint256 _id,
         bytes32 _key,
-        address data
+        address _data
     ) internal {
-        self.addressData[keccak256(abi.encodePacked(_id, _key))] = data;
+        self.addressData[keccak256(abi.encodePacked(_id, _key))] = _data;
     }
 }

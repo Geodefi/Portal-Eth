@@ -1,4 +1,4 @@
-const { BigNumber } = require("ethers");
+const { BigNumber, utils } = require("ethers");
 const { ZERO_ADDRESS } = require("../testUtils");
 const { solidity } = require("ethereum-waffle");
 const { deployments } = require("hardhat");
@@ -6,7 +6,6 @@ const web3 = require("web3");
 
 const chai = require("chai");
 // const { shouldSupportInterfaces } = require("./SupportsInterface");
-
 chai.use(solidity);
 const { expect } = chai;
 const initialURI = "https://token-cdn-domain/{id}.json";
@@ -36,7 +35,7 @@ const MINTER_ROLE = web3.utils.soliditySha3("MINTER_ROLE");
 const PAUSER_ROLE = web3.utils.soliditySha3("PAUSER_ROLE");
 const ORACLE_ROLE = web3.utils.soliditySha3("ORACLE_ROLE");
 
-describe("gETH ", async function () {
+describe("gETH", async function () {
   const setupTest = deployments.createFixture(async function ({
     deployments,
     ethers,
@@ -205,16 +204,6 @@ describe("gETH ", async function () {
         expect(
           await tokenContract.isApprovedForAll(multiTokenHolder, proxy)
         ).to.be.equal(true);
-      });
-
-      it("emits an ApprovalForAll log", function () {
-        expect(
-          tokenContract.connect(signers[4]).setApprovalForAll(proxy, true)
-        ).to.emit("ApprovalForAll", {
-          account: multiTokenHolder,
-          operator: proxy,
-          approved: true,
-        });
       });
 
       it("can unset approval for an operator", async function () {
@@ -1351,6 +1340,9 @@ describe("gETH ", async function () {
   });
 
   describe("gETH specific", function () {
+    it("denominator", async function () {
+      expect(await tokenContract.denominator()).to.be.eq(utils.parseEther("1"));
+    });
     describe("setMinterPauserOracle", function () {
       describe("on creation", function () {
         it("deployer has the oracle role", async function () {
@@ -1424,13 +1416,6 @@ describe("gETH ", async function () {
       });
 
       describe("ORACLE_ROLE can set", async function () {
-        it("id = 0", async function () {
-          await tokenContract
-            .connect(signers[7])
-            .setPricePerShare(firstAmount, 0);
-          const price = await tokenContract.pricePerShare(0);
-          expect(price).to.be.eq(firstAmount);
-        });
         it("id = 1", async function () {
           await tokenContract
             .connect(signers[7])
@@ -1444,6 +1429,11 @@ describe("gETH ", async function () {
             .setPricePerShare(firstAmount, unknownTokenId);
           const price = await tokenContract.pricePerShare(unknownTokenId);
           expect(price).to.be.eq(firstAmount);
+        });
+        it("reverts: id = 0", async function () {
+          await expect(
+            tokenContract.connect(signers[7]).setPricePerShare(firstAmount, 0)
+          ).to.be.revertedWith("gETH: price query for the zero address");
         });
       });
 
@@ -1664,7 +1654,7 @@ describe("gETH ", async function () {
           tokenContract
             .connect(signers[0])
             .setInterface(ZERO_ADDRESS, unknownTokenId, true)
-        ).to.be.revertedWith("gETH: _Interface must be a contract");
+        ).to.be.revertedWith("gETH: _interface must be a contract");
       });
 
       it("interfaces can conduct transfers between non-erc1155Receiver contracts", async function () {

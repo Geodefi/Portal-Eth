@@ -5,12 +5,19 @@ pragma solidity =0.8.7;
 import "./IgETH.sol";
 
 interface ISwap {
+    function donateBalancedFees(uint256 EthDonation, uint256 gEthDonation)
+        external
+        payable
+        returns (uint256, uint256);
+
     // pool data view functions
     function getERC1155() external view returns (address);
 
     function getA() external view returns (uint256);
 
     function getAPrecise() external view returns (uint256);
+
+    function getSwapFee() external view returns (uint256);
 
     function getToken() external view returns (uint256);
 
@@ -46,7 +53,7 @@ interface ISwap {
 
     // state modifying functions
     function initialize(
-        address _gEth,
+        IgETH _gEth,
         uint256 _pooledTokenId,
         string memory lpTokenName,
         string memory lpTokenSymbol,

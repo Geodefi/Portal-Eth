@@ -11,7 +11,7 @@ contract DepositContractUtilsTest {
         virtual
         returns (IDepositContract)
     {
-        return DepositContractUtils.getDepositContract();
+        return DepositContractUtils.DEPOSIT_CONTRACT;
     }
 
     function getDepositDataRoot(
@@ -21,7 +21,7 @@ contract DepositContractUtilsTest {
         uint256 _stakeAmount
     ) external view virtual returns (bytes32) {
         return
-            DepositContractUtils.getDepositDataRoot(
+            DepositContractUtils._getDepositDataRoot(
                 _pubkey,
                 _withdrawal_credentials,
                 _signature,

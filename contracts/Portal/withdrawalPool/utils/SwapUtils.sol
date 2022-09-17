@@ -3,7 +3,7 @@ pragma solidity =0.8.7;
 
 import "./MathUtils.sol";
 import "./AmplificationUtils.sol";
-import "../LPToken.sol";
+import "../../../interfaces/ILPToken.sol";
 import "../../../interfaces/IgETH.sol";
 
 /**
@@ -64,6 +64,9 @@ library SwapUtils {
     event NewSwapFee(uint256 newSwapFee);
 
     struct Swap {
+        IgETH gETH;
+        ILPToken lpToken;
+        uint256 pooledTokenId;
         // variables around the ramp management of A,
         // the amplification coefficient * n * (n - 1)
         // see https://curve.fi/stableswap-paper.pdf for details
@@ -74,10 +77,7 @@ library SwapUtils {
         // fee calculation
         uint256 swapFee;
         uint256 adminFee;
-        LPToken lpToken;
-        uint256 pooledTokenId;
         // gETH contract reference
-        IgETH referenceForPooledTokens;
         // the pool balance as [ETH, gETH]
         // the contract's actual token balance might differ
         uint256[] balances;
@@ -96,21 +96,18 @@ library SwapUtils {
     // Struct storing variables used in calculations in the
     // {add,remove} Liquidity functions to avoid stack too deep errors
     struct ManageLiquidityInfo {
+        ILPToken lpToken;
         uint256 d0;
         uint256 d1;
         uint256 d2;
         uint256 preciseA;
-        LPToken lpToken;
         uint256 totalSupply;
         uint256[] balances;
     }
 
-    // the precision all pool tokens will be converted to
-    uint8 public constant POOL_PRECISION_DECIMALS = 18;
-
     // the denominator used to calculate admin and LP fees. For example, an
-    // LP fee is BoughtAmount.mul(fee).div(FEE_DENOMINATOR)
-    uint256 private constant FEE_DENOMINATOR = 10**10;
+    // LP fee is BoughtAmount.mul(fee).div(PERCENTAGE_DENOMINATOR)
+    uint256 private constant PERCENTAGE_DENOMINATOR = 10**10;
 
     // Max swap fee is 1% or 100bps of each swap
     uint256 public constant MAX_SWAP_FEE = 10**8;
@@ -144,10 +141,8 @@ library SwapUtils {
     ) internal view returns (uint256) {
         return
             i == 1
-                ? (balance *
-                    IgETH(self.referenceForPooledTokens).pricePerShare(
-                        self.pooledTokenId
-                    )) / 1e18
+                ? (balance * self.gETH.pricePerShare(self.pooledTokenId)) /
+                    self.gETH.denominator()
                 : balance;
     }
 
@@ -165,10 +160,8 @@ library SwapUtils {
     ) internal view returns (uint256) {
         return
             i == 1
-                ? (balance * 1e18) /
-                    IgETH(self.referenceForPooledTokens).pricePerShare(
-                        self.pooledTokenId
-                    )
+                ? (balance * self.gETH.denominator()) /
+                    self.gETH.pricePerShare(self.pooledTokenId)
                 : balance;
     }
 
@@ -186,11 +179,8 @@ library SwapUtils {
         uint256[] memory _p = new uint256[](balances.length);
         _p[0] = balances[0];
         _p[1] =
-            (balances[1] *
-                IgETH(self.referenceForPooledTokens).pricePerShare(
-                    self.pooledTokenId
-                )) /
-            1e18;
+            (balances[1] * self.gETH.pricePerShare(self.pooledTokenId)) /
+            self.gETH.denominator();
         return _p;
     }
 
@@ -208,10 +198,8 @@ library SwapUtils {
         uint256[] memory _p = new uint256[](balances.length);
         _p[0] = balances[0];
         _p[1] =
-            (balances[1] * 1e18) /
-            IgETH(self.referenceForPooledTokens).pricePerShare(
-                self.pooledTokenId
-            );
+            (balances[1] * self.gETH.denominator()) /
+            self.gETH.pricePerShare(self.pooledTokenId);
         return _p;
     }
 
@@ -321,7 +309,7 @@ library SwapUtils {
                     (i == tokenIndex)
                         ? (xpi * v.d1) / v.d0 - v.newY
                         : xpi - ((xpi * v.d1) / (v.d0))
-                ) * (v.feePerToken)) / (FEE_DENOMINATOR));
+                ) * (v.feePerToken)) / (PERCENTAGE_DENOMINATOR));
         }
 
         uint256 dy = xpReduced[tokenIndex] -
@@ -360,7 +348,7 @@ library SwapUtils {
             return 0;
         } else {
             uint256 dy = xp[1] - halfD;
-            uint256 feeHalf = (dy * self.swapFee) / FEE_DENOMINATOR / 2;
+            uint256 feeHalf = (dy * self.swapFee) / PERCENTAGE_DENOMINATOR / 2;
             uint256 debt = halfD - xp[0] + feeHalf;
             return debt;
         }
@@ -483,7 +471,7 @@ library SwapUtils {
     /**
      * @notice Get the virtual price, to help calculate profit
      * @param self Swap struct to read from
-     * @return the virtual price, scaled to precision of POOL_PRECISION_DECIMALS
+     * @return the virtual price
      */
     function getVirtualPrice(Swap storage self)
         external
@@ -494,10 +482,10 @@ library SwapUtils {
             _pricedInBatch(self, self.balances),
             _getAPrecise(self)
         );
-        LPToken lpToken = self.lpToken;
+        ILPToken lpToken = self.lpToken;
         uint256 supply = lpToken.totalSupply();
         if (supply > 0) {
-            return (d * 10**uint256(POOL_PRECISION_DECIMALS)) / supply;
+            return (d * 10**18) / supply;
         }
         return 0;
     }
@@ -622,7 +610,7 @@ library SwapUtils {
             tokenIndexTo // => not id, index !!!
         );
         dy = balances[tokenIndexTo] - y - 1;
-        dyFee = (dy * self.swapFee) / (FEE_DENOMINATOR);
+        dyFee = (dy * self.swapFee) / (PERCENTAGE_DENOMINATOR);
         dy = dy - dyFee;
     }
 
@@ -734,10 +722,8 @@ library SwapUtils {
 
         if (index == 1)
             return
-                self.referenceForPooledTokens.balanceOf(
-                    address(this),
-                    self.pooledTokenId
-                ) - (self.balances[index]);
+                self.gETH.balanceOf(address(this), self.pooledTokenId) -
+                (self.balances[index]);
         return 0;
     }
 
@@ -759,7 +745,7 @@ library SwapUtils {
         uint256 dx,
         uint256 minDy
     ) external returns (uint256) {
-        IgETH gETHReference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.gETH;
         if (tokenIndexFrom == 0) {
             // Means user is selling some ETH to the pool to get some gETH.
             // In which case, we need to send exactly that amount of ETH.
@@ -807,7 +793,7 @@ library SwapUtils {
         );
 
         require(dy >= minDy, "Swap didn't result in min tokens");
-        uint256 dyAdminFee = (dyFee * self.adminFee) / FEE_DENOMINATOR;
+        uint256 dyAdminFee = (dyFee * self.adminFee) / PERCENTAGE_DENOMINATOR;
 
         // To prevent any Reentrancy, balances are updated before transfering the tokens.
         self.balances[tokenIndexFrom] = balances[tokenIndexFrom] + dx;
@@ -853,14 +839,14 @@ library SwapUtils {
             amounts[0] == msg.value,
             "SwapUtils: received less or more ETH than expected"
         );
-        IgETH gETHReference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.gETH;
         // current state
         ManageLiquidityInfo memory v = ManageLiquidityInfo(
+            self.lpToken,
             0,
             0,
             0,
             _getAPrecise(self),
-            self.lpToken,
             0,
             self.balances
         );
@@ -915,10 +901,10 @@ library SwapUtils {
                 uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
                 fees[i] =
                     (feePerToken * (idealBalance.difference(newBalances[i]))) /
-                    (FEE_DENOMINATOR);
+                    (PERCENTAGE_DENOMINATOR);
                 self.balances[i] =
                     newBalances[i] -
-                    ((fees[i] * (self.adminFee)) / (FEE_DENOMINATOR));
+                    ((fees[i] * (self.adminFee)) / (PERCENTAGE_DENOMINATOR));
                 newBalances[i] = newBalances[i] - (fees[i]);
             }
             v.d2 = getD(_pricedInBatch(self, newBalances), v.preciseA);
@@ -963,8 +949,8 @@ library SwapUtils {
         uint256 amount,
         uint256[] calldata minAmounts
     ) external returns (uint256[] memory) {
-        LPToken lpToken = self.lpToken;
-        IgETH gETHReference = self.referenceForPooledTokens;
+        ILPToken lpToken = self.lpToken;
+        IgETH gETHReference = self.gETH;
         require(amount <= lpToken.balanceOf(msg.sender), ">LP.balanceOf");
         require(minAmounts.length == 2, "minAmounts must match poolTokens");
 
@@ -1017,8 +1003,8 @@ library SwapUtils {
         uint8 tokenIndex,
         uint256 minAmount
     ) external returns (uint256) {
-        LPToken lpToken = self.lpToken;
-        IgETH gETHReference = self.referenceForPooledTokens;
+        ILPToken lpToken = self.lpToken;
+        IgETH gETHReference = self.gETH;
 
         require(tokenAmount <= lpToken.balanceOf(msg.sender), ">LP.balanceOf");
         require(tokenIndex < 2, "Token not found");
@@ -1037,7 +1023,7 @@ library SwapUtils {
         // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
         self.balances[tokenIndex] =
             self.balances[tokenIndex] -
-            (dy + ((dyFee * (self.adminFee)) / (FEE_DENOMINATOR)));
+            (dy + ((dyFee * (self.adminFee)) / (PERCENTAGE_DENOMINATOR)));
         lpToken.burnFrom(msg.sender, tokenAmount);
 
         if (tokenIndex == 0) {
@@ -1080,14 +1066,14 @@ library SwapUtils {
         uint256[] memory amounts,
         uint256 maxBurnAmount
     ) public returns (uint256) {
-        IgETH gETHReference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.gETH;
 
         ManageLiquidityInfo memory v = ManageLiquidityInfo(
+            self.lpToken,
             0,
             0,
             0,
             _getAPrecise(self),
-            self.lpToken,
             0,
             self.balances
         );
@@ -1120,12 +1106,12 @@ library SwapUtils {
             for (uint256 i = 0; i < 2; i++) {
                 uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
                 uint256 difference = idealBalance.difference(balances1[i]);
-                fees[i] = (feePerToken * difference) / FEE_DENOMINATOR;
+                fees[i] = (feePerToken * difference) / PERCENTAGE_DENOMINATOR;
                 uint256 adminFee = self.adminFee;
                 {
                     self.balances[i] =
                         balances1[i] -
-                        ((fees[i] * adminFee) / FEE_DENOMINATOR);
+                        ((fees[i] * adminFee) / PERCENTAGE_DENOMINATOR);
                 }
                 balances1[i] = balances1[i] - fees[i];
             }
@@ -1165,12 +1151,58 @@ library SwapUtils {
     }
 
     /**
+     * @notice donate ETH and gETH to the pool as fee with respect to derivative price
+     * @param self Swap struct to deposit fees
+     * @param EthDonation amount of ETH to donate into the pool
+     * @param gEthDonation amount of gETH to donate into the pool
+     */
+    function donateBalancedFees(
+        Swap storage self,
+        uint256 EthDonation,
+        uint256 gEthDonation
+    ) external returns (uint256, uint256) {
+        {
+            IgETH gETHReference = self.gETH;
+            // Transfer tokens first
+            uint256 beforeBalance = gETHReference.balanceOf(
+                address(this),
+                self.pooledTokenId
+            );
+            gETHReference.safeTransferFrom(
+                msg.sender,
+                address(this),
+                self.pooledTokenId,
+                gEthDonation,
+                ""
+            );
+
+            // Use the actual transferred amount
+            gEthDonation =
+                gETHReference.balanceOf(address(this), self.pooledTokenId) -
+                beforeBalance;
+        }
+        require(
+            _pricedIn(self, gEthDonation, 1) == EthDonation,
+            "SwapUtils: MUST respect to derivative price"
+        );
+        self.balances[0] +=
+            EthDonation -
+            (EthDonation * self.adminFee) /
+            PERCENTAGE_DENOMINATOR;
+        self.balances[1] +=
+            gEthDonation -
+            (gEthDonation * self.adminFee) /
+            PERCENTAGE_DENOMINATOR;
+        return (EthDonation, gEthDonation);
+    }
+
+    /**
      * @notice withdraw all admin fees to a given address
      * @param self Swap struct to withdraw fees from
      * @param to Address to send the fees to
      */
     function withdrawAdminFees(Swap storage self, address to) external {
-        IgETH gETHReference = self.referenceForPooledTokens;
+        IgETH gETHReference = self.gETH;
         uint256 tokenBalance = gETHReference.balanceOf(
             address(this),
             self.pooledTokenId

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
-import "../../utils/DataStoreLib.sol";
+import "../../utils/DataStoreUtilsLib.sol";
 import "../../utils/GeodeUtilsLib.sol";
 
 contract TestGeodeUtils {
@@ -17,7 +17,7 @@ contract TestGeodeUtils {
     ) {
         GEODE.GOVERNANCE = _GOVERNANCE;
         GEODE.SENATE = _SENATE;
-        GEODE.SENATE_EXPIRE_TIMESTAMP = block.timestamp + 1 days;
+        GEODE.SENATE_EXPIRY = block.timestamp + 1 days;
         GEODE.GOVERNANCE_TAX = _GOVERNANCE_TAX;
         GEODE.MAX_GOVERNANCE_TAX = _MAX_GOVERNANCE_TAX;
 
@@ -38,21 +38,21 @@ contract TestGeodeUtils {
         return GEODE.getGovernanceTax();
     }
 
-    function getFeeDenominator() external view virtual returns (uint256) {
-        return GeodeUtils.FEE_DENOMINATOR;
+    function getPERCENTAGE_DENOMINATOR()
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return GeodeUtils.PERCENTAGE_DENOMINATOR;
     }
 
     function getMaxGovernanceTax() external view virtual returns (uint256) {
         return GEODE.getMaxGovernanceTax();
     }
 
-    function getSenateExpireTimestamp()
-        external
-        view
-        virtual
-        returns (uint256)
-    {
-        return GEODE.getSenateExpireTimestamp();
+    function getSenateExpiry() external view virtual returns (uint256) {
+        return GEODE.getSenateExpiry();
     }
 
     /**
@@ -180,7 +180,7 @@ contract TestGeodeUtils {
         external
         virtual
     {
-        GEODE.setSenate(newSenate, senatePeriod);
+        GEODE._setSenate(newSenate, senatePeriod);
     }
 
     /// @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022.

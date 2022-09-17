@@ -12,9 +12,9 @@ import "../../interfaces/IgETH.sol";
 /**
  * @dev differences between ERC20InterfaceUpgradable and Openzeppelin's implementation of ERC20Upgradeable is:
  * -> pragma set to =0.8.7;
- * -> ERC20InterfaceUpgradable uses gETH contract for balances and otalsupply info.
+ * -> ERC20InterfaceUpgradable uses gETH contract for balances and totalsupply info.
  * -> unique id of ERC1155 is used
- * -> there is no mint of burn functionality implemented here.
+ * -> there is no mint or burn functionality implemented here.
  *
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/2cb8996b777060e658e2b8c9b1630313aedb04c0/contracts/token/ERC20/ERC20Upgradeable.sol
  * diffchecker link: https://www.diffchecker.com/0PlrxJT9
@@ -82,8 +82,8 @@ contract ERC20InterfaceUpgradable is
 
     function __ERC20interface_init(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         address gETH_1155
     ) internal onlyInitializing {
         __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);
@@ -91,8 +91,8 @@ contract ERC20InterfaceUpgradable is
 
     function __ERC20interface_init_unchained(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         address gETH_1155
     ) internal onlyInitializing {
         _id = id_;
@@ -158,7 +158,7 @@ contract ERC20InterfaceUpgradable is
     }
 
     /**
-     * @dev shows the u underlying ETH for 1 staked ether for a given Registerer as 1e18
+     * @dev shows the underlying ETH for 1 staked ether for a given id
      * @dev CHANGED for gETH.
      * @dev See {gETH-pricePerShare}.
      */

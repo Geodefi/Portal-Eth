@@ -12,6 +12,16 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../helpers/ERC20InterfaceUpgradable.sol";
 
 /**
+ * @dev differences between ERC20InterfacePermitUpgradable and Openzeppelin's implementation of ERC20PermitUpgradable is:
+ * -> pragma set to =0.8.7;
+ * -> using ERC20InterfaceUpgradable instead of ERC20Upgradeable
+ * -> added initialize
+ *
+ * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/54803be62207c2412e27d09325243f2f1452f7b9/contracts/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol
+ * diffchecker: https://www.diffchecker.com/Hwmvi5HF
+ */
+
+/**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
  * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].
  *
@@ -56,8 +66,8 @@ contract ERC20InterfacePermitUpgradable is
      */
     function initialize(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         address gETH_1155
     ) public virtual initializer {
         __ERC20interfacePermit_init(id_, name_, symbol_, gETH_1155);
@@ -70,8 +80,8 @@ contract ERC20InterfacePermitUpgradable is
      */
     function __ERC20interfacePermit_init(
         uint256 id_,
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         address gETH_1155
     ) internal onlyInitializing {
         __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);

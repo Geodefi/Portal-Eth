@@ -107,7 +107,7 @@ async function getPoolBalances(swap, numOfTokens) {
 }
 module.exports.getPoolBalances = getPoolBalances;
 
-async function getUserTokenBalances(address, tokenIds, wETH2Reference) {
+async function getUserTokenBalances(address, tokenIds, gETHReference) {
   const balanceArray = [];
 
   if (address instanceof Signer) {
@@ -115,18 +115,18 @@ async function getUserTokenBalances(address, tokenIds, wETH2Reference) {
   }
 
   for (const tokenId of tokenIds) {
-    balanceArray.push(await wETH2Reference.balanceOf(address, tokenId));
+    balanceArray.push(await gETHReference.balanceOf(address, tokenId));
   }
 
   return balanceArray;
 }
 module.exports.getUserTokenBalances = getUserTokenBalances;
 
-async function getUserTokenBalance(address, tokenId, wETH2Reference) {
+async function getUserTokenBalance(address, tokenId, gETHReference) {
   if (address instanceof Signer) {
     address = await address.getAddress();
   }
-  return wETH2Reference.balanceOf(address, tokenId);
+  return gETHReference.balanceOf(address, tokenId);
 }
 module.exports.getUserTokenBalance = getUserTokenBalance;
 
