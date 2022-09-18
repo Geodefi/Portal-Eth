@@ -296,25 +296,6 @@ library StakeUtils {
     }
 
     /**
-     * @notice initiates ID as a comet (private pool)
-     * @dev requires ID to be approved as comet with a specific CONTROLLER
-     * @dev currently NOT IMPLEMENTED
-     */
-    function initiateComet(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage DATASTORE,
-        uint256 _id,
-        uint256 _fee,
-        address _maintainer
-    ) external {
-        require(
-            _fee <= self.MAX_MAINTAINER_FEE,
-            "StakeUtils: MAX_MAINTAINER_FEE ERROR"
-        );
-        DATASTORE.initiateComet(_id, _fee, _maintainer);
-    }
-
-    /**
      * @notice                      ** Governance specific functions **
      */
 
@@ -987,6 +968,10 @@ library StakeUtils {
         );
 
         {
+            uint256 boost = DATASTORE.readUintForId(poolId, "TYPE") == 6
+                ? DATASTORE.readUintForId(poolId, "earlyExitFee")
+                : 0;
+
             uint256[2] memory fees = [
                 DATASTORE.getMaintainerFee(poolId),
                 DATASTORE.getMaintainerFee(operatorId)
@@ -1026,8 +1011,9 @@ library StakeUtils {
                     operatorId,
                     fees[0],
                     fees[1],
+                    block.timestamp,
                     expectedExit,
-                    0,
+                    boost,
                     signatures[i]
                 );
                 emit ProposeStaked(pubkeys[i], poolId, operatorId);
@@ -1223,7 +1209,7 @@ library StakeUtils {
             require(self.TELESCOPE._validators[pubkeys[i]].state == 2);
 
             self.TELESCOPE._validators[pubkeys[i]].state = 3;
-            self.TELESCOPE._validators[pubkeys[i]].signalBoost = DATASTORE
+            self.TELESCOPE._validators[pubkeys[i]].boost = DATASTORE
                 .readUintForId(
                     self.TELESCOPE._validators[pubkeys[i]].poolId,
                     "withdrawalBoost"
@@ -1312,7 +1298,7 @@ library StakeUtils {
 
         uint256 debt = withdrawalPoolById(DATASTORE, poolId).getDebt();
         {
-            uint256 signalBoost = self.TELESCOPE._validators[pk].signalBoost;
+            uint256 signalBoost = self.TELESCOPE._validators[pk].boost;
             if (
                 signalBoost > 0 &&
                 debt > IGNORABLE_DEBT &&

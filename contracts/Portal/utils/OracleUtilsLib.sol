@@ -53,8 +53,13 @@ library OracleUtils {
      * @param operatorId needed for staking after allowence
      * @param poolFee percentage of the rewards that will got to pool's maintainer, locked when the validator is created
      * @param operatorFee percentage of the rewards that will got to operator's maintainer, locked when the validator is created
-     * @param signalBoost the percentage of the arbitrage -collected from DWP-, that will be given to Operator.
+     * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
+     * @param expectedExit expected timestamp of the exit of validator. Calculated with operator["validatorPeriod"]
+     * @param boost Can mean 2 things:
+     * For TYPE 5 : the percentage of the arbitrage -collected from DWP-, that will be given to Operator.
      * 0 until signaled, locked when signaled, 0 if busted (meaning fake signaled withdrawal)
+     * For TYPE 6: an initial percentage(Up to 40%) that will encourage the early validator exits, relative to expectedExit.
+     * Its effect will decrease over time while calculating the percentage of staking yields to be given to Operators.
      * @param signature BLS12-381 signature of the validator
      **/
     struct Validator {
@@ -64,8 +69,9 @@ library OracleUtils {
         uint256 operatorId;
         uint256 poolFee;
         uint256 operatorFee;
+        uint256 createdAt;
         uint256 expectedExit;
-        uint256 signalBoost;
+        uint256 boost;
         bytes signature;
     }
     /**
@@ -226,7 +232,7 @@ library OracleUtils {
             "OracleUtils: NOT all bustedPubkeys are signaled"
         );
         self._validators[_pk].state == 2;
-        self._validators[_pk].signalBoost = 0;
+        self._validators[_pk].boost = 0;
 
         imprison(DATASTORE, self._validators[_pk].operatorId);
         emit Busted(_pk);
