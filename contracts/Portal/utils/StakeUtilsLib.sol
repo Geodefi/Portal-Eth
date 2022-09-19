@@ -67,7 +67,7 @@ library StakeUtils {
     event UnpausedPool(uint256 id);
     event ProposeStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
-    event UnstakeSignal(bytes pubkey);
+    event UnstakeSignal(uint256 poolId, bytes pubkey);
     event ParamsUpdated(
         address DEFAULT_gETH_INTERFACE_,
         address DEFAULT_DWP_,
@@ -969,7 +969,7 @@ library StakeUtils {
 
         {
             uint256 boost = DATASTORE.readUintForId(poolId, "TYPE") == 6
-                ? DATASTORE.readUintForId(poolId, "earlyExitFee")
+                ? DATASTORE.readUintForId(poolId, "earlyExitBoost")
                 : 0;
 
             uint256[2] memory fees = [
@@ -1202,19 +1202,24 @@ library StakeUtils {
             .operatorId;
         DATASTORE.authenticate(expectedOperator, true, [true, true, false]);
         for (uint256 i = 0; i < pubkeys.length; i++) {
+            require(self.TELESCOPE._validators[pubkeys[i]].state == 2);
             require(
                 self.TELESCOPE._validators[pubkeys[i]].operatorId ==
                     expectedOperator
             );
-            require(self.TELESCOPE._validators[pubkeys[i]].state == 2);
+
+            uint256 poolId = self.TELESCOPE._validators[pubkeys[i]].poolId;
+            uint256 poolType = DATASTORE.readUintForId(poolId, "TYPE");
 
             self.TELESCOPE._validators[pubkeys[i]].state = 3;
-            self.TELESCOPE._validators[pubkeys[i]].boost = DATASTORE
-                .readUintForId(
-                    self.TELESCOPE._validators[pubkeys[i]].poolId,
-                    "withdrawalBoost"
-                );
-            emit UnstakeSignal(pubkeys[i]);
+            if (poolType == 5) {
+                self.TELESCOPE._validators[pubkeys[i]].boost = DATASTORE
+                    .readUintForId(poolId, "withdrawalBoost");
+            }
+            if (poolType == 6) {
+                /// TODO :: a param like signalSize should be checked to see if an early exit is needed
+            }
+            emit UnstakeSignal(poolId, pubkeys[i]);
         }
     }
 

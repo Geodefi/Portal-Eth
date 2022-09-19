@@ -185,16 +185,42 @@ library MaintainerUtils {
 
     /**
      * @notice initiates ID as a comet (private pool)
-     * @dev requires ID to be approved as comet with a specific CONTROLLER,
-     * NOTE CONTROLLER check will be surpassed with portal.
+     * @dev permissionless to create
+     * NOTE CONTROLLER check will be surpassed with portal
      */
     function initiateComet(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id,
         uint256 fee,
-        address maintainer
-    ) external initiator(DATASTORE, 6, id, maintainer) {
+        address maintainer,
+        address _gETH,
+        address _DEFAULT_gETH_INTERFACE,
+        uint256 _MINI_GOVERNANCE_VERSION,
+        string[2] calldata interfaceSpecs
+    )
+        external
+        initiator(DATASTORE, 6, id, maintainer)
+        returns (address miniGovernance, address gInterface)
+    {
         DATASTORE.writeUintForId(id, "fee", fee);
+        {
+            miniGovernance = _deployMiniGovernance(
+                DATASTORE,
+                _gETH,
+                id,
+                _MINI_GOVERNANCE_VERSION,
+                maintainer
+            );
+        }
+        {
+            gInterface = Clones.clone(_DEFAULT_gETH_INTERFACE);
+            IgETHInterface(gInterface).initialize(
+                id,
+                interfaceSpecs[0],
+                interfaceSpecs[1],
+                _gETH
+            );
+        }
     }
 
     /**
