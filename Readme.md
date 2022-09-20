@@ -45,7 +45,7 @@
 >
 > We worked hard, day and night, for months, with no visibility... just to contribute.
 > We had no idea what we were going to build at the beginning.
-> I like what we coded.
+> I like what we have coded.
 >
 > Here, my telegram: @icebearDefi
 > If it makes this process faster and cheaper :P Please don't hesitate reach out to book multiple calls, whenever you want.
@@ -56,7 +56,7 @@
 
 # Geode
 
-Geode Finance is built by contributors who are bothered by the centralization and unfair monopolization of Liquid Staking Derivatives. There is an urgent need for a viable solution. We didn’t want to just bring another Staking-as-a-Service product to the market, but rather change the way staking works.
+Geode Finance is built by contributors, bothered by the centralization and unfair monopolization of Liquid Staking Derivatives (LSDs). There is an urgent need for a viable solution. We didn’t want to just bring another Staking-as-a-Service product to the market, but rather change the way staking works.
 
 Thus, we should underline that Geode Finance is not another Staking-as-a-Service provider.
 
@@ -77,7 +77,7 @@ There are 3 main issues with the current design of the LSD market. Anyone who ca
 2. Trust
 3. Sustainability
 
-> These all are very related to each other. But during our research we concluded that it all comes down to one: *Trust*.
+> These all are significantly related to each other. But during our research we concluded that it all comes down to one: *Trust*.
 
 To overcome them, we need to improve our understanding of LSDs.
 
@@ -90,7 +90,7 @@ Even within the short period since Serenity Phase 0, we have witnessed multiple 
 > Resulted in costumers to choose trusted pools over smaller ones.
 
 Naturally, it costs a lot to build and maintain SaaS pools.
-> Discouraged builders even more, resulted in less competition for big, greedy staking pools.
+> Discouraged the builders, even more, resulting in less competition for big, greedy staking pools.
 
 Finally, Liquid Staking Derivatives required an assertive amount of liquidity source to ensure the `Price Peg`.
 > Created an environment where it is near impossible to fight with the big guys.
@@ -115,7 +115,7 @@ There are points that requires trust. Currently, all are susceptible to single-p
 
 Simply, "the yield" is not sustainable.
 
-One LSD can grow fast in an unhealthy, speculative environment.
+An LSD can grow fast in an unhealthy, speculative environment.
 It can acquire a big proportion of the marketshare within a short period of time with unsustainable incentives.
 It's fall is inevitable when the market rejects/forgets it.
 
@@ -132,7 +132,7 @@ The solution is as Trustless as it goes. It claims to solve the trust, monopoliz
 
 Understanding it requires a basic understanding of the Game Theory and Race Conditions.
 
-> We will gamify the implementation with Star Wars referances. Hope you enjoy it.
+> We will gamify the implementation with Star Wars references. Hope you enjoy it.
 
 # 3. Geode Portal
 
@@ -147,7 +147,7 @@ gETH is a simple ERC1155 contract with additional, special functionalities. gETH
   * To allow basic functionalities to build on top of gETH, we also keep the timestamp of the latest price updates.
 * Most important improvement is the implementation of ERC1155Interfaces:
   * Interfaces allow any token ID to act with different functionalities as default. Meaning one ERC1155 id can act like erc20, or it is even possible to build a whole protocol on top gETH and use it as an internal database for balances and prices.
-  * One can avoid the interface usage by simply calling `avoidInterfaces`.
+  * One can avoid the use of interface by simply calling `avoidInterfaces`.
 
 ## DataStore Library
 
@@ -196,7 +196,7 @@ The patterns that are implemented should make it easy to maintain these IDs, whi
 
 ## OracleUtils Library
 
-Telescope is our Holy Oracle.Currently, It is operated by a multisig, which we proposed to be same as the Senate. To improve trustlessness, we might improve this component in the future.
+Telescope is our Holy Oracle. Currently, It is operated by a multisig, which we proposed to be same as the Senate. To improve trustlessness, we might improve this component in the future.
 
 It has 3 functionalities:
 
@@ -211,7 +211,7 @@ There are 4 forbidden acts, and Telescope regulates them by `regulateOperators` 
 
 Actions that can cause imprisonment:
 
-1. Alien Proposals: Simply validator credential frontrunning (<https://bit.ly/3Tkc6UC>). This would endanger the user funds. Operator is imprisoned for a while (currently 15 days) as a punishment.
+1. Alien Proposals: Simply validator credential frontrunning (<https://bit.ly/3Tkc6UC>). This would jeopardize the user funds. Operator is imprisoned for a while (currently 15 days) as a punishment.
 2. Busted Signals: Operator signaled an unstake, but did not unstake. Operator did not respect the game. Operator is imprisoned for a while (currently 15 days) as a punishment.
 3. Validator Unstaked without a signal. Operator did not respect the game. Operator is imprisoned for a while (currently 15 days) as a punishment.
 4. Validator is not exited by Operator although the `expectedExit` has past. Anyone can blame a validator and effectively imprison the Operator until the exit happens.
