@@ -371,7 +371,6 @@ library OracleUtils {
         Oracle storage self,
         DataStoreUtils.DataStore storage DATASTORE,
         bytes32[2] memory _dailyBufferKeys,
-        uint256 _index,
         uint256 _poolId,
         uint256 _beaconBalance,
         uint256 _periodsSinceUpdate, // calculation for this changes for private pools
@@ -387,7 +386,7 @@ library OracleUtils {
         );
         _sanityCheck(self, _poolId, _periodsSinceUpdate, oraclePrice);
         bytes32 node = keccak256(
-            abi.encodePacked(_index, _poolId, oraclePrice)
+            abi.encodePacked(_poolId, oraclePrice)
         );
 
         require(
@@ -448,7 +447,6 @@ library OracleUtils {
                 self,
                 DATASTORE,
                 dailyBufferKeys,
-                i,
                 DATASTORE.allIdsByType[5][i],
                 beaconBalances[i],
                 periodsSinceUpdate,

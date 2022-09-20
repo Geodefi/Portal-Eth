@@ -48,13 +48,16 @@ library CometUtils {
             "CometUtils: MAX_MAINTAINER_FEE ERROR"
         );
 
-        (address miniGovernance, address gInterface) = DATASTORE.initiateComet(
-            _id,
-            _fee,
-            _maintainer,
+        address[3] memory addressSpecs = [
             address(self.gETH),
-            self.DEFAULT_gETH_INTERFACE,
-            self.MINI_GOVERNANCE_VERSION,
+            _maintainer,
+            self.DEFAULT_gETH_INTERFACE
+        ];
+        uint256[3] memory uintSpecs = [_id, _fee, self.MINI_GOVERNANCE_VERSION];
+
+        (address miniGovernance, address gInterface) = DATASTORE.initiateComet(
+            uintSpecs,
+            addressSpecs,
             _interfaceSpecs
         );
 
@@ -109,11 +112,10 @@ library CometUtils {
     function priceSync(
         SU.StakePool storage self,
         DSU.DataStore storage DATASTORE,
-        uint256 index,
         uint256 cometId,
         uint256 beaconBalance,
         bytes32[] calldata priceProofs // uint256 prices[]
-    ) external returns (bool) {
+    ) external {
         require(
             !isPriceValid(self, cometId),
             "CometUtils: Price is already valid"
@@ -136,25 +138,20 @@ library CometUtils {
         self.TELESCOPE._priceSync(
             DATASTORE,
             dailyBufferKeys,
-            index,
             cometId,
             beaconBalance,
             periodsSinceUpdate,
             priceProofs
         );
-
-        return true;
     }
 
     function depositComet(
         SU.StakePool storage self,
         DSU.DataStore storage DATASTORE,
-        uint256 cometId,
-        uint256 deadline
+        uint256 cometId
     ) external returns (uint256 mintedgETH) {
         DATASTORE.authenticate(cometId, true, [false, false, true]);
 
-        require(deadline > block.timestamp, "CometUtils: Deadline not met");
         require(isPriceValid(self, cometId), "CometUtils: Price is invalid");
 
         uint256 value = msg.value;

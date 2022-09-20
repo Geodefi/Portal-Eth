@@ -54,28 +54,23 @@ contract TestCometUtils {
     }
 
     function priceSync(
-        uint256 _index,
         uint256 _cometId,
         uint256 _beaconBalance,
         bytes32[] calldata _priceProofs // uint256 prices[]
-    ) external virtual returns (bool) {
-        return
-            CU.priceSync(
-                STAKEPOOL,
-                DATASTORE,
-                _index,
-                _cometId,
-                _beaconBalance,
-                _priceProofs
-            );
+    ) external virtual {
+        CU.priceSync(
+            STAKEPOOL,
+            DATASTORE,
+            _cometId,
+            _beaconBalance,
+            _priceProofs
+        );
     }
 
     function depositComet(
-        uint256 _cometId,
-        uint256 _mingETH,
-        uint256 _deadline
+        uint256 _cometId
     ) external virtual {
-        CU.depositComet(STAKEPOOL, DATASTORE, _cometId, _deadline);
+        CU.depositComet(STAKEPOOL, DATASTORE, _cometId);
     }
 
     function enqueueWithdrawal() external virtual {

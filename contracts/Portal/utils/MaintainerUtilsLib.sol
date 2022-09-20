@@ -183,42 +183,41 @@ library MaintainerUtils {
         }
     }
 
-    /**
+    /*
      * @notice initiates ID as a comet (private pool)
      * @dev permissionless to create
+     * @param uintSpecs 0:_id, 1:_fee, 2:_MINI_GOVERNANCE_VERSION
+     * @param addressSpecs 0:gETH, 1:_maintainer, 2:DEFAULT_gETH_INTERFACE_
+     * @param interfaceSpecs 0: interface name, 1: interface symbol
      * NOTE CONTROLLER check will be surpassed with portal
      */
     function initiateComet(
         DataStoreUtils.DataStore storage DATASTORE,
-        uint256 id,
-        uint256 fee,
-        address maintainer,
-        address _gETH,
-        address _DEFAULT_gETH_INTERFACE,
-        uint256 _MINI_GOVERNANCE_VERSION,
+        uint256[3] memory uintSpecs,
+        address[3] memory addressSpecs,
         string[2] calldata interfaceSpecs
     )
         external
-        initiator(DATASTORE, 6, id, maintainer)
+        initiator(DATASTORE, 6, uintSpecs[0], addressSpecs[1])
         returns (address miniGovernance, address gInterface)
     {
-        DATASTORE.writeUintForId(id, "fee", fee);
+        DATASTORE.writeUintForId(uintSpecs[0], "fee", uintSpecs[1]);
         {
             miniGovernance = _deployMiniGovernance(
                 DATASTORE,
-                _gETH,
-                id,
-                _MINI_GOVERNANCE_VERSION,
-                maintainer
+                addressSpecs[0],
+                uintSpecs[0],
+                uintSpecs[2],
+                addressSpecs[1]
             );
         }
         {
-            gInterface = Clones.clone(_DEFAULT_gETH_INTERFACE);
+            gInterface = Clones.clone(addressSpecs[2]);
             IgETHInterface(gInterface).initialize(
-                id,
+                uintSpecs[0],
                 interfaceSpecs[0],
                 interfaceSpecs[1],
-                _gETH
+                addressSpecs[0]
             );
         }
     }
