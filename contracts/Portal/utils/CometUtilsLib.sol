@@ -29,19 +29,20 @@ library CometUtils {
 
     /// @notice min queue amount is 0.001 ether
     uint256 public constant MIN_QUEUE_SIZE = 1 ether / 1000;
+    uint256 public constant INITIATION_PERIOD = 24 hours;
 
     /// @notice
     uint256 public constant MAX_EARLY_EXIT_BOOST =
         (40 * PERCENTAGE_DENOMINATOR) / 100;
 
-    function initiateComet(
+    function _initiateComet(
         SU.StakePool storage self,
         DSU.DataStore storage DATASTORE,
         uint256 _id,
         uint256 _fee,
         address _maintainer,
         string[2] calldata _interfaceSpecs
-    ) external {
+    ) internal {
         // require(condition); 32 ether needed put in to surplus?
         require(
             _fee <= self.MAX_MAINTAINER_FEE,
@@ -71,6 +72,35 @@ library CometUtils {
             "withdrawalCredential",
             DCU.addressToWC(miniGovernance)
         );
+    }
+
+    function initiateComet(
+        SU.StakePool storage self,
+        DSU.DataStore storage DATASTORE,
+        bytes calldata NAME,
+        uint256 fee,
+        string[2] calldata _interfaceSpecs
+    ) external {
+        uint256 value = msg.value;
+        require(
+            value >= 32 ether,
+            "CometUtils: requires at least 32 ether to initiate"
+        );
+
+        //GeodeUtils._generateId(_NAME, _TYPE);
+        uint256 TYPE = 6;
+        uint256 id = uint256(keccak256(abi.encodePacked(NAME, TYPE)));
+
+        require(
+            DATASTORE.readAddressForId(id, "CONTROLLER") == address(0),
+            "CometUtils: name is already claimed"
+        );
+        DATASTORE.writeUintForId(id, "TYPE", TYPE);
+        DATASTORE.writeBytesForId(id, "NAME", NAME);
+        DATASTORE.writeAddressForId(id, "CONTROLLER", msg.sender);
+
+        _initiateComet(self, DATASTORE, id, fee, msg.sender, _interfaceSpecs);
+        DATASTORE.addUintForId(id, "surplus", value);
     }
 
     /**
@@ -145,6 +175,7 @@ library CometUtils {
         );
     }
 
+    // it is not possible to put the newly acquired funds to queue, but it can be taken from surplus with enqueueWithdrawal.
     function depositComet(
         SU.StakePool storage self,
         DSU.DataStore storage DATASTORE,
@@ -174,16 +205,14 @@ library CometUtils {
         }
     }
 
-    function enqueueWithdrawal() external {}
-
     function canDequeue(
         DSU.DataStore storage DATASTORE,
         uint256 cometId,
         uint256 index
     ) internal view returns (bool) {
         return
-            DATASTORE.readUintForId(cometId, DSU.getKey(index, "trigger")) <
-            DATASTORE.readUintForId(cometId, "withdrawn");
+            DATASTORE.readUintForId(cometId, DSU.getKey(index, "trigger")) <=
+            DATASTORE.readUintForId(cometId, "unstaked");
     }
 
     function getEnqueued(
@@ -210,7 +239,78 @@ library CometUtils {
         );
     }
 
-    function dequeueWithdrawal() external {}
+    // users should be aware of the surplus (from frontend etc.), if amount is bigger than surplus it will be queued.
+    // user can decrease the amount in that case to avoid queue
+    function enqueueWithdrawal(
+        SU.StakePool storage self,
+        DSU.DataStore storage DATASTORE,
+        uint256 cometId,
+        uint256 gAmount,
+        address receiver
+    ) external {
+        require(gAmount > MIN_QUEUE_SIZE, "CometUtils: at least 0.001 eth");
+        require(
+            block.timestamp >
+                DATASTORE.readUintForId(cometId, "initiated") +
+                    INITIATION_PERIOD
+        );
+        {
+            // transfer token first
+            uint256 beforeBalance = self.gETH.balanceOf(address(this), cometId);
+            self.gETH.safeTransferFrom(
+                msg.sender,
+                address(this),
+                cometId,
+                gAmount,
+                ""
+            );
+
+            // Use the transferred amount
+            gAmount =
+                beforeBalance -
+                self.gETH.balanceOf(address(this), cometId);
+        }
+
+        // surplus check => if surplus, burn surplus
+        uint256 EthToSend = gAmount * self.gETH.pricePerShare(cometId);
+        if (DATASTORE.readUintForId(cometId, "surplus") >= EthToSend) {
+            DATASTORE.subUintForId(cometId, "surplus", EthToSend);
+            (bool sent, ) = payable(msg.sender).call{value: EthToSend}("");
+            require(sent, "CometUtils: Failed to send Ether");
+        } else {
+            DATASTORE.addUintForId(cometId, "queueSum", gAmount);
+            DATASTORE.addUintForId(cometId, "queueSize", 1);
+
+            uint256 index = DATASTORE.readUintForId(cometId, "queueSize");
+
+            DATASTORE.writeUintForId(
+                cometId,
+                DSU.getKey(index, "amount"),
+                gAmount
+            );
+            DATASTORE.writeUintForId(
+                cometId,
+                DSU.getKey(index, "trigger"),
+                DATASTORE.readUintForId(cometId, "queueSum")
+            );
+            DATASTORE.writeAddressForId(
+                cometId,
+                DSU.getKey(index, "receiver"),
+                receiver
+            );
+        }
+    }
+
+    // gives the gETH if not triggered yet
+    function dequeueWithdrawal() external {
+        // can not dequeue if not fulfilled
+        // give pricetimestamp
+        // 1.1 10
+        // 1.2 20
+        // 1.3 50
+        //
+        // burn
+    }
 
     function fetchUnstake() external {}
 }

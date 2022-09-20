@@ -385,9 +385,7 @@ library OracleUtils {
             _beaconBalance
         );
         _sanityCheck(self, _poolId, _periodsSinceUpdate, oraclePrice);
-        bytes32 node = keccak256(
-            abi.encodePacked(_poolId, oraclePrice)
-        );
+        bytes32 node = keccak256(abi.encodePacked(_poolId, oraclePrice));
 
         require(
             MerkleProof.verify(_priceProofs, self.PRICE_MERKLE_ROOT, node),

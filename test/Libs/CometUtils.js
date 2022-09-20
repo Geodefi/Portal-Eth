@@ -5,21 +5,21 @@ const { deployments } = require("hardhat");
 const chai = require("chai");
 
 chai.use(solidity);
-const { expect } = chai;
-const randId = 3131313131;
-const operatorId = 420420420;
-const planetId = 696969696969;
-const cometId = 123123123123;
-const wrongId = 69;
+// const { expect } = chai;
+// const randId = 3131313131;
+// const operatorId = 420420420;
+// const planetId = 696969696969;
+// const cometId = 123123123123;
+// const wrongId = 69;
 
 describe("GeodeUtils", async () => {
   let testContract;
-  let deployer;
-  let planet;
-  let comet;
-  let operator;
-  let user1;
-  let user2;
+  // let deployer;
+  // let planet;
+  // let comet;
+  // let operator;
+  // let user1;
+  // let user2;
 
   const setupTest = deployments.createFixture(async (hre) => {
     ({ ethers, web3, Web3 } = hre);
@@ -34,14 +34,17 @@ describe("GeodeUtils", async () => {
     user2 = signers[6];
 
     await deployments.fixture(); // ensure you start from a fresh deployments
+    const { get } = deployments;
     const TestCometUtils = await ethers.getContractFactory("TestCometUtils", {
       libraries: {
-        MaintainerUtils: (await get("MaintainerUtils")).address,
-        OracleUtils: (await get("OracleUtils")).address,
+        // MaintainerUtils: (await get("MaintainerUtils")).address,
+        // OracleUtils: (await get("OracleUtils")).address,
         CometUtils: (await get("CometUtils")).address,
-        StakeUtils: (await get("StakeUtils")).address,
+        // StakeUtils: (await get("StakeUtils")).address,
       },
     });
+
+    // write constructor
     testContract = await TestCometUtils.deploy();
   });
 
