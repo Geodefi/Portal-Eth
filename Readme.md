@@ -1,6 +1,6 @@
 # Auditing Geode
 
-* The code base might seem big. However, most of it either functions referancing Library functions, or comments. So no worries, you will understand everything easily.
+* The code base might seem big. However, most of it either functions referencing Library functions, or comments. So no worries, you will understand everything easily.
 * DWP is forked from Saddle Finance.
   * We added dynamic peg, which means price is not focusing around 1:1 but 1:price :)
   * We also added something called `debt`, which is the amount of Ether that is needed to heal to price to peg.
