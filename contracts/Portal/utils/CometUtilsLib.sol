@@ -12,7 +12,7 @@ import "../../interfaces/IMiniGovernance.sol";
 
 /**
  * @author Icebear & Crash Bandicoot
- * @title StakeUtils library
+ * @title CometUtils library, an extension to StakeUtils
  * @notice Exclusively contains functions related to ETH Liquid Staking design
  */
 
@@ -301,16 +301,112 @@ library CometUtils {
         }
     }
 
-    // gives the gETH if not triggered yet
-    function dequeueWithdrawal() external {
-        // can not dequeue if not fulfilled
-        // give pricetimestamp
-        // 1.1 10
-        // 1.2 20
-        // 1.3 50
-        //
-        // burn
+    function finalizeDequeu(
+        DSU.DataStore storage DATASTORE,
+        uint256 cometId,
+        uint256 index,
+        uint256 etherToSend,
+        uint256 remgETH
+    ) internal {
+        address receiver = DATASTORE.readAddressForId(
+            cometId,
+            DSU.getKey(index, "receiver")
+        );
+        (bool sent, ) = payable(receiver).call{value: etherToSend}("");
+        require(sent, "CometUtils: Failed to send Ether");
+        DATASTORE.writeUintForId(cometId, DSU.getKey(index, "amount"), remgETH);
     }
 
-    function fetchUnstake() external {}
+    // it is assumed cpPrice can never be 0
+    // bufferGeth meaning amount between 2 cp
+    function dequeueWithdrawal(
+        DSU.DataStore storage DATASTORE,
+        uint256 cometId,
+        uint256 index,
+        uint256 priceIndex
+    ) external {
+        uint256 gAmount = DATASTORE.readUintForId(
+            cometId,
+            DSU.getKey(index, "amount")
+        );
+        uint256 trigger = DATASTORE.readUintForId(
+            cometId,
+            DSU.getKey(index, "trigger")
+        );
+
+        uint256 bufferGeth;
+        uint256 cpUnstaked_0 = DATASTORE.readUintForId(
+            cometId,
+            DSU.getKey(priceIndex, "cpUnstaked")
+        );
+        {
+            uint256 initAmount = trigger - gAmount;
+            require(
+                DATASTORE.readUintForId(
+                    cometId,
+                    DSU.getKey(priceIndex - 1, "cpUnstaked")
+                ) <= initAmount
+            );
+
+            require(cpUnstaked_0 > initAmount);
+
+            bufferGeth = cpUnstaked_0 - initAmount;
+        }
+
+        uint256 price = DATASTORE.readUintForId(
+            cometId,
+            DSU.getKey(priceIndex, "cpPrice")
+        );
+
+        if (gAmount <= bufferGeth) {
+            return
+                finalizeDequeu(DATASTORE, cometId, index, gAmount * price, 0);
+        }
+
+        uint256 etherToSend = bufferGeth * price;
+        gAmount -= bufferGeth;
+
+        uint256 cpLength = DATASTORE.readUintForId(
+            cometId,
+            DSU.getKey(priceIndex, "cpLength")
+        );
+        for (uint256 i = priceIndex + 1; i < cpLength; i++) {
+            price = DATASTORE.readUintForId(
+                cometId,
+                DSU.getKey(priceIndex, "cpPrice")
+            );
+
+            uint256 cpUnstaked_1 = DATASTORE.readUintForId(
+                cometId,
+                DSU.getKey(i, "cpUnstaked")
+            );
+
+            bufferGeth = cpUnstaked_1 - cpUnstaked_0;
+
+            if (gAmount <= bufferGeth) {
+                etherToSend += gAmount * price;
+                return
+                    finalizeDequeu(DATASTORE, cometId, index, etherToSend, 0);
+            }
+
+            etherToSend += bufferGeth * price;
+            gAmount -= bufferGeth;
+            cpUnstaked_0 = cpUnstaked_1;
+        }
+        return finalizeDequeu(DATASTORE, cometId, index, etherToSend, gAmount);
+    }
+
+    // burns the amount of gETH
+    // ! isoracleactive
+    function fetchUnstake() external {
+        // StakePool storage self,
+        // DataStoreUtils.DataStore storage DATASTORE,
+        // bytes calldata pk,
+        // uint256 balance,
+        // bool isExit,
+        // uint256 GOVERNANCE_TAX
+        //
+        // if price did not change increase cpUnstaked instead of new cp (?)
+        // burn (?)
+    }
 }

@@ -86,13 +86,13 @@ contract TestCometUtils {
         return CU.getEnqueued(DATASTORE, _cometId, _index);
     }
 
-    // TODO: if self is a parameter dont forget to call from STAKEPOOL not CU
-    function dequeueWithdrawal() external virtual {
-        CU.dequeueWithdrawal();
-    }
+    // // TODO: if self is a parameter dont forget to call from STAKEPOOL not CU
+    // function dequeueWithdrawal() external virtual {
+    //     CU.dequeueWithdrawal();
+    // }
 
-    // TODO: if self is a parameter dont forget to call from STAKEPOOL not CU
-    function fetchUnstake() external virtual {
-        CU.fetchUnstake();
-    }
+    // // TODO: if self is a parameter dont forget to call from STAKEPOOL not CU
+    // function fetchUnstake() external virtual {
+    //     CU.fetchUnstake();
+    // }
 }
