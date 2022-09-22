@@ -271,7 +271,7 @@ library OracleUtils {
             _alienateValidator(self, DATASTORE, regulatedPubkeys[0][a]);
         }
 
-        for (uint256 b; b < regulatedPubkeys[2].length; b++) {
+        for (uint256 b; b < regulatedPubkeys[1].length; b++) {
             _bustValidator(self, DATASTORE, regulatedPubkeys[1][b]);
         }
 

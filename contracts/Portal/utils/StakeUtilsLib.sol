@@ -68,16 +68,6 @@ library StakeUtils {
     event ProposeStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
     event UnstakeSignal(bytes pubkey);
-    event ParamsUpdated(
-        address DEFAULT_gETH_INTERFACE_,
-        address DEFAULT_DWP_,
-        address DEFAULT_LP_TOKEN_,
-        uint256 MAX_MAINTAINER_FEE_,
-        uint256 BOOSTRAP_PERIOD_,
-        uint256 PERIOD_PRICE_INCREASE_LIMIT_,
-        uint256 PERIOD_PRICE_DECREASE_LIMIT_,
-        uint256 COMET_TAX_
-    );
 
     using DataStoreUtils for DataStoreUtils.DataStore;
     using MaintainerUtils for DataStoreUtils.DataStore;
@@ -511,12 +501,12 @@ library StakeUtils {
     ) public {
         DATASTORE.authenticate(operatorId, true, [true, true, false]);
         require(
-            newPeriod <= MIN_VALIDATOR_PERIOD,
-            "StekeUtils: should be more than MIN_VALIDATOR_PERIOD"
+            newPeriod >= MIN_VALIDATOR_PERIOD,
+            "StakeUtils: should be more than MIN_VALIDATOR_PERIOD"
         );
         require(
             newPeriod <= MAX_VALIDATOR_PERIOD,
-            "StekeUtils: should be less than MAX_VALIDATOR_PERIOD"
+            "StakeUtils: should be less than MAX_VALIDATOR_PERIOD"
         );
         DATASTORE.writeUintForId(operatorId, "validatorPeriod", newPeriod);
         emit ValidatorPeriodUpdated(operatorId, newPeriod);
