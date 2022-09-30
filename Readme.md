@@ -60,7 +60,7 @@ Geode Finance is built by contributors, bothered by the centralization and unfai
 
 Thus, we should underline that Geode Finance is not another Staking-as-a-Service provider.
 
-Geode Finance Team have been researching the understanding behind the Liquid Staking Derivatives since September 2021.
+Geode Finance Team have been researching the understanding the Liquid Staking Derivatives since September 2021.
 
 1. Define what made LSDs special.
 2. Research the issues with its current design.
