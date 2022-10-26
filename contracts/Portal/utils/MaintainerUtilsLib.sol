@@ -128,13 +128,13 @@ library MaintainerUtils {
     /**
      * @notice initiates ID as a planet (public pool): deploys a miniGovernance, a Dynamic Withdrawal Pool, an ERC1155Interface
      * @dev requires ID to be approved as a planet with a specific CONTROLLER
-     * @param uintSpecs 0:_id, 1:_fee, 2:_withdrawalBoost, 3:_MINI_GOVERNANCE_VERSION
+     * @param uintSpecs 0:_id, 1:_fee, 2:_MINI_GOVERNANCE_VERSION
      * @param addressSpecs 0:gETH, 1:_maintainer, 2:DEFAULT_gETH_INTERFACE_, 3:DEFAULT_DWP, 4:DEFAULT_LP_TOKEN
      * @param interfaceSpecs 0: interface name, 1: interface symbol
      */
     function initiatePlanet(
         DataStoreUtils.DataStore storage DATASTORE,
-        uint256[4] memory uintSpecs,
+        uint256[3] memory uintSpecs,
         address[5] memory addressSpecs,
         string[2] calldata interfaceSpecs
     )
@@ -146,20 +146,14 @@ library MaintainerUtils {
             address withdrawalPool
         )
     {
-        require(
-            uintSpecs[2] <= PERCENTAGE_DENOMINATOR,
-            "MaintainerUtils: withdrawalBoost > 100%"
-        );
 
         DATASTORE.writeUintForId(uintSpecs[0], "fee", uintSpecs[1]);
-        DATASTORE.writeUintForId(uintSpecs[0], "withdrawalBoost", uintSpecs[2]);
-
         {
             miniGovernance = _deployMiniGovernance(
                 DATASTORE,
                 addressSpecs[0],
                 uintSpecs[0],
-                uintSpecs[3],
+                uintSpecs[2],
                 addressSpecs[1]
             );
         }

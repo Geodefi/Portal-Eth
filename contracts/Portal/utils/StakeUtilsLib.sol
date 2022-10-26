@@ -241,8 +241,6 @@ library StakeUtils {
     /**
      * @notice initiates ID as a planet (public pool)
      * @dev requires ID to be approved as a planet with a specific CONTROLLER
-     * @param _withdrawalBoost the percentage of arbitrague that will be shared
-     * with Operator on Unstake. Can be used to incentivise Unstakes in case of depeg
      * @param _interfaceSpecs 0: interface name, 1: interface symbol, currently ERC20 specs.
      */
     function initiatePlanet(
@@ -250,7 +248,6 @@ library StakeUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 _id,
         uint256 _fee,
-        uint256 _withdrawalBoost,
         address _maintainer,
         string[2] calldata _interfaceSpecs
     ) external {
@@ -266,12 +263,7 @@ library StakeUtils {
             self.DEFAULT_DWP,
             self.DEFAULT_LP_TOKEN
         ];
-        uint256[4] memory uintSpecs = [
-            _id,
-            _fee,
-            _withdrawalBoost,
-            self.MINI_GOVERNANCE_VERSION
-        ];
+        uint256[3] memory uintSpecs = [_id, _fee, self.MINI_GOVERNANCE_VERSION];
         (
             address miniGovernance,
             address gInterface,
@@ -436,7 +428,10 @@ library StakeUtils {
     /**
      * @notice                           ** Pool - Operator interactions **
      */
-
+    /**
+     * @param withdrawalBoost the percentage of arbitrague that will be shared
+     * with Operator on Unstake. Can be used to incentivise Unstakes in case of depeg
+     */
     function setWithdrawalBoost(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 poolId,

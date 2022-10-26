@@ -187,7 +187,6 @@ interface IPortal {
     function initiatePlanet(
         uint256 _id,
         uint256 _fee,
-        uint256 _withdrawalBoost,
         address _maintainer,
         string calldata _interfaceName,
         string calldata _interfaceSymbol

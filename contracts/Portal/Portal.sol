@@ -731,7 +731,6 @@ contract Portal is
     function initiatePlanet(
         uint256 _id,
         uint256 _fee,
-        uint256 _withdrawalBoost,
         address _maintainer,
         string calldata _interfaceName,
         string calldata _interfaceSymbol
@@ -740,7 +739,6 @@ contract Portal is
             DATASTORE,
             _id,
             _fee,
-            _withdrawalBoost,
             _maintainer,
             [_interfaceName, _interfaceSymbol]
         );
