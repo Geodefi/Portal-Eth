@@ -152,12 +152,12 @@ interface IPortal {
         uint256 validatorVerificationIndex,
         bytes[] calldata alienatedPubkeys
     ) external;
-    
+
     function regulateOperators(
-        bytes[] calldata bustedPubkeys,
+        bytes[] calldata bustedExits,
+        bytes[] calldata bustedSignals,
         uint256[2][] calldata feeThefts
     ) external;
-
 
     function StakingParams()
         external
@@ -224,7 +224,7 @@ interface IPortal {
         external
         returns (bool success);
 
-    function setWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
+    function switchWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
         external;
 
     function operatorAllowance(uint256 poolId, uint256 operatorId)
@@ -278,8 +278,10 @@ interface IPortal {
     function signalUnstake(bytes[] calldata pubkeys) external;
 
     function fetchUnstake(
-        bytes calldata pk,
-        uint256 balance,
-        bool isExit
-    ) external returns (uint256 tax);
+        uint256 poolId,
+        uint256 operatorId,
+        bytes[] calldata pubkeys,
+        uint256[] calldata balances,
+        bool[] calldata isExit
+    ) external;
 }

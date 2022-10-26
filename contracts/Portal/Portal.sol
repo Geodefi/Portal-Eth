@@ -520,12 +520,14 @@ contract Portal is
     }
 
     function regulateOperators(
-        bytes[] calldata bustedPubkeys,
+        bytes[] calldata bustedExits,
+        bytes[] calldata bustedSignals,
         uint256[2][] calldata feeThefts
     ) external virtual override {
         STAKEPOOL.TELESCOPE.regulateOperators(
             DATASTORE,
-            bustedPubkeys,
+            bustedExits,
+            bustedSignals,
             feeThefts
         );
     }
@@ -833,13 +835,13 @@ contract Portal is
      * @notice Pool - Operator interactions
      */
 
-    function setWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
+    function switchWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
         external
         virtual
         override
         whenNotPaused
     {
-        StakeUtils.setWithdrawalBoost(DATASTORE, poolId, withdrawalBoost);
+        StakeUtils.switchWithdrawalBoost(DATASTORE, poolId, withdrawalBoost);
     }
 
     function operatorAllowance(uint256 poolId, uint256 operatorId)
@@ -1017,26 +1019,20 @@ contract Portal is
     }
 
     function fetchUnstake(
-        bytes calldata pk,
-        uint256 balance,
-        bool isExit
-    )
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256 tax)
-    {
-        tax = STAKEPOOL.fetchUnstake(
+        uint256 poolId,
+        uint256 operatorId,
+        bytes[] calldata pubkeys,
+        uint256[] calldata balances,
+        bool[] calldata isExit
+    ) external virtual override whenNotPaused nonReentrant {
+        STAKEPOOL.fetchUnstake(
             DATASTORE,
-            pk,
-            balance,
-            isExit,
-            GEODE.getGovernanceTax()
+            poolId,
+            operatorId,
+            pubkeys,
+            balances,
+            isExit
         );
-        (bool sent, ) = payable(GEODE.getGovernance()).call{value: tax}("");
-        require(sent, "Portal: Failed to pay tax");
     }
 
     /**

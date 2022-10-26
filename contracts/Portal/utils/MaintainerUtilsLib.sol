@@ -35,7 +35,7 @@ library MaintainerUtils {
     uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     /// @notice when a maintainer changes the fee, it is effective after a delay
-    uint256 public constant FEE_SWITCH_LATENCY = 7 days;
+    uint256 public constant FEE_SWITCH_LATENCY = 3 days;
 
     /// @notice default DWP parameters
     uint256 public constant DEFAULT_A = 60;
@@ -349,7 +349,7 @@ library MaintainerUtils {
     }
 
     /**
-     * @notice To increase the balance of an Maintainer's wallet
+     * @notice To increase the balance of a Maintainer's wallet
      * @param _id the id of the Operator
      * @param _value Ether (in Wei) amount to increase the wallet balance.
      * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.

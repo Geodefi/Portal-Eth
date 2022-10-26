@@ -78,7 +78,11 @@ library StakeUtils {
         uint256 PERIOD_PRICE_DECREASE_LIMIT_,
         uint256 COMET_TAX_
     );
-
+    event WithdrawalBoostChanged(
+        uint256 poolId,
+        uint256 withdrawalBoost,
+        uint256 effectiveAfter
+    );
     using DataStoreUtils for DataStoreUtils.DataStore;
     using MaintainerUtils for DataStoreUtils.DataStore;
     using OracleUtils for OracleUtils.Oracle;
@@ -122,6 +126,9 @@ library StakeUtils {
 
     /// @notice ignoring any buybacks if the DWP has a low debt
     uint256 public constant IGNORABLE_DEBT = 1 ether;
+
+    /// @notice when a maintainer changes the withdrawalBoost, it is effective after a delay
+    uint256 public constant BOOST_SWITCH_LATENCY = 3 days;
 
     modifier onlyGovernance(StakePool storage self) {
         require(
@@ -431,14 +438,42 @@ library StakeUtils {
     /**
      * @param withdrawalBoost the percentage of arbitrague that will be shared
      * with Operator on Unstake. Can be used to incentivise Unstakes in case of depeg
+     * @dev to prevent malicious swings in the withdrawal boost that can harm the competition,
+     * Boost changes is also has a delay.
      */
-    function setWithdrawalBoost(
+    function switchWithdrawalBoost(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 poolId,
         uint256 withdrawalBoost
     ) external {
         DATASTORE.authenticate(poolId, true, [false, true, true]);
+        DATASTORE.writeUintForId(
+            poolId,
+            "priorBoost",
+            DATASTORE.readUintForId(poolId, "withdrawalBoost")
+        );
+        DATASTORE.writeUintForId(
+            poolId,
+            "boostSwitch",
+            block.timestamp + BOOST_SWITCH_LATENCY
+        );
         DATASTORE.writeUintForId(poolId, "withdrawalBoost", withdrawalBoost);
+
+        emit WithdrawalBoostChanged(
+            poolId,
+            withdrawalBoost,
+            block.timestamp + BOOST_SWITCH_LATENCY
+        );
+    }
+
+    function getWithdrawalBoost(
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id
+    ) internal view returns (uint256 fee) {
+        fee = DATASTORE.readUintForId(id, "withdrawalBoost");
+        if (DATASTORE.readUintForId(id, "boostSwitch") >= block.timestamp) {
+            fee = DATASTORE.readUintForId(id, "priorBoost");
+        }
     }
 
     /** *
@@ -963,10 +998,6 @@ library StakeUtils {
         );
 
         {
-            uint256 boost = DATASTORE.readUintForId(poolId, "TYPE") == 6
-                ? DATASTORE.readUintForId(poolId, "earlyExitBoost")
-                : 0;
-
             uint256[2] memory fees = [
                 DATASTORE.getMaintainerFee(poolId),
                 DATASTORE.getMaintainerFee(operatorId)
@@ -1008,7 +1039,7 @@ library StakeUtils {
                     fees[1],
                     block.timestamp,
                     expectedExit,
-                    boost,
+                    0,
                     signatures[i]
                 );
                 emit ProposeStaked(pubkeys[i], poolId, operatorId);
@@ -1183,9 +1214,7 @@ library StakeUtils {
      * @notice allows giving a unstake signal, meaning validator has been exited.
      * * And boost can be claimed upon arrival of the funds.
      * @dev to maintain the health of Geode Universe, we should protect the race conditions.
-     * * would be bad if one pool increases the withdrawalBoost, but its too late when the funds are received.
-     * * again, opeators should know when others are unstaking so they don't spend money for no boost.
-     * @dev MIN_VALIDATOR_PERIOD is checked to prevent unhealthy competition between Operators towards withdrawalBoost
+     * * opeators should know when others are unstaking so they don't spend money for no boost.
      */
     function signalUnstake(
         StakePool storage self,
@@ -1196,7 +1225,9 @@ library StakeUtils {
             .TELESCOPE
             ._validators[pubkeys[0]]
             .operatorId;
+
         DATASTORE.authenticate(expectedOperator, true, [true, true, false]);
+
         for (uint256 i = 0; i < pubkeys.length; i++) {
             require(self.TELESCOPE._validators[pubkeys[i]].state == 2);
             require(
@@ -1204,48 +1235,40 @@ library StakeUtils {
                     expectedOperator
             );
 
-            uint256 poolId = self.TELESCOPE._validators[pubkeys[i]].poolId;
-            uint256 poolType = DATASTORE.readUintForId(poolId, "TYPE");
-
             self.TELESCOPE._validators[pubkeys[i]].state = 3;
 
-            if (
-                poolType == 5 &&
-                block.timestamp >
-                self.TELESCOPE._validators[pubkeys[i]].createdAt +
-                    MIN_VALIDATOR_PERIOD
-            ) {
-                self.TELESCOPE._validators[pubkeys[i]].boost = DATASTORE
-                    .readUintForId(poolId, "withdrawalBoost");
-            }
-
-            emit UnstakeSignal(poolId, pubkeys[i]);
+            emit UnstakeSignal(
+                self.TELESCOPE._validators[pubkeys[i]].poolId,
+                pubkeys[i]
+            );
         }
     }
 
     /**
-     * @notice Telescope finalizing an Unstake event, distributing fees+boost,
-     * * does a buyack if necessary and distriutes rewards by burning the derivative and
+     * @notice Operator finalizing an Unstake event by calling Telescope's multisig:
+     * * distributing fees + boost
+     * * distributes rewards by burning the derivative
+     * * does a buyback if necessary
      * * putting the extra within surplus.
      * @param isExit according to eip-4895, there can be multiple ways to distriute the rewards
      * * and not all of them requires exit. Even in such cases reward can be catched from
-     * * withdrawal credential and distributed
+     * * withdrawal credential and distributed.
      *
      * @dev although OnlyOracle, logically this has nothing to do with Telescope.
      * * So we are keeping it here.
      * * @dev operator is prisoned if:
      * 1. withdrawn without signalled, being sneaky. in such case they also doesn't receive the boost
      * 2. signalled without withdrawal, deceiving other operators
-     * note that telescope does not listen signals for this, only beacon chain and withdrawal contracts
      */
     function fetchUnstake(
         StakePool storage self,
         DataStoreUtils.DataStore storage DATASTORE,
-        bytes calldata pk,
-        uint256 balance,
-        bool isExit,
-        uint256 GOVERNANCE_TAX
-    ) external returns (uint256 tax) {
+        uint256 poolId,
+        uint256 operatorId,
+        bytes[] calldata pubkeys,
+        uint256[] calldata balances,
+        bool[] calldata isExit
+    ) external {
         require(
             msg.sender == self.TELESCOPE.ORACLE_POSITION,
             "StakeUtils: sender NOT ORACLE"
@@ -1254,89 +1277,98 @@ library StakeUtils {
             !self.TELESCOPE._isOracleActive(),
             "StakeUtils: ORACLE is active"
         );
-        uint256 poolId = self.TELESCOPE._validators[pk].poolId;
+
+        uint256 cumBal;
+        uint256[2] memory fees;
         {
-            bool success = miniGovernanceById(DATASTORE, poolId).claimUnstake(
-                balance
-            );
-            require(success, "StakeUtils: Failed to claim ");
-        }
-        uint256 operatorId = self.TELESCOPE._validators[pk].operatorId;
+            uint256 exitCount;
 
-        uint256 reward = balance;
+            for (uint256 i = 0; i < pubkeys.length; i++) {
+                uint256 balance = balances[i];
+                cumBal += balances[i];
 
-        if (isExit) {
+                if (isExit[i]) {
+                    exitCount += 1;
+                    if (balance > DCU.DEPOSIT_AMOUNT) {
+                        balance -= DCU.DEPOSIT_AMOUNT;
+                    } else {
+                        balance = 0;
+                    }
+                }
+
+                if (balance > 0) {
+                    fees[0] += ((balance *
+                        self.TELESCOPE._validators[pubkeys[i]].poolFee) /
+                        PERCENTAGE_DENOMINATOR);
+
+                    if (poolId != operatorId) {
+                        fees[1] += ((balance *
+                            self
+                                .TELESCOPE
+                                ._validators[pubkeys[i]]
+                                .operatorFee) / PERCENTAGE_DENOMINATOR);
+                    }
+                }
+            }
+
+            {
+                bool success = miniGovernanceById(DATASTORE, poolId)
+                    .claimUnstake(cumBal);
+                require(success, "StakeUtils: Failed to claim");
+            }
+
+            // decrease the sum of isExit activeValidators and totalValidators
             DATASTORE.subUintForId(
                 poolId,
                 DataStoreUtils.getKey(operatorId, "activeValidators"),
-                1
+                exitCount
             );
-            DATASTORE.subUintForId(operatorId, "totalActiveValidators", 1);
+            DATASTORE.subUintForId(
+                operatorId,
+                "totalActiveValidators",
+                exitCount
+            );
 
-            if (self.TELESCOPE._validators[pk].state == 2) {
-                self.TELESCOPE._validators[pk].state == 3;
-                OracleUtils.imprison(DATASTORE, operatorId);
-            } else if (self.TELESCOPE._validators[pk].state != 3)
-                revert("Not an active validator ?");
-
-            if (balance > DCU.DEPOSIT_AMOUNT) {
-                reward -= DCU.DEPOSIT_AMOUNT;
-            } else reward = 0;
-        }
-
-        uint256 operatorFee;
-        if (reward > 0) {
-            tax = (reward * GOVERNANCE_TAX) / PERCENTAGE_DENOMINATOR;
-            balance -= tax;
-
-            uint256 poolFee = (reward *
-                self.TELESCOPE._validators[pk].poolFee) /
-                PERCENTAGE_DENOMINATOR;
-            balance -= poolFee;
-            DATASTORE._increaseMaintainerWallet(poolId, poolFee);
-
-            operatorFee =
-                (reward * self.TELESCOPE._validators[pk].operatorFee) /
-                PERCENTAGE_DENOMINATOR;
-            balance -= operatorFee;
+            cumBal = cumBal - (fees[0] + fees[1]);
         }
 
         uint256 debt = withdrawalPoolById(DATASTORE, poolId).getDebt();
         {
-            uint256 signalBoost = self.TELESCOPE._validators[pk].boost;
-            if (
-                signalBoost > 0 &&
-                debt > IGNORABLE_DEBT &&
-                self.TELESCOPE._validators[pk].poolId != operatorId
-            ) {
+            uint256 boost = getWithdrawalBoost(DATASTORE, poolId);
+            if (boost > 0 && debt > IGNORABLE_DEBT && poolId != operatorId) {
                 uint256 arb = withdrawalPoolById(DATASTORE, poolId)
-                    .calculateSwap(0, 1, balance);
-                arb -= ((balance * self.gETH.denominator()) /
-                    self.gETH.pricePerShare(poolId));
-                uint256 boost = ((arb * signalBoost) / PERCENTAGE_DENOMINATOR);
+                    .calculateSwap(0, 1, cumBal);
+                arb -=
+                    (cumBal * self.gETH.denominator()) /
+                    self.gETH.pricePerShare(poolId);
+                boost = (arb * boost) / PERCENTAGE_DENOMINATOR;
 
-                operatorFee += boost;
-                balance -= boost;
-            }
-            DATASTORE._increaseMaintainerWallet(operatorId, operatorFee);
-        }
-        {
-            if (debt > IGNORABLE_DEBT) {
-                if (debt >= balance) {
-                    debt = balance;
-                }
-                _buyback(
-                    self,
-                    DATASTORE,
-                    address(0), // burn
-                    poolId,
-                    debt,
-                    0,
-                    type(uint256).max
-                );
-                balance -= debt;
+                fees[1] += boost;
+                cumBal -= boost;
             }
         }
-        DATASTORE.addUintForId(poolId, "surplus", balance);
+
+        if (debt > IGNORABLE_DEBT) {
+            if (debt >= cumBal) {
+                debt = cumBal;
+            }
+            _buyback(
+                self,
+                DATASTORE,
+                address(0), // burn
+                poolId,
+                debt,
+                0,
+                type(uint256).max
+            );
+            cumBal -= debt;
+        }
+
+        if (cumBal > 0) {
+            DATASTORE.addUintForId(poolId, "surplus", cumBal);
+        }
+
+        DATASTORE._increaseMaintainerWallet(poolId, fees[0]);
+        DATASTORE._increaseMaintainerWallet(operatorId, fees[1]);
     }
 }

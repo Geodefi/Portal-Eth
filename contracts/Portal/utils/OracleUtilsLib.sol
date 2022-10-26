@@ -59,6 +59,7 @@ library OracleUtils {
      * @param boost Can mean 2 things:
      * For TYPE 5 : the percentage of the arbitrage -collected from DWP-, that will be given to Operator.
      * 0 until signaled, locked when signaled, 0 if busted (meaning fake signaled withdrawal)
+     * * Note that to decrease the gas cost, we register the boost on fetchUnstake now.
      * For TYPE 6: an initial percentage(Up to 40%) that will encourage the early validator exits, relative to expectedExit.
      * Its effect will decrease over time while calculating the percentage of staking yields to be given to Operators.
      * @param signature BLS12-381 signature of the validator
@@ -221,19 +222,37 @@ library OracleUtils {
 
     /**
      * @notice "Busting" refers to a false signal, meaning there is a signal but no Unstake
-     * @dev imprisonates the operator who signaled a false Unstake
+     * @dev imprisonates the operator who signaled a fake Unstake
      */
-    function _bustValidator(
+    function _bustSignal(
         Oracle storage self,
         DataStoreUtils.DataStore storage DATASTORE,
         bytes calldata _pk
     ) internal {
         require(
             self._validators[_pk].state == 3,
-            "OracleUtils: NOT all bustedPubkeys are signaled"
+            "OracleUtils: pubkey is NOT signaled"
         );
         self._validators[_pk].state == 2;
-        self._validators[_pk].boost = 0;
+
+        imprison(DATASTORE, self._validators[_pk].operatorId);
+        emit Busted(_pk);
+    }
+
+    /**
+     * @notice "Busting" refers to unsignaled withdrawal, meaning there is an unstake but no Signal
+     * @dev imprisonates the operator who haven't signal the unstake
+     */
+    function _bustExit(
+        Oracle storage self,
+        DataStoreUtils.DataStore storage DATASTORE,
+        bytes calldata _pk
+    ) internal {
+        require(
+            self._validators[_pk].state == 2,
+            "OracleUtils: Signaled, cannot be busted"
+        );
+        self._validators[_pk].state == 3;
 
         imprison(DATASTORE, self._validators[_pk].operatorId);
         emit Busted(_pk);
@@ -279,20 +298,26 @@ library OracleUtils {
 
     /**
      * @notice regulating operators within Geode with verifiable proofs
-     * @param bustedPubkeys validators that are "mistakenly" signaled as Unstaked
+     * @param bustedExits validators that have not signaled before Unstake
+     * @param bustedSignals validators that are "mistakenly" signaled as Unstaked
      * @param feeThefts [0]: Operator ids who have stolen MEV or block rewards, [1]: detected BlockNumber as proof
      * @dev Both of these functions results in imprisonment.
      */
     function regulateOperators(
         Oracle storage self,
         DataStoreUtils.DataStore storage DATASTORE,
-        bytes[] calldata bustedPubkeys,
+        bytes[] calldata bustedExits,
+        bytes[] calldata bustedSignals,
         uint256[2][] calldata feeThefts
     ) external onlyOracle(self) {
         require(!_isOracleActive(self), "OracleUtils: oracle is active");
 
-        for (uint256 i; i < bustedPubkeys.length; i++) {
-            _bustValidator(self, DATASTORE, bustedPubkeys[i]);
+        for (uint256 i; i < bustedExits.length; i++) {
+            _bustExit(self, DATASTORE, bustedExits[i]);
+        }
+
+        for (uint256 i; i < bustedSignals.length; i++) {
+            _bustSignal(self, DATASTORE, bustedSignals[i]);
         }
 
         for (uint256 j; j < feeThefts.length; j++) {
