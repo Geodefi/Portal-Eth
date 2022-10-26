@@ -506,16 +506,27 @@ contract Portal is
         return OracleUtils.isPrisoned(DATASTORE, operatorId);
     }
 
-    function regulateOperators(
+    function updateVerificationIndex(
         uint256 allValidatorsCount,
         uint256 validatorVerificationIndex,
-        bytes[2][] calldata regulatedPubkeys
-    ) external virtual override nonReentrant {
-        STAKEPOOL.TELESCOPE.regulateOperators(
+        bytes[] calldata alienatedPubkeys
+    ) external virtual override {
+        STAKEPOOL.TELESCOPE.updateVerificationIndex(
             DATASTORE,
             allValidatorsCount,
             validatorVerificationIndex,
-            regulatedPubkeys
+            alienatedPubkeys
+        );
+    }
+
+    function regulateOperators(
+        bytes[] calldata bustedPubkeys,
+        uint256[2][] calldata feeThefts
+    ) external virtual override {
+        STAKEPOOL.TELESCOPE.regulateOperators(
+            DATASTORE,
+            bustedPubkeys,
+            feeThefts
         );
     }
 

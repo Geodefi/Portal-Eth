@@ -45,6 +45,7 @@ library OracleUtils {
     event Busted(bytes pubkey);
     event Prisoned(uint256 id, uint256 releaseTimestamp);
     event VerificationIndexUpdated(uint256 validatorVerificationIndex);
+    event FeeTheft(uint256 id, uint256 blockNumber);
 
     /**
      * @param state 0: inactive, 1: proposed/cured validator, 2: active validator, 3: exited withdrawal, 4: withdrawn 69: alienated proposal
@@ -243,17 +244,15 @@ library OracleUtils {
      * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds
      * @param allValidatorsCount total number of validators to figure out what is the current Monopoly Requirement
      * @param validatorVerificationIndex index of the highest validator that is verified to be activated
-     * @param regulatedPubkeys matrix of validator pubkeys:
-     * 0. alienated: proposals with lower index than new_index who frontrunned proposeStake with incorrect withdrawal credential
-     * 1. busted:  mistakenly signaled an Unstake
-     * @dev Both of these functions results in imprisonment
+     * @param alienatedPubkeys proposals with lower index than new_index who frontrunned proposeStake 
+     * with incorrect withdrawal credential results in imprisonment.
      */
-    function regulateOperators(
+    function updateVerificationIndex(
         Oracle storage self,
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 allValidatorsCount,
         uint256 validatorVerificationIndex,
-        bytes[2][] calldata regulatedPubkeys
+        bytes[] calldata alienatedPubkeys
     ) external onlyOracle(self) {
         require(!_isOracleActive(self), "OracleUtils: oracle is active");
         require(allValidatorsCount > 4999, "OracleUtils: low validator count");
@@ -267,12 +266,8 @@ library OracleUtils {
         );
         self.VERIFICATION_INDEX = validatorVerificationIndex;
 
-        for (uint256 a; a < regulatedPubkeys[0].length; a++) {
-            _alienateValidator(self, DATASTORE, regulatedPubkeys[0][a]);
-        }
-
-        for (uint256 b; b < regulatedPubkeys[2].length; b++) {
-            _bustValidator(self, DATASTORE, regulatedPubkeys[1][b]);
+        for (uint256 i; i < alienatedPubkeys.length; i++) {
+            _alienateValidator(self, DATASTORE, alienatedPubkeys[i]);
         }
 
         self.MONOPOLY_THRESHOLD =
@@ -280,6 +275,30 @@ library OracleUtils {
             PERCENTAGE_DENOMINATOR;
 
         emit VerificationIndexUpdated(validatorVerificationIndex);
+    }
+
+    /**
+     * @notice regulating operators within Geode with verifiable proofs
+     * @param bustedPubkeys validators that are "mistakenly" signaled as Unstaked
+     * @param feeThefts Operators who have stolen MEV or block rewards, with detected BlockNumber as proof 
+     * @dev Both of these functions results in imprisonment.
+     */
+    function regulateOperators(
+        Oracle storage self,
+        DataStoreUtils.DataStore storage DATASTORE,
+        bytes[] calldata bustedPubkeys,
+        uint256[2][] calldata feeThefts
+    ) external onlyOracle(self) {
+        require(!_isOracleActive(self), "OracleUtils: oracle is active");
+
+        for (uint256 i; i < bustedPubkeys.length; i++) {
+            _bustValidator(self, DATASTORE, bustedPubkeys[i]);
+        }
+
+        for (uint256 j; j < feeThefts.length; j++) {
+            imprison(DATASTORE, feeThefts[0][j]);
+            emit FeeTheft(feeThefts[0][j], feeThefts[1][j]);
+        }
     }
 
     /**

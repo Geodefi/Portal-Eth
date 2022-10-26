@@ -147,11 +147,17 @@ interface IPortal {
             uint256 released
         );
 
-    function regulateOperators(
+    function updateVerificationIndex(
         uint256 allValidatorsCount,
         uint256 validatorVerificationIndex,
-        bytes[2][] calldata regulatedPubkeys
+        bytes[] calldata alienatedPubkeys
     ) external;
+    
+    function regulateOperators(
+        bytes[] calldata bustedPubkeys,
+        uint256[2][] calldata feeThefts
+    ) external;
+
 
     function StakingParams()
         external
