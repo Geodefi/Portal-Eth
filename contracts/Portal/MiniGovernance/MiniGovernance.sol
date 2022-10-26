@@ -215,7 +215,7 @@ contract MiniGovernance is
 
     /**
      * @notice Portal changing the Senate of Minigovernance when the maintainer of the pool is changed
-     * @dev (Senate+Governance) can access this function easily, even they working together is near impossible
+     * @dev (Senate+Governance) can access this function easily, even they are working together is impossible
      * * Thus, access to this function requires a password.
      * @param newPasswordHash = keccak256(abi.encodePacked(SELF.ID, password))
      */
@@ -232,7 +232,7 @@ contract MiniGovernance is
         returns (bool success)
     {
         require(
-            keccak256(abi.encodePacked(SELF.ID, password)) == SELF.PASSWORD_HASH
+           SELF.PASSWORD_HASH == bytes32(0) || SELF.PASSWORD_HASH == keccak256(abi.encodePacked(SELF.ID, password))  
         );
         SELF.PASSWORD_HASH = newPasswordHash;
 
