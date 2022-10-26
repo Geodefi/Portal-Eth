@@ -215,8 +215,8 @@ contract MiniGovernance is
 
     /**
      * @notice Portal changing the Senate of Minigovernance when the maintainer of the pool is changed
-     * @dev (Senate+Governance) can access this function easily, even they are working together is impossible
-     * * Thus, access to this function requires a password.
+     * @dev (Senate+Governance) can possibly access this function if they are working together.
+     * * Thus, access to this function requires an optional password.
      * @param newPasswordHash = keccak256(abi.encodePacked(SELF.ID, password))
      */
     function changeMaintainer(
