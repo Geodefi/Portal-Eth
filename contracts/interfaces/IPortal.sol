@@ -6,8 +6,8 @@ import "../Portal/utils/OracleUtilsLib.sol";
 
 interface IPortal {
     function initialize(
-        address _gETH,
         address _GOVERNANCE,
+        address _gETH,
         address _ORACLE_POSITION,
         address _DEFAULT_gETH_INTERFACE,
         address _DEFAULT_DWP,

@@ -10,7 +10,7 @@ require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
-require("ethers");
+const ethers = require("ethers");
 require("./scripts");
 
 // You need to export an object to set up your config
@@ -19,6 +19,7 @@ require("./scripts");
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 
 const config = {
   solidity: {
@@ -38,12 +39,18 @@ const config = {
   networks: {
     hardhat: {
       deploy: ["./deploy"],
-      // forking: process.env.FORK_MAINNET
-      //   ? {
-      //       url: process.env.FORK_URL,
-      //     }
-      //   : undefined,
+      forking: FORK_MAINNET
+        ? {
+            url: process.env.FORK_URL,
+          }
+        : undefined,
       // allowUnlimitedContractSize: true,
+    },
+    prater: {
+      url: process.env.PRATER,
+      deploy: ["./deploy"],
+      chainId: 5,
+      gasPrice: ethers.utils.parseUnits("1.01", "gwei").toNumber(),
     },
   },
   namedAccounts: {
@@ -73,5 +80,13 @@ const config = {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
-
+if (process.env.ACCOUNT_PRIVATE_KEYS) {
+  config.networks = {
+    ...config.networks,
+    prater: {
+      ...config.networks?.prater,
+      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(" "),
+    },
+  };
+}
 module.exports = config;
