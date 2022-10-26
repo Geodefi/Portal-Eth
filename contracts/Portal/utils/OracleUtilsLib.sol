@@ -280,7 +280,7 @@ library OracleUtils {
     /**
      * @notice regulating operators within Geode with verifiable proofs
      * @param bustedPubkeys validators that are "mistakenly" signaled as Unstaked
-     * @param feeThefts Operators who have stolen MEV or block rewards, with detected BlockNumber as proof 
+     * @param feeThefts [0]: Operator ids who have stolen MEV or block rewards, [1]: detected BlockNumber as proof 
      * @dev Both of these functions results in imprisonment.
      */
     function regulateOperators(
