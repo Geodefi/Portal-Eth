@@ -244,7 +244,7 @@ library OracleUtils {
      * validators with lower index than VERIFICATION_INDEX to stake with staking pool funds
      * @param allValidatorsCount total number of validators to figure out what is the current Monopoly Requirement
      * @param validatorVerificationIndex index of the highest validator that is verified to be activated
-     * @param alienatedPubkeys proposals with lower index than new_index who frontrunned proposeStake 
+     * @param alienatedPubkeys proposals with lower index than new_index who frontrunned proposeStake
      * with incorrect withdrawal credential results in imprisonment.
      */
     function updateVerificationIndex(
@@ -280,7 +280,7 @@ library OracleUtils {
     /**
      * @notice regulating operators within Geode with verifiable proofs
      * @param bustedPubkeys validators that are "mistakenly" signaled as Unstaked
-     * @param feeThefts [0]: Operator ids who have stolen MEV or block rewards, [1]: detected BlockNumber as proof 
+     * @param feeThefts [0]: Operator ids who have stolen MEV or block rewards, [1]: detected BlockNumber as proof
      * @dev Both of these functions results in imprisonment.
      */
     function regulateOperators(
@@ -390,7 +390,6 @@ library OracleUtils {
         Oracle storage self,
         DataStoreUtils.DataStore storage DATASTORE,
         bytes32[2] memory _dailyBufferKeys,
-        uint256 _index,
         uint256 _poolId,
         uint256 _beaconBalance,
         uint256 _periodsSinceUpdate, // calculation for this changes for private pools
@@ -405,9 +404,7 @@ library OracleUtils {
             _beaconBalance
         );
         _sanityCheck(self, _poolId, _periodsSinceUpdate, oraclePrice);
-        bytes32 node = keccak256(
-            abi.encodePacked(_index, _poolId, oraclePrice)
-        );
+        bytes32 node = keccak256(abi.encodePacked(_poolId, oraclePrice));
 
         require(
             MerkleProof.verify(_priceProofs, self.PRICE_MERKLE_ROOT, node),
@@ -467,7 +464,6 @@ library OracleUtils {
                 self,
                 DATASTORE,
                 dailyBufferKeys,
-                i,
                 DATASTORE.allIdsByType[5][i],
                 beaconBalances[i],
                 periodsSinceUpdate,

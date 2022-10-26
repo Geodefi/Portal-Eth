@@ -67,7 +67,7 @@ library StakeUtils {
     event UnpausedPool(uint256 id);
     event ProposeStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
-    event UnstakeSignal(bytes pubkey);
+    event UnstakeSignal(uint256 poolId, bytes pubkey);
     event ParamsUpdated(
         address DEFAULT_gETH_INTERFACE_,
         address DEFAULT_DWP_,
@@ -964,7 +964,7 @@ library StakeUtils {
 
         {
             uint256 boost = DATASTORE.readUintForId(poolId, "TYPE") == 6
-                ? DATASTORE.readUintForId(poolId, "earlyExitFee")
+                ? DATASTORE.readUintForId(poolId, "earlyExitBoost")
                 : 0;
 
             uint256[2] memory fees = [
@@ -1184,7 +1184,8 @@ library StakeUtils {
      * * And boost can be claimed upon arrival of the funds.
      * @dev to maintain the health of Geode Universe, we should protect the race conditions.
      * * would be bad if one pool increases the withdrawalBoost, but its too late when the funds are received.
-     * * again, opeators should know when others are unstaking so they don't spend money for nothing.
+     * * again, opeators should know when others are unstaking so they don't spend money for no boost.
+     * @dev MIN_VALIDATOR_PERIOD is checked to prevent unhealthy competition between Operators towards withdrawalBoost
      */
     function signalUnstake(
         StakePool storage self,
@@ -1197,24 +1198,33 @@ library StakeUtils {
             .operatorId;
         DATASTORE.authenticate(expectedOperator, true, [true, true, false]);
         for (uint256 i = 0; i < pubkeys.length; i++) {
+            require(self.TELESCOPE._validators[pubkeys[i]].state == 2);
             require(
                 self.TELESCOPE._validators[pubkeys[i]].operatorId ==
                     expectedOperator
             );
-            require(self.TELESCOPE._validators[pubkeys[i]].state == 2);
+
+            uint256 poolId = self.TELESCOPE._validators[pubkeys[i]].poolId;
+            uint256 poolType = DATASTORE.readUintForId(poolId, "TYPE");
 
             self.TELESCOPE._validators[pubkeys[i]].state = 3;
-            self.TELESCOPE._validators[pubkeys[i]].boost = DATASTORE
-                .readUintForId(
-                    self.TELESCOPE._validators[pubkeys[i]].poolId,
-                    "withdrawalBoost"
-                );
-            emit UnstakeSignal(pubkeys[i]);
+
+            if (
+                poolType == 5 &&
+                block.timestamp >
+                self.TELESCOPE._validators[pubkeys[i]].createdAt +
+                    MIN_VALIDATOR_PERIOD
+            ) {
+                self.TELESCOPE._validators[pubkeys[i]].boost = DATASTORE
+                    .readUintForId(poolId, "withdrawalBoost");
+            }
+
+            emit UnstakeSignal(poolId, pubkeys[i]);
         }
     }
 
     /**
-     * @notice Telescope finalizing an Unstake event, distriuting fees+boost,
+     * @notice Telescope finalizing an Unstake event, distributing fees+boost,
      * * does a buyack if necessary and distriutes rewards by burning the derivative and
      * * putting the extra within surplus.
      * @param isExit according to eip-4895, there can be multiple ways to distriute the rewards

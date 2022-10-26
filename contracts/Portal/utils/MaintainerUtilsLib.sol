@@ -146,7 +146,6 @@ library MaintainerUtils {
             address withdrawalPool
         )
     {
-
         DATASTORE.writeUintForId(uintSpecs[0], "fee", uintSpecs[1]);
         {
             miniGovernance = _deployMiniGovernance(
