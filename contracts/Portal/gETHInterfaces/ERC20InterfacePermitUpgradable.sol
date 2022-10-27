@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import "../helpers/ERC20InterfaceUpgradable.sol";
+import "./ERC20InterfaceUpgradable.sol";
 
 /**
  * @dev differences between ERC20InterfacePermitUpgradable and Openzeppelin's implementation of ERC20PermitUpgradable is:

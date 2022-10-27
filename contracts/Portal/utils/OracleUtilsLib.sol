@@ -26,7 +26,7 @@ import "../../interfaces/IgETH.sol";
  * * Creates a merkle root, by simply calculating all prices from every pool, either private or public
  * * Verifies merkle root with price proofs of all public pools.
  * * * Private pools need to verify their own price once a day, otherwise minting is not allowed.
- * * * This is why merkle root of all prices is needed
+ * * * * This is why merkle root of all prices is needed
  *
  * @dev Prisoned Validator:
  * * 1. created a malicious validator(alien)
@@ -48,7 +48,7 @@ library OracleUtils {
     event FeeTheft(uint256 id, uint256 blockNumber);
 
     /**
-     * @param state 0: inactive, 1: proposed/cured validator, 2: active validator, 3: exited withdrawal, 4: withdrawn 69: alienated proposal
+     * @param state 0: inactive, 1: proposed/cured validator, 2: active validator, 3: exited,  69: alienated proposal
      * @param index representing this validators placement on the chronological order of the proposed validators
      * @param planetId needed for withdrawal_credential
      * @param operatorId needed for staking after allowence
@@ -56,10 +56,7 @@ library OracleUtils {
      * @param operatorFee percentage of the rewards that will got to operator's maintainer, locked when the validator is created
      * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
      * @param expectedExit expected timestamp of the exit of validator. Calculated with operator["validatorPeriod"]
-     * @param boost Can mean 2 things:
-     * For TYPE 5 : the percentage of the arbitrage -collected from DWP-, that will be given to Operator.
-     * 0 until signaled, locked when signaled, 0 if busted (meaning fake signaled withdrawal)
-     * * Note that to decrease the gas cost, we register the boost on fetchUnstake now.
+     * @param boost Needed for Comets:
      * For TYPE 6: an initial percentage(Up to 40%) that will encourage the early validator exits, relative to expectedExit.
      * Its effect will decrease over time while calculating the percentage of staking yields to be given to Operators.
      * @param signature BLS12-381 signature of the validator
@@ -79,12 +76,12 @@ library OracleUtils {
     /**
      * @param ORACLE_POSITION https://github.com/Geodefi/Telescope-Eth
      * @param ORACLE_UPDATE_TIMESTAMP the timestamp of the latest oracle update
-     * @param MONOPOLY_THRESHOLD max number of validators an operator is allowed to operate, updated daily by oracle
+     * @param MONOPOLY_THRESHOLD max number of validators 1 operator is allowed to operate, updated daily by oracle
      * @param VALIDATORS_INDEX total number of validators that are proposed at some point. includes all states of validators.
      * @param VERIFICATION_INDEX the highest index of the validators that are verified ( to be not alien ) by Telescope. Updated by Telescope.
      * @param PERIOD_PRICE_INCREASE_LIMIT limiting the price increases for one oracle period, 24h. Effective for any time interval
      * @param PERIOD_PRICE_DECREASE_LIMIT limiting the price decreases for one oracle period, 24h. Effective for any time interval
-     * @param PRICE_MERKLE_ROOT merkle root of the prices of every pool, private or public
+     * @param PRICE_MERKLE_ROOT merkle root of the prices of every pool, planet or comet
      * @param _validators contains all the data about proposed or/and active validators
      **/
     struct Oracle {
@@ -107,11 +104,11 @@ library OracleUtils {
     uint256 public constant ORACLE_PERIOD = 1 days;
     uint256 public constant ORACLE_ACTIVE_PERIOD = 30 minutes;
 
-    /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators, set to 2% at start.
-    uint256 public constant MONOPOLY_RATIO = (2 * PERCENTAGE_DENOMINATOR) / 100;
+    /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators, set to 5% at start.
+    uint256 public constant MONOPOLY_RATIO = (5 * PERCENTAGE_DENOMINATOR) / 100;
 
     /// @notice limiting some abilities of Operators in case of bad behaviour
-    uint256 public constant PRISON_SENTENCE = 15 days;
+    uint256 public constant PRISON_SENTENCE = 30 days;
 
     modifier onlyOracle(Oracle storage self) {
         require(
@@ -152,7 +149,7 @@ library OracleUtils {
     function isPrisoned(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 _operatorId
-    ) public view returns (bool _isPrisoned) {
+    ) internal view returns (bool _isPrisoned) {
         _isPrisoned =
             block.timestamp <= DATASTORE.readUintForId(_operatorId, "released");
     }
@@ -163,7 +160,7 @@ library OracleUtils {
     function imprison(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 _operatorId
-    ) public {
+    ) internal {
         DATASTORE.writeUintForId(
             _operatorId,
             "released",
@@ -299,7 +296,7 @@ library OracleUtils {
     /**
      * @notice regulating operators within Geode with verifiable proofs
      * @param bustedExits validators that have not signaled before Unstake
-     * @param bustedSignals validators that are "mistakenly" signaled as Unstaked
+     * @param bustedSignals validators that are "mistakenly:)" signaled but not Unstaked
      * @param feeThefts [0]: Operator ids who have stolen MEV or block rewards, [1]: detected BlockNumber as proof
      * @dev Both of these functions results in imprisonment.
      */
@@ -316,13 +313,13 @@ library OracleUtils {
             _bustExit(self, DATASTORE, bustedExits[i]);
         }
 
-        for (uint256 i; i < bustedSignals.length; i++) {
-            _bustSignal(self, DATASTORE, bustedSignals[i]);
+        for (uint256 j; j < bustedSignals.length; j++) {
+            _bustSignal(self, DATASTORE, bustedSignals[j]);
         }
 
-        for (uint256 j; j < feeThefts.length; j++) {
-            imprison(DATASTORE, feeThefts[0][j]);
-            emit FeeTheft(feeThefts[0][j], feeThefts[1][j]);
+        for (uint256 k; k < feeThefts.length; k++) {
+            imprison(DATASTORE, feeThefts[0][k]);
+            emit FeeTheft(feeThefts[0][k], feeThefts[1][k]);
         }
     }
 
@@ -335,7 +332,8 @@ library OracleUtils {
      * @dev surplus at the oracle time is found with the help of mint and burn buffers
      * @param _dailyBufferMintKey represents the gETH minted during oracleActivePeriod, unique to every day
      * @param _dailyBufferBurnKey represents the gETH burned during oracleActivePeriod, unique to every day
-     * @dev clears the buffers to respect ethereum's war with storage size
+     * @dev calculates the totalEther amount, decreases the amount minted while oracle was working (first 30m),
+     * finds the expected Oracle price by totalEther / supply , finds the current price by unbufferedEther / unbufferedSupply
      */
     function _findPricesClearBuffer(
         Oracle storage self,
@@ -371,7 +369,7 @@ library OracleUtils {
         DATASTORE.writeUintForId(_poolId, _dailyBufferMintKey, 0);
         DATASTORE.writeUintForId(_poolId, _dailyBufferBurnKey, 0);
 
-        return (totalEther / supply, unbufferedEther / unbufferedSupply);
+        return (unbufferedEther / unbufferedSupply, totalEther / supply);
     }
 
     /**
@@ -393,20 +391,21 @@ library OracleUtils {
                 self.PERIOD_PRICE_INCREASE_LIMIT *
                 _periodsSinceUpdate) / PERCENTAGE_DENOMINATOR);
 
-        require(_newPrice <= maxPrice, "OracleUtils: price is insane");
-
         uint256 minPrice = curPrice -
             ((curPrice *
                 self.PERIOD_PRICE_DECREASE_LIMIT *
                 _periodsSinceUpdate) / PERCENTAGE_DENOMINATOR);
 
-        require(_newPrice >= minPrice, "OracleUtils: price is insane");
+        require(
+            _newPrice >= minPrice && _newPrice <= maxPrice,
+            "OracleUtils: price is insane"
+        );
     }
 
     /**
      * @notice syncing the price of g-derivative after checking the merkle proofs and the sanity of it.
      * @param _beaconBalance the total balance -excluding fees- of all validators of this pool
-     * @param _periodsSinceUpdate time-in sec- since the last update of the g-derivative's price.
+     * @param _periodsSinceUpdate time(s) since the last update of the g-derivative's price.
      * while public pools are using ORACLE_UPDATE_TIMESTAMP, private pools will refer gEth.priceUpdateTimestamp()
      * @param _priceProofs the merkle proof of the latests prices that are reported by Telescope
      * @dev if merkle proof holds the oracle price, new price is the current price of the derivative

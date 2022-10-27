@@ -102,7 +102,7 @@ describe("SwapInitialize", () => {
           0,
           RAND_ADDRESS
         )
-      ).to.be.revertedWith("function returned an unexpected amount of data");
+      ).to.be.reverted;
     });
   });
 });

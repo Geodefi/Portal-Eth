@@ -7,7 +7,7 @@ import "./DataStoreUtilsLib.sol";
  * @author Icebear & Crash Bandicoot
  * @title GeodeUtils library
  * @notice Exclusively contains functions responsible for administration of DATASTORE,
- * including functions related to "limited upgradability" with Senate & proposals.
+ * including functions related to "limited upgradability" with Senate & Proposals.
  * @dev Contracts relying on this library must initialize GeodeUtils.Universe
  * @dev ALL "fee" variables are limited by PERCENTAGE_DENOMINATOR = 100%
  * @dev Admin functions are already protected
