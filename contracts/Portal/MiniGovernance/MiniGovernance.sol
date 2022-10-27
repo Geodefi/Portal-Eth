@@ -78,10 +78,10 @@ contract MiniGovernance is
 
     function initialize(
         address _gETH,
-        uint256 _ID,
         address _PORTAL,
-        uint256 _VERSION,
-        address _MAINTAINER
+        address _MAINTAINER,
+        uint256 _ID,
+        uint256 _VERSION
     ) public virtual override initializer {
         __ReentrancyGuard_init();
         __Pausable_init();
@@ -232,7 +232,9 @@ contract MiniGovernance is
         returns (bool success)
     {
         require(
-           SELF.PASSWORD_HASH == bytes32(0) || SELF.PASSWORD_HASH == keccak256(abi.encodePacked(SELF.ID, password))  
+            SELF.PASSWORD_HASH == bytes32(0) ||
+                SELF.PASSWORD_HASH ==
+                keccak256(abi.encodePacked(SELF.ID, password))
         );
         SELF.PASSWORD_HASH = newPasswordHash;
 

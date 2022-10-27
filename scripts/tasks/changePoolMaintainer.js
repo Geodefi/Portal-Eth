@@ -1,3 +1,4 @@
+const web3 = require("web3");
 const func = async (taskArgs, hre) => {
   const { deployer } = await getNamedAccounts();
   const { deployments } = hre;
@@ -9,8 +10,8 @@ const func = async (taskArgs, hre) => {
       { from: deployer, log: true },
       "changePoolMaintainer",
       taskArgs.id,
-      taskArgs.p,
-      taskArgs.h,
+      web3.utils.asciiToHex(""),
+      web3.utils.padRight(web3.utils.asciiToHex(""), 64),
       taskArgs.m
     );
     console.log(`changed Maintainer for: ${taskArgs.id}`);

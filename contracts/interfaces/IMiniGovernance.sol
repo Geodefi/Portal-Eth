@@ -6,10 +6,10 @@ import "../Portal/utils/GeodeUtilsLib.sol";
 interface IMiniGovernance {
     function initialize(
         address _gETH,
-        uint256 _ID,
         address _PORTAL,
-        uint256 _VERSION,
-        address _MAINTAINER
+        address _MAINTAINER,
+        uint256 _ID,
+        uint256 _VERSION
     ) external;
 
     function pause() external;

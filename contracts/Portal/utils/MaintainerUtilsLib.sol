@@ -207,9 +207,9 @@ library MaintainerUtils {
             abi.encodeWithSelector(
                 IMiniGovernance(address(0)).initialize.selector,
                 _gETH,
-                _id,
                 address(this),
                 _maintainer,
+                _id,
                 _versionId
             )
         );

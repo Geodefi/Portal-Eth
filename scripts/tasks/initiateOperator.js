@@ -1,3 +1,4 @@
+const BN = require("bignumber.js");
 const func = async (taskArgs, hre) => {
   const { deployer } = await getNamedAccounts();
   const { deployments } = hre;

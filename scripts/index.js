@@ -15,7 +15,6 @@ const initiateOperator = require("./tasks/initiateOperator");
 const initiatePlanet = require("./tasks/initiatePlanet");
 
 const switchFee = require("./tasks/switchFee");
-const slippageSet = require("./tasks/slippageSet");
 const rampA = require("./tasks/rampA");
 
 task("accounts", "Prints the list of accounts", accounts);
@@ -25,12 +24,12 @@ task("activate-portal", "", activatePortal);
 
 // proposals
 task("propose", "Creates a proposal with desired parameters")
-  .addParam("type", "defines type such as planet , operator , senate , Upgrade")
+  .addParam("t", "defines type such as planet , operator , senate , Upgrade")
   .addParam(
-    "controller",
+    "c",
     "refers to the proposed address as the controller of resulting ID"
   )
-  .addParam("name", "id with keccak")
+  .addParam("n", "id with keccak")
   .setAction(propose);
 
 task("approveProposal", "Approves a proposal with given id")
@@ -50,8 +49,6 @@ task("setController", "Approves a Senate proposal")
 
 task("changePoolMaintainer", "Approves a Senate proposal")
   .addParam("id", "id to change the controller")
-  .addParam("p", "old password")
-  .addParam("h", "new password hash")
   .addParam("m", "new maintainer")
   .setAction(changePoolMaintainer);
 
@@ -79,7 +76,7 @@ task("initiateOperator", "Change fee of an ID")
 task("approveOperator", "Approves a Senate proposal")
   .addParam("pid", "pool ID")
   .addParam("oid", "operator ID")
-  .addParam("amount", "# validators to approve for")
+  .addParam("a", "# validators to approve for")
   .setAction(approveOperator);
 
 task("switchFee", "Change fee of an ID")
@@ -88,14 +85,7 @@ task("switchFee", "Change fee of an ID")
   .setAction(switchFee);
 
 // DWP
-task(
-  "slippageSet",
-  "changes the slippage for future debt calculations in StakeUtils"
-)
-  .addParam("s", "new slippage")
-  .setAction(slippageSet);
-
 task("rampA", "Change A parameter of Withdrawal Pool of given ID ")
-  .addParam("a", "new A")
   .addParam("id", "id of planet")
+  .addParam("a", "new A")
   .setAction(rampA);
