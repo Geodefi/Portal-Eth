@@ -44,6 +44,7 @@ library OracleUtils {
     event Alienated(bytes pubkey);
     event Busted(bytes pubkey);
     event Prisoned(uint256 id, uint256 releaseTimestamp);
+    event Released(uint256 id);
     event VerificationIndexUpdated(uint256 validatorVerificationIndex);
     event FeeTheft(uint256 id, uint256 blockNumber);
 
@@ -56,9 +57,6 @@ library OracleUtils {
      * @param operatorFee percentage of the rewards that will got to operator's maintainer, locked when the validator is created
      * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
      * @param expectedExit expected timestamp of the exit of validator. Calculated with operator["validatorPeriod"]
-     * @param boost Needed for Comets:
-     * For TYPE 6: an initial percentage(Up to 40%) that will encourage the early validator exits, relative to expectedExit.
-     * Its effect will decrease over time while calculating the percentage of staking yields to be given to Operators.
      * @param signature BLS12-381 signature of the validator
      **/
     struct Validator {
@@ -70,7 +68,6 @@ library OracleUtils {
         uint256 operatorFee;
         uint256 createdAt;
         uint256 expectedExit;
-        uint256 boost;
         bytes signature;
     }
     /**
@@ -152,6 +149,24 @@ library OracleUtils {
     ) internal view returns (bool _isPrisoned) {
         _isPrisoned =
             block.timestamp <= DATASTORE.readUintForId(_operatorId, "released");
+    }
+
+    /**
+     * @notice releases an imprisoned operator immidately
+     * @dev in different situations such as a faulty improsenment or coordinated testing periods
+     * * Governance can vote on releasing the prisoners
+     * @dev onlyGovernance check is in Portal
+     */
+    function releasePrisoned(
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 operatorId
+    ) external {
+        require(
+            isPrisoned(DATASTORE, operatorId),
+            "OracleUtils: NOT in prison"
+        );
+        DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
+        emit Released(operatorId);
     }
 
     /**

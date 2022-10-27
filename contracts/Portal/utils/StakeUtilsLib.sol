@@ -19,7 +19,7 @@ import "../../interfaces/ISwap.sol";
  * which relies on continuous buybacks (DWP) to maintain the price health with debt/surplus calculations
  * @dev Contracts relying on this library must initialize StakeUtils.StakePool
  * @dev ALL "fee" variables are limited by PERCENTAGE_DENOMINATOR.
- * * For ex, when fee is equal to PERCENTAGE_DENOMINATOR/2, it means 50% fee
+ * * For example, when fee is equal to PERCENTAGE_DENOMINATOR/2, it means 50% of the fee
  * Note refer to DataStoreUtils before reviewing
  * Note refer to MaintainerUtilsLib before reviewing
  * Note refer to OracleUtilsLib before reviewing
@@ -36,7 +36,7 @@ import "../../interfaces/ISwap.sol";
  * * * Planets inherits Operator functionalities and parameters, with additional
  * * * properties related to miniGovernances and staking pools - surplus, secured, withdrawalPool etc.
  * * ID of a pool represents an id of gETH.
- * * Creation of staking pools are not permissionless but the usage of it is.
+ * * For now, creation of staking pools are not permissionless but the usage of it is.
  * * * Meaning Everyone can stake and unstake using public pools.
  *
  * Type 6 stands for Private Staking Pools (Comets):
@@ -44,7 +44,7 @@ import "../../interfaces/ISwap.sol";
  * * * choosing a name and sending MIN_AMOUNT which is expected to be 32 ether.
  * * GeodeUtils generates IDs based on types, meaning same name can be used for a Planet and a Comet simultaneously.
  * * The creation process is permissionless but staking is not.
- * * * Meaning Only Comet's maintainer can stake but everyone can unstake
+ * * * Meaning Only Comet's maintainer can stake but everyone can hold the derivative
  * * In Comets, there is a Withdrawal Queue instead of DWP.
  * * NOT IMPLEMENTED YET
  *
@@ -57,14 +57,13 @@ import "../../interfaces/ISwap.sol";
 
 library StakeUtils {
     event ValidatorPeriodUpdated(uint256 operatorId, uint256 newPeriod);
-    event Released(uint256 operatorId);
     event OperatorApproval(
         uint256 planetId,
         uint256 operatorId,
         uint256 allowance
     );
-    event PausedPool(uint256 id);
-    event UnpausedPool(uint256 id);
+    event PoolPaused(uint256 id);
+    event PoolUnpaused(uint256 id);
     event ProposeStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
     event UnstakeSignal(uint256 poolId, bytes pubkey);
@@ -99,11 +98,13 @@ library StakeUtils {
      * * versioning is done by GeodeUtils.proposal.id, implementation is stored in DataStore.id.controller
      * @param MAX_MAINTAINER_FEE  limits fees, set by GOVERNANCE
      * @param BOOSTRAP_PERIOD during this period the surplus of the pool can not be burned for withdrawals, initially set to 6 months
+     * @param BOOST_SWITCH_LATENCY when a maintainer changes the withdrawalBoost, it is effective after a delay
      * @param COMET_TAX tax that will be taken from private pools, limited by MAX_MAINTAINER_FEE, set by GOVERNANCE
      * @dev gETH should not be changed, ever!
      * @dev changing some of these parameters (gETH, ORACLE) MUST require a contract upgrade to ensure security.
      * We can change this in the future with a better GeodeUtils design, giving every update a type, like MINI_GOVERNANCE_VERSION
      **/
+    // TODO: gaps
     struct StakePool {
         IgETH gETH;
         OracleUtils.Oracle TELESCOPE;
@@ -114,6 +115,7 @@ library StakeUtils {
         uint256 MINI_GOVERNANCE_VERSION;
         uint256 MAX_MAINTAINER_FEE;
         uint256 BOOSTRAP_PERIOD;
+        uint256 BOOST_SWITCH_LATENCY;
         uint256 COMET_TAX;
     }
 
@@ -127,8 +129,7 @@ library StakeUtils {
     /// @notice ignoring any buybacks if the DWP has a low debt
     uint256 public constant IGNORABLE_DEBT = 1 ether;
 
-    /// @notice when a maintainer changes the withdrawalBoost, it is effective after a delay
-    uint256 public constant BOOST_SWITCH_LATENCY = 3 days;
+    // uint256 public constant BOOST_SWITCH_LATENCY = 3 days;
 
     modifier onlyGovernance(StakePool storage self) {
         require(
@@ -156,14 +157,17 @@ library StakeUtils {
     ) public {
         DATASTORE.authenticate(id, true, [false, true, true]);
 
-        uint256 IL = DATASTORE.readUintForId(id, "interfacesLength");
+        uint256 interfacesLength = DATASTORE.readUintForId(
+            id,
+            "interfacesLength"
+        );
         require(
             !self.gETH.isInterface(_interface, id),
             "StakeUtils: already interface"
         );
         DATASTORE.writeAddressForId(
             id,
-            DataStoreUtils.getKey(IL, "interfaces"),
+            DataStoreUtils.getKey(interfacesLength, "interfaces"),
             _interface
         );
         DATASTORE.addUintForId(id, "interfacesLength", 1);
@@ -208,9 +212,12 @@ library StakeUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
     ) external view returns (address[] memory) {
-        uint256 IL = DATASTORE.readUintForId(id, "interfacesLength");
-        address[] memory interfaces = new address[](IL);
-        for (uint256 i = 0; i < IL; i++) {
+        uint256 interfacesLength = DATASTORE.readUintForId(
+            id,
+            "interfacesLength"
+        );
+        address[] memory interfaces = new address[](interfacesLength);
+        for (uint256 i = 0; i < interfacesLength; i++) {
             interfaces[i] = DATASTORE.readAddressForId(
                 id,
                 DataStoreUtils.getKey(i, "interfaces")
@@ -225,7 +232,9 @@ library StakeUtils {
     /**
      * @notice initiates ID as an node operator
      * @dev requires ID to be approved as a node operator with a specific CONTROLLER
-     * @param _validatorPeriod the expected maximum staking interval
+     * @param _validatorPeriod the expected maximum staking interval. This value should between
+     * * MIN_VALIDATOR_PERIOD and MAX_VALIDATOR_PERIOD values defined as constants above,
+     * * this check is done inside updateValidatorPeriod function.
      * Operator can unstake at any given point before this period ends.
      * If operator disobeys this rule, it can be prisoned with blameOperator()
      */
@@ -301,6 +310,8 @@ library StakeUtils {
     /**
      * @notice called when a proposal(TYPE=11) for a new MiniGovernance is approved by Senate
      * @dev CONTROLLER of the proposal id represents the implementation address
+     * @dev This function seems like everyone can call, but it is called inside portal after approveProposal function
+     * * and approveProposal has onlySenate modifier, can be called only by senate.
      */
     function setMiniGovernanceVersion(
         StakePool storage self,
@@ -312,30 +323,13 @@ library StakeUtils {
     }
 
     /**
-     * @notice releases an imprisoned operator immidately
-     * @dev in different situations such as a faulty improsenment or coordinated testing periods
-     * * Governance can vote on releasing the prisoners
-     * @dev onlyGovernance
-     */
-    function releasePrisoned(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage DATASTORE,
-        uint256 operatorId
-    ) external onlyGovernance(self) {
-        require(
-            OracleUtils.isPrisoned(DATASTORE, operatorId),
-            "StakeUtils: NOT in prison"
-        );
-        DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
-        emit Released(operatorId);
-    }
-
-    /**
      * @notice                      ** Maintainer specific functions **
      */
 
     /**
      * @notice changes maintainer of the given operator (TYPE 4)
+     * @dev Seems like authenticate is not correct, but authenticate checks for maintainer
+     * and this function expects controller and DATASTORE.changeMaintainer checks that.
      */
     function changeOperatorMaintainer(
         DataStoreUtils.DataStore storage DATASTORE,
@@ -352,6 +346,8 @@ library StakeUtils {
      * from Double Horn Attack: when Both Senate and Governance is malicious.
      * @dev currently this is enough to ensure the future implementations will improve the miniGovernance security,
      * * we are also working on improving the Isolation Mode, which will allow Portal-less withdrawals for all pool types
+     * @dev Seems like authenticate is not correct, but authenticate checks for maintainer
+     * and this function expects controller and DATASTORE.changeMaintainer checks that.
      */
     function changePoolMaintainer(
         DataStoreUtils.DataStore storage DATASTORE,
@@ -442,6 +438,7 @@ library StakeUtils {
      * Boost changes is also has a delay.
      */
     function switchWithdrawalBoost(
+        StakePool storage self,
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 poolId,
         uint256 withdrawalBoost
@@ -455,17 +452,20 @@ library StakeUtils {
         DATASTORE.writeUintForId(
             poolId,
             "boostSwitch",
-            block.timestamp + BOOST_SWITCH_LATENCY
+            block.timestamp + self.BOOST_SWITCH_LATENCY
         );
         DATASTORE.writeUintForId(poolId, "withdrawalBoost", withdrawalBoost);
 
         emit WithdrawalBoostChanged(
             poolId,
             withdrawalBoost,
-            block.timestamp + BOOST_SWITCH_LATENCY
+            block.timestamp + self.BOOST_SWITCH_LATENCY
         );
     }
 
+    /**
+     * @notice returns the withdrawalBoost with a time delay
+     */
     function getWithdrawalBoost(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
@@ -556,6 +556,9 @@ library StakeUtils {
      * @notice                      ** STAKING POOL (TYPE 5 and 6)  specific functions **
      */
 
+    /**
+     * @notice returns miniGovernance as a contract
+     */
     function miniGovernanceById(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 _id
@@ -564,6 +567,9 @@ library StakeUtils {
             IMiniGovernance(DATASTORE.readAddressForId(_id, "miniGovernance"));
     }
 
+    /**
+     * @notice returns withdrawalPool as a contract
+     */
     function withdrawalPoolById(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 _id
@@ -586,7 +592,7 @@ library StakeUtils {
         );
 
         DATASTORE.writeUintForId(id, "stakePaused", 1); // meaning true
-        emit PausedPool(id);
+        emit PoolPaused(id);
     }
 
     /**
@@ -604,7 +610,7 @@ library StakeUtils {
         );
 
         DATASTORE.writeUintForId(id, "stakePaused", 0); // meaning false
-        emit UnpausedPool(id);
+        emit PoolUnpaused(id);
     }
 
     /**
@@ -681,6 +687,8 @@ library StakeUtils {
      * // 100   10  => buyback
      * // 100   100 => buyback
      * // 10    100 => buyback + mint
+     * // 1     x   => mint
+     * // 0.5   x   => mint
      * // 0     x   => mint
      */
     function depositPlanet(
@@ -1039,7 +1047,6 @@ library StakeUtils {
                     fees[1],
                     block.timestamp,
                     expectedExit,
-                    0,
                     signatures[i]
                 );
                 emit ProposeStaked(pubkeys[i], poolId, operatorId);

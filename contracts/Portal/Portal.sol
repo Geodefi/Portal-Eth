@@ -113,11 +113,11 @@ contract Portal is
     event Alienated(bytes pubkey);
     event Busted(bytes pubkey);
     event Prisoned(uint256 id, uint256 releaseTimestamp);
+    event Released(uint256 id);
     event VerificationIndexUpdated(uint256 validatorVerificationIndex);
 
     /// StakeUtils EVENTS
     event ValidatorPeriodUpdated(uint256 operatorId, uint256 newPeriod);
-    event Released(uint256 operatorId);
     event OperatorApproval(
         uint256 planetId,
         uint256 operatorId,
@@ -132,14 +132,15 @@ contract Portal is
     // Portal Events
     event ContractVersionSet(uint256 version);
     event ParamsUpdated(
-        address DEFAULT_gETH_INTERFACE_,
-        address DEFAULT_DWP_,
-        address DEFAULT_LP_TOKEN_,
-        uint256 MAX_MAINTAINER_FEE_,
-        uint256 BOOSTRAP_PERIOD_,
-        uint256 PERIOD_PRICE_INCREASE_LIMIT_,
-        uint256 PERIOD_PRICE_DECREASE_LIMIT_,
-        uint256 COMET_TAX_
+        address DEFAULT_gETH_INTERFACE,
+        address DEFAULT_DWP,
+        address DEFAULT_LP_TOKEN,
+        uint256 MAX_MAINTAINER_FEE,
+        uint256 BOOSTRAP_PERIOD,
+        uint256 PERIOD_PRICE_INCREASE_LIMIT,
+        uint256 PERIOD_PRICE_DECREASE_LIMIT,
+        uint256 COMET_TAX,
+        uint256 BOOST_SWITCH_LATENCY
     );
 
     // Portal VARIABLES
@@ -189,7 +190,8 @@ contract Portal is
             _BOOSTRAP_PERIOD,
             type(uint256).max,
             type(uint256).max,
-            _COMET_TAX
+            _COMET_TAX,
+            3 days
         );
 
         uint256 _MINI_GOVERNANCE_VERSION = GEODE.newProposal(
@@ -653,7 +655,8 @@ contract Portal is
         uint256 _BOOSTRAP_PERIOD,
         uint256 _PERIOD_PRICE_INCREASE_LIMIT,
         uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 _COMET_TAX
+        uint256 _COMET_TAX,
+        uint256 _BOOST_SWITCH_LATENCY
     ) public virtual override {
         require(
             msg.sender == GEODE.GOVERNANCE,
@@ -694,6 +697,7 @@ contract Portal is
         STAKEPOOL.MAX_MAINTAINER_FEE = _MAX_MAINTAINER_FEE;
         STAKEPOOL.COMET_TAX = _COMET_TAX;
         STAKEPOOL.BOOSTRAP_PERIOD = _BOOSTRAP_PERIOD;
+        STAKEPOOL.BOOST_SWITCH_LATENCY = _BOOST_SWITCH_LATENCY;
         STAKEPOOL
             .TELESCOPE
             .PERIOD_PRICE_INCREASE_LIMIT = _PERIOD_PRICE_INCREASE_LIMIT;
@@ -708,17 +712,20 @@ contract Portal is
             _BOOSTRAP_PERIOD,
             _PERIOD_PRICE_INCREASE_LIMIT,
             _PERIOD_PRICE_DECREASE_LIMIT,
-            _COMET_TAX
+            _COMET_TAX,
+            _BOOST_SWITCH_LATENCY
         );
     }
 
-    function releasePrisoned(uint256 operatorId)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        STAKEPOOL.releasePrisoned(DATASTORE, operatorId);
+    /**
+     * @dev onlyGovernance
+     */
+    function releasePrisoned(uint256 operatorId) external virtual override {
+        require(
+            msg.sender == GEODE.GOVERNANCE,
+            "Portal: sender not GOVERNANCE"
+        );
+        OracleUtils.releasePrisoned(DATASTORE, operatorId);
     }
 
     /**
@@ -841,7 +848,7 @@ contract Portal is
         override
         whenNotPaused
     {
-        StakeUtils.switchWithdrawalBoost(DATASTORE, poolId, withdrawalBoost);
+        STAKEPOOL.switchWithdrawalBoost(DATASTORE, poolId, withdrawalBoost);
     }
 
     function operatorAllowance(uint256 poolId, uint256 operatorId)

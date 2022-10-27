@@ -180,7 +180,8 @@ interface IPortal {
         uint256 _BOOSTRAP_PERIOD,
         uint256 _PERIOD_PRICE_INCREASE_LIMIT,
         uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 _COMET_TAX
+        uint256 _COMET_TAX,
+        uint256 _BOOST_SWITCH_LATENCY
     ) external;
 
     function initiateOperator(
