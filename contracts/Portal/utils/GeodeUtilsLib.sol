@@ -72,6 +72,7 @@ library GeodeUtils {
      * @param _electorCount increased when a new id is added with _electorTypes[id] == true
      * @param _electorTypes only given types can vote @dev MUST only change during upgrades.
      * @param _proposalForId proposals are kept seperately instead of setting the parameters of id in DATASTORE, and then setting it's type; to allow surpassing type checks to save gas cost
+     * @param __gap keep the struct size at 16
      **/
     struct Universe {
         address SENATE;
@@ -83,6 +84,7 @@ library GeodeUtils {
         uint256 _electorCount;
         mapping(uint256 => bool) _electorTypes;
         mapping(uint256 => Proposal) _proposalForId;
+        uint256[7] __gap;
     }
 
     /// @notice PERCENTAGE_DENOMINATOR represents 100%

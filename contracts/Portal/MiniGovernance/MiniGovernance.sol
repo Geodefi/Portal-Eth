@@ -19,7 +19,7 @@ import "../../interfaces/IMiniGovernance.sol";
  * @dev currently only defense mechanics this contract provides is the trustless updates that are
  * * achieved with GeodeUtils and passwordHashes
  * * 1. portal cannot change the maintainer without knowing the real password
- * * 1. portal cannot upgrade the contract without Maintainer's approval
+ * * 2. portal cannot upgrade the contract without Maintainer's approval
  * *
  * * However there are such improvements planned to be implemented to make
  * * the staking environment more trustless.
@@ -262,5 +262,6 @@ contract MiniGovernance is
         require(success, "MiniGovernance: Failed to send Ether");
     }
 
+    /// @notice keep the contract size at 50
     uint256[45] private __gap;
 }

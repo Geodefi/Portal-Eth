@@ -7,13 +7,13 @@
       "kind": "uups"
     },
     {
-      "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
-      "txHash": "0x29e72cc9afbc68b3a5ca402941046e2b8d4980969de84fe0ee36668150e739f3",
+      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+      "txHash": "0x7ef54ff50777de90de17ce3dc1c3a13e8d3ab9252a0471a2093b3df1a7f83116",
       "kind": "uups"
     },
     {
-      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
-      "txHash": "0x191d916dfea67030ede20ad9683c015456288bad4ec5ec6ff0e9453e83c1d30b",
+      "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+      "txHash": "0x21e31651cb4a7bef4cff1fbc4b818c81da9b933fccaa622ab19c3f98bc0270b8",
       "kind": "uups"
     }
   ],
@@ -558,9 +558,9 @@
         }
       }
     },
-    "d2187b75740db3bbd9f18e2afb51a59d4ed87eef711f7619a67134b57ea2f542": {
-      "address": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
-      "txHash": "0xef046723c5e3c9d113c092f6d46626d9768b161805950410824b38f4a0dd41d9",
+    "60a1007c66fd7ece2048d8df5901fb20bd5103161ffbd0152896727ef1edaed4": {
+      "address": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+      "txHash": "0x8468dd9fc114c9496a2ded8ea5922ffa57ce8274c13722de4a927feaee85b7f7",
       "layout": {
         "storage": [
           {
@@ -665,45 +665,49 @@
             "slot": "401",
             "type": "t_uint256",
             "contract": "Portal",
-            "src": "contracts\\Portal\\Portal.sol:176"
+            "src": "contracts\\Portal\\Portal.sol:177"
           },
           {
             "label": "DATASTORE",
             "offset": 0,
             "slot": "402",
-            "type": "t_struct(DataStore)13517_storage",
-            "contract": "Portal",
-            "src": "contracts\\Portal\\Portal.sol:176"
-          },
-          {
-            "label": "GEODE",
-            "offset": 0,
-            "slot": "406",
-            "type": "t_struct(Universe)14157_storage",
+            "type": "t_struct(DataStore)5828_storage",
             "contract": "Portal",
             "src": "contracts\\Portal\\Portal.sol:177"
           },
           {
+            "label": "GEODE",
+            "offset": 0,
+            "slot": "418",
+            "type": "t_struct(Universe)6445_storage",
+            "contract": "Portal",
+            "src": "contracts\\Portal\\Portal.sol:178"
+          },
+          {
             "label": "STAKEPOOL",
             "offset": 0,
-            "slot": "415",
-            "type": "t_struct(StakePool)16925_storage",
+            "slot": "434",
+            "type": "t_struct(StakePool)9245_storage",
             "contract": "Portal",
-            "src": "contracts\\Portal\\Portal.sol:179"
+            "src": "contracts\\Portal\\Portal.sol:180"
           },
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "434",
+            "slot": "465",
             "type": "t_array(t_uint256)46_storage",
             "contract": "Portal",
-            "src": "contracts\\Portal\\Portal.sol:1048"
+            "src": "contracts\\Portal\\Portal.sol:1055"
           }
         ],
         "types": {
           "t_address": {
             "label": "address",
             "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)12_storage": {
+            "label": "uint256[12]",
+            "numberOfBytes": "384"
           },
           "t_array(t_uint256)46_storage": {
             "label": "uint256[46]",
@@ -716,6 +720,18 @@
           "t_array(t_uint256)50_storage": {
             "label": "uint256[50]",
             "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)5_storage": {
+            "label": "uint256[5]",
+            "numberOfBytes": "160"
+          },
+          "t_array(t_uint256)6_storage": {
+            "label": "uint256[6]",
+            "numberOfBytes": "192"
+          },
+          "t_array(t_uint256)7_storage": {
+            "label": "uint256[7]",
+            "numberOfBytes": "224"
           },
           "t_array(t_uint256)dyn_storage": {
             "label": "uint256[]",
@@ -737,7 +753,7 @@
             "label": "bytes",
             "numberOfBytes": "32"
           },
-          "t_contract(IgETH)26145": {
+          "t_contract(IgETH)13340": {
             "label": "contract IgETH",
             "numberOfBytes": "20"
           },
@@ -753,7 +769,7 @@
             "label": "mapping(bytes32 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)15822_storage)": {
+          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)8108_storage)": {
             "label": "mapping(bytes => struct OracleUtils.Validator)",
             "numberOfBytes": "32"
           },
@@ -765,11 +781,11 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Proposal)14133_storage)": {
+          "t_mapping(t_uint256,t_struct(Proposal)6417_storage)": {
             "label": "mapping(uint256 => struct GeodeUtils.Proposal)",
             "numberOfBytes": "32"
           },
-          "t_struct(DataStore)13517_storage": {
+          "t_struct(DataStore)5828_storage": {
             "label": "struct DataStoreUtils.DataStore",
             "members": [
               {
@@ -795,16 +811,22 @@
                 "type": "t_mapping(t_bytes32,t_address)",
                 "offset": 0,
                 "slot": "3"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)12_storage",
+                "offset": 0,
+                "slot": "4"
               }
             ],
-            "numberOfBytes": "128"
+            "numberOfBytes": "512"
           },
-          "t_struct(Oracle)15847_storage": {
+          "t_struct(Oracle)8137_storage": {
             "label": "struct OracleUtils.Oracle",
             "members": [
               {
                 "label": "gETH",
-                "type": "t_contract(IgETH)26145",
+                "type": "t_contract(IgETH)13340",
                 "offset": 0,
                 "slot": "0"
               },
@@ -858,14 +880,20 @@
               },
               {
                 "label": "_validators",
-                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)15822_storage)",
+                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)8108_storage)",
                 "offset": 0,
                 "slot": "9"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)6_storage",
+                "offset": 0,
+                "slot": "10"
               }
             ],
-            "numberOfBytes": "320"
+            "numberOfBytes": "512"
           },
-          "t_struct(Proposal)14133_storage": {
+          "t_struct(Proposal)6417_storage": {
             "label": "struct GeodeUtils.Proposal",
             "members": [
               {
@@ -895,18 +923,18 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(StakePool)16925_storage": {
+          "t_struct(StakePool)9245_storage": {
             "label": "struct StakeUtils.StakePool",
             "members": [
               {
                 "label": "gETH",
-                "type": "t_contract(IgETH)26145",
+                "type": "t_contract(IgETH)13340",
                 "offset": 0,
                 "slot": "0"
               },
               {
                 "label": "TELESCOPE",
-                "type": "t_struct(Oracle)15847_storage",
+                "type": "t_struct(Oracle)8137_storage",
                 "offset": 0,
                 "slot": "1"
               },
@@ -914,54 +942,66 @@
                 "label": "GOVERNANCE",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "11"
+                "slot": "17"
               },
               {
                 "label": "DEFAULT_gETH_INTERFACE",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "12"
+                "slot": "18"
               },
               {
                 "label": "DEFAULT_DWP",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "13"
+                "slot": "19"
               },
               {
                 "label": "DEFAULT_LP_TOKEN",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "14"
+                "slot": "20"
               },
               {
                 "label": "MINI_GOVERNANCE_VERSION",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "15"
+                "slot": "21"
               },
               {
                 "label": "MAX_MAINTAINER_FEE",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "16"
+                "slot": "22"
               },
               {
                 "label": "BOOSTRAP_PERIOD",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "17"
+                "slot": "23"
+              },
+              {
+                "label": "BOOST_SWITCH_LATENCY",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "24"
               },
               {
                 "label": "COMET_TAX",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "18"
+                "slot": "25"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)5_storage",
+                "offset": 0,
+                "slot": "26"
               }
             ],
-            "numberOfBytes": "608"
+            "numberOfBytes": "992"
           },
-          "t_struct(Universe)14157_storage": {
+          "t_struct(Universe)6445_storage": {
             "label": "struct GeodeUtils.Universe",
             "members": [
               {
@@ -1014,14 +1054,20 @@
               },
               {
                 "label": "_proposalForId",
-                "type": "t_mapping(t_uint256,t_struct(Proposal)14133_storage)",
+                "type": "t_mapping(t_uint256,t_struct(Proposal)6417_storage)",
                 "offset": 0,
                 "slot": "8"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)7_storage",
+                "offset": 0,
+                "slot": "9"
               }
             ],
-            "numberOfBytes": "288"
+            "numberOfBytes": "512"
           },
-          "t_struct(Validator)15822_storage": {
+          "t_struct(Validator)8108_storage": {
             "label": "struct OracleUtils.Validator",
             "members": [
               {
@@ -1073,19 +1119,13 @@
                 "slot": "7"
               },
               {
-                "label": "boost",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "8"
-              },
-              {
                 "label": "signature",
                 "type": "t_bytes_storage",
                 "offset": 0,
-                "slot": "9"
+                "slot": "8"
               }
             ],
-            "numberOfBytes": "320"
+            "numberOfBytes": "288"
           },
           "t_uint256": {
             "label": "uint256",
@@ -1098,9 +1138,9 @@
         }
       }
     },
-    "d43af40a85ad077201609a1815e59bcf1990d5680d075a6f90766f1561553c96": {
-      "address": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
-      "txHash": "0x510b665de13f011b925a814808452de0a7fdfaaee6757436337defd18a540d7a",
+    "4794f95f74e66f36b68216f177da8b83f2c8447157212c051eeaa7285be3449b": {
+      "address": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+      "txHash": "0xce94be579c6f5422f0353e994a7f4a8b1860a992bc4c2362f4469a948ec4e250",
       "layout": {
         "storage": [
           {
@@ -1211,39 +1251,43 @@
             "label": "DATASTORE",
             "offset": 0,
             "slot": "402",
-            "type": "t_struct(DataStore)5280_storage",
+            "type": "t_struct(DataStore)5828_storage",
             "contract": "Portal",
             "src": "contracts\\Portal\\Portal.sol:177"
           },
           {
             "label": "GEODE",
             "offset": 0,
-            "slot": "406",
-            "type": "t_struct(Universe)5893_storage",
+            "slot": "418",
+            "type": "t_struct(Universe)6445_storage",
             "contract": "Portal",
             "src": "contracts\\Portal\\Portal.sol:178"
           },
           {
             "label": "STAKEPOOL",
             "offset": 0,
-            "slot": "415",
-            "type": "t_struct(StakePool)8654_storage",
+            "slot": "434",
+            "type": "t_struct(StakePool)9245_storage",
             "contract": "Portal",
             "src": "contracts\\Portal\\Portal.sol:180"
           },
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "435",
+            "slot": "465",
             "type": "t_array(t_uint256)46_storage",
             "contract": "Portal",
-            "src": "contracts\\Portal\\Portal.sol:1053"
+            "src": "contracts\\Portal\\Portal.sol:1055"
           }
         ],
         "types": {
           "t_address": {
             "label": "address",
             "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)12_storage": {
+            "label": "uint256[12]",
+            "numberOfBytes": "384"
           },
           "t_array(t_uint256)46_storage": {
             "label": "uint256[46]",
@@ -1256,6 +1300,18 @@
           "t_array(t_uint256)50_storage": {
             "label": "uint256[50]",
             "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)5_storage": {
+            "label": "uint256[5]",
+            "numberOfBytes": "160"
+          },
+          "t_array(t_uint256)6_storage": {
+            "label": "uint256[6]",
+            "numberOfBytes": "192"
+          },
+          "t_array(t_uint256)7_storage": {
+            "label": "uint256[7]",
+            "numberOfBytes": "224"
           },
           "t_array(t_uint256)dyn_storage": {
             "label": "uint256[]",
@@ -1277,7 +1333,7 @@
             "label": "bytes",
             "numberOfBytes": "32"
           },
-          "t_contract(IgETH)12785": {
+          "t_contract(IgETH)13340": {
             "label": "contract IgETH",
             "numberOfBytes": "20"
           },
@@ -1293,7 +1349,7 @@
             "label": "mapping(bytes32 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7552_storage)": {
+          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)8108_storage)": {
             "label": "mapping(bytes => struct OracleUtils.Validator)",
             "numberOfBytes": "32"
           },
@@ -1305,11 +1361,11 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Proposal)5869_storage)": {
+          "t_mapping(t_uint256,t_struct(Proposal)6417_storage)": {
             "label": "mapping(uint256 => struct GeodeUtils.Proposal)",
             "numberOfBytes": "32"
           },
-          "t_struct(DataStore)5280_storage": {
+          "t_struct(DataStore)5828_storage": {
             "label": "struct DataStoreUtils.DataStore",
             "members": [
               {
@@ -1335,16 +1391,22 @@
                 "type": "t_mapping(t_bytes32,t_address)",
                 "offset": 0,
                 "slot": "3"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)12_storage",
+                "offset": 0,
+                "slot": "4"
               }
             ],
-            "numberOfBytes": "128"
+            "numberOfBytes": "512"
           },
-          "t_struct(Oracle)7577_storage": {
+          "t_struct(Oracle)8137_storage": {
             "label": "struct OracleUtils.Oracle",
             "members": [
               {
                 "label": "gETH",
-                "type": "t_contract(IgETH)12785",
+                "type": "t_contract(IgETH)13340",
                 "offset": 0,
                 "slot": "0"
               },
@@ -1398,14 +1460,20 @@
               },
               {
                 "label": "_validators",
-                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7552_storage)",
+                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)8108_storage)",
                 "offset": 0,
                 "slot": "9"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)6_storage",
+                "offset": 0,
+                "slot": "10"
               }
             ],
-            "numberOfBytes": "320"
+            "numberOfBytes": "512"
           },
-          "t_struct(Proposal)5869_storage": {
+          "t_struct(Proposal)6417_storage": {
             "label": "struct GeodeUtils.Proposal",
             "members": [
               {
@@ -1435,18 +1503,18 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(StakePool)8654_storage": {
+          "t_struct(StakePool)9245_storage": {
             "label": "struct StakeUtils.StakePool",
             "members": [
               {
                 "label": "gETH",
-                "type": "t_contract(IgETH)12785",
+                "type": "t_contract(IgETH)13340",
                 "offset": 0,
                 "slot": "0"
               },
               {
                 "label": "TELESCOPE",
-                "type": "t_struct(Oracle)7577_storage",
+                "type": "t_struct(Oracle)8137_storage",
                 "offset": 0,
                 "slot": "1"
               },
@@ -1454,60 +1522,66 @@
                 "label": "GOVERNANCE",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "11"
+                "slot": "17"
               },
               {
                 "label": "DEFAULT_gETH_INTERFACE",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "12"
+                "slot": "18"
               },
               {
                 "label": "DEFAULT_DWP",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "13"
+                "slot": "19"
               },
               {
                 "label": "DEFAULT_LP_TOKEN",
                 "type": "t_address",
                 "offset": 0,
-                "slot": "14"
+                "slot": "20"
               },
               {
                 "label": "MINI_GOVERNANCE_VERSION",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "15"
+                "slot": "21"
               },
               {
                 "label": "MAX_MAINTAINER_FEE",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "16"
+                "slot": "22"
               },
               {
                 "label": "BOOSTRAP_PERIOD",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "17"
+                "slot": "23"
               },
               {
                 "label": "BOOST_SWITCH_LATENCY",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "18"
+                "slot": "24"
               },
               {
                 "label": "COMET_TAX",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "19"
+                "slot": "25"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)5_storage",
+                "offset": 0,
+                "slot": "26"
               }
             ],
-            "numberOfBytes": "640"
+            "numberOfBytes": "992"
           },
-          "t_struct(Universe)5893_storage": {
+          "t_struct(Universe)6445_storage": {
             "label": "struct GeodeUtils.Universe",
             "members": [
               {
@@ -1560,14 +1634,20 @@
               },
               {
                 "label": "_proposalForId",
-                "type": "t_mapping(t_uint256,t_struct(Proposal)5869_storage)",
+                "type": "t_mapping(t_uint256,t_struct(Proposal)6417_storage)",
                 "offset": 0,
                 "slot": "8"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)7_storage",
+                "offset": 0,
+                "slot": "9"
               }
             ],
-            "numberOfBytes": "288"
+            "numberOfBytes": "512"
           },
-          "t_struct(Validator)7552_storage": {
+          "t_struct(Validator)8108_storage": {
             "label": "struct OracleUtils.Validator",
             "members": [
               {

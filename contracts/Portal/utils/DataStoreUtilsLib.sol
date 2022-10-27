@@ -29,12 +29,14 @@ library DataStoreUtils {
      * @param bytesData keccak(id, key) => returns bytes
      * @param addressData keccak(id, key) =>  returns address
      * @dev any other storage type can be expressed as bytes
+     * @param __gap keep the struct size at 16
      */
     struct DataStore {
         mapping(uint256 => uint256[]) allIdsByType;
         mapping(bytes32 => uint256) uintData;
         mapping(bytes32 => bytes) bytesData;
         mapping(bytes32 => address) addressData;
+        uint256[12] __gap;
     }
 
     /**

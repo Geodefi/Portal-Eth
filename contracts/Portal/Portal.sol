@@ -1050,5 +1050,6 @@ contract Portal is
         return true;
     }
 
+    /// @notice keep the contract size at 50
     uint256[46] private __gap;
 }

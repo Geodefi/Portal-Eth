@@ -104,7 +104,6 @@ library StakeUtils {
      * @dev changing some of these parameters (gETH, ORACLE) MUST require a contract upgrade to ensure security.
      * We can change this in the future with a better GeodeUtils design, giving every update a type, like MINI_GOVERNANCE_VERSION
      **/
-    // TODO: gaps
     struct StakePool {
         IgETH gETH;
         OracleUtils.Oracle TELESCOPE;
@@ -117,6 +116,7 @@ library StakeUtils {
         uint256 BOOSTRAP_PERIOD;
         uint256 BOOST_SWITCH_LATENCY;
         uint256 COMET_TAX;
+        uint256[5] __gap;
     }
 
     /// @notice PERCENTAGE_DENOMINATOR represents 100%

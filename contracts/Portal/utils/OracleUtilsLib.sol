@@ -80,6 +80,7 @@ library OracleUtils {
      * @param PERIOD_PRICE_DECREASE_LIMIT limiting the price decreases for one oracle period, 24h. Effective for any time interval
      * @param PRICE_MERKLE_ROOT merkle root of the prices of every pool, planet or comet
      * @param _validators contains all the data about proposed or/and active validators
+     * @param __gap keep the struct size at 16
      **/
     struct Oracle {
         IgETH gETH;
@@ -92,6 +93,7 @@ library OracleUtils {
         uint256 PERIOD_PRICE_DECREASE_LIMIT;
         bytes32 PRICE_MERKLE_ROOT;
         mapping(bytes => Validator) _validators;
+        uint256[6] __gap;
     }
 
     /// @notice PERCENTAGE_DENOMINATOR represents 100%
