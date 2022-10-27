@@ -469,11 +469,11 @@ library StakeUtils {
     function getWithdrawalBoost(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
-    ) internal view returns (uint256 fee) {
-        fee = DATASTORE.readUintForId(id, "withdrawalBoost");
-        if (DATASTORE.readUintForId(id, "boostSwitch") >= block.timestamp) {
-            fee = DATASTORE.readUintForId(id, "priorBoost");
+    ) internal view returns (uint256 boost) {
+        if (DATASTORE.readUintForId(id, "boostSwitch") > block.timestamp) {
+            return DATASTORE.readUintForId(id, "priorBoost");
         }
+        return DATASTORE.readUintForId(id, "withdrawalBoost");
     }
 
     /** *
@@ -1333,23 +1333,23 @@ library StakeUtils {
         }
 
         uint256 debt = withdrawalPoolById(DATASTORE, poolId).getDebt();
-        {
-            uint256 boost = getWithdrawalBoost(DATASTORE, poolId);
-            if (boost > 0 && debt > IGNORABLE_DEBT && poolId != operatorId) {
-                uint256 arb = withdrawalPoolById(DATASTORE, poolId)
-                    .calculateSwap(0, 1, cumBal);
-                arb -=
-                    (cumBal * self.gETH.denominator()) /
-                    self.gETH.pricePerShare(poolId);
-                boost = (arb * boost) / PERCENTAGE_DENOMINATOR;
-
-                fees[1] += boost;
-                cumBal -= boost;
-            }
-        }
-
         if (debt > IGNORABLE_DEBT) {
-            if (debt >= cumBal) {
+            {
+                uint256 boost = getWithdrawalBoost(DATASTORE, poolId);
+                if (boost > 0 && poolId != operatorId) {
+                    uint256 arb = withdrawalPoolById(DATASTORE, poolId)
+                        .calculateSwap(0, 1, cumBal);
+                    arb -=
+                        (cumBal * self.gETH.denominator()) /
+                        self.gETH.pricePerShare(poolId);
+                    boost = (arb * boost) / PERCENTAGE_DENOMINATOR;
+
+                    fees[1] += boost;
+                    cumBal -= boost;
+                }
+            }
+
+            if (debt > cumBal) {
                 debt = cumBal;
             }
             _buyback(

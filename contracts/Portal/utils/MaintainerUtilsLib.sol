@@ -297,10 +297,10 @@ library MaintainerUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
     ) internal view returns (uint256 fee) {
-        fee = DATASTORE.readUintForId(id, "fee");
-        if (DATASTORE.readUintForId(id, "feeSwitch") >= block.timestamp) {
-            fee = DATASTORE.readUintForId(id, "priorFee");
+        if (DATASTORE.readUintForId(id, "feeSwitch") > block.timestamp) {
+            return DATASTORE.readUintForId(id, "priorFee");
         }
+        return DATASTORE.readUintForId(id, "fee");
     }
 
     /**
