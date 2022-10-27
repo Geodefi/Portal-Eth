@@ -50,7 +50,7 @@ const config = {
       url: process.env.PRATER,
       deploy: ["./deploy"],
       chainId: 5,
-      gasPrice: ethers.utils.parseUnits("1.01", "gwei").toNumber(),
+      gasPrice: ethers.utils.parseUnits("60", "gwei").toNumber(),
     },
   },
   namedAccounts: {
