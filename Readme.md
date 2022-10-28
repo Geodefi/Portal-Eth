@@ -7,29 +7,29 @@ Functions and Contracts are comprehensively explained with inline comments. Howe
 ## Contracts
 This is the recommanded order to review the contracts:
 - gETH
-  - [ERC1155SupplyMinterPauser](contracts\Portal\helpers\ERC1155SupplyMinterPauser.sol)
-  - [gETH](contracts\Portal\gETH.sol)
-    - [ERC20InterfaceUpgradable](contracts\Portal\gETHInterfaces\ERC20InterfaceUpgradable.sol)
-    - [ERC20InterfacePermitUpgradable](contracts\Portal\gETHInterfaces\ERC20InterfacePermitUpgradable.sol)
+  - [ERC1155SupplyMinterPauser](contracts/Portal/helpers/ERC1155SupplyMinterPauser.sol)
+  - [gETH](contracts/Portal/gETH.sol)
+    - [ERC20InterfaceUpgradable](contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol)
+    - [ERC20InterfacePermitUpgradable](contracts/Portal/gETHInterfaces/ERC20InterfacePermitUpgradable.sol)
 
 - Dynamic Withdrawal Pools
-  - [MathUtils](contracts\Portal\withdrawalPool\utils\MathUtils.sol)
-  - [AmplificationUtils](contracts\Portal\withdrawalPool\utils\AmplificationUtils.sol)
-  - [SwapUtils](contracts\Portal\withdrawalPool\utils\SwapUtils.sol)
-  - [Swap](contracts\Portal\withdrawalPool\Swap.sol)
-  - [LPToken](contracts\Portal\withdrawalPool\LPToken.sol)
+  - [MathUtils](contracts/Portal/withdrawalPool/utils/MathUtils.sol)
+  - [AmplificationUtils](contracts/Portal/withdrawalPool/utils/AmplificationUtils.sol)
+  - [SwapUtils](contracts/Portal/withdrawalPool/utils/SwapUtils.sol)
+  - [Swap](contracts/Portal/withdrawalPool/Swap.sol)
+  - [LPToken](contracts/Portal/withdrawalPool/LPToken.sol)
 
 - Portal
-  - [DataStoreUtilsLib](contracts\Portal\utils\DataStoreUtilsLib.sol)
-  - [GeodeUtilsLib](contracts\Portal\utils\GeodeUtilsLib.sol)
-  - [MaintainerUtilsLib](contracts\Portal\utils\MaintainerUtilsLib.sol)
-  - [OracleUtilsLib](contracts\Portal\utils\OracleUtilsLib.sol)
-  - [DepositContractUtilsLib](contracts\Portal\utils\DepositContractUtilsLib.sol)
-  - [StakeUtilsLib](contracts\Portal\utils\StakeUtilsLib.sol)
-  - [StakeUtilsLib](contracts\Portal\Portal.sol)
+  - [DataStoreUtilsLib](contracts/Portal/utils/DataStoreUtilsLib.sol)
+  - [GeodeUtilsLib](contracts/Portal/utils/GeodeUtilsLib.sol)
+  - [MaintainerUtilsLib](contracts/Portal/utils/MaintainerUtilsLib.sol)
+  - [OracleUtilsLib](contracts/Portal/utils/OracleUtilsLib.sol)
+  - [DepositContractUtilsLib](contracts/Portal/utils/DepositContractUtilsLib.sol)
+  - [StakeUtilsLib](contracts/Portal/utils/StakeUtilsLib.sol)
+  - [StakeUtilsLib](contracts/Portal/Portal.sol)
 
 - MiniGovernance
-  - [MiniGovernance](contracts\Portal\MiniGovernance\MiniGovernance.sol)
+  - [MiniGovernance](contracts/Portal/MiniGovernance/MiniGovernance.sol)
 
 ## Starter Pack
 - Clone the repository:
