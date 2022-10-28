@@ -26,7 +26,7 @@ This is the recommanded order to review the contracts:
   - [OracleUtilsLib](contracts/Portal/utils/OracleUtilsLib.sol)
   - [DepositContractUtilsLib](contracts/Portal/utils/DepositContractUtilsLib.sol)
   - [StakeUtilsLib](contracts/Portal/utils/StakeUtilsLib.sol)
-  - [StakeUtilsLib](contracts/Portal/Portal.sol)
+  - [Portal](contracts/Portal/Portal.sol)
 
 - MiniGovernance
   - [MiniGovernance](contracts/Portal/MiniGovernance/MiniGovernance.sol)
