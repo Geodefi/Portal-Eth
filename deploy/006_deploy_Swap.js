@@ -8,7 +8,6 @@ const func = async function (hre) {
     log: true,
     libraries: {
       SwapUtils: (await get("SwapUtils")).address,
-      AmplificationUtils: (await get("AmplificationUtils")).address,
     },
     skipIfAlreadyDeployed: true,
   });

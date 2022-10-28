@@ -29,12 +29,14 @@ library DataStoreUtils {
      * @param bytesData keccak(id, key) => returns bytes
      * @param addressData keccak(id, key) =>  returns address
      * @dev any other storage type can be expressed as bytes
+     * @param __gap keep the struct size at 16
      */
     struct DataStore {
         mapping(uint256 => uint256[]) allIdsByType;
         mapping(bytes32 => uint256) uintData;
         mapping(bytes32 => bytes) bytesData;
         mapping(bytes32 => address) addressData;
+        uint256[12] __gap;
     }
 
     /**
@@ -45,12 +47,12 @@ library DataStoreUtils {
      * @notice hashes given id with parameter to be used as key in getters and setters
      * @return key bytes32 hash of id and parameter to be stored
      **/
-    function getKey(uint256 _id, string memory _param)
+    function getKey(uint256 _id, bytes32 _param)
         internal
         pure
         returns (bytes32 key)
     {
-        key = bytes32(keccak256(abi.encodePacked(_id, _param)));
+        key = keccak256(abi.encodePacked(_id, _param));
     }
 
     /**
@@ -62,7 +64,7 @@ library DataStoreUtils {
         uint256 _id,
         bytes32 _key
     ) internal view returns (uint256 data) {
-        data = self.uintData[keccak256(abi.encodePacked(_id, _key))];
+        data = self.uintData[getKey(_id, _key)];
     }
 
     function readBytesForId(
@@ -70,7 +72,7 @@ library DataStoreUtils {
         uint256 _id,
         bytes32 _key
     ) internal view returns (bytes memory data) {
-        data = self.bytesData[keccak256(abi.encodePacked(_id, _key))];
+        data = self.bytesData[getKey(_id, _key)];
     }
 
     function readAddressForId(
@@ -78,7 +80,7 @@ library DataStoreUtils {
         uint256 _id,
         bytes32 _key
     ) internal view returns (address data) {
-        data = self.addressData[keccak256(abi.encodePacked(_id, _key))];
+        data = self.addressData[getKey(_id, _key)];
     }
 
     /**
@@ -90,7 +92,7 @@ library DataStoreUtils {
         bytes32 _key,
         uint256 _data
     ) internal {
-        self.uintData[keccak256(abi.encodePacked(_id, _key))] = _data;
+        self.uintData[getKey(_id, _key)] = _data;
     }
 
     function addUintForId(
@@ -99,7 +101,7 @@ library DataStoreUtils {
         bytes32 _key,
         uint256 _addend
     ) internal {
-        self.uintData[keccak256(abi.encodePacked(_id, _key))] += _addend;
+        self.uintData[getKey(_id, _key)] += _addend;
     }
 
     function subUintForId(
@@ -108,7 +110,7 @@ library DataStoreUtils {
         bytes32 _key,
         uint256 _minuend
     ) internal {
-        self.uintData[keccak256(abi.encodePacked(_id, _key))] -= _minuend;
+        self.uintData[getKey(_id, _key)] -= _minuend;
     }
 
     function writeBytesForId(
@@ -117,7 +119,7 @@ library DataStoreUtils {
         bytes32 _key,
         bytes memory _data
     ) internal {
-        self.bytesData[keccak256(abi.encodePacked(_id, _key))] = _data;
+        self.bytesData[getKey(_id, _key)] = _data;
     }
 
     function writeAddressForId(
@@ -126,6 +128,6 @@ library DataStoreUtils {
         bytes32 _key,
         address _data
     ) internal {
-        self.addressData[keccak256(abi.encodePacked(_id, _key))] = _data;
+        self.addressData[getKey(_id, _key)] = _data;
     }
 }

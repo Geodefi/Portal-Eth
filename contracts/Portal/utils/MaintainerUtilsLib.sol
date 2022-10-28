@@ -35,7 +35,7 @@ library MaintainerUtils {
     uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     /// @notice when a maintainer changes the fee, it is effective after a delay
-    uint256 public constant FEE_SWITCH_LATENCY = 7 days;
+    uint256 public constant FEE_SWITCH_LATENCY = 3 days;
 
     /// @notice default DWP parameters
     uint256 public constant DEFAULT_A = 60;
@@ -128,13 +128,13 @@ library MaintainerUtils {
     /**
      * @notice initiates ID as a planet (public pool): deploys a miniGovernance, a Dynamic Withdrawal Pool, an ERC1155Interface
      * @dev requires ID to be approved as a planet with a specific CONTROLLER
-     * @param uintSpecs 0:_id, 1:_fee, 2:_withdrawalBoost, 3:_MINI_GOVERNANCE_VERSION
+     * @param uintSpecs 0:_id, 1:_fee, 2:_MINI_GOVERNANCE_VERSION
      * @param addressSpecs 0:gETH, 1:_maintainer, 2:DEFAULT_gETH_INTERFACE_, 3:DEFAULT_DWP, 4:DEFAULT_LP_TOKEN
      * @param interfaceSpecs 0: interface name, 1: interface symbol
      */
     function initiatePlanet(
         DataStoreUtils.DataStore storage DATASTORE,
-        uint256[4] memory uintSpecs,
+        uint256[3] memory uintSpecs,
         address[5] memory addressSpecs,
         string[2] calldata interfaceSpecs
     )
@@ -146,20 +146,13 @@ library MaintainerUtils {
             address withdrawalPool
         )
     {
-        require(
-            uintSpecs[2] <= PERCENTAGE_DENOMINATOR,
-            "MaintainerUtils: withdrawalBoost > 100%"
-        );
-
         DATASTORE.writeUintForId(uintSpecs[0], "fee", uintSpecs[1]);
-        DATASTORE.writeUintForId(uintSpecs[0], "withdrawalBoost", uintSpecs[2]);
-
         {
             miniGovernance = _deployMiniGovernance(
                 DATASTORE,
                 addressSpecs[0],
                 uintSpecs[0],
-                uintSpecs[3],
+                uintSpecs[2],
                 addressSpecs[1]
             );
         }
@@ -214,9 +207,9 @@ library MaintainerUtils {
             abi.encodeWithSelector(
                 IMiniGovernance(address(0)).initialize.selector,
                 _gETH,
-                _id,
                 address(this),
                 _maintainer,
+                _id,
                 _versionId
             )
         );
@@ -304,10 +297,10 @@ library MaintainerUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
     ) internal view returns (uint256 fee) {
-        fee = DATASTORE.readUintForId(id, "fee");
-        if (DATASTORE.readUintForId(id, "feeSwitch") >= block.timestamp) {
-            fee = DATASTORE.readUintForId(id, "priorFee");
+        if (DATASTORE.readUintForId(id, "feeSwitch") > block.timestamp) {
+            return DATASTORE.readUintForId(id, "priorFee");
         }
+        return DATASTORE.readUintForId(id, "fee");
     }
 
     /**
@@ -356,7 +349,7 @@ library MaintainerUtils {
     }
 
     /**
-     * @notice To increase the balance of an Maintainer's wallet
+     * @notice To increase the balance of a Maintainer's wallet
      * @param _id the id of the Operator
      * @param _value Ether (in Wei) amount to increase the wallet balance.
      * @return success boolean value which is true if successful, should be used by Operator is Maintainer is a contract.

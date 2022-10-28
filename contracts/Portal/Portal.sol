@@ -113,11 +113,11 @@ contract Portal is
     event Alienated(bytes pubkey);
     event Busted(bytes pubkey);
     event Prisoned(uint256 id, uint256 releaseTimestamp);
+    event Released(uint256 id);
     event VerificationIndexUpdated(uint256 validatorVerificationIndex);
 
     /// StakeUtils EVENTS
     event ValidatorPeriodUpdated(uint256 operatorId, uint256 newPeriod);
-    event Released(uint256 operatorId);
     event OperatorApproval(
         uint256 planetId,
         uint256 operatorId,
@@ -132,14 +132,15 @@ contract Portal is
     // Portal Events
     event ContractVersionSet(uint256 version);
     event ParamsUpdated(
-        address DEFAULT_gETH_INTERFACE_,
-        address DEFAULT_DWP_,
-        address DEFAULT_LP_TOKEN_,
-        uint256 MAX_MAINTAINER_FEE_,
-        uint256 BOOSTRAP_PERIOD_,
-        uint256 PERIOD_PRICE_INCREASE_LIMIT_,
-        uint256 PERIOD_PRICE_DECREASE_LIMIT_,
-        uint256 COMET_TAX_
+        address DEFAULT_gETH_INTERFACE,
+        address DEFAULT_DWP,
+        address DEFAULT_LP_TOKEN,
+        uint256 MAX_MAINTAINER_FEE,
+        uint256 BOOSTRAP_PERIOD,
+        uint256 PERIOD_PRICE_INCREASE_LIMIT,
+        uint256 PERIOD_PRICE_DECREASE_LIMIT,
+        uint256 COMET_TAX,
+        uint256 BOOST_SWITCH_LATENCY
     );
 
     // Portal VARIABLES
@@ -180,6 +181,7 @@ contract Portal is
         STAKEPOOL.gETH = IgETH(_gETH);
         STAKEPOOL.TELESCOPE.gETH = IgETH(_gETH);
         STAKEPOOL.TELESCOPE.ORACLE_POSITION = _ORACLE_POSITION;
+        STAKEPOOL.TELESCOPE.MONOPOLY_THRESHOLD = 20000;
 
         updateStakingParams(
             _DEFAULT_gETH_INTERFACE,
@@ -189,7 +191,8 @@ contract Portal is
             _BOOSTRAP_PERIOD,
             type(uint256).max,
             type(uint256).max,
-            _COMET_TAX
+            _COMET_TAX,
+            3 days
         );
 
         uint256 _MINI_GOVERNANCE_VERSION = GEODE.newProposal(
@@ -506,16 +509,29 @@ contract Portal is
         return OracleUtils.isPrisoned(DATASTORE, operatorId);
     }
 
-    function regulateOperators(
+    function updateVerificationIndex(
         uint256 allValidatorsCount,
         uint256 validatorVerificationIndex,
-        bytes[2][] calldata regulatedPubkeys
-    ) external virtual override nonReentrant {
-        STAKEPOOL.TELESCOPE.regulateOperators(
+        bytes[] calldata alienatedPubkeys
+    ) external virtual override {
+        STAKEPOOL.TELESCOPE.updateVerificationIndex(
             DATASTORE,
             allValidatorsCount,
             validatorVerificationIndex,
-            regulatedPubkeys
+            alienatedPubkeys
+        );
+    }
+
+    function regulateOperators(
+        bytes[] calldata bustedExits,
+        bytes[] calldata bustedSignals,
+        uint256[2][] calldata feeThefts
+    ) external virtual override {
+        STAKEPOOL.TELESCOPE.regulateOperators(
+            DATASTORE,
+            bustedExits,
+            bustedSignals,
+            feeThefts
         );
     }
 
@@ -640,7 +656,8 @@ contract Portal is
         uint256 _BOOSTRAP_PERIOD,
         uint256 _PERIOD_PRICE_INCREASE_LIMIT,
         uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 _COMET_TAX
+        uint256 _COMET_TAX,
+        uint256 _BOOST_SWITCH_LATENCY
     ) public virtual override {
         require(
             msg.sender == GEODE.GOVERNANCE,
@@ -681,6 +698,7 @@ contract Portal is
         STAKEPOOL.MAX_MAINTAINER_FEE = _MAX_MAINTAINER_FEE;
         STAKEPOOL.COMET_TAX = _COMET_TAX;
         STAKEPOOL.BOOSTRAP_PERIOD = _BOOSTRAP_PERIOD;
+        STAKEPOOL.BOOST_SWITCH_LATENCY = _BOOST_SWITCH_LATENCY;
         STAKEPOOL
             .TELESCOPE
             .PERIOD_PRICE_INCREASE_LIMIT = _PERIOD_PRICE_INCREASE_LIMIT;
@@ -695,17 +713,20 @@ contract Portal is
             _BOOSTRAP_PERIOD,
             _PERIOD_PRICE_INCREASE_LIMIT,
             _PERIOD_PRICE_DECREASE_LIMIT,
-            _COMET_TAX
+            _COMET_TAX,
+            _BOOST_SWITCH_LATENCY
         );
     }
 
-    function releasePrisoned(uint256 operatorId)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        STAKEPOOL.releasePrisoned(DATASTORE, operatorId);
+    /**
+     * @dev onlyGovernance
+     */
+    function releasePrisoned(uint256 operatorId) external virtual override {
+        require(
+            msg.sender == GEODE.GOVERNANCE,
+            "Portal: sender not GOVERNANCE"
+        );
+        OracleUtils.releasePrisoned(DATASTORE, operatorId);
     }
 
     /**
@@ -731,7 +752,6 @@ contract Portal is
     function initiatePlanet(
         uint256 _id,
         uint256 _fee,
-        uint256 _withdrawalBoost,
         address _maintainer,
         string calldata _interfaceName,
         string calldata _interfaceSymbol
@@ -740,7 +760,6 @@ contract Portal is
             DATASTORE,
             _id,
             _fee,
-            _withdrawalBoost,
             _maintainer,
             [_interfaceName, _interfaceSymbol]
         );
@@ -824,13 +843,13 @@ contract Portal is
      * @notice Pool - Operator interactions
      */
 
-    function setWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
+    function switchWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
         external
         virtual
         override
         whenNotPaused
     {
-        StakeUtils.setWithdrawalBoost(DATASTORE, poolId, withdrawalBoost);
+        STAKEPOOL.switchWithdrawalBoost(DATASTORE, poolId, withdrawalBoost);
     }
 
     function operatorAllowance(uint256 poolId, uint256 operatorId)
@@ -1008,26 +1027,20 @@ contract Portal is
     }
 
     function fetchUnstake(
-        bytes calldata pk,
-        uint256 balance,
-        bool isExit
-    )
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256 tax)
-    {
-        tax = STAKEPOOL.fetchUnstake(
+        uint256 poolId,
+        uint256 operatorId,
+        bytes[] calldata pubkeys,
+        uint256[] calldata balances,
+        bool[] calldata isExit
+    ) external virtual override whenNotPaused nonReentrant {
+        STAKEPOOL.fetchUnstake(
             DATASTORE,
-            pk,
-            balance,
-            isExit,
-            GEODE.getGovernanceTax()
+            poolId,
+            operatorId,
+            pubkeys,
+            balances,
+            isExit
         );
-        (bool sent, ) = payable(GEODE.getGovernance()).call{value: tax}("");
-        require(sent, "Portal: Failed to pay tax");
     }
 
     /**
@@ -1038,5 +1051,6 @@ contract Portal is
         return true;
     }
 
+    /// @notice keep the contract size at 50
     uint256[46] private __gap;
 }

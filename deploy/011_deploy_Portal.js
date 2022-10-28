@@ -15,7 +15,7 @@ const func = async function (hre) {
   // PARAMS
   const _GOVERNANCE_TAX = (1 * 10 ** 10) / 100; // 1%
   const _COMET_TAX = (3 * 10 ** 10) / 100; // 3%
-  const _MAX_MAINTAINER_FEE = (15 * 10 ** 10) / 100; // 15%
+  const _MAX_MAINTAINER_FEE = (10 * 10 ** 10) / 100; // 10%
   const _BOOSTRAP_PERIOD = 6 * 30 * 24 * 3600; // 6 Months
 
   const Portal = await ethers.getContractFactory("Portal", {

@@ -6,8 +6,8 @@ import "../Portal/utils/OracleUtilsLib.sol";
 
 interface IPortal {
     function initialize(
-        address _gETH,
         address _GOVERNANCE,
+        address _gETH,
         address _ORACLE_POSITION,
         address _DEFAULT_gETH_INTERFACE,
         address _DEFAULT_DWP,
@@ -147,10 +147,16 @@ interface IPortal {
             uint256 released
         );
 
-    function regulateOperators(
+    function updateVerificationIndex(
         uint256 allValidatorsCount,
         uint256 validatorVerificationIndex,
-        bytes[2][] calldata regulatedPubkeys
+        bytes[] calldata alienatedPubkeys
+    ) external;
+
+    function regulateOperators(
+        bytes[] calldata bustedExits,
+        bytes[] calldata bustedSignals,
+        uint256[2][] calldata feeThefts
     ) external;
 
     function StakingParams()
@@ -174,7 +180,8 @@ interface IPortal {
         uint256 _BOOSTRAP_PERIOD,
         uint256 _PERIOD_PRICE_INCREASE_LIMIT,
         uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 _COMET_TAX
+        uint256 _COMET_TAX,
+        uint256 _BOOST_SWITCH_LATENCY
     ) external;
 
     function initiateOperator(
@@ -187,7 +194,6 @@ interface IPortal {
     function initiatePlanet(
         uint256 _id,
         uint256 _fee,
-        uint256 _withdrawalBoost,
         address _maintainer,
         string calldata _interfaceName,
         string calldata _interfaceSymbol
@@ -219,7 +225,7 @@ interface IPortal {
         external
         returns (bool success);
 
-    function setWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
+    function switchWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
         external;
 
     function operatorAllowance(uint256 poolId, uint256 operatorId)
@@ -273,8 +279,10 @@ interface IPortal {
     function signalUnstake(bytes[] calldata pubkeys) external;
 
     function fetchUnstake(
-        bytes calldata pk,
-        uint256 balance,
-        bool isExit
-    ) external returns (uint256 tax);
+        uint256 poolId,
+        uint256 operatorId,
+        bytes[] calldata pubkeys,
+        uint256[] calldata balances,
+        bool[] calldata isExit
+    ) external;
 }

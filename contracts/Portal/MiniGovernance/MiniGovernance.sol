@@ -19,7 +19,7 @@ import "../../interfaces/IMiniGovernance.sol";
  * @dev currently only defense mechanics this contract provides is the trustless updates that are
  * * achieved with GeodeUtils and passwordHashes
  * * 1. portal cannot change the maintainer without knowing the real password
- * * 1. portal cannot upgrade the contract without Maintainer's approval
+ * * 2. portal cannot upgrade the contract without Maintainer's approval
  * *
  * * However there are such improvements planned to be implemented to make
  * * the staking environment more trustless.
@@ -78,10 +78,10 @@ contract MiniGovernance is
 
     function initialize(
         address _gETH,
-        uint256 _ID,
         address _PORTAL,
-        uint256 _VERSION,
-        address _MAINTAINER
+        address _MAINTAINER,
+        uint256 _ID,
+        uint256 _VERSION
     ) public virtual override initializer {
         __ReentrancyGuard_init();
         __Pausable_init();
@@ -215,8 +215,8 @@ contract MiniGovernance is
 
     /**
      * @notice Portal changing the Senate of Minigovernance when the maintainer of the pool is changed
-     * @dev (Senate+Governance) can access this function easily, even they working together is near impossible
-     * * Thus, access to this function requires a password.
+     * @dev (Senate+Governance) can possibly access this function if they are working together.
+     * * Thus, access to this function requires an optional password.
      * @param newPasswordHash = keccak256(abi.encodePacked(SELF.ID, password))
      */
     function changeMaintainer(
@@ -232,7 +232,9 @@ contract MiniGovernance is
         returns (bool success)
     {
         require(
-            keccak256(abi.encodePacked(SELF.ID, password)) == SELF.PASSWORD_HASH
+            SELF.PASSWORD_HASH == bytes32(0) ||
+                SELF.PASSWORD_HASH ==
+                keccak256(abi.encodePacked(SELF.ID, password))
         );
         SELF.PASSWORD_HASH = newPasswordHash;
 
@@ -260,5 +262,6 @@ contract MiniGovernance is
         require(success, "MiniGovernance: Failed to send Ether");
     }
 
+    /// @notice keep the contract size at 50
     uint256[45] private __gap;
 }
