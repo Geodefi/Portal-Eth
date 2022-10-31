@@ -1,11 +1,14 @@
 # Decentralized & Liquid Staking Pools
 
 ## Documentation
+
 Functions and Contracts are comprehensively explained with inline comments. However, to understand the logic behind it better:
 > Before starting to review the contracts please take a look at [our docs](https://docs.geode.fi/).
 
 ## Contracts
+
 This is the recommanded order to review the contracts:
+
 - gETH
   - [ERC1155SupplyMinterPauser](contracts/Portal/helpers/ERC1155SupplyMinterPauser.sol)
   - [gETH](contracts/Portal/gETH.sol)
@@ -32,6 +35,7 @@ This is the recommanded order to review the contracts:
   - [MiniGovernance](contracts/Portal/MiniGovernance/MiniGovernance.sol)
 
 ## Starter Pack
+
 - Clone the repository:
 
 ```
@@ -44,9 +48,12 @@ cd Portal-Eth
 
 2. Create `.env` file, similar to:
 
+> If mainnet is not forked, some tests related to ETH2 deposit contract may fail.
+
 ```
 
-FORK_MAINNET= "false"
+FORK_MAINNET= "true"
+FORK_URL= "https://eth-mainnet.g.alchemy.com/v2/<YOUR_KEY>"
 PRATER= "https://eth-goerli.g.alchemy.com/v2/<YOUR_KEY>"
 ACCOUNT_PRIVATE_KEYS= "<array of private keys seperated with `space` character, at least 1>"
 
@@ -127,6 +134,7 @@ npx hardhat deploy
 ```
 
 2. deploy to prater
+
 > You might want to remove `deployments/prater`
 
 ```
@@ -134,6 +142,7 @@ npx hardhat deploy
 npx hardhat deploy --network prater
 
 ```
+
 ### 4. Activate Portal
 
 Portal needs to be set as the minter address for the following scripts to work.
@@ -149,7 +158,6 @@ npx hardhat activate-portal --network prater
 
 Lists all the Planets & Operators, with curent information on fee; maintainer & CONTROLLER addresses; Withdrawal Pool, LPtoken, currentInterface addresses.
 
-
 ```
 
 npx hardhat details --network prater
@@ -159,6 +167,7 @@ npx hardhat details --network prater
 ## Governance Tasks
 
 ### 6. Create a Proposal
+
 > This proposal requires and approval
 Creates a proposal with desired parameters.
 
@@ -187,6 +196,7 @@ npx hardhat propose --t senate --c 0xbabababababababababababaabababababa --n myS
 ## Senate Tasks
 
 ### 7. Approve Proposal
+
 > This approval requires initiation from the controller with correct params in case of a Planet or Operator
 
 Approves a proposal with given id.
@@ -202,9 +212,11 @@ npx hardhat approve --id 1020199987657710907759710834392969660265205379392345017
 ```
 
 ## User Tasks
+
 > **following tasks might require different tasks to be run first: such as propose, approve with desired type**
 
 ### 8. Initiate an Operator
+
 > Should be called from a Controller
 
 - `id` : id of operator
@@ -218,7 +230,8 @@ initiate-operator --id 102019998765771090775971083439296966026520537939234501758
 
 ```
 
-### 9. Initiate a Planet 
+### 9. Initiate a Planet
+
 > Should be called from a Controller
 
 - `id` : id of operator
@@ -232,7 +245,6 @@ initiate-operator --id 102019998765771090775971083439296966026520537939234501758
 npx hardhat initiate-planet --id 8438890131190638961805509956978898063010048183498455403055171776782939000754 --network prater --f 10 --m 0x5297F1EA60D4b60E85eF323DECEc1A907295B6E6 --n myPlanetETH --s myETH
 
 ```
-
 
 ### 10. Approve a Senate Proposal as a Planet maintainer
 

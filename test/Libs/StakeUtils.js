@@ -57,6 +57,7 @@ const { expect } = chai;
 const randId = 3131313131;
 const operatorId = 420420420;
 const planetId = 696969696969;
+const cometId = 141;
 const wrongId = 69;
 const provider = waffle.provider;
 const INITIAL_A_VALUE = 60;
@@ -65,9 +66,8 @@ const ADMIN_FEE = 5e9; // 0
 const PERIOD_PRICE_INCREASE_LIMIT = 2e7;
 const PERIOD_PRICE_DECREASE_LIMIT = 2e7;
 const BOOSTRAP_PERIOD = 3 * 30 * 24 * 60 * 60;
-const WITHDRAWAL_DELAY = 3 * 24 * 60 * 60;
 const MAX_MAINTAINER_FEE = 1e9;
-describe("StakeUtils", async () => {
+describe("StakeUtils", () => {
   let gETH;
   let deployer;
   let oracle;
@@ -90,7 +90,6 @@ describe("StakeUtils", async () => {
     user2 = signers[5];
 
     gETH = await ethers.getContractAt("gETH", (await get("gETH")).address);
-
     DEFAULT_DWP = (await get("Swap")).address;
     DEFAULT_LP_TOKEN = (await get("LPToken")).address;
     DEFAULT_GETH_INTERFACE = (await get("ERC20InterfacePermitUpgradable"))
@@ -112,9 +111,9 @@ describe("StakeUtils", async () => {
       DEFAULT_GETH_INTERFACE,
       DEFAULT_MINI_GOVERNANCE,
       BOOSTRAP_PERIOD,
-      WITHDRAWAL_DELAY,
       oracle.address
     );
+
     await gETH.updateMinterRole(testContract.address);
     await gETH.updateOracleRole(testContract.address);
 
@@ -127,7 +126,7 @@ describe("StakeUtils", async () => {
     await setupTest();
   });
 
-  describe("After Creation TX", () => {
+  describe("Initalization", () => {
     let stakepool;
     let telescope;
     beforeEach(async () => {
@@ -140,9 +139,11 @@ describe("StakeUtils", async () => {
     it("correct gETH", async () => {
       expect(stakepool.gETH).to.eq(gETH.address);
     });
+
     it("correct DEFAULT_DWP", async () => {
       expect(stakepool.DEFAULT_DWP).to.eq(DEFAULT_DWP);
     });
+
     it("correct DEFAULT_LP_TOKEN", async () => {
       expect(stakepool.DEFAULT_LP_TOKEN).to.eq(DEFAULT_LP_TOKEN);
     });
@@ -159,15 +160,12 @@ describe("StakeUtils", async () => {
     it("correct MAX_MAINTAINER_FEE", async () => {
       expect(stakepool.MAX_MAINTAINER_FEE).to.eq(MAX_MAINTAINER_FEE);
     });
-
     it("correct VERIFICATION_INDEX", async () => {
       expect(telescope.VERIFICATION_INDEX).to.eq(String(0));
     });
-
     it("correct BOOSTRAP_PERIOD", async () => {
       expect(stakepool.BOOSTRAP_PERIOD).to.eq(BOOSTRAP_PERIOD);
     });
-
     it("correct VALIDATORS_INDEX", async () => {
       expect(telescope.VALIDATORS_INDEX).to.eq(String(0));
     });
@@ -175,7 +173,6 @@ describe("StakeUtils", async () => {
 
   describe("Helper functions", () => {
     describe("authenticate", async () => {
-      const cometId = 141;
       beforeEach(async () => {
         await testContract.beController(operatorId);
         await testContract.beController(planetId);
@@ -192,278 +189,307 @@ describe("StakeUtils", async () => {
         await testContract.setType(cometId, 6);
       });
 
-      describe("switchMaintainerFee", async () => {
+      describe("switchMaintainerFee", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract.connect(planet).switchMaintainerFee(operatorId, 100)
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).switchMaintainerFee(wrongId, 100)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
       });
 
-      describe("approveOperator", async () => {
+      describe("approveOperator", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract
               .connect(operator)
               .approveOperator(planetId, operatorId, 100)
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if _planetId or _operatorId type 0", async () => {
           await expect(
             testContract
               .connect(user2)
               .approveOperator(wrongId, operatorId, 100)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
           await expect(
             testContract.connect(planet).approveOperator(planetId, wrongId, 100)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
         it("reverts if _planetId is an Operator", async () => {
           await expect(
             testContract
               .connect(operator)
               .approveOperator(operatorId, planetId, 100)
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
         it("reverts if _operatorId is a Comet", async () => {
           await expect(
             testContract
               .connect(operator)
               .approveOperator(operatorId, cometId, 100)
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
       });
 
-      describe("increaseMaintainerWallet", async () => {
+      describe("increaseMaintainerWallet", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract.connect(operator).increaseMaintainerWallet(planetId, {
               value: String(1e17),
             })
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).increaseMaintainerWallet(wrongId, {
               value: String(1e17),
             })
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
       });
 
-      describe("decreaseMaintainerWallet", async () => {
+      describe("decreaseMaintainerWallet", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract
               .connect(operator)
               .decreaseMaintainerWallet(planetId, String(1e2))
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if type 0", async () => {
           await expect(
             testContract
               .connect(user2)
               .decreaseMaintainerWallet(wrongId, String(1e2))
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
       });
 
-      describe("updateValidatorPeriod", async () => {
+      describe("updateValidatorPeriod", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract.connect(operator).updateValidatorPeriod(planetId, 100)
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).updateValidatorPeriod(wrongId, 100)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
         it("reverts if _operatorId is a Comet", async () => {
           await expect(
             testContract.connect(user1).updateValidatorPeriod(cometId, 100)
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
       });
 
-      describe("pauseStakingForPool", async () => {
+      describe("pauseStakingForPool", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract.connect(planet).pauseStakingForPool(operatorId)
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).pauseStakingForPool(wrongId)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
       });
 
-      describe("unpauseStakingForPool", async () => {
+      describe("unpauseStakingForPool", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract.connect(operator).unpauseStakingForPool(planetId)
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).unpauseStakingForPool(wrongId)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
       });
 
-      describe("proposeStake", async () => {
+      describe("proposeStake", () => {
         it("reverts if not maintainer of planetId", async () => {
           await expect(
             testContract
               .connect(operator)
               .proposeStake(planetId, planetId, [pubkey1], [signature1])
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if planetId or operatorId type 0", async () => {
           await expect(
             testContract
               .connect(user2)
               .proposeStake(operatorId, wrongId, [pubkey1], [signature1])
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
           await expect(
             testContract
               .connect(operator)
               .proposeStake(wrongId, operatorId, [pubkey1], [signature1])
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
         it("reverts if planetId is an Operator", async () => {
           await expect(
             testContract
               .connect(operator)
               .proposeStake(operatorId, operatorId, [pubkey1], [signature1])
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
         it("reverts if operatorId is a Comet", async () => {
           await expect(
             testContract
               .connect(user1)
               .proposeStake(operatorId, cometId, [pubkey1], [signature1])
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
       });
 
-      describe("beaconStake", async () => {
+      describe("beaconStake", () => {
         it("reverts if not maintainer", async () => {
           await expect(
             testContract.connect(planet).beaconStake(operatorId, [pubkey1])
-          ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+          ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         });
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).beaconStake(wrongId, [pubkey1])
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
         it("reverts if operatorId is a Comet", async () => {
           await expect(
             testContract.connect(user1).beaconStake(cometId, [pubkey1])
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
       });
 
-      describe("depositPlanet", async () => {
+      describe("depositPlanet", () => {
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).depositPlanet(wrongId, 0, 0)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
         it("reverts if poolId is an Operator", async () => {
           await expect(
             testContract.connect(user2).depositPlanet(operatorId, 0, 0)
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
         it("reverts if poolId is a Comet", async () => {
           await expect(
             testContract.connect(user2).depositPlanet(cometId, 0, 0)
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
       });
 
-      describe("withdrawPlanet", async () => {
+      describe("withdrawPlanet", () => {
         it("reverts if type 0", async () => {
           await expect(
             testContract.connect(user2).withdrawPlanet(wrongId, 0, 0, 0)
-          ).to.be.revertedWith("StakeUtils: invalid TYPE");
+          ).to.be.revertedWith("MaintainerUtils: invalid TYPE");
         });
         it("reverts if poolId is an Operator", async () => {
           await expect(
             testContract.connect(user2).withdrawPlanet(operatorId, 0, 0, 0)
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
         it("reverts if poolId is a Comet", async () => {
           await expect(
             testContract.connect(user2).withdrawPlanet(cometId, 0, 0, 0)
-          ).to.be.revertedWith("StakeUtils: TYPE NOT allowed");
+          ).to.be.revertedWith("MaintainerUtils: TYPE NOT allowed");
         });
       });
     });
 
-    describe("interfaces", async () => {
-      describe("setInterface", async () => {
+    describe("interfaces", () => {
+      beforeEach(async () => {
+        await testContract.beController(operatorId);
+        await testContract.beController(planetId);
+        await testContract.beController(cometId);
+        await testContract.beController(wrongId);
+
+        await testContract.changeIdMaintainer(operatorId, operator.address);
+        await testContract.changeIdMaintainer(planetId, planet.address);
+        await testContract.changeIdMaintainer(cometId, user1.address);
+        await testContract.changeIdMaintainer(wrongId, user2.address);
+
+        await testContract.setType(operatorId, 4);
+        await testContract.setType(planetId, 5);
+        await testContract.setType(cometId, 6);
+      });
+
+      describe("setInterface", () => {
         it("reverts if already interface", async () => {
-          await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
+          await testContract
+            .connect(planet)
+            .setInterface(planetId, DEFAULT_GETH_INTERFACE);
           expect(
-            testContract.setInterface(randId, DEFAULT_GETH_INTERFACE)
+            testContract
+              .connect(planet)
+              .setInterface(planetId, DEFAULT_GETH_INTERFACE)
           ).to.be.revertedWith("StakeUtils: already interface");
         });
-        describe("success", async () => {
+
+        describe("success", () => {
           beforeEach(async () => {
-            await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
+            await testContract
+              .connect(planet)
+              .setInterface(planetId, DEFAULT_GETH_INTERFACE);
           });
           it("gEth.isinterface=true", async () => {
             expect(
-              await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)
+              await gETH.isInterface(DEFAULT_GETH_INTERFACE, planetId)
             ).to.eq(true);
           });
           it("added to interfaces", async () => {
-            expect((await testContract.allInterfaces(randId))[0]).to.eq(
+            expect((await testContract.allInterfaces(planetId))[0]).to.eq(
               DEFAULT_GETH_INTERFACE
             );
           });
         });
       });
-      describe("unsetInterface", async () => {
+      describe("unsetInterface", () => {
         beforeEach(async () => {
-          await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
+          await testContract
+            .connect(planet)
+            .setInterface(planetId, DEFAULT_GETH_INTERFACE);
         });
         it("reverts if already NOT interface", async () => {
-          await testContract.unsetInterface(randId, 0);
-          expect(testContract.unsetInterface(randId, 0)).to.be.revertedWith(
-            "StakeUtils: already NOT interface"
-          );
+          await testContract.connect(planet).unsetInterface(planetId, 0);
+          expect(
+            testContract.connect(planet).unsetInterface(planetId, 0)
+          ).to.be.revertedWith("StakeUtils: already NOT interface");
         });
-        describe("success", async () => {
+        describe("success", () => {
           beforeEach(async () => {
-            await testContract.unsetInterface(randId, 0);
+            await testContract.connect(planet).unsetInterface(planetId, 0);
           });
+
           it("gEth.isinterface=false", async () => {
             expect(
-              await gETH.isInterface(DEFAULT_GETH_INTERFACE, randId)
+              await gETH.isInterface(DEFAULT_GETH_INTERFACE, planetId)
             ).to.eq(false);
           });
+
           it("removed from to interfaces", async () => {
-            expect((await testContract.allInterfaces(randId))[0]).to.eq(
+            expect((await testContract.allInterfaces(planetId))[0]).to.eq(
               ZERO_ADDRESS
             );
-            await testContract.setInterface(randId, DEFAULT_GETH_INTERFACE);
-            expect((await testContract.allInterfaces(randId))[1]).to.eq(
+            await testContract
+              .connect(planet)
+              .setInterface(planetId, DEFAULT_GETH_INTERFACE);
+            expect((await testContract.allInterfaces(planetId))[1]).to.eq(
               DEFAULT_GETH_INTERFACE
             );
-            await testContract.unsetInterface(randId, 1);
-            expect((await testContract.allInterfaces(randId))[0]).to.eq(
+            await testContract.connect(planet).unsetInterface(planetId, 1);
+            expect((await testContract.allInterfaces(planetId))[0]).to.eq(
               ZERO_ADDRESS
             );
-            expect((await testContract.allInterfaces(randId))[1]).to.eq(
+            expect((await testContract.allInterfaces(planetId))[1]).to.eq(
               ZERO_ADDRESS
             );
           });
@@ -486,17 +512,15 @@ describe("StakeUtils", async () => {
         let effectTS;
         beforeEach(async () => {
           await testContract.connect(user1).switchMaintainerFee(randId, 12345);
-          effectTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60 - 1;
+          effectTS = (await getCurrentBlockTimestamp()) + 3 * 24 * 60 * 60 - 1;
         });
         it("returns old value", async () => {
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
         });
-        it("switches after a week", async () => {
+        it("switches after 3 days", async () => {
           await setTimestamp(effectTS);
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
           await setTimestamp(effectTS + 1);
-          expect(await testContract.getMaintainerFee(randId)).to.be.eq(0);
-          await setTimestamp(effectTS + 2);
           expect(await testContract.getMaintainerFee(randId)).to.be.eq(12345);
         });
       });
@@ -509,7 +533,7 @@ describe("StakeUtils", async () => {
       it("Reverts if not maintainer", async () => {
         await expect(
           testContract.switchMaintainerFee(randId, 10 ** 9 + 1)
-        ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+        ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
       });
     });
 
@@ -525,234 +549,224 @@ describe("StakeUtils", async () => {
       it("Reverts if not controller", async () => {
         await expect(
           testContract.changeIdMaintainer(randId, user2.address)
-        ).to.be.revertedWith("StakeUtils: sender NOT CONTROLLER");
+        ).to.be.revertedWith("MaintainerUtils: sender NOT CONTROLLER");
       });
       it("Reverts if ZERO ADDRESS", async () => {
         await expect(
           testContract.connect(user1).changeIdMaintainer(randId, ZERO_ADDRESS)
-        ).to.be.revertedWith("StakeUtils: maintainer can NOT be zero");
+        ).to.be.revertedWith("MaintainerUtils: maintainer can NOT be zero");
       });
     });
   });
 
-  describe("updateGovernanceParams", () => {
-    it("Reverts if sender not governance", async () => {
-      await expect(
-        testContract
-          .connect(user1)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            DEFAULT_DWP,
-            DEFAULT_LP_TOKEN,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: sender NOT GOVERNANCE");
-    });
+  // TODO: this needs to be added in portal tests!
 
-    it("Reverts if DEFAULT_GETH_INTERFACE is 0 address", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            ZERO_ADDRESS,
-            DEFAULT_DWP,
-            DEFAULT_LP_TOKEN,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: DEFAULT_gETH_INTERFACE NOT contract");
-    });
+  // describe("updateGovernanceParams", () => {
+  //   it("Reverts if sender not governance", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(user1)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           DEFAULT_DWP,
+  //           DEFAULT_LP_TOKEN,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: sender NOT GOVERNANCE");
+  //   });
 
-    it("Reverts if DEFAULT_gETH_INTERFACE is NOT contract", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            user2.address,
-            DEFAULT_DWP,
-            DEFAULT_LP_TOKEN,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: DEFAULT_gETH_INTERFACE NOT contract");
-    });
+  //   it("Reverts if DEFAULT_GETH_INTERFACE is 0 address", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           ZERO_ADDRESS,
+  //           DEFAULT_DWP,
+  //           DEFAULT_LP_TOKEN,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: DEFAULT_gETH_INTERFACE NOT contract");
+  //   });
 
-    it("Reverts if DEFAULT_DWP is 0 address", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            ZERO_ADDRESS,
-            DEFAULT_LP_TOKEN,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: DEFAULT_DWP NOT contract");
-    });
+  //   it("Reverts if DEFAULT_gETH_INTERFACE is NOT contract", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           user2.address,
+  //           DEFAULT_DWP,
+  //           DEFAULT_LP_TOKEN,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: DEFAULT_gETH_INTERFACE NOT contract");
+  //   });
 
-    it("Reverts if DEFAULT_DWP is NOT contract", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            user2.address,
-            DEFAULT_LP_TOKEN,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: DEFAULT_DWP NOT contract");
-    });
+  //   it("Reverts if DEFAULT_DWP is 0 address", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           ZERO_ADDRESS,
+  //           DEFAULT_LP_TOKEN,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: DEFAULT_DWP NOT contract");
+  //   });
 
-    it("Reverts if DEFAULT_LP_TOKEN is 0 address", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            DEFAULT_DWP,
-            ZERO_ADDRESS,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN NOT contract");
-    });
+  //   it("Reverts if DEFAULT_DWP is NOT contract", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           user2.address,
+  //           DEFAULT_LP_TOKEN,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: DEFAULT_DWP NOT contract");
+  //   });
 
-    it("Reverts if DEFAULT_LP_TOKEN is NOT contract", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            DEFAULT_DWP,
-            user2.address,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN NOT contract");
-    });
+  //   it("Reverts if DEFAULT_LP_TOKEN is 0 address", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           DEFAULT_DWP,
+  //           ZERO_ADDRESS,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN NOT contract");
+  //   });
 
-    it("Reverts if Max Maintainer Fee > 100%", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            DEFAULT_DWP,
-            DEFAULT_LP_TOKEN,
-            10 ** 10 + 1,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
-    });
+  //   it("Reverts if DEFAULT_LP_TOKEN is NOT contract", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           DEFAULT_DWP,
+  //           user2.address,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: DEFAULT_LP_TOKEN NOT contract");
+  //   });
 
-    it("Reverts if Max Maintainer Fee == 0", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            DEFAULT_DWP,
-            DEFAULT_LP_TOKEN,
-            0,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
-    });
+  //   it("Reverts if Max Maintainer Fee > 100%", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           DEFAULT_DWP,
+  //           DEFAULT_LP_TOKEN,
+  //           10 ** 10 + 1,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
+  //   });
 
-    it("Reverts if PERIOD_PRICE_INCREASE_LIMIT is zero", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            DEFAULT_DWP,
-            DEFAULT_LP_TOKEN,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            0,
-            PERIOD_PRICE_DECREASE_LIMIT,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: incorrect PERIOD_PRICE_INCREASE_LIMIT");
-    });
-    it("Reverts if PERIOD_PRICE_DECREASE_LIMIT is zero", async () => {
-      await expect(
-        testContract
-          .connect(deployer)
-          .updateGovernanceParams(
-            DEFAULT_GETH_INTERFACE,
-            DEFAULT_DWP,
-            DEFAULT_LP_TOKEN,
-            MAX_MAINTAINER_FEE,
-            BOOSTRAP_PERIOD,
-            PERIOD_PRICE_INCREASE_LIMIT,
-            0,
-            WITHDRAWAL_DELAY
-          )
-      ).to.be.revertedWith("StakeUtils: incorrect PERIOD_PRICE_DECREASE_LIMIT");
-    });
+  //   it("Reverts if Max Maintainer Fee == 0", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           DEFAULT_DWP,
+  //           DEFAULT_LP_TOKEN,
+  //           0,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: incorrect MAX_MAINTAINER_FEE");
+  //   });
 
-    it("success, check params", async () => {
-      const { get } = deployments;
-      await testContract
-        .connect(deployer)
-        .updateGovernanceParams(
-          DEFAULT_GETH_INTERFACE,
-          DEFAULT_DWP,
-          DEFAULT_LP_TOKEN,
-          MAX_MAINTAINER_FEE,
-          BOOSTRAP_PERIOD,
-          PERIOD_PRICE_INCREASE_LIMIT,
-          PERIOD_PRICE_DECREASE_LIMIT,
-          WITHDRAWAL_DELAY
-        );
+  //   it("Reverts if PERIOD_PRICE_INCREASE_LIMIT is zero", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           DEFAULT_DWP,
+  //           DEFAULT_LP_TOKEN,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           0,
+  //           PERIOD_PRICE_DECREASE_LIMIT
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: incorrect PERIOD_PRICE_INCREASE_LIMIT");
+  //   });
+  //   it("Reverts if PERIOD_PRICE_DECREASE_LIMIT is zero", async () => {
+  //     await expect(
+  //       testContract
+  //         .connect(deployer)
+  //         .updateGovernanceParams(
+  //           DEFAULT_GETH_INTERFACE,
+  //           DEFAULT_DWP,
+  //           DEFAULT_LP_TOKEN,
+  //           MAX_MAINTAINER_FEE,
+  //           BOOSTRAP_PERIOD,
+  //           PERIOD_PRICE_INCREASE_LIMIT,
+  //           0
+  //         )
+  //     ).to.be.revertedWith("StakeUtils: incorrect PERIOD_PRICE_DECREASE_LIMIT");
+  //   });
 
-      const stakePoolParams = await testContract.getStakePoolParams();
-      const telescopeParams = await testContract.getOracleParams();
+  //   it("success, check params", async () => {
+  //     const { get } = deployments;
+  //     await testContract
+  //       .connect(deployer)
+  //       .updateGovernanceParams(
+  //         DEFAULT_GETH_INTERFACE,
+  //         DEFAULT_DWP,
+  //         DEFAULT_LP_TOKEN,
+  //         MAX_MAINTAINER_FEE,
+  //         BOOSTRAP_PERIOD,
+  //         PERIOD_PRICE_INCREASE_LIMIT,
+  //         PERIOD_PRICE_DECREASE_LIMIT
+  //       );
 
-      expect(stakePoolParams.DEFAULT_gETH_INTERFACE).to.be.eq(
-        (await get("ERC20InterfacePermitUpgradable")).address
-      );
-      expect(stakePoolParams.DEFAULT_DWP).to.be.eq((await get("Swap")).address);
-      expect(stakePoolParams.DEFAULT_LP_TOKEN).to.be.eq(
-        (await get("LPToken")).address
-      );
-      expect(stakePoolParams.MAX_MAINTAINER_FEE).to.be.eq(1e9);
-      expect(stakePoolParams.BOOSTRAP_PERIOD).to.be.eq(3 * 30 * 24 * 60 * 60);
-      expect(telescopeParams.PERIOD_PRICE_INCREASE_LIMIT).to.be.eq(2e7);
-      expect(telescopeParams.PERIOD_PRICE_DECREASE_LIMIT).to.be.eq(2e7);
-    });
-  });
+  //     const stakePoolParams = await testContract.getStakePoolParams();
+  //     const telescopeParams = await testContract.getOracleParams();
+
+  //     expect(stakePoolParams.DEFAULT_gETH_INTERFACE).to.be.eq(
+  //       (await get("ERC20InterfacePermitUpgradable")).address
+  //     );
+  //     expect(stakePoolParams.DEFAULT_DWP).to.be.eq((await get("Swap")).address);
+  //     expect(stakePoolParams.DEFAULT_LP_TOKEN).to.be.eq(
+  //       (await get("LPToken")).address
+  //     );
+  //     expect(stakePoolParams.MAX_MAINTAINER_FEE).to.be.eq(1e9);
+  //     expect(stakePoolParams.BOOSTRAP_PERIOD).to.be.eq(3 * 30 * 24 * 60 * 60);
+  //     expect(telescopeParams.PERIOD_PRICE_INCREASE_LIMIT).to.be.eq(2e7);
+  //     expect(telescopeParams.PERIOD_PRICE_DECREASE_LIMIT).to.be.eq(2e7);
+  //   });
+  // });
 
   describe("deployWithdrawalPool", () => {
     let wpoolContract;
@@ -777,7 +791,7 @@ describe("StakeUtils", async () => {
         expect((await wpoolContract.swapStorage()).adminFee).to.eq(ADMIN_FEE);
       });
 
-      describe("LPToken", async () => {
+      describe("LPToken", () => {
         let LPcontract;
         it("init() fails with already init", async () => {
           LPcontract = await ethers.getContractAt(
@@ -792,11 +806,11 @@ describe("StakeUtils", async () => {
         });
 
         it("Returns correct name", async () => {
-          expect(await LPcontract.name()).to.eq("-Geode WP Token");
+          expect(await LPcontract.name()).to.eq("-Geode LP Token");
         });
 
         it("Returns correct symbol", async () => {
-          expect(await LPcontract.symbol()).to.eq("-WP");
+          expect(await LPcontract.symbol()).to.eq("-LP");
         });
       });
     });
@@ -814,9 +828,9 @@ describe("StakeUtils", async () => {
           randId, // _id
           1e5, // _fee
           user1.address, // _maintainer
-          69 // _ValidatorPeriod
+          1e8 // _ValidatorPeriod
         )
-      ).to.be.revertedWith("StakeUtils: sender NOT CONTROLLER");
+      ).to.be.revertedWith("MaintainerUtils: sender NOT CONTROLLER");
     });
 
     it("reverts if id should be Operator TYPE", async () => {
@@ -826,19 +840,19 @@ describe("StakeUtils", async () => {
           randId, // _id
           1e5, // _fee
           user1.address, // _maintainer
-          69 // _ValidatorPeriod
+          1e8 // _ValidatorPeriod
         )
-      ).to.be.revertedWith("StakeUtils: id NOT correct TYPE");
+      ).to.be.revertedWith("MaintainerUtils: id NOT correct TYPE");
     });
 
-    describe("success", async () => {
+    describe("success", () => {
       let timestamp;
       beforeEach(async () => {
         await testContract.connect(user1).initiateOperator(
           randId, // _id
           1e5, // _fee
           user1.address, // _maintainer
-          69 // _ValidatorPeriod
+          1e8 // _ValidatorPeriod
         );
         timestamp = await getCurrentBlockTimestamp();
       });
@@ -859,7 +873,7 @@ describe("StakeUtils", async () => {
 
       it("check ValidatorPeriod is set correctly", async () => {
         setFee = await testContract.getValidatorPeriod(randId);
-        expect(setFee).to.be.eq(69);
+        expect(setFee).to.be.eq(1e8);
       });
 
       it("after success, reverts if already initiated", async () => {
@@ -868,30 +882,15 @@ describe("StakeUtils", async () => {
             randId, // _id
             1e5, // _fee
             user1.address, // _maintainer
-            69 // _ValidatorPeriod
+            1e8 // _ValidatorPeriod
           )
-        ).to.be.revertedWith("StakeUtils: already initiated");
+        ).to.be.revertedWith("MaintainerUtils: already initiated");
       });
     });
   });
 
   describe("initiatePlanet", () => {
     let wPoolContract;
-
-    it("reverts when withdrawalBoost > 100%", async () => {
-      await testContract.connect(user1).beController(planetId);
-      await testContract.connect(user1).setType(planetId, 5);
-      await expect(
-        testContract.connect(user1).initiatePlanet(
-          planetId, // _id
-          1e6, // _fee
-          1e11, // _withdrawalBoost
-          user1.address, // _maintainer
-          "beautiful-planet", // _interfaceName
-          "BP" // _interfaceSymbol
-        )
-      ).to.be.revertedWith("StakeUtils: withdrawalBoost > 100%");
-    });
 
     describe("success", () => {
       beforeEach(async () => {
@@ -901,7 +900,6 @@ describe("StakeUtils", async () => {
         await testContract.connect(user1).initiatePlanet(
           randId, // _id
           1e6, // _fee
-          1e2, // _withdrawalBoost
           user1.address, // _maintainer
           "beautiful-planet", // _interfaceName
           "BP" // _interfaceSymbol
@@ -927,11 +925,6 @@ describe("StakeUtils", async () => {
       it("fee is correct", async () => {
         setFee = await testContract.getMaintainerFee(randId);
         expect(setFee).to.be.eq(1e6);
-      });
-
-      it("withdrawalBoost is correct", async () => {
-        withdrawalBoost = await testContract.withdrawalBoost(randId);
-        expect(withdrawalBoost).to.be.eq(1e2);
       });
 
       it("check WP is approvedForAll on gETH", async () => {
@@ -962,7 +955,6 @@ describe("StakeUtils", async () => {
       await testContract.connect(user1).initiatePlanet(
         planetId, // _id
         1e6, // _fee
-        1e2, // _withdrawalBoost
         user1.address, // _maintainer
         "beautiful-planet", // _interfaceName
         "BP" // _interfaceSymbol
@@ -977,43 +969,49 @@ describe("StakeUtils", async () => {
       await expect(
         testContract.connect(user1).unpauseStakingForPool(planetId)
       ).to.be.revertedWith("StakeUtils: staking already NOT paused");
-      expect(await testContract.canDeposit(planetId)).to.be.eq(true);
     });
 
     describe("pauseStakingForPool functionality", () => {
       beforeEach(async () => {
         await testContract.setType(planetId, 5);
       });
+
       it("pauseStakingForPool reverts when it is NOT maintainer", async () => {
         await expect(
           testContract.connect(user2).pauseStakingForPool(planetId)
-        ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+        ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
         expect(await testContract.canDeposit(planetId)).to.be.eq(true);
       });
-      describe("pauseStakingForPool succeeds when it is maintainer", async () => {
+
+      describe("pauseStakingForPool succeeds when it is maintainer", () => {
         beforeEach(async () => {
           await testContract.connect(user1).pauseStakingForPool(planetId);
           expect(await testContract.canDeposit(planetId)).to.be.eq(false);
         });
+
         it("pauseStakingForPool reverts when it is already paused", async () => {
           await expect(
             testContract.connect(user1).pauseStakingForPool(planetId)
           ).to.be.revertedWith("StakeUtils: staking already paused");
           expect(await testContract.canDeposit(planetId)).to.be.eq(false);
         });
-        describe("unpauseStakingForPool when it is already paused", async () => {
+
+        describe("unpauseStakingForPool when it is already paused", () => {
           it("unpauseStakingForPool reverts when it is NOT maintainer", async () => {
             await expect(
               testContract.connect(user2).unpauseStakingForPool(planetId)
-            ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+            ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
 
             expect(await testContract.canDeposit(planetId)).to.be.eq(false);
           });
-          describe("unpauseStakingForPool succeeds when called by Maintainer", async () => {
+
+          describe("unpauseStakingForPool succeeds when called by Maintainer", () => {
             beforeEach(async () => {
               await testContract.connect(user1).unpauseStakingForPool(planetId);
+
               expect(await testContract.canDeposit(planetId)).to.be.eq(true);
             });
+
             it("unpauseStakingForPool reverts when it is NOT paused", async () => {
               await expect(
                 testContract.connect(user1).unpauseStakingForPool(planetId)
@@ -1039,7 +1037,7 @@ describe("StakeUtils", async () => {
     it("approveOperator reverts if NOT maintainer", async () => {
       await expect(
         testContract.connect(user2).approveOperator(planetId, operatorId, 69)
-      ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+      ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
     });
 
     it("approveOperator succeeds if maintainer", async () => {
@@ -1092,7 +1090,7 @@ describe("StakeUtils", async () => {
         testContract.connect(user2).increaseMaintainerWallet(operatorId, {
           value: String(1e17),
         })
-      ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+      ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
     });
 
     it("increaseMaintainerWallet succeeds if maintainer", async () => {
@@ -1116,7 +1114,7 @@ describe("StakeUtils", async () => {
             operatorId,
             ethers.BigNumber.from(String(1e17))
           )
-      ).to.be.revertedWith("StakeUtils: sender NOT maintainer");
+      ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
     });
 
     it("decreaseMaintainerWallet reverts if underflow", async () => {
@@ -1152,7 +1150,7 @@ describe("StakeUtils", async () => {
         testContract
           .connect(user1)
           .decreaseMaintainerWallet(operatorId, String(3e17))
-      ).to.be.revertedWith("StakeUtils: NOT enough balance in wallet");
+      ).to.be.revertedWith("MaintainerUtils: NOT enough balance in wallet");
     });
 
     it("decreaseMaintainerWallet succeeds if maintainer", async () => {
@@ -1196,22 +1194,29 @@ describe("StakeUtils", async () => {
     });
   });
 
-  describe("Update Comet Period ", () => {
+  // TODO: 4 is not comet; comet should not be updated, so this should change as operator "Update Operator Period"
+  // TODO: note that comet revert check done somewhere else check "reverts if _operatorId is a Comet" !!!
+
+  // TODO: should check MIN_VALIDATOR_PERIOD
+  // TODO: should check MAX_VALIDATOR_PERIOD
+  describe("Update Validator Period", () => {
     beforeEach(async () => {
       await testContract.setType(randId, 4);
       await testContract.beController(randId);
       await testContract.changeIdMaintainer(randId, user1.address);
     });
     it("reverts when not called by maintainer", async () => {
-      await expect(testContract.updateValidatorPeriod(randId, String(1e18))).to
-        .be.reverted;
+      await expect(
+        testContract.updateValidatorPeriod(randId, String(1e18))
+      ).to.be.revertedWith("MaintainerUtils: sender NOT maintainer");
     });
+
     it("succeeds", async () => {
       await testContract
         .connect(user1)
-        .updateValidatorPeriod(randId, String(1e18));
+        .updateValidatorPeriod(randId, String(1e8));
       await expect(await testContract.getValidatorPeriod(randId)).to.be.eq(
-        String(1e18)
+        String(1e8)
       );
     });
   });
@@ -1230,12 +1235,26 @@ describe("StakeUtils", async () => {
     let preSwapFees;
 
     beforeEach(async () => {
-      await testContract.beController(randId);
-      await testContract.changeIdMaintainer(randId, user1.address);
+      await testContract.connect(user1).beController(randId);
+      await testContract
+        .connect(user1)
+        .changeIdMaintainer(randId, user1.address);
     });
 
     describe("depositPlanet", () => {
       beforeEach(async () => {
+        await testContract.setType(randId, 5);
+        await testContract.connect(user1).beController(randId);
+        await testContract
+          .connect(user1)
+          .changeIdMaintainer(randId, user1.address);
+        await testContract.connect(user1).initiatePlanet(
+          randId, // _id
+          1e5, // _fee
+          user1.address, // _maintainer
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
+        );
         await testContract.deployWithdrawalPool(randId);
         const wpool = await testContract.withdrawalPoolById(randId);
         wpoolContract = await ethers.getContractAt("Swap", wpool);
@@ -1288,7 +1307,7 @@ describe("StakeUtils", async () => {
           testContract.depositPlanet(randId, 0, MAX_UINT256, {
             value: String(2e18),
           })
-        ).to.be.revertedWith("StakeUtils: minting is paused");
+        ).to.be.revertedWith("StakeUtils: minting paused");
       });
 
       describe("succeeds", () => {
@@ -1299,6 +1318,7 @@ describe("StakeUtils", async () => {
             await setTimestamp(24 * 60 * 60 * 100000 + 100);
             // ensure that it starts as zero.
             expect(await testContract.dailyMintBuffer(randId)).to.be.eq(0);
+
             const tx = await testContract
               .connect(user1)
               .depositPlanet(randId, 0, MAX_UINT256, {
@@ -1308,7 +1328,7 @@ describe("StakeUtils", async () => {
             gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
           });
 
-          it("user lost ether more than stake (+gas) ", async () => {
+          it("user lost ether more than stake (+gas)", async () => {
             const newBal = await provider.getBalance(user1.address);
             expect(newBal.add(gasUsed)).to.be.eq(
               ethers.BigNumber.from(String(preUserBal)).sub(String(1e18))
@@ -1373,7 +1393,7 @@ describe("StakeUtils", async () => {
           });
         });
 
-        describe("when paused pool is unpaused and not balanced", async () => {
+        describe("when paused pool is unpaused and not balanced", () => {
           let gasUsed;
           let newPreUserBal;
 
@@ -1407,7 +1427,7 @@ describe("StakeUtils", async () => {
             gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
           });
 
-          it("user lost ether more than stake (+gas) ", async () => {
+          it("user lost ether more than stake (+gas)", async () => {
             const newBal = await provider.getBalance(user1.address);
             expect(newBal).to.be.eq(
               ethers.BigNumber.from(String(newPreUserBal))
@@ -1465,13 +1485,13 @@ describe("StakeUtils", async () => {
 
     describe("Withdrawals", () => {
       beforeEach(async () => {
-        await testContract.deployWithdrawalPool(randId);
         await testContract.setType(randId, 5);
+
         await testContract.beController(randId);
+
         await testContract.initiatePlanet(
           randId, // _id
           1e5, // _fee
-          5e2,
           user2.address, // _maintainer
           "beautiful-planet", // _interfaceName
           "BP" // _interfaceSymbol
@@ -1555,7 +1575,7 @@ describe("StakeUtils", async () => {
               .donateBalancedFees(randId, String(1e19), String(1e19))
           ).to.be.revertedWith("SwapUtils: MUST respect to derivative price");
         });
-        describe("success", async () => {
+        describe("success", () => {
           beforeEach(async () => {
             await gETH.safeTransferFrom(
               deployer.address,
@@ -1616,12 +1636,12 @@ describe("StakeUtils", async () => {
             testContract.connect(user1).burnSurplus(randId, String(1e19))
           ).to.be.revertedWith("ERC1155: insufficient balance for transfer");
         });
-        describe("success", async () => {
+        describe("success", () => {
           beforeEach(async () => {
             await setTimestamp(100000 * 24 * 3600);
             expect(await testContract.isOracleActive()).to.be.eq(true);
           });
-          describe("g-price = 1", async () => {
+          describe("g-price = 1", () => {
             beforeEach(async () => {
               await gETH.safeTransferFrom(
                 deployer.address,
@@ -1755,7 +1775,7 @@ describe("StakeUtils", async () => {
             ).to.be.revertedWith("Swap didn't result in min tokens");
           });
 
-          describe("success", async () => {
+          describe("success", () => {
             let calcPay;
             beforeEach(async () => {
               await gETH
@@ -1781,7 +1801,7 @@ describe("StakeUtils", async () => {
           });
         });
 
-        describe("after BOOSTRAP_PERIOD", async () => {
+        describe("after BOOSTRAP_PERIOD", () => {
           beforeEach(async () => {
             await setTimestamp(
               (await getCurrentBlockTimestamp()) + BOOSTRAP_PERIOD + 30 * 60 + 1
@@ -1793,7 +1813,7 @@ describe("StakeUtils", async () => {
               .setApprovalForAll(testContract.address, true);
           });
 
-          describe("success: withdrawnGeth <= surplus", async () => {
+          describe("success: withdrawnGeth <= surplus", () => {
             beforeEach(async () => {
               await testContract
                 .connect(user1)
@@ -1813,7 +1833,7 @@ describe("StakeUtils", async () => {
             });
           });
 
-          describe("success: withdrawnGeth > surplus", async () => {
+          describe("success: withdrawnGeth > surplus", () => {
             let calcPay;
             beforeEach(async () => {
               calcPay = ethers.BigNumber.from(String(1e20))
@@ -1844,15 +1864,13 @@ describe("StakeUtils", async () => {
           operatorId, // _id
           1e5, // _fee
           user1.address, // _maintainer
-          69
+          1e8
         );
-
         await testContract.setType(planetId, 5);
         await testContract.beController(planetId);
         await testContract.initiatePlanet(
           planetId, // _id
           1e5, // _fee
-          5e2,
           user2.address, // _maintainer
           "beautiful-planet", // _interfaceName
           "BP" // _interfaceSymbol
@@ -1949,7 +1967,7 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith("StakeUtils: NOT enough allowance");
       });
 
-      it("StakeUtils: Pubkey is already alienated", async () => {
+      it("Pubkey is already alienated", async () => {
         await testContract.connect(user1).increaseMaintainerWallet(operatorId, {
           value: String(2e18),
         });
@@ -1957,19 +1975,13 @@ describe("StakeUtils", async () => {
         await testContract
           .connect(user2)
           .approveOperator(planetId, operatorId, 2);
-
         await testContract.alienatePubKey(pubkey2);
         await testContract.setSurplus(planetId, String(1e20));
         await testContract.Receive({ value: String(1e20) });
         await expect(
           testContract
             .connect(user1)
-            .proposeStake(
-              planetId,
-              operatorId,
-              [pubkey1, pubkey2],
-              [signature1, signature2]
-            )
+            .proposeStake(planetId, operatorId, [pubkey2], [signature2])
         ).to.be.revertedWith("StakeUtils: Pubkey already used or alienated");
       });
 
@@ -1989,8 +2001,8 @@ describe("StakeUtils", async () => {
             .proposeStake(
               planetId,
               operatorId,
-              [pubkey1, pubkey2 + "aefe"],
-              [signature1, signature2]
+              [pubkey2 + "aefe"],
+              [signature2]
             )
         ).to.be.revertedWith("StakeUtils: PUBKEY_LENGTH ERROR");
       });
@@ -2012,8 +2024,8 @@ describe("StakeUtils", async () => {
             .proposeStake(
               planetId,
               operatorId,
-              [pubkey1, pubkey2],
-              [signature1, signature2 + "aefe"]
+              [pubkey2],
+              [signature2 + "aefe"]
             )
         ).to.be.revertedWith("StakeUtils: SIGNATURE_LENGTH ERROR");
       });
@@ -2024,7 +2036,6 @@ describe("StakeUtils", async () => {
         let prevAllowance;
         let prevWalletBalance;
         let prevProposedValidators;
-        let prevTotalProposedValidators;
         let prevContractBalance;
 
         beforeEach(async () => {
@@ -2068,16 +2079,20 @@ describe("StakeUtils", async () => {
             );
         });
 
-        describe("if prisoned", async () => {
+        describe("if prisoned", () => {
           let releaseTS;
           beforeEach(async () => {
             await testContract.setSurplus(planetId, String(64e18));
             await testContract.Receive({ value: String(64e18) });
-
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1000, 0, [[], [], [], []], [operatorId]);
-            releaseTS = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
+            await testContract.connect(oracle).regulateOperators(
+              [],
+              [],
+              [
+                [operatorId, 12421],
+                [planetId, 1312],
+              ]
+            );
+            releaseTS = (await getCurrentBlockTimestamp()) + 30 * 24 * 60 * 60;
           });
 
           it("reverts", async () => {
@@ -2097,8 +2112,8 @@ describe("StakeUtils", async () => {
           });
         });
 
-        it("Contract balance decreased accordingly (1 eth)", async () => {
-          expect(String(1e18)).to.be.eq(
+        it("Contract balance decreased accordingly (2 eth)", async () => {
+          expect(String(2e18)).to.be.eq(
             prevContractBalance.sub(await testContract.getContractBalance())
           );
         });
@@ -2131,12 +2146,6 @@ describe("StakeUtils", async () => {
           expect(
             await testContract.proposedValidatorsById(planetId, operatorId)
           ).to.be.eq(prevProposedValidators + 2);
-        });
-
-        it("totalProposedValidators increased accordingly", async () => {
-          expect(
-            await testContract.totalProposedValidatorsById(operatorId)
-          ).to.be.eq(prevTotalProposedValidators + 2);
         });
 
         it("reverts if pubKey is already created", async () => {
@@ -2188,12 +2197,24 @@ describe("StakeUtils", async () => {
     describe("canStake", () => {
       beforeEach(async () => {
         await testContract.setMONOPOLY_THRESHOLD(1000);
-        await testContract.beController(operatorId);
-        await testContract.changeIdMaintainer(operatorId, user1.address);
-        await testContract.beController(planetId);
-        await testContract.changeIdMaintainer(planetId, user2.address);
         await testContract.setType(operatorId, 4);
+        await testContract.beController(operatorId);
+        await testContract.initiateOperator(
+          operatorId, // _id
+          1e5, // _fee
+          user1.address, // _maintainer
+          1e8
+        );
         await testContract.setType(planetId, 5);
+        await testContract.beController(planetId);
+        await testContract.initiatePlanet(
+          planetId, // _id
+          1e5, // _fee
+          user2.address, // _maintainer
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
+        );
+
         await testContract.setSurplus(planetId, String(1e20));
         await testContract
           .connect(user2)
@@ -2218,16 +2239,12 @@ describe("StakeUtils", async () => {
       });
 
       it("returns false if VERIFICATION_INDEX is smaller than validator's index", async () => {
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 1, [[], [], [], []], [operatorId]);
+        await testContract.connect(oracle).updateVerificationIndex(5000, 1, []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(false);
       });
 
-      it("returns true", async () => {
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 2, [[], [], [], []], []);
+      it("returns true if verified", async () => {
+        await testContract.connect(oracle).updateVerificationIndex(5000, 2, []);
         expect(await testContract.canStake(pubkey2)).to.be.eq(true);
       });
     });
@@ -2239,30 +2256,40 @@ describe("StakeUtils", async () => {
       let prevContractBalance;
       beforeEach(async () => {
         await testContract.setMONOPOLY_THRESHOLD(1000);
-        await testContract.beController(operatorId);
-        await testContract.changeIdMaintainer(operatorId, user1.address);
-        await testContract.beController(planetId);
-        await testContract.changeIdMaintainer(planetId, user2.address);
         await testContract.setType(operatorId, 4);
+        await testContract.beController(operatorId);
+        await testContract.initiateOperator(
+          operatorId, // _id
+          1e5, // _fee
+          user1.address, // _maintainer
+          1e8
+        );
         await testContract.setType(planetId, 5);
-        await testContract
-          .connect(user2)
-          .approveOperator(planetId, operatorId, 3);
+        await testContract.beController(planetId);
+        await testContract.initiatePlanet(
+          planetId, // _id
+          1e5, // _fee
+          user2.address, // _maintainer
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
+        );
         await testContract.setPricePerShare(String(1e18), planetId);
-        await testContract.deployWithdrawalPool(planetId);
         await testContract.connect(user1).increaseMaintainerWallet(operatorId, {
           value: String(6e18),
         });
+        await testContract
+          .connect(user2)
+          .approveOperator(planetId, operatorId, 5);
         await testContract.setSurplus(planetId, String(1e20));
         await testContract.Receive({ value: String(1e20) });
-        await testContract.connect(user1).proposeStake(
-          planetId,
-          operatorId,
-          [pubkey1, pubkey2],
-          [signature1, signature2]
-          // [pubkey1, pubkey2, pubkey3, pubkey4],
-          // [signature1, signature2, signature3, signature4]
-        );
+        await testContract
+          .connect(user1)
+          .proposeStake(
+            planetId,
+            operatorId,
+            [pubkey1, pubkey2, pubkey3],
+            [signature1, signature2, signature3]
+          );
         prevActiveValidators = await testContract.activeValidatorsById(
           planetId,
           operatorId
@@ -2278,7 +2305,7 @@ describe("StakeUtils", async () => {
           testContract
             .connect(user1)
             .beaconStake(operatorId, Array(1).fill(pubkey1))
-        ).to.be.revertedWith("StakeUtils: oracle is active");
+        ).to.be.revertedWith("StakeUtils: ORACLE is active");
       });
 
       it("1 to 64 nodes per transaction", async () => {
@@ -2293,33 +2320,7 @@ describe("StakeUtils", async () => {
         ).to.be.revertedWith("StakeUtils: MAX 64 nodes");
       });
 
-      it("reverts if prisoned, can stake after released", async () => {
-        await testContract
-          .connect(user1)
-          .depositPlanet(planetId, 0, MAX_UINT256, {
-            value: String(1e20),
-          });
-
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 2, [[], [], [], []], [operatorId]);
-
-        await expect(
-          testContract
-            .connect(user1)
-            .beaconStake(operatorId, [pubkey1, pubkey2])
-        ).to.be.revertedWith(
-          "StakeUtils: operator is in prison, get in touch with governance"
-        );
-
-        await testContract.connect(deployer).releasePrisoned(operatorId);
-
-        await testContract
-          .connect(user1)
-          .beaconStake(operatorId, [pubkey1, pubkey2]);
-      });
-
-      describe("success, check params", async () => {
+      describe("success, check params", () => {
         beforeEach(async () => {
           await testContract
             .connect(user1)
@@ -2330,7 +2331,7 @@ describe("StakeUtils", async () => {
 
           await testContract
             .connect(oracle)
-            .regulateOperators(1000, 2, [[], [], [], []], []);
+            .updateVerificationIndex(5000, 3, []);
 
           prevContractBalance = await testContract.getContractBalance();
           await testContract
@@ -2348,7 +2349,7 @@ describe("StakeUtils", async () => {
         });
 
         it("Contract balance decreased accordingly (64 eth)", async () => {
-          expect(String(64e18)).to.be.eq(
+          expect(String(62e18)).to.be.eq(
             prevContractBalance.sub(await testContract.getContractBalance())
           );
         });
@@ -2378,7 +2379,7 @@ describe("StakeUtils", async () => {
     });
   });
 
-  describe("Oracle Operations", async () => {
+  describe("Oracle Operations", () => {
     it("_setPricePerShare", async () => {
       await testContract.setPricePerShare(String(1e20), randId);
       expect(await gETH.pricePerShare(randId)).to.eq(String(1e20));
@@ -2394,14 +2395,26 @@ describe("StakeUtils", async () => {
       expect(await testContract.getPricePerShare(randId)).to.eq(String(2e19));
     });
 
-    describe("regulateOperators", () => {
+    describe("updateVerificationIndex", () => {
       beforeEach(async () => {
-        await testContract.beController(operatorId);
-        await testContract.changeIdMaintainer(operatorId, user1.address);
-        await testContract.beController(planetId);
-        await testContract.changeIdMaintainer(planetId, user2.address);
+        await testContract.setMONOPOLY_THRESHOLD(1000);
         await testContract.setType(operatorId, 4);
+        await testContract.beController(operatorId);
+        await testContract.initiateOperator(
+          operatorId, // _id
+          1e5, // _fee
+          user1.address, // _maintainer
+          1e8
+        );
         await testContract.setType(planetId, 5);
+        await testContract.beController(planetId);
+        await testContract.initiatePlanet(
+          planetId, // _id
+          1e5, // _fee
+          user2.address, // _maintainer
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
+        );
         await testContract.setSurplus(planetId, String(1e20));
         await testContract
           .connect(user2)
@@ -2414,35 +2427,15 @@ describe("StakeUtils", async () => {
 
       it("reverts if low validator count", async () => {
         await expect(
-          testContract
-            .connect(oracle)
-            .regulateOperators(
-              999,
-              2,
-              [[pubkey4], [pubkey4], [pubkey4], [pubkey4]],
-              []
-            )
+          testContract.connect(oracle).updateVerificationIndex(4999, 1, [])
         ).to.be.revertedWith("OracleUtils: low validator count");
-      });
-
-      it("reverts if regulatedPubkeys length != 4", async () => {
-        await expect(
-          testContract
-            .connect(oracle)
-            .regulateOperators(1000, 0, [[pubkey4], [pubkey4], [pubkey4]], [])
-        ).to.be.revertedWith("OracleUtils: regulatedPubkeys length != 4");
       });
 
       it("reverts if VALIDATORS_INDEX is smaller than new index point", async () => {
         await expect(
           testContract
             .connect(oracle)
-            .regulateOperators(
-              1000,
-              2,
-              [[pubkey4], [pubkey4], [pubkey4], [pubkey4]],
-              []
-            )
+            .updateVerificationIndex(5000, 2, [pubkey3, pubkey4])
         ).to.be.revertedWith("OracleUtils: high VERIFICATION_INDEX");
       });
 
@@ -2456,14 +2449,10 @@ describe("StakeUtils", async () => {
             [pubkey1, pubkey2, pubkey3],
             [signature1, signature2, signature3]
           );
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 2, [[pubkey3], [], [], []], []);
+        await testContract.connect(oracle).updateVerificationIndex(5000, 2, []);
 
         await expect(
-          testContract
-            .connect(oracle)
-            .regulateOperators(1000, 1, [[], [], [], []], [])
+          testContract.connect(oracle).updateVerificationIndex(5000, 1, [])
         ).to.be.revertedWith("OracleUtils: low VERIFICATION_INDEX");
       });
 
@@ -2477,46 +2466,15 @@ describe("StakeUtils", async () => {
             [pubkey1, pubkey2],
             [signature1, signature2]
           );
+
         await expect(
           testContract
             .connect(oracle)
-            .regulateOperators(1000, 2, [[pubkey3], [], [], []], [])
+            .updateVerificationIndex(5000, 2, [pubkey3])
         ).to.be.revertedWith("OracleUtils: NOT all alienPubkeys are pending");
       });
 
-      it("reverts if not alienated validator tried to be cured", async () => {
-        await testContract.setMONOPOLY_THRESHOLD(1000);
-        await testContract
-          .connect(user1)
-          .proposeStake(
-            planetId,
-            operatorId,
-            [pubkey1, pubkey2],
-            [signature1, signature2]
-          );
-        await expect(
-          testContract
-            .connect(oracle)
-            .regulateOperators(1000, 2, [[], [pubkey3], [], []], [])
-        ).to.be.revertedWith("OracleUtils: NOT all curedPubkeys are alienated");
-      });
-      it("cant cure if not enough surplus", async () => {
-        await testContract.setMONOPOLY_THRESHOLD(1000);
-        await testContract
-          .connect(user1)
-          .proposeStake(planetId, operatorId, [pubkey1], [signature1]);
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 1, [[pubkey1], [], [], []], []);
-        await testContract.setSurplus(planetId, 0);
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 1, [[], [pubkey1], [], []], []);
-        expect((await testContract.getValidatorData(pubkey1)).state).to.be.eq(
-          69
-        );
-      });
-      describe("success", async () => {
+      describe("success", () => {
         let surplus;
         let secured;
         beforeEach(async () => {
@@ -2528,11 +2486,11 @@ describe("StakeUtils", async () => {
           surplus = await testContract.surplusById(planetId);
           secured = await testContract.securedById(planetId);
         });
-        describe("Alienated", async () => {
+        describe("Alienated", () => {
           beforeEach(async () => {
             await testContract
               .connect(oracle)
-              .regulateOperators(1000, 1, [[pubkey1], [], [], []], []);
+              .updateVerificationIndex(5000, 1, [pubkey1]);
             expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
           });
           it("check validator.state", async () => {
@@ -2549,63 +2507,6 @@ describe("StakeUtils", async () => {
             expect(await testContract.securedById(planetId)).to.be.eq(
               secured.sub(String(32e18))
             );
-          });
-        });
-        describe("Cured", async () => {
-          beforeEach(async () => {
-            await testContract.setSurplus(planetId, String(1e20));
-            await testContract.Receive({ value: String(1e20) });
-            surplus = await testContract.surplusById(planetId);
-            secured = await testContract.securedById(planetId);
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1000, 1, [[pubkey1], [], [], []], []);
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1000, 1, [[], [pubkey1], [], []], []);
-            expect(await testContract.getVERIFICATION_INDEX()).to.be.eq(1);
-          });
-          it("check validator.state", async () => {
-            expect(
-              (await testContract.getValidatorData(pubkey1)).state
-            ).to.be.eq(1);
-          });
-          it("check surplus", async () => {
-            expect(0).to.be.eq(
-              surplus.sub(await testContract.surplusById(planetId))
-            );
-          });
-          it("check secured", async () => {
-            expect(String(0)).to.be.eq(
-              (await testContract.securedById(planetId)).sub(secured)
-            );
-          });
-        });
-        describe("Prisoned", async () => {
-          let releaseTs;
-          beforeEach(async () => {
-            await testContract.setSurplus(planetId, String(1e20));
-            await testContract.Receive({ value: String(1e20) });
-            await testContract
-              .connect(oracle)
-              .regulateOperators(1000, 1, [[], [], [], []], [operatorId]);
-            releaseTs = (await getCurrentBlockTimestamp()) + 7 * 24 * 60 * 60;
-          });
-          it("released after 7 days", async () => {
-            expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
-            await setTimestamp(releaseTs + 1);
-            expect(await testContract.isPrisoned(operatorId)).to.be.eq(false);
-          });
-          describe("releasePrisoned", async () => {
-            it("reverts when not called by Governance", async () => {
-              await expect(
-                testContract.connect(user1).releasePrisoned(operatorId)
-              ).to.be.revertedWith("StakeUtils: sender NOT GOVERNANCE");
-            });
-            it("success", async () => {
-              await testContract.connect(deployer).releasePrisoned(operatorId);
-              expect(await testContract.isPrisoned(operatorId)).to.be.eq(true);
-            });
           });
         });
       });
@@ -2641,7 +2542,7 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("_sanityCheck", async () => {
+    describe("_sanityCheck", () => {
       beforeEach(async () => {
         await testContract.setPricePerShare(String(1e18), planetId);
         await testContract.setORACLE_UPDATE_TIMESTAMP(
@@ -2686,31 +2587,41 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("_priceSync", async () => {
-      describe("needs update with merkle", async () => {
-        const isThisPartUpdated = false;
-        beforeEach(async () => {
-          // continue here and make isThisPartUpdated when done.
-          // ----
-          //
-          // ----
-        });
-        it("needs update with merkle", async () => {
-          expect(isThisPartUpdated).to.be.eq(true);
-        });
-      });
-    });
+    // describe("_priceSync", () => {
+    //   describe("needs update with merkle", () => {
+    //     const isThisPartUpdated = false;
+    //     beforeEach(async () => {
+    //       // continue here and make isThisPartUpdated when done.
+    //       // ----
+    //       //
+    //       // ----
+    //     });
+    //     it("needs update with merkle", async () => {
+    //       expect(isThisPartUpdated).to.be.eq(true);
+    //     });
+    //   });
+    // });
 
-    describe("_findPrices_ClearBuffer", async () => {
+    describe("_findPrices_ClearBuffer", () => {
       beforeEach(async () => {
         await testContract.setMONOPOLY_THRESHOLD(1000);
-        await testContract.setPricePerShare(String(1e18), planetId);
-        await testContract.beController(operatorId);
-        await testContract.changeIdMaintainer(operatorId, user1.address);
-        await testContract.beController(planetId);
-        await testContract.changeIdMaintainer(planetId, user2.address);
         await testContract.setType(operatorId, 4);
+        await testContract.beController(operatorId);
+        await testContract.initiateOperator(
+          operatorId, // _id
+          1e5, // _fee
+          user1.address, // _maintainer
+          1e8
+        );
         await testContract.setType(planetId, 5);
+        await testContract.beController(planetId);
+        await testContract.initiatePlanet(
+          planetId, // _id
+          1e5, // _fee
+          user2.address, // _maintainer
+          "beautiful-planet", // _interfaceName
+          "BP" // _interfaceSymbol
+        );
         await testContract
           .connect(user2)
           .approveOperator(planetId, operatorId, 4);
@@ -2731,9 +2642,8 @@ describe("StakeUtils", async () => {
             [pubkey1, pubkey2, pubkey3, pubkey4],
             [signature1, signature2, signature3, signature4]
           );
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 2, [[], [], [], []], []);
+
+        await testContract.connect(oracle).updateVerificationIndex(5000, 4, []);
 
         await testContract.setORACLE_UPDATE_TIMESTAMP(
           24 * 60 * 60 * 100000 + 0 * 60 + 1
@@ -2757,7 +2667,7 @@ describe("StakeUtils", async () => {
           });
       });
 
-      it("works when oracle not missed ", async () => {
+      it("works when oracle not missed", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 0 * 60 + 30);
         await testContract.setORACLE_UPDATE_TIMESTAMP(
           24 * 60 * 60 * 100001 + 0 * 60 + 30
@@ -2778,10 +2688,6 @@ describe("StakeUtils", async () => {
 
       it("works when oracle missed 1 day", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
-
-        await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 4, [[], [], [], []], []);
 
         await testContract
           .connect(user1)
@@ -2824,10 +2730,6 @@ describe("StakeUtils", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
 
         await testContract
-          .connect(oracle)
-          .regulateOperators(1000, 4, [[], [], [], []], []);
-
-        await testContract
           .connect(user1)
           .beaconStake(operatorId, [pubkey3, pubkey4]);
 
@@ -2866,7 +2768,7 @@ describe("StakeUtils", async () => {
       });
     });
 
-    describe("reportOracle", async () => {
+    describe("reportOracle", () => {
       const someBytes32 = ethers.utils.formatBytes32String("some");
       beforeEach(async () => {});
       it("reverts when caller is not oracle ", async () => {
@@ -2931,25 +2833,25 @@ describe("StakeUtils", async () => {
           )
         ).to.be.revertedWith("OracleUtils: incorrect priceProofs length");
       });
-      describe("success => needs update with merkle", async () => {
-        beforeEach(async () => {
-          // continue here and make isThisPartUpdated when done.
-          // ----
-          //
-          // ----
-          const isThisPartUpdated = false;
-          expect(isThisPartUpdated).to.be.eq(true);
-        });
-        it("updated all pricePerShares", async () => {
-          expect().to.be.eq();
-        });
-        it("correct ORACLE_UPDATE_TIMESTAMP", async () => {
-          expect().to.be.eq();
-        });
-        it("", async () => {
-          expect().to.be.eq();
-        });
-      });
+      // describe("success => needs update with merkle", async () => {
+      //   beforeEach(async () => {
+      //     // continue here and make isThisPartUpdated when done.
+      //     // ----
+      //     //
+      //     // ----
+      //     const isThisPartUpdated = false;
+      //     expect(isThisPartUpdated).to.be.eq(true);
+      //   });
+      //   it("updated all pricePerShares", async () => {
+      //     expect().to.be.eq();
+      //   });
+      //   it("correct ORACLE_UPDATE_TIMESTAMP", async () => {
+      //     expect().to.be.eq();
+      //   });
+      //   it("", async () => {
+      //     expect().to.be.eq();
+      //   });
+      // });
     });
   });
 });

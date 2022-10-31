@@ -74,6 +74,7 @@ contract MiniGovernance is
         uint256 whenPauseAllowed;
         uint256 contractVersion;
         uint256 proposedVersion;
+        uint256[9] __gap;
     }
 
     function initialize(
@@ -94,6 +95,7 @@ contract MiniGovernance is
         _refreshSenate(_MAINTAINER);
 
         SELF.contractVersion = _VERSION;
+        SELF.proposedVersion = _VERSION;
         emit ContractVersionSet(_VERSION);
     }
 

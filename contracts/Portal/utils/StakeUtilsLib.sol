@@ -67,16 +67,6 @@ library StakeUtils {
     event ProposeStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
     event BeaconStaked(bytes pubkey);
     event UnstakeSignal(uint256 poolId, bytes pubkey);
-    event ParamsUpdated(
-        address DEFAULT_gETH_INTERFACE_,
-        address DEFAULT_DWP_,
-        address DEFAULT_LP_TOKEN_,
-        uint256 MAX_MAINTAINER_FEE_,
-        uint256 BOOSTRAP_PERIOD_,
-        uint256 PERIOD_PRICE_INCREASE_LIMIT_,
-        uint256 PERIOD_PRICE_DECREASE_LIMIT_,
-        uint256 COMET_TAX_
-    );
     event WithdrawalBoostChanged(
         uint256 poolId,
         uint256 withdrawalBoost,
@@ -149,14 +139,12 @@ library StakeUtils {
      * @dev every interface has a unique index within "interfaces" dynamic array.
      * * even if unsetted, it just replaces the implementation with address(0) for obvious security reasons
      */
-    function setInterface(
+    function _setInterface(
         StakePool storage self,
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id,
         address _interface
-    ) public {
-        DATASTORE.authenticate(id, true, [false, true, true]);
-
+    ) internal {
         uint256 interfacesLength = DATASTORE.readUintForId(
             id,
             "interfacesLength"
@@ -172,6 +160,16 @@ library StakeUtils {
         );
         DATASTORE.addUintForId(id, "interfacesLength", 1);
         self.gETH.setInterface(_interface, id, true);
+    }
+
+    function setInterface(
+        StakePool storage self,
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 id,
+        address _interface
+    ) external {
+        DATASTORE.authenticate(id, true, [false, true, true]);
+        _setInterface(self, DATASTORE, id, _interface);
     }
 
     /**
@@ -251,7 +249,7 @@ library StakeUtils {
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
         );
         DATASTORE.initiateOperator(_id, _fee, _maintainer);
-        updateValidatorPeriod(DATASTORE, _id, _validatorPeriod);
+        _updateValidatorPeriod(DATASTORE, _id, _validatorPeriod);
     }
 
     /**
@@ -283,7 +281,7 @@ library StakeUtils {
         (
             address miniGovernance,
             address gInterface,
-            address WithdrawalPool
+            address withdrawalPool
         ) = DATASTORE.initiatePlanet(uintSpecs, addressSpecs, _interfaceSpecs);
 
         DATASTORE.writeBytesForId(
@@ -292,15 +290,15 @@ library StakeUtils {
             DCU.addressToWC(miniGovernance)
         );
 
-        setInterface(self, DATASTORE, _id, gInterface);
+        _setInterface(self, DATASTORE, _id, gInterface);
 
         // initially 1 ETHER = 1 ETHER
         self.gETH.setPricePerShare(1 ether, _id);
 
         // transfer ownership of DWP to GOVERNANCE
-        Ownable(WithdrawalPool).transferOwnership(self.GOVERNANCE);
+        Ownable(withdrawalPool).transferOwnership(self.GOVERNANCE);
         // approve token so we can use it in buybacks
-        self.gETH.setApprovalForAll(WithdrawalPool, true);
+        self.gETH.setApprovalForAll(withdrawalPool, true);
     }
 
     /**
@@ -534,14 +532,13 @@ library StakeUtils {
     /**
      * @notice updates validatorPeriod for given operator, limited by MAX_VALIDATOR_PERIOD
      */
-    function updateValidatorPeriod(
+    function _updateValidatorPeriod(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 operatorId,
         uint256 newPeriod
-    ) public {
-        DATASTORE.authenticate(operatorId, true, [true, true, false]);
+    ) internal {
         require(
-            newPeriod <= MIN_VALIDATOR_PERIOD,
+            newPeriod >= MIN_VALIDATOR_PERIOD,
             "StekeUtils: should be more than MIN_VALIDATOR_PERIOD"
         );
         require(
@@ -550,6 +547,15 @@ library StakeUtils {
         );
         DATASTORE.writeUintForId(operatorId, "validatorPeriod", newPeriod);
         emit ValidatorPeriodUpdated(operatorId, newPeriod);
+    }
+
+    function updateValidatorPeriod(
+        DataStoreUtils.DataStore storage DATASTORE,
+        uint256 operatorId,
+        uint256 newPeriod
+    ) external {
+        DATASTORE.authenticate(operatorId, true, [true, true, false]);
+        _updateValidatorPeriod(DATASTORE, operatorId, newPeriod);
     }
 
     /**
@@ -631,7 +637,7 @@ library StakeUtils {
         returns (bool)
     {
         return
-            DATASTORE.readUintForId(_id, "stakePaused") == 0 &&
+            (DATASTORE.readUintForId(_id, "stakePaused") == 0) &&
             !(miniGovernanceById(DATASTORE, _id).isolationMode());
     }
 

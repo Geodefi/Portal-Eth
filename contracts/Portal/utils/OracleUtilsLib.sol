@@ -333,10 +333,9 @@ library OracleUtils {
         for (uint256 j; j < bustedSignals.length; j++) {
             _bustSignal(self, DATASTORE, bustedSignals[j]);
         }
-
         for (uint256 k; k < feeThefts.length; k++) {
-            imprison(DATASTORE, feeThefts[0][k]);
-            emit FeeTheft(feeThefts[0][k], feeThefts[1][k]);
+            imprison(DATASTORE, feeThefts[k][0]);
+            emit FeeTheft(feeThefts[k][0], feeThefts[k][1]);
         }
     }
 
