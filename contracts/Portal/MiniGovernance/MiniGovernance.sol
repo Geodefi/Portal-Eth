@@ -57,14 +57,14 @@ contract MiniGovernance is
      * with the introduction of private pools, it can be a problem.
      * Thus, we require senate to refresh it's validity time to time.
      */
-    uint256 SENATE_VALIDITY = 180 days;
+     uint256 constant SENATE_VALIDITY = 180 days;
     /**
      * @dev While there are currently no worry on what pausing will affect,
      * with the next implementations, spamming stake/unstake can cause an issue.
      * Thus, we require senate to wait a bit before pausing the contract again, allowing
      * validator unstake(maybe).
      */
-    uint256 PAUSE_LAPSE = 1 weeks;
+    uint256 constant PAUSE_LAPSE = 1 weeks;
 
     struct PoolGovernance {
         IgETH gETH;
@@ -102,13 +102,13 @@ contract MiniGovernance is
     modifier onlyPortal() {
         require(
             msg.sender == GEM.GOVERNANCE,
-            "StakeUtils: sender is NOT PORTAL"
+            "MiniGovernance: sender is NOT PORTAL"
         );
         _;
     }
 
     modifier onlyMaintainer() {
-        require(msg.sender == GEM.SENATE, "StakeUtils: sender is NOT SENATE");
+        require(msg.sender == GEM.SENATE, "MiniGovernance: sender is NOT SENATE");
         _;
     }
 
@@ -180,7 +180,7 @@ contract MiniGovernance is
         require(id != SELF.contractVersion);
         GeodeUtils.Proposal memory proposal = getPortal().getProposal(id);
         require(proposal.TYPE == 11);
-        GEM.newProposal(proposal.CONTROLLER, 2, proposal.NAME, 4 weeks);
+        GEM.newProposal(proposal.CONTROLLER, 2, proposal.NAME, 5 days);
         SELF.proposedVersion = id;
     }
 
@@ -198,7 +198,7 @@ contract MiniGovernance is
      *                                          ** SENATE & UPGRADE MANAGEMENT **
      */
     function _refreshSenate(address newSenate) internal virtual whenNotPaused {
-        GEM._setSenate(newSenate, block.timestamp + SENATE_VALIDITY);
+        GEM._setSenate(newSenate, SENATE_VALIDITY);
     }
 
     /**
