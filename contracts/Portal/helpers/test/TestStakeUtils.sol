@@ -12,9 +12,11 @@ contract TestStakeUtils is ERC1155Holder {
     using DataStoreUtils for DataStoreUtils.DataStore;
     using OracleUtils for OracleUtils.Oracle;
     using StakeUtils for StakeUtils.StakePool;
+    using GeodeUtils for GeodeUtils.Universe;
 
     DataStoreUtils.DataStore private DATASTORE;
     StakeUtils.StakePool private STAKEPOOL;
+    GeodeUtils.Universe private GEODE;
 
     constructor(
         address _gETH,
@@ -45,12 +47,16 @@ contract TestStakeUtils is ERC1155Holder {
             (2 * StakeUtils.PERCENTAGE_DENOMINATOR) /
             1e3;
         STAKEPOOL.TELESCOPE.PRICE_MERKLE_ROOT = "";
-        STAKEPOOL.MINI_GOVERNANCE_VERSION = 31415926535;
+        STAKEPOOL.MINI_GOVERNANCE_VERSION = 58300719301927709293725675566594180747137962353038020407921210900692208248751; //mini-v1
         DATASTORE.writeAddressForId(
             STAKEPOOL.MINI_GOVERNANCE_VERSION,
             "CONTROLLER",
             _DEFAULT_MINI_GOVERNANCE
         );
+
+        // for mini gov  proposals and approvals
+        GEODE.SENATE = _GOVERNANCE;
+        GEODE.SENATE_EXPIRY = 7776036016 + 360 days;
     }
 
     function getStakePoolParams()
@@ -391,6 +397,15 @@ contract TestStakeUtils is ERC1155Holder {
         return address(StakeUtils.withdrawalPoolById(DATASTORE, _id));
     }
 
+    function miniGovernanceById(uint256 _id)
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return address(StakeUtils.miniGovernanceById(DATASTORE, _id));
+    }
+
     function LPTokenById(uint256 _id) external view virtual returns (address) {
         return DATASTORE.readAddressForId(_id, "LPToken");
     }
@@ -709,6 +724,64 @@ contract TestStakeUtils is ERC1155Holder {
             beaconBalances,
             priceProofs
         );
+    }
+
+    function getId(string calldata _NAME, uint256 _TYPE)
+        external
+        pure
+        virtual
+        returns (uint256 _id)
+    {
+        return uint256(keccak256(abi.encodePacked(_NAME, _TYPE)));
+    }
+
+    function getCONTROLLERFromId(uint256 _id)
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return GeodeUtils.getCONTROLLERFromId(DATASTORE, _id);
+    }
+
+    function getTYPEFromId(uint256 _id)
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        return GeodeUtils.getTYPEFromId(DATASTORE, _id);
+    }
+
+    function getNAMEFromId(uint256 _id)
+        external
+        view
+        virtual
+        returns (bytes memory)
+    {
+        return GeodeUtils.getNAMEFromId(DATASTORE, _id);
+    }
+
+    function getProposal(uint256 id)
+        external
+        view
+        returns (GeodeUtils.Proposal memory proposal)
+    {
+        proposal = GEODE.getProposal(id);
+    }
+
+    function miniGovernanceVersion() external view returns (uint256) {
+        return STAKEPOOL.MINI_GOVERNANCE_VERSION;
+    }
+
+    function proposeAndApproveMiniGov(address CONTROLLER, bytes calldata name, uint256 TYPE) external {
+        uint256 _MINI_GOVERNANCE_VERSION = GEODE.newProposal(CONTROLLER, TYPE, name, 2 days);
+        GEODE.approveProposal(DATASTORE, _MINI_GOVERNANCE_VERSION);
+        STAKEPOOL.MINI_GOVERNANCE_VERSION = _MINI_GOVERNANCE_VERSION;
+    }
+
+    function miniGovChangeMaintainer(uint256 id, bytes calldata password, bytes32 newPasswordHash, address newMaintainer) external {
+        StakeUtils.miniGovernanceById(DATASTORE, id).changeMaintainer(password, newPasswordHash, newMaintainer);
     }
 
     function Receive() external payable {}
