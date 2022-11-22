@@ -2934,7 +2934,6 @@ describe("StakeUtils", () => {
         await expect(mgContract.connect(user2).approveProposal(propId)).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
       });
 
-      // TODO: check this test again discuss with Ice
       it("success", async () => {
         await testContract.proposeAndApproveMiniGov(newMiniGov.address, ethers.utils.toUtf8Bytes("mini-v2"), 11);
         await mgContract.fetchUpgradeProposal();
@@ -2983,10 +2982,6 @@ describe("StakeUtils", () => {
       });
       
     });
-
-    // TODO: discuss if this test is needed if so, possible ways
-    // describe("claimUnstake", async () => {
-    // });
 
     describe("pause unpause", async () => {
       it("pause reverts if not maintainer", async () => {
