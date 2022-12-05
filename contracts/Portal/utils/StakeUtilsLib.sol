@@ -1351,7 +1351,7 @@ library StakeUtils {
                 uint256 boost = getWithdrawalBoost(DATASTORE, poolId);
                 if (boost > 0 && poolId != operatorId) {
                     uint256 arb = withdrawalPoolById(DATASTORE, poolId)
-                        .calculateSwap(0, 1, cumBal);
+                        .calculateSwap(0, 1, cumBal > debt ? debt : cumBal);
                     arb -=
                         (cumBal * self.gETH.denominator()) /
                         self.gETH.pricePerShare(poolId);
