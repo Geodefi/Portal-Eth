@@ -247,7 +247,7 @@ library OracleUtils {
             self._validators[_pk].state == 3,
             "OracleUtils: pubkey is NOT signaled"
         );
-        self._validators[_pk].state == 2;
+        self._validators[_pk].state = 2;
 
         imprison(DATASTORE, self._validators[_pk].operatorId);
         emit Busted(_pk);
@@ -266,7 +266,7 @@ library OracleUtils {
             self._validators[_pk].state == 2,
             "OracleUtils: Signaled, cannot be busted"
         );
-        self._validators[_pk].state == 3;
+        self._validators[_pk].state = 3;
 
         imprison(DATASTORE, self._validators[_pk].operatorId);
         emit Busted(_pk);
