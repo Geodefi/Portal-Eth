@@ -789,18 +789,13 @@ contract TestStakeUtils is ERC1155Holder {
         STAKEPOOL.MINI_GOVERNANCE_VERSION = _MINI_GOVERNANCE_VERSION;
     }
 
-    function miniGovChangeMaintainer(
-        uint256 id,
-        bytes calldata password,
-        bytes32 newPasswordHash,
-        address newMaintainer
-    ) external {
-        StakeUtils.miniGovernanceById(DATASTORE, id).changeMaintainer(
-            password,
-            newPasswordHash,
-            newMaintainer
-        );
-    }
+    // function miniGovChangeMaintainer(uint256 id, address newMaintainer)
+    //     external
+    // {
+    //     StakeUtils.miniGovernanceById(DATASTORE, id).changeMaintainer(
+    //         newMaintainer
+    //     );
+    // }
 
     function Receive() external payable {}
 

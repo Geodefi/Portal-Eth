@@ -15,11 +15,10 @@ import "../../interfaces/IMiniGovernance.sol";
  * @title MiniGovernance: local defense layer of the trustless Staking Derivatives
  * @dev Global defense layer is the Portal
  * @notice This contract is being used as the withdrawal credential of the validators,
- * * that are maintained by the given IDs maintainer.
+ * * that are maintained by the given IDs Controller.
  * @dev currently only defense mechanics this contract provides is the trustless updates that are
- * * achieved with GeodeUtils and passwordHashes
- * * 1. portal cannot change the maintainer without knowing the real password
- * * 2. portal cannot upgrade the contract without Maintainer's approval
+ * * achieved with GeodeUtils
+ * * portal cannot upgrade the contract without Senate's approval
  * *
  * * However there are such improvements planned to be implemented to make
  * * the staking environment more trustless.
@@ -57,7 +56,7 @@ contract MiniGovernance is
      * with the introduction of private pools, it can be a problem.
      * Thus, we require senate to refresh it's validity time to time.
      */
-     uint256 constant SENATE_VALIDITY = 180 days;
+    uint256 constant SENATE_VALIDITY = 180 days;
     /**
      * @dev While there are currently no worry on what pausing will affect,
      * with the next implementations, spamming stake/unstake can cause an issue.
@@ -69,7 +68,6 @@ contract MiniGovernance is
     struct PoolGovernance {
         IgETH gETH;
         uint256 ID;
-        bytes32 PASSWORD_HASH;
         uint256 lastPause;
         uint256 whenPauseAllowed;
         uint256 contractVersion;
@@ -80,7 +78,7 @@ contract MiniGovernance is
     function initialize(
         address _gETH,
         address _PORTAL,
-        address _MAINTAINER,
+        address _CONTROLLER,
         uint256 _ID,
         uint256 _VERSION
     ) public virtual override initializer {
@@ -92,7 +90,7 @@ contract MiniGovernance is
         SELF.ID = _ID;
         SELF.lastPause = type(uint256).max;
         GEM.GOVERNANCE = _PORTAL;
-        _refreshSenate(_MAINTAINER);
+        _refreshSenate(_CONTROLLER);
 
         SELF.contractVersion = _VERSION;
         SELF.proposedVersion = _VERSION;
@@ -107,8 +105,11 @@ contract MiniGovernance is
         _;
     }
 
-    modifier onlyMaintainer() {
-        require(msg.sender == GEM.SENATE, "MiniGovernance: sender is NOT SENATE");
+    modifier onlyController() {
+        require(
+            msg.sender == GEM.SENATE,
+            "MiniGovernance: sender is NOT SENATE"
+        );
         _;
     }
 
@@ -121,7 +122,7 @@ contract MiniGovernance is
         internal
         virtual
         override
-        onlyMaintainer
+        onlyController
     {
         require(
             GEM.isUpgradeAllowed(proposed_implementation),
@@ -129,14 +130,14 @@ contract MiniGovernance is
         );
     }
 
-    function pause() external virtual override onlyMaintainer {
+    function pause() external virtual override onlyController {
         require(block.timestamp > SELF.whenPauseAllowed);
         _pause();
         SELF.lastPause = block.timestamp;
     }
 
     /// @dev cannot spam, be careful
-    function unpause() external virtual override onlyMaintainer {
+    function unpause() external virtual override onlyController {
         _unpause();
         SELF.whenPauseAllowed = block.timestamp + PAUSE_LAPSE;
         SELF.lastPause = type(uint256).max;
@@ -180,7 +181,7 @@ contract MiniGovernance is
         require(id != SELF.contractVersion);
         GeodeUtils.Proposal memory proposal = getPortal().getProposal(id);
         require(proposal.TYPE == 11);
-        GEM.newProposal(proposal.CONTROLLER, 2, proposal.NAME, 5 days);
+        GEM.newProposal(proposal.CONTROLLER, 2, proposal.NAME, 7 days);
         SELF.proposedVersion = id;
     }
 
@@ -189,7 +190,7 @@ contract MiniGovernance is
         virtual
         override
         whenNotPaused
-        onlyMaintainer
+        onlyController
     {
         GEM.approveProposal(DATASTORE, _id);
     }
@@ -201,48 +202,13 @@ contract MiniGovernance is
         GEM._setSenate(newSenate, SENATE_VALIDITY);
     }
 
-    /**
-     * @dev should change the password, every now and then
-     * @param newPasswordHash = keccak256(abi.encodePacked(SELF.ID, password))
-     */
-    function refreshSenate(bytes32 newPasswordHash)
+    function setSenate(address newController)
         external
         virtual
         override
-        onlyMaintainer
+        onlyController
     {
-        SELF.PASSWORD_HASH = newPasswordHash;
-        _refreshSenate(GEM.SENATE);
-    }
-
-    /**
-     * @notice Portal changing the Senate of Minigovernance when the maintainer of the pool is changed
-     * @dev (Senate+Governance) can possibly access this function if they are working together.
-     * * Thus, access to this function requires an optional password.
-     * @param newPasswordHash = keccak256(abi.encodePacked(SELF.ID, password))
-     */
-    function changeMaintainer(
-        bytes calldata password,
-        bytes32 newPasswordHash,
-        address newMaintainer
-    )
-        external
-        virtual
-        override
-        onlyPortal
-        whenNotPaused
-        returns (bool success)
-    {
-        require(
-            SELF.PASSWORD_HASH == bytes32(0) ||
-                SELF.PASSWORD_HASH ==
-                keccak256(abi.encodePacked(SELF.ID, password))
-        );
-        SELF.PASSWORD_HASH = newPasswordHash;
-
-        _refreshSenate(newMaintainer);
-
-        success = true;
+        _refreshSenate(newController);
     }
 
     /**

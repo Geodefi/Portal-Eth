@@ -152,8 +152,7 @@ library MaintainerUtils {
                 DATASTORE,
                 addressSpecs[0],
                 uintSpecs[0],
-                uintSpecs[2],
-                addressSpecs[1]
+                uintSpecs[2]
             );
         }
         {
@@ -199,8 +198,7 @@ library MaintainerUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         address _gETH,
         uint256 _id,
-        uint256 _versionId,
-        address _maintainer
+        uint256 _versionId
     ) internal returns (address miniGovernance) {
         ERC1967Proxy newGovernance = new ERC1967Proxy(
             DATASTORE.readAddressForId(_versionId, "CONTROLLER"),
@@ -208,7 +206,7 @@ library MaintainerUtils {
                 IMiniGovernance(address(0)).initialize.selector,
                 _gETH,
                 address(this),
-                _maintainer,
+                DATASTORE.readAddressForId(_id, "CONTROLLER"),
                 _id,
                 _versionId
             )

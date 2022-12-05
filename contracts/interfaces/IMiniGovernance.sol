@@ -26,13 +26,7 @@ interface IMiniGovernance {
 
     function approveProposal(uint256 _id) external;
 
-    function refreshSenate(bytes32 newPassword) external;
-
-    function changeMaintainer(
-        bytes calldata password,
-        bytes32 newPasswordHash,
-        address newMaintainer
-    ) external returns (bool success);
+    function setSenate(address newController) external;
 
     function claimUnstake(uint256 claim) external returns (bool success);
 }

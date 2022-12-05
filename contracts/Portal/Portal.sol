@@ -765,32 +765,16 @@ contract Portal is
         );
     }
 
-    function changeOperatorMaintainer(uint256 id, address newMaintainer)
+    /**
+     * @notice Maintainer functions
+     */
+    function changeMaintainer(uint256 id, address newMaintainer)
         external
         virtual
         override
         whenNotPaused
     {
-        StakeUtils.changeOperatorMaintainer(DATASTORE, id, newMaintainer);
-    }
-
-    /**
-     * @notice Maintainer functions
-     */
-
-    function changePoolMaintainer(
-        uint256 id,
-        bytes calldata password,
-        bytes32 newPasswordHash,
-        address newMaintainer
-    ) external virtual override whenNotPaused {
-        StakeUtils.changePoolMaintainer(
-            DATASTORE,
-            id,
-            password,
-            newPasswordHash,
-            newMaintainer
-        );
+        StakeUtils.changeMaintainer(DATASTORE, id, newMaintainer);
     }
 
     function switchMaintainerFee(uint256 id, uint256 newFee)

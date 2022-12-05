@@ -199,15 +199,7 @@ interface IPortal {
         string calldata _interfaceSymbol
     ) external;
 
-    function changeOperatorMaintainer(uint256 id, address newMaintainer)
-        external;
-
-    function changePoolMaintainer(
-        uint256 id,
-        bytes calldata password,
-        bytes32 newPasswordHash,
-        address newMaintainer
-    ) external;
+    function changeMaintainer(uint256 id, address newMaintainer) external;
 
     function getMaintainerWalletBalance(uint256 id)
         external

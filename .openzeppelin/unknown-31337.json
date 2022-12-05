@@ -7,11 +7,6 @@
       "kind": "uups"
     },
     {
-      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
-      "txHash": "0x7ef54ff50777de90de17ce3dc1c3a13e8d3ab9252a0471a2093b3df1a7f83116",
-      "kind": "uups"
-    },
-    {
       "address": "0x2538a10b7fFb1B78c890c870FC152b10be121f04",
       "txHash": "0xb179ab2c39fc23b215ee7aaec5461d6fe5d6e47a3e23b6ed250e36611f1a2b1f",
       "kind": "uups"
@@ -29,6 +24,16 @@
     {
       "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
       "txHash": "0xe30c0f606005cc797ce06f0e05aa60a0a7e6ea1c5e85c321e017dc24a3a3fe30",
+      "kind": "uups"
+    },
+    {
+      "address": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+      "txHash": "0xcc0a765bd7c62720990803ad9aec15dacb922e5b078a37d3ed6269986d095053",
+      "kind": "uups"
+    },
+    {
+      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+      "txHash": "0xa4f24a23bceacc545a056108bfe8b1b8f5eb2f407f3b25be4ed1fc7818b39813",
       "kind": "uups"
     }
   ],
@@ -3373,6 +3378,586 @@
             "numberOfBytes": "512"
           },
           "t_struct(Validator)9833_storage": {
+            "label": "struct OracleUtils.Validator",
+            "members": [
+              {
+                "label": "state",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "index",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "poolId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "operatorId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "poolFee",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "operatorFee",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "expectedExit",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "signature",
+                "type": "t_bytes_storage",
+                "offset": 0,
+                "slot": "8"
+              }
+            ],
+            "numberOfBytes": "288"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "bcdb8a3c16e78b5b3c09c841e1556982587156004b3672dbea67cd6e3301d350": {
+      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
+      "txHash": "0x9a6091507638697bffdc3be7ca53814c0417c987374c6e4e7de09445c716de10",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:39"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:44"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:74"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\security\\PausableUpgradeable.sol:102"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC165Upgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\introspection\\ERC165Upgradeable.sol:41"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1155ReceiverUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC1155\\utils\\ERC1155ReceiverUpgradeable.sol:31"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1155HolderUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC1155\\utils\\ERC1155HolderUpgradeable.sol:48"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "301",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\ERC1967\\ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "351",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\UUPSUpgradeable.sol:107"
+          },
+          {
+            "label": "CONTRACT_VERSION",
+            "offset": 0,
+            "slot": "401",
+            "type": "t_uint256",
+            "contract": "Portal",
+            "src": "contracts\\Portal\\Portal.sol:177"
+          },
+          {
+            "label": "DATASTORE",
+            "offset": 0,
+            "slot": "402",
+            "type": "t_struct(DataStore)7061_storage",
+            "contract": "Portal",
+            "src": "contracts\\Portal\\Portal.sol:177"
+          },
+          {
+            "label": "GEODE",
+            "offset": 0,
+            "slot": "418",
+            "type": "t_struct(Universe)7678_storage",
+            "contract": "Portal",
+            "src": "contracts\\Portal\\Portal.sol:178"
+          },
+          {
+            "label": "STAKEPOOL",
+            "offset": 0,
+            "slot": "434",
+            "type": "t_struct(StakePool)10471_storage",
+            "contract": "Portal",
+            "src": "contracts\\Portal\\Portal.sol:180"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "465",
+            "type": "t_array(t_uint256)46_storage",
+            "contract": "Portal",
+            "src": "contracts\\Portal\\Portal.sol:1041"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)12_storage": {
+            "label": "uint256[12]",
+            "numberOfBytes": "384"
+          },
+          "t_array(t_uint256)46_storage": {
+            "label": "uint256[46]",
+            "numberOfBytes": "1472"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)5_storage": {
+            "label": "uint256[5]",
+            "numberOfBytes": "160"
+          },
+          "t_array(t_uint256)6_storage": {
+            "label": "uint256[6]",
+            "numberOfBytes": "192"
+          },
+          "t_array(t_uint256)7_storage": {
+            "label": "uint256[7]",
+            "numberOfBytes": "224"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_bytes_memory_ptr": {
+            "label": "bytes",
+            "numberOfBytes": "32"
+          },
+          "t_bytes_storage": {
+            "label": "bytes",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IgETH)14587": {
+            "label": "contract IgETH",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_bytes32,t_address)": {
+            "label": "mapping(bytes32 => address)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_bytes_storage)": {
+            "label": "mapping(bytes32 => bytes)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)9352_storage)": {
+            "label": "mapping(bytes => struct OracleUtils.Validator)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_array(t_uint256)dyn_storage)": {
+            "label": "mapping(uint256 => uint256[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Proposal)7650_storage)": {
+            "label": "mapping(uint256 => struct GeodeUtils.Proposal)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(DataStore)7061_storage": {
+            "label": "struct DataStoreUtils.DataStore",
+            "members": [
+              {
+                "label": "allIdsByType",
+                "type": "t_mapping(t_uint256,t_array(t_uint256)dyn_storage)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "uintData",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "bytesData",
+                "type": "t_mapping(t_bytes32,t_bytes_storage)",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "addressData",
+                "type": "t_mapping(t_bytes32,t_address)",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)12_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "512"
+          },
+          "t_struct(Oracle)9381_storage": {
+            "label": "struct OracleUtils.Oracle",
+            "members": [
+              {
+                "label": "gETH",
+                "type": "t_contract(IgETH)14587",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "ORACLE_POSITION",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "ORACLE_UPDATE_TIMESTAMP",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "MONOPOLY_THRESHOLD",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "VALIDATORS_INDEX",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "VERIFICATION_INDEX",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "PERIOD_PRICE_INCREASE_LIMIT",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "PERIOD_PRICE_DECREASE_LIMIT",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "PRICE_MERKLE_ROOT",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "_validators",
+                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)9352_storage)",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)6_storage",
+                "offset": 0,
+                "slot": "10"
+              }
+            ],
+            "numberOfBytes": "512"
+          },
+          "t_struct(Proposal)7650_storage": {
+            "label": "struct GeodeUtils.Proposal",
+            "members": [
+              {
+                "label": "CONTROLLER",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "TYPE",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "NAME",
+                "type": "t_bytes_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "deadline",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(StakePool)10471_storage": {
+            "label": "struct StakeUtils.StakePool",
+            "members": [
+              {
+                "label": "gETH",
+                "type": "t_contract(IgETH)14587",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "TELESCOPE",
+                "type": "t_struct(Oracle)9381_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "GOVERNANCE",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "17"
+              },
+              {
+                "label": "DEFAULT_gETH_INTERFACE",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "18"
+              },
+              {
+                "label": "DEFAULT_DWP",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "19"
+              },
+              {
+                "label": "DEFAULT_LP_TOKEN",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "20"
+              },
+              {
+                "label": "MINI_GOVERNANCE_VERSION",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "21"
+              },
+              {
+                "label": "MAX_MAINTAINER_FEE",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "22"
+              },
+              {
+                "label": "BOOSTRAP_PERIOD",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "23"
+              },
+              {
+                "label": "BOOST_SWITCH_LATENCY",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "24"
+              },
+              {
+                "label": "COMET_TAX",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "25"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)5_storage",
+                "offset": 0,
+                "slot": "26"
+              }
+            ],
+            "numberOfBytes": "992"
+          },
+          "t_struct(Universe)7678_storage": {
+            "label": "struct GeodeUtils.Universe",
+            "members": [
+              {
+                "label": "SENATE",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "GOVERNANCE",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "GOVERNANCE_TAX",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "MAX_GOVERNANCE_TAX",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "SENATE_EXPIRY",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "approvedUpgrade",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "_electorCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "_electorTypes",
+                "type": "t_mapping(t_uint256,t_bool)",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "_proposalForId",
+                "type": "t_mapping(t_uint256,t_struct(Proposal)7650_storage)",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)7_storage",
+                "offset": 0,
+                "slot": "9"
+              }
+            ],
+            "numberOfBytes": "512"
+          },
+          "t_struct(Validator)9352_storage": {
             "label": "struct OracleUtils.Validator",
             "members": [
               {

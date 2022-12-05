@@ -323,43 +323,16 @@ library StakeUtils {
      */
 
     /**
-     * @notice changes maintainer of the given operator (TYPE 4)
+     * @notice changes maintainer of the given operator, planet or comet
      * @dev Seems like authenticate is not correct, but authenticate checks for maintainer
      * and this function expects controller and DATASTORE.changeMaintainer checks that.
      */
-    function changeOperatorMaintainer(
+    function changeMaintainer(
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id,
         address newMaintainer
     ) external {
-        DATASTORE.authenticate(id, false, [true, false, false]);
-        DATASTORE.changeMaintainer(id, newMaintainer);
-    }
-
-    /**
-     * @notice changes pool maintainer  (TYPE 5-6) + conducts a Senate change on miniGovernance
-     * @dev requires the old Password and a new passwordHash, this saves the MiniGovernance contract
-     * from Double Horn Attack: when Both Senate and Governance is malicious.
-     * @dev currently this is enough to ensure the future implementations will improve the miniGovernance security,
-     * * we are also working on improving the Isolation Mode, which will allow Portal-less withdrawals for all pool types
-     * @dev Seems like authenticate is not correct, but authenticate checks for maintainer
-     * and this function expects controller and DATASTORE.changeMaintainer checks that.
-     */
-    function changePoolMaintainer(
-        DataStoreUtils.DataStore storage DATASTORE,
-        uint256 id,
-        bytes calldata password,
-        bytes32 newPasswordHash,
-        address newMaintainer
-    ) external {
-        DATASTORE.authenticate(id, false, [false, true, true]);
-
-        bool success = miniGovernanceById(DATASTORE, id).changeMaintainer(
-            password,
-            newPasswordHash,
-            newMaintainer
-        );
-        require(success, "StakeUtils: unsuccessful interaction");
+        DATASTORE.authenticate(id, false, [true, true, true]);
         DATASTORE.changeMaintainer(id, newMaintainer);
     }
 
