@@ -113,13 +113,11 @@ library StakeUtils {
     uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     /// @notice limiting the operator.validatorPeriod, currently around 5 years
-    uint256 public constant MIN_VALIDATOR_PERIOD = 60 days;
+    uint256 public constant MIN_VALIDATOR_PERIOD = 90 days;
     uint256 public constant MAX_VALIDATOR_PERIOD = 1825 days;
 
     /// @notice ignoring any buybacks if the DWP has a low debt
     uint256 public constant IGNORABLE_DEBT = 1 ether;
-
-    // uint256 public constant BOOST_SWITCH_LATENCY = 3 days;
 
     modifier onlyGovernance(StakePool storage self) {
         require(
@@ -442,6 +440,10 @@ library StakeUtils {
         uint256 withdrawalBoost
     ) external {
         DATASTORE.authenticate(poolId, true, [false, true, true]);
+        require(
+            block.timestamp > DATASTORE.readUintForId(poolId, "boostSwitch"),
+            "StakeUtils: boost is currently switching"
+        );
         DATASTORE.writeUintForId(
             poolId,
             "priorBoost",
@@ -545,7 +547,24 @@ library StakeUtils {
             newPeriod <= MAX_VALIDATOR_PERIOD,
             "StekeUtils: should be less than MAX_VALIDATOR_PERIOD"
         );
+
+        require(
+            block.timestamp >
+                DATASTORE.readUintForId(operatorId, "periodSwitch"),
+            "StakeUtils: period is currently switching"
+        );
+        DATASTORE.writeUintForId(
+            operatorId,
+            "priorPeriod",
+            DATASTORE.readUintForId(operatorId, "validatorPeriod")
+        );
+        DATASTORE.writeUintForId(
+            operatorId,
+            "periodSwitch",
+            block.timestamp + MaintainerUtils.SWITCH_LATENCY
+        );
         DATASTORE.writeUintForId(operatorId, "validatorPeriod", newPeriod);
+
         emit ValidatorPeriodUpdated(operatorId, newPeriod);
     }
 

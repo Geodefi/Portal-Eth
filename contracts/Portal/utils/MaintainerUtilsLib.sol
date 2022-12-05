@@ -35,7 +35,7 @@ library MaintainerUtils {
     uint256 public constant PERCENTAGE_DENOMINATOR = 10**10;
 
     /// @notice when a maintainer changes the fee, it is effective after a delay
-    uint256 public constant FEE_SWITCH_LATENCY = 3 days;
+    uint256 public constant SWITCH_LATENCY = 3 days;
 
     /// @notice default DWP parameters
     uint256 public constant DEFAULT_A = 60;
@@ -313,6 +313,10 @@ library MaintainerUtils {
         uint256 id,
         uint256 newFee
     ) external {
+        require(
+            block.timestamp > DATASTORE.readUintForId(id, "feeSwitch"),
+            "MaintainerUtils: fee is currently switching"
+        );
         DATASTORE.writeUintForId(
             id,
             "priorFee",
@@ -321,14 +325,14 @@ library MaintainerUtils {
         DATASTORE.writeUintForId(
             id,
             "feeSwitch",
-            block.timestamp + FEE_SWITCH_LATENCY
+            block.timestamp + SWITCH_LATENCY
         );
         DATASTORE.writeUintForId(id, "fee", newFee);
 
         emit MaintainerFeeSwitched(
             id,
             newFee,
-            block.timestamp + FEE_SWITCH_LATENCY
+            block.timestamp + SWITCH_LATENCY
         );
     }
 
