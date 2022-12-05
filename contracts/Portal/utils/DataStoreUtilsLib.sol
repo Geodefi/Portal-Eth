@@ -36,6 +36,7 @@ library DataStoreUtils {
         mapping(bytes32 => uint256) uintData;
         mapping(bytes32 => bytes) bytesData;
         mapping(bytes32 => address) addressData;
+        uint256[12] __gap;
     }
 
     /**
