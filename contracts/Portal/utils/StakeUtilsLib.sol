@@ -847,7 +847,11 @@ library StakeUtils {
                 block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
                 "burnBuffer"
             );
-            DATASTORE.addUintForId(poolId, dailyBufferKey, spentGeth);
+            DATASTORE.addUintForId(
+                poolId,
+                dailyBufferKey,
+                spentGeth - gEthDonation
+            );
         }
 
         return (spentSurplus - (EthDonation * 2), gEthToWithdraw - spentGeth);

@@ -47,7 +47,8 @@ contract TestStakeUtils is ERC1155Holder {
             (2 * StakeUtils.PERCENTAGE_DENOMINATOR) /
             1e3;
         STAKEPOOL.TELESCOPE.PRICE_MERKLE_ROOT = "";
-        STAKEPOOL.MINI_GOVERNANCE_VERSION = 58300719301927709293725675566594180747137962353038020407921210900692208248751; //mini-v1
+        STAKEPOOL
+            .MINI_GOVERNANCE_VERSION = 58300719301927709293725675566594180747137962353038020407921210900692208248751; //mini-v1
         DATASTORE.writeAddressForId(
             STAKEPOOL.MINI_GOVERNANCE_VERSION,
             "CONTROLLER",
@@ -659,7 +660,6 @@ contract TestStakeUtils is ERC1155Holder {
 
     function priceSync(
         bytes32 merkleRoot,
-        uint256 index,
         uint256 poolId,
         uint256 beaconBalance,
         uint256 periodsSinceUpdate,
@@ -774,14 +774,32 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.MINI_GOVERNANCE_VERSION;
     }
 
-    function proposeAndApproveMiniGov(address CONTROLLER, bytes calldata name, uint256 TYPE) external {
-        uint256 _MINI_GOVERNANCE_VERSION = GEODE.newProposal(CONTROLLER, TYPE, name, 2 days);
+    function proposeAndApproveMiniGov(
+        address CONTROLLER,
+        bytes calldata name,
+        uint256 TYPE
+    ) external {
+        uint256 _MINI_GOVERNANCE_VERSION = GEODE.newProposal(
+            CONTROLLER,
+            TYPE,
+            name,
+            2 days
+        );
         GEODE.approveProposal(DATASTORE, _MINI_GOVERNANCE_VERSION);
         STAKEPOOL.MINI_GOVERNANCE_VERSION = _MINI_GOVERNANCE_VERSION;
     }
 
-    function miniGovChangeMaintainer(uint256 id, bytes calldata password, bytes32 newPasswordHash, address newMaintainer) external {
-        StakeUtils.miniGovernanceById(DATASTORE, id).changeMaintainer(password, newPasswordHash, newMaintainer);
+    function miniGovChangeMaintainer(
+        uint256 id,
+        bytes calldata password,
+        bytes32 newPasswordHash,
+        address newMaintainer
+    ) external {
+        StakeUtils.miniGovernanceById(DATASTORE, id).changeMaintainer(
+            password,
+            newPasswordHash,
+            newMaintainer
+        );
     }
 
     function Receive() external payable {}
