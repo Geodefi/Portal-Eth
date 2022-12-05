@@ -392,7 +392,7 @@ library StakeUtils {
         DataStoreUtils.DataStore storage DATASTORE,
         uint256 id
     ) external returns (bool success) {
-        DATASTORE.authenticate(id, true, [true, true, false]);
+        DATASTORE.authenticate(id, true, [true, false, false]);
 
         return DATASTORE._increaseMaintainerWallet(id, msg.value);
     }
@@ -513,7 +513,7 @@ library StakeUtils {
         uint256 allowance
     ) external returns (bool) {
         DATASTORE.authenticate(poolId, true, [false, true, true]);
-        DATASTORE.authenticate(operatorId, false, [true, true, false]);
+        DATASTORE.authenticate(operatorId, false, [true, false, false]);
 
         DATASTORE.writeUintForId(
             poolId,
@@ -554,7 +554,7 @@ library StakeUtils {
         uint256 operatorId,
         uint256 newPeriod
     ) external {
-        DATASTORE.authenticate(operatorId, true, [true, true, false]);
+        DATASTORE.authenticate(operatorId, true, [true, false, false]);
         _updateValidatorPeriod(DATASTORE, operatorId, newPeriod);
     }
 
@@ -960,7 +960,7 @@ library StakeUtils {
         bytes[] calldata pubkeys,
         bytes[] calldata signatures
     ) external {
-        DATASTORE.authenticate(operatorId, true, [true, true, false]);
+        DATASTORE.authenticate(operatorId, true, [true, false, false]);
         DATASTORE.authenticate(poolId, false, [false, true, true]);
         require(
             !OracleUtils.isPrisoned(DATASTORE, operatorId),
@@ -1095,7 +1095,7 @@ library StakeUtils {
         uint256 operatorId,
         bytes[] calldata pubkeys
     ) external {
-        DATASTORE.authenticate(operatorId, true, [true, true, false]);
+        DATASTORE.authenticate(operatorId, true, [true, false, false]);
 
         require(
             !self.TELESCOPE._isOracleActive(),
@@ -1239,7 +1239,7 @@ library StakeUtils {
             ._validators[pubkeys[0]]
             .operatorId;
 
-        DATASTORE.authenticate(expectedOperator, true, [true, true, false]);
+        DATASTORE.authenticate(expectedOperator, true, [true, false, false]);
 
         for (uint256 i = 0; i < pubkeys.length; i++) {
             require(self.TELESCOPE._validators[pubkeys[i]].state == 2);
