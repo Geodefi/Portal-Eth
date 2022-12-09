@@ -271,8 +271,12 @@ contract Portal is
         return DATASTORE.allIdsByType[_type];
     }
 
+    /**
+     *                                  ** DataStore Functionalities **
+     */
+
     /// @notice id is keccak(name, type)
-    function getIdFromName(string calldata _name, uint256 _type)
+    function generateId(string calldata _name, uint256 _type)
         external
         pure
         virtual
@@ -280,6 +284,36 @@ contract Portal is
         returns (uint256 id)
     {
         id = uint256(keccak256(abi.encodePacked(_name, _type)));
+    }
+
+    function readAddressForId(uint256 id, bytes32 key)
+        external
+        view
+        virtual
+        override
+        returns (address data)
+    {
+        data = DATASTORE.readAddressForId(id, key);
+    }
+
+    function readUintForId(uint256 id, bytes32 key)
+        external
+        view
+        virtual
+        override
+        returns (uint256 data)
+    {
+        data = DATASTORE.readUintForId(id, key);
+    }
+
+    function readBytesForId(uint256 id, bytes32 key)
+        external
+        view
+        virtual
+        override
+        returns (bytes memory data)
+    {
+        data = DATASTORE.readBytesForId(id, key);
     }
 
     /**
@@ -562,73 +596,73 @@ contract Portal is
         COMET_TAX = STAKEPOOL.COMET_TAX;
     }
 
-    function getPlanet(uint256 planetId)
-        external
-        view
-        virtual
-        override
-        returns (
-            bytes memory name,
-            address CONTROLLER,
-            address maintainer,
-            uint256 initiated,
-            uint256 fee,
-            uint256 feeSwitch,
-            uint256 surplus,
-            uint256 secured,
-            uint256 withdrawalBoost,
-            address withdrawalPool,
-            address LPToken,
-            address miniGovernance
-        )
-    {
-        name = DATASTORE.readBytesForId(planetId, "NAME");
-        CONTROLLER = DATASTORE.readAddressForId(planetId, "CONTROLLER");
-        maintainer = DATASTORE.readAddressForId(planetId, "maintainer");
-        initiated = DATASTORE.readUintForId(planetId, "initiated");
-        fee = DATASTORE.getMaintainerFee(planetId);
-        feeSwitch = DATASTORE.readUintForId(planetId, "feeSwitch");
-        surplus = DATASTORE.readUintForId(planetId, "surplus");
-        secured = DATASTORE.readUintForId(planetId, "secured");
-        withdrawalBoost = DATASTORE.readUintForId(planetId, "withdrawalBoost");
-        withdrawalPool = DATASTORE.readAddressForId(planetId, "withdrawalPool");
-        LPToken = DATASTORE.readAddressForId(planetId, "LPToken");
-        miniGovernance = DATASTORE.readAddressForId(planetId, "miniGovernance");
-    }
+    // function getPlanet(uint256 planetId)
+    //     external
+    //     view
+    //     virtual
+    //     override
+    //     returns (
+    //         bytes memory name,
+    //         address CONTROLLER,
+    //         address maintainer,
+    //         uint256 initiated,
+    //         uint256 fee,
+    //         uint256 feeSwitch,
+    //         uint256 surplus,
+    //         uint256 secured,
+    //         uint256 withdrawalBoost,
+    //         address withdrawalPool,
+    //         address LPToken,
+    //         address miniGovernance
+    //     )
+    // {
+    //     name = DATASTORE.readBytesForId(planetId, "NAME");
+    //     CONTROLLER = DATASTORE.readAddressForId(planetId, "CONTROLLER");
+    //     maintainer = DATASTORE.readAddressForId(planetId, "maintainer");
+    //     initiated = DATASTORE.readUintForId(planetId, "initiated");
+    //     fee = DATASTORE.getMaintainerFee(planetId);
+    //     feeSwitch = DATASTORE.readUintForId(planetId, "feeSwitch");
+    //     surplus = DATASTORE.readUintForId(planetId, "surplus");
+    //     secured = DATASTORE.readUintForId(planetId, "secured");
+    //     withdrawalBoost = DATASTORE.readUintForId(planetId, "withdrawalBoost");
+    //     withdrawalPool = DATASTORE.readAddressForId(planetId, "withdrawalPool");
+    //     LPToken = DATASTORE.readAddressForId(planetId, "LPToken");
+    //     miniGovernance = DATASTORE.readAddressForId(planetId, "miniGovernance");
+    // }
 
-    function getOperator(uint256 operatorId)
-        external
-        view
-        virtual
-        override
-        returns (
-            bytes memory name,
-            address CONTROLLER,
-            address maintainer,
-            uint256 initiated,
-            uint256 fee,
-            uint256 feeSwitch,
-            uint256 totalActiveValidators,
-            uint256 validatorPeriod,
-            uint256 released
-        )
-    {
-        name = DATASTORE.readBytesForId(operatorId, "NAME");
-        CONTROLLER = DATASTORE.readAddressForId(operatorId, "CONTROLLER");
-        maintainer = DATASTORE.readAddressForId(operatorId, "maintainer");
-        initiated = DATASTORE.readUintForId(operatorId, "initiated");
-        fee = DATASTORE.getMaintainerFee(operatorId);
-        feeSwitch = DATASTORE.readUintForId(operatorId, "feeSwitch");
-        totalActiveValidators = DATASTORE.readUintForId(
-            operatorId,
-            "totalActiveValidators"
-        );
-        validatorPeriod = DATASTORE.readUintForId(
-            operatorId,
-            "validatorPeriod"
-        );
-        released = DATASTORE.readUintForId(operatorId, "released");
-    }
+    // function getOperator(uint256 operatorId)
+    //     external
+    //     view
+    //     virtual
+    //     override
+    //     returns (
+    //         bytes memory name,
+    //         address CONTROLLER,
+    //         address maintainer,
+    //         uint256 initiated,
+    //         uint256 fee,
+    //         uint256 feeSwitch,
+    //         uint256 totalActiveValidators,
+    //         uint256 validatorPeriod,
+    //         uint256 released
+    //     )
+    // {
+    //     name = DATASTORE.readBytesForId(operatorId, "NAME");
+    //     CONTROLLER = DATASTORE.readAddressForId(operatorId, "CONTROLLER");
+    //     maintainer = DATASTORE.readAddressForId(operatorId, "maintainer");
+    //     initiated = DATASTORE.readUintForId(operatorId, "initiated");
+    //     fee = DATASTORE.getMaintainerFee(operatorId);
+    //     feeSwitch = DATASTORE.readUintForId(operatorId, "feeSwitch");
+    //     totalActiveValidators = DATASTORE.readUintForId(
+    //         operatorId,
+    //         "totalActiveValidators"
+    //     );
+    //     validatorPeriod = DATASTORE.readUintForId(
+    //         operatorId,
+    //         "validatorPeriod"
+    //     );
+    //     released = DATASTORE.readUintForId(operatorId, "released");
+    // }
 
     function miniGovernanceVersion()
         external

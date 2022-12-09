@@ -32,10 +32,25 @@ interface IPortal {
         view
         returns (uint256[] memory);
 
-    function getIdFromName(string calldata _name, uint256 _type)
+    function generateId(string calldata _name, uint256 _type)
         external
         pure
         returns (uint256 id);
+
+    function readAddressForId(uint256 id, bytes32 key)
+        external
+        view
+        returns (address data);
+
+    function readUintForId(uint256 id, bytes32 key)
+        external
+        view
+        returns (uint256 data);
+
+    function readBytesForId(uint256 id, bytes32 key)
+        external
+        view
+        returns (bytes memory data);
 
     function GeodeParams()
         external
@@ -113,39 +128,6 @@ interface IPortal {
     ) external;
 
     function isPrisoned(uint256 operatorId) external view returns (bool);
-
-    function getPlanet(uint256 planetId)
-        external
-        view
-        returns (
-            bytes memory name,
-            address CONTROLLER,
-            address maintainer,
-            uint256 initiated,
-            uint256 fee,
-            uint256 feeSwitch,
-            uint256 surplus,
-            uint256 secured,
-            uint256 withdrawalBoost,
-            address withdrawalPool,
-            address LPToken,
-            address miniGovernance
-        );
-
-    function getOperator(uint256 operatorId)
-        external
-        view
-        returns (
-            bytes memory name,
-            address CONTROLLER,
-            address maintainer,
-            uint256 initiated,
-            uint256 fee,
-            uint256 feeSwitch,
-            uint256 totalActiveValidators,
-            uint256 validatorPeriod,
-            uint256 released
-        );
 
     function updateVerificationIndex(
         uint256 allValidatorsCount,
