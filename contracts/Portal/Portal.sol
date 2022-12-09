@@ -183,7 +183,7 @@ contract Portal is
         STAKEPOOL.TELESCOPE.ORACLE_POSITION = _ORACLE_POSITION;
         STAKEPOOL.TELESCOPE.MONOPOLY_THRESHOLD = 20000;
 
-        updateStakingParams(
+        _updateStakingParams(
             _DEFAULT_gETH_INTERFACE,
             _DEFAULT_DWP,
             _DEFAULT_LP_TOKEN,
@@ -646,9 +646,9 @@ contract Portal is
 
     /**
      * @notice updating the StakePool Params that does NOT require Senate approval
-     * @dev onlyGovernance
+     * @dev onlyGovernance on external funciton
      */
-    function updateStakingParams(
+    function _updateStakingParams(
         address _DEFAULT_gETH_INTERFACE,
         address _DEFAULT_DWP,
         address _DEFAULT_LP_TOKEN,
@@ -658,11 +658,7 @@ contract Portal is
         uint256 _PERIOD_PRICE_DECREASE_LIMIT,
         uint256 _COMET_TAX,
         uint256 _BOOST_SWITCH_LATENCY
-    ) public virtual override {
-        require(
-            msg.sender == GEODE.GOVERNANCE,
-            "Portal: sender not GOVERNANCE"
-        );
+    ) internal virtual {
         require(
             _DEFAULT_gETH_INTERFACE.code.length > 0,
             "Portal: DEFAULT_gETH_INTERFACE NOT contract"
@@ -706,6 +702,34 @@ contract Portal is
             .TELESCOPE
             .PERIOD_PRICE_DECREASE_LIMIT = _PERIOD_PRICE_DECREASE_LIMIT;
         emit ParamsUpdated(
+            _DEFAULT_gETH_INTERFACE,
+            _DEFAULT_DWP,
+            _DEFAULT_LP_TOKEN,
+            _MAX_MAINTAINER_FEE,
+            _BOOSTRAP_PERIOD,
+            _PERIOD_PRICE_INCREASE_LIMIT,
+            _PERIOD_PRICE_DECREASE_LIMIT,
+            _COMET_TAX,
+            _BOOST_SWITCH_LATENCY
+        );
+    }
+
+    function updateStakingParams(
+        address _DEFAULT_gETH_INTERFACE,
+        address _DEFAULT_DWP,
+        address _DEFAULT_LP_TOKEN,
+        uint256 _MAX_MAINTAINER_FEE,
+        uint256 _BOOSTRAP_PERIOD,
+        uint256 _PERIOD_PRICE_INCREASE_LIMIT,
+        uint256 _PERIOD_PRICE_DECREASE_LIMIT,
+        uint256 _COMET_TAX,
+        uint256 _BOOST_SWITCH_LATENCY
+    ) external virtual override {
+        require(
+            msg.sender == GEODE.GOVERNANCE,
+            "Portal: sender not GOVERNANCE"
+        );
+        _updateStakingParams(
             _DEFAULT_gETH_INTERFACE,
             _DEFAULT_DWP,
             _DEFAULT_LP_TOKEN,
