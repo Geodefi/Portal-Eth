@@ -1210,7 +1210,7 @@ library StakeUtils {
     ) external {
         if (
             block.timestamp > self.TELESCOPE._validators[pk].expectedExit &&
-            self.TELESCOPE._validators[pk].state != 3
+            self.TELESCOPE._validators[pk].state == 2
         ) {
             OracleUtils.imprison(
                 DATASTORE,
