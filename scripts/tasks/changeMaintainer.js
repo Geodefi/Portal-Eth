@@ -7,7 +7,7 @@ const func = async (taskArgs, hre) => {
     await execute(
       "Portal",
       { from: deployer, log: true },
-      "changeOperatorMaintainer",
+      "changeMaintainer",
       taskArgs.id,
       taskArgs.m
     );

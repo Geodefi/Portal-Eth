@@ -11,9 +11,9 @@ const func = async (taskArgs, hre) => {
       "approveOperator",
       taskArgs.pid,
       taskArgs.oid,
-      taskArgs.allowance
+      taskArgs.a
     );
-    console.log(`approved: ${taskArgs.pid} for  ${taskArgs.allowance}`);
+    console.log(`${taskArgs.pid} approved: ${taskArgs.oid} for  ${taskArgs.a}`);
   } catch (error) {
     console.log(error);
     console.log("Unsuccesful...");

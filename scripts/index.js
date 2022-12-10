@@ -8,8 +8,7 @@ const approveProposal = require("./tasks/approveProposal");
 const elect = require("./tasks/elect");
 
 const setController = require("./tasks/setController");
-const changePoolMaintainer = require("./tasks/changePoolMaintainer");
-const changeOperatorMaintainer = require("./tasks/changeOperatorMaintainer");
+const changeOperatorMaintainer = require("./tasks/changeMaintainer");
 
 const approveOperator = require("./tasks/approveOperator");
 const initiateOperator = require("./tasks/initiateOperator");
@@ -49,18 +48,13 @@ task("set-controller", "Approves a Senate proposal")
   .addParam("c", "new controller")
   .setAction(setController);
 
-task("change-pool-maintainer", "Approves a Senate proposal")
-  .addParam("id", "id to change the controller")
-  .addParam("m", "new maintainer")
-  .setAction(changePoolMaintainer);
-
-task("change-operator-maintainer", "Change fee of an ID")
+task("change-maintainer", "Change operator of an ID")
   .addParam("id", "id for operator")
   .addParam("m", "new maintainer")
   .setAction(changeOperatorMaintainer);
 
 // maintainers
-task("initiate-planet", "Change fee of an ID")
+task("initiate-planet", "initiate a planet with correct parameters")
   .addParam("id", "id for planet")
   .addParam("f", "maintainerFee")
   .addParam("m", "maintainer address")
@@ -68,7 +62,7 @@ task("initiate-planet", "Change fee of an ID")
   .addParam("s", "interface symbol")
   .setAction(initiatePlanet);
 
-task("initiate-operator", "Change fee of an ID")
+task("initiate-operator", "initiate an operator with correct parameters")
   .addParam("id", "id for planet")
   .addParam("f", "maintainerFee")
   .addParam("m", "maintainer address")

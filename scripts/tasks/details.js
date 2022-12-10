@@ -1,5 +1,6 @@
 const web3 = require("web3");
 const BN = require("bignumber.js");
+/// TODO: fix
 const func = async (taskArgs, hre) => {
   const { deployments } = hre;
   const { read } = deployments;
