@@ -26,7 +26,7 @@ contract gETH is ERC1155SupplyMinterPauser {
         uint256 id,
         bool isSet
     );
-    event InterfacesAvoided(address indexed avoider, bool isAvoid);
+    event InterfacesAvoided(address indexed avoider, uint256 id, bool isAvoid);
     event PriceUpdated(
         uint256 id,
         uint256 pricePerShare,
@@ -49,7 +49,7 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @notice Mapping of user addresses who chose to restrict the usage of interfaces
      * @dev ADDED for gETH
      **/
-    mapping(address => bool) private _interfaceAvoiders;
+    mapping(address => mapping(uint256 => bool)) private _interfaceAvoiders;
 
     /**
      * @notice shows the underlying ETH for 1 staked gETH for a given asset id
@@ -136,8 +136,13 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @notice Checks if the given address restricts the affect of the interfaces on their gETH
      * @dev ADDED for gETH
      **/
-    function isAvoider(address account) public view virtual returns (bool) {
-        return _interfaceAvoiders[account];
+    function isAvoider(address account, uint256 id)
+        public
+        view
+        virtual
+        returns (bool)
+    {
+        return _interfaceAvoiders[account][id];
     }
 
     /**
@@ -146,10 +151,10 @@ contract gETH is ERC1155SupplyMinterPauser {
      * @param isAvoid true: restrict interfaces, false: allow the interfaces,
      * @dev ADDED for gETH
      **/
-    function avoidInterfaces(bool isAvoid) external virtual {
-        _interfaceAvoiders[_msgSender()] = isAvoid;
+    function avoidInterfaces(bool isAvoid, uint256 id) external virtual {
+        _interfaceAvoiders[_msgSender()][id] = isAvoid;
 
-        emit InterfacesAvoided(_msgSender(), isAvoid);
+        emit InterfacesAvoided(_msgSender(), id, isAvoid);
     }
 
     /**
@@ -251,7 +256,7 @@ contract gETH is ERC1155SupplyMinterPauser {
         require(
             from == _msgSender() ||
                 isApprovedForAll(from, _msgSender()) ||
-                (isInterface(_msgSender(), id) && !isAvoider(from)),
+                (isInterface(_msgSender(), id) && !isAvoider(from, id)),
             "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
 
@@ -271,7 +276,7 @@ contract gETH is ERC1155SupplyMinterPauser {
         require(
             account == _msgSender() ||
                 isApprovedForAll(account, _msgSender()) ||
-                (isInterface(_msgSender(), id) && !isAvoider(account)),
+                (isInterface(_msgSender(), id) && !isAvoider(account, id)),
             "ERC1155: caller is not owner nor approved nor an allowed interface"
         );
 
