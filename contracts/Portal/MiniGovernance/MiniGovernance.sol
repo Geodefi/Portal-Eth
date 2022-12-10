@@ -181,7 +181,7 @@ contract MiniGovernance is
         require(id != SELF.contractVersion);
         GeodeUtils.Proposal memory proposal = getPortal().getProposal(id);
         require(proposal.TYPE == 11);
-        GEM.newProposal(proposal.CONTROLLER, 2, proposal.NAME, 7 days);
+        GEM.newProposal(proposal.CONTROLLER, 2, proposal.NAME, 2 weeks);
         SELF.proposedVersion = id;
     }
 
