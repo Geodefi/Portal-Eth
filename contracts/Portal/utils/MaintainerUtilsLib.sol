@@ -90,6 +90,12 @@ library MaintainerUtils {
             );
         }
         uint256 typeOfId = DATASTORE.readUintForId(id, "TYPE");
+
+        require(
+            DATASTORE.readUintForId(id, "initiated") != 0,
+            "MaintainerUtils: ID is not initiated"
+        );
+
         if (typeOfId == 4) {
             require(
                 restrictionMap[0] == true,
