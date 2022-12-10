@@ -1310,13 +1310,9 @@ library StakeUtils {
                         self.TELESCOPE._validators[pubkeys[i]].poolFee) /
                         PERCENTAGE_DENOMINATOR);
 
-                    if (poolId != operatorId) {
-                        fees[1] += ((balance *
-                            self
-                                .TELESCOPE
-                                ._validators[pubkeys[i]]
-                                .operatorFee) / PERCENTAGE_DENOMINATOR);
-                    }
+                    fees[1] += ((balance *
+                        self.TELESCOPE._validators[pubkeys[i]].operatorFee) /
+                        PERCENTAGE_DENOMINATOR);
                 }
             }
 
@@ -1343,13 +1339,16 @@ library StakeUtils {
 
         uint256 debt = withdrawalPoolById(DATASTORE, poolId).getDebt();
         if (debt > IGNORABLE_DEBT) {
+            if (debt > cumBal) {
+                debt = cumBal;
+            }
             {
                 uint256 boost = getWithdrawalBoost(DATASTORE, poolId);
-                if (boost > 0 && poolId != operatorId) {
+                if (boost > 0) {
                     uint256 arb = withdrawalPoolById(DATASTORE, poolId)
-                        .calculateSwap(0, 1, cumBal > debt ? debt : cumBal);
+                        .calculateSwap(0, 1, debt);
                     arb -=
-                        (cumBal * self.gETH.denominator()) /
+                        (debt * self.gETH.denominator()) /
                         self.gETH.pricePerShare(poolId);
                     boost = (arb * boost) / PERCENTAGE_DENOMINATOR;
 
@@ -1358,9 +1357,6 @@ library StakeUtils {
                 }
             }
 
-            if (debt > cumBal) {
-                debt = cumBal;
-            }
             _buyback(
                 self,
                 DATASTORE,
