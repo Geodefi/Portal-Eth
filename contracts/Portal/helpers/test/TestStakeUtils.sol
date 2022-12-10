@@ -687,17 +687,17 @@ contract TestStakeUtils is ERC1155Holder {
     }
 
     uint256 lastRealPrice;
-    uint256 lastExpectedPrice;
+    uint256 lastUnbufferedPrice;
 
     function getLastPrices() external view returns (uint256, uint256) {
-        return (lastRealPrice, lastExpectedPrice);
+        return (lastRealPrice, lastUnbufferedPrice);
     }
 
     function findPrices(uint256 poolId, uint256 beaconBalance)
         external
-        returns (uint256 real, uint256 expected)
+        returns (uint256 real, uint256 unbuffered)
     {
-        (real, expected) = STAKEPOOL.TELESCOPE._findPricesClearBuffer(
+        (unbuffered, real) = STAKEPOOL.TELESCOPE._findPricesClearBuffer(
             DATASTORE,
             DataStoreUtils.getKey(
                 block.timestamp - (block.timestamp % OracleUtils.ORACLE_PERIOD),
@@ -710,7 +710,7 @@ contract TestStakeUtils is ERC1155Holder {
             poolId,
             beaconBalance
         );
-        (lastRealPrice, lastExpectedPrice) = (real, expected);
+        (lastRealPrice, lastUnbufferedPrice) = (real, unbuffered);
     }
 
     function reportOracle(

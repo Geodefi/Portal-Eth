@@ -363,15 +363,24 @@ library OracleUtils {
             DATASTORE.readUintForId(_poolId, "secured") +
             DATASTORE.readUintForId(_poolId, "surplus");
 
-        uint256 supply = self.gETH.totalSupply(_poolId);
-        uint256 price = self.gETH.pricePerShare(_poolId);
-        uint256 unbufferedEther = totalEther -
-            (DATASTORE.readUintForId(_poolId, _dailyBufferMintKey) * price) /
-            self.gETH.totalSupply(_poolId);
+        uint256 denominator = self.gETH.denominator();
+        uint256 unbufferedEther;
 
-        unbufferedEther +=
-            (DATASTORE.readUintForId(_poolId, _dailyBufferBurnKey) * price) /
-            self.gETH.denominator();
+        {
+            uint256 price = self.gETH.pricePerShare(_poolId);
+            unbufferedEther =
+                totalEther -
+                (DATASTORE.readUintForId(_poolId, _dailyBufferMintKey) *
+                    price) /
+                denominator;
+
+            unbufferedEther +=
+                (DATASTORE.readUintForId(_poolId, _dailyBufferBurnKey) *
+                    price) /
+                denominator;
+        }
+
+        uint256 supply = self.gETH.totalSupply(_poolId);
 
         uint256 unbufferedSupply = supply -
             DATASTORE.readUintForId(_poolId, _dailyBufferMintKey);
@@ -385,7 +394,10 @@ library OracleUtils {
         DATASTORE.writeUintForId(_poolId, _dailyBufferMintKey, 0);
         DATASTORE.writeUintForId(_poolId, _dailyBufferBurnKey, 0);
 
-        return (unbufferedEther / unbufferedSupply, totalEther / supply);
+        return (
+            (unbufferedEther * denominator) / unbufferedSupply,
+            (totalEther * denominator) / supply
+        );
     }
 
     /**

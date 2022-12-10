@@ -2606,6 +2606,7 @@ describe("StakeUtils", () => {
 
     describe("_findPrices_ClearBuffer", () => {
       beforeEach(async () => {
+        await setTimestamp(24 * 60 * 60 * 99999 + 30 * 60 + 10);
         await testContract.setMONOPOLY_THRESHOLD(1000);
         await testContract.setType(operatorId, 4);
         await testContract.beController(operatorId);
@@ -2679,12 +2680,15 @@ describe("StakeUtils", () => {
         const results = await testContract.getLastPrices();
         const settedPrice = results[0];
         const unbufferedPrice = results[1];
-
         expect(settedPrice).to.be.eq(
-          ethers.BigNumber.from(String(192e18)).div(String(176e18))
+          ethers.BigNumber.from(String(192e18))
+            .mul(String(1e18))
+            .div(String(176e18))
         ); // totalETH div getgETH(self).totalSupply(poolId) -> 160 + 32/2 = 176
         expect(unbufferedPrice).to.be.eq(
-          ethers.BigNumber.from(String(160e18)).div(String(160e18))
+          ethers.BigNumber.from(String(160e18))
+            .mul(String(1e18))
+            .div(String(160e18))
         ); // unbufferedSupply div (getgETH(self).totalSupply(poolId) - calculation) -> 176 - 16
       });
 
@@ -2720,13 +2724,18 @@ describe("StakeUtils", () => {
         const results = await testContract.getLastPrices();
         const settedPrice = results[0];
         const unbufferedPrice = results[1];
+        console.log(settedPrice.toString(), unbufferedPrice.toString());
 
         expect(settedPrice).to.be.eq(
-          ethers.BigNumber.from(String(256e18)).div(String(224e18))
+          ethers.BigNumber.from(String(288e18))
+            .mul(String(1e18))
+            .div(String(224e18))
         ); // totalETH div getgETH(self).totalSupply(poolId) -> 176 + 32/2 + 64/2 = 224
         expect(unbufferedPrice).to.be.eq(
-          ethers.BigNumber.from(String(192e18)).div(String(192e18))
-        ); // unbufferedSupply div (getgETH(self).totalSupply(poolId) - calculation) -> 224 - 32
+          ethers.BigNumber.from(String(224e18))
+            .mul(String(1e18))
+            .div(String(192e18))
+        ); // unbufferedSupply div (getgETH(self).totalSupply(poolId) - calculation) -> 288 - 64
       });
       it("works when oracle missed 20 days", async () => {
         await setTimestamp(24 * 60 * 60 * 100001 + 30 * 60 + 10);
@@ -2760,12 +2769,23 @@ describe("StakeUtils", () => {
         const results = await testContract.getLastPrices();
         const settedPrice = results[0];
         const unbufferedPrice = results[1];
-
+        console.log(settedPrice.toString(), unbufferedPrice.toString());
+        console.log(
+          (await testContract.dailyMintBuffer(planetId)).toString(), // 32
+          (await testContract.dailyBurnBuffer(planetId)).toString(), // 0
+          (await testContract.surplusById(planetId)).toString(), // 160
+          (await testContract.securedById(planetId)).toString(), // 0
+          (await gETH.totalSupply(planetId)).toString() // 224
+        );
         expect(settedPrice).to.be.eq(
-          ethers.BigNumber.from(String(256e18)).div(String(224e18))
+          ethers.BigNumber.from(String(288e18))
+            .mul(String(1e18))
+            .div(String(224e18))
         ); // totalETH div getgETH(self).totalSupply(poolId) -> 176 + 32/2 + 64/2 = 224
         expect(unbufferedPrice).to.be.eq(
-          ethers.BigNumber.from(String(192e18)).div(String(192e18))
+          ethers.BigNumber.from(String(224e18))
+            .mul(String(1e18))
+            .div(String(192e18))
         ); // unbufferedSupply div (getgETH(self).totalSupply(poolId) - calculation) -> 224 - 32
       });
     });
@@ -2879,27 +2899,41 @@ describe("StakeUtils", () => {
 
     it("returns correct version", async () => {
       let currentVersion = await mgContract.getCurrentVersion();
-      expect(currentVersion).to.be.eq(ethers.BigNumber.from(String("58300719301927709293725675566594180747137962353038020407921210900692208248751")));
+      expect(currentVersion).to.be.eq(
+        ethers.BigNumber.from(
+          String(
+            "58300719301927709293725675566594180747137962353038020407921210900692208248751"
+          )
+        )
+      );
     });
 
     describe("isolationMode", async () => {
       it("returns false since not expired and no new proposal exist", async () => {
         let isInIsolation = await mgContract.isolationMode();
         expect(isInIsolation).to.be.eq(false);
-        
-        await setTimestamp(await getCurrentBlockTimestamp() + 24 * 60 * 60 * 180);
+
+        await setTimestamp(
+          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 180
+        );
         isInIsolation = await mgContract.isolationMode();
         expect(isInIsolation).to.be.eq(false);
       });
 
       it("isolation returns true when senate expired", async () => {
-        await setTimestamp(await getCurrentBlockTimestamp() + 24 * 60 * 60 * 180 + 1);
+        await setTimestamp(
+          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 180 + 1
+        );
         let isInIsolation = await mgContract.isolationMode();
         expect(isInIsolation).to.be.eq(true);
       });
 
       it("isolation returns true when new proposed version exist", async () => {
-        await testContract.proposeAndApproveMiniGov(newMiniGov.address, ethers.utils.toUtf8Bytes("mini-v99"), 11);
+        await testContract.proposeAndApproveMiniGov(
+          newMiniGov.address,
+          ethers.utils.toUtf8Bytes("mini-v99"),
+          11
+        );
         await mgContract.fetchUpgradeProposal();
         let isInIsolation = await mgContract.isolationMode();
         expect(isInIsolation).to.be.eq(true);
@@ -2909,116 +2943,271 @@ describe("StakeUtils", () => {
     describe("fetchUpgradeProposal", async () => {
       it("reverts if same version", async () => {
         await expect(mgContract.fetchUpgradeProposal()).to.be.reverted;
-        await testContract.proposeAndApproveMiniGov(newMiniGov.address, ethers.utils.toUtf8Bytes("mini-v1"), 11);
+        await testContract.proposeAndApproveMiniGov(
+          newMiniGov.address,
+          ethers.utils.toUtf8Bytes("mini-v1"),
+          11
+        );
         await expect(mgContract.fetchUpgradeProposal()).to.be.reverted;
       });
 
       it("reverts if type not 11", async () => {
-        await testContract.proposeAndApproveMiniGov(newMiniGov.address, ethers.utils.toUtf8Bytes("mini-v2"), 555);
+        await testContract.proposeAndApproveMiniGov(
+          newMiniGov.address,
+          ethers.utils.toUtf8Bytes("mini-v2"),
+          555
+        );
         await expect(mgContract.fetchUpgradeProposal()).to.be.reverted;
       });
 
       it("success, proposed version is updated correctly", async () => {
-        await testContract.proposeAndApproveMiniGov(newMiniGov.address, ethers.utils.toUtf8Bytes("mini-v2"), 11);
+        await testContract.proposeAndApproveMiniGov(
+          newMiniGov.address,
+          ethers.utils.toUtf8Bytes("mini-v2"),
+          11
+        );
         await mgContract.fetchUpgradeProposal();
-        expect(await testContract.miniGovernanceVersion()).to.be.not.eq(ethers.BigNumber.from(String("58300719301927709293725675566594180747137962353038020407921210900692208248751")));
-      });      
+        expect(await testContract.miniGovernanceVersion()).to.be.not.eq(
+          ethers.BigNumber.from(
+            String(
+              "58300719301927709293725675566594180747137962353038020407921210900692208248751"
+            )
+          )
+        );
+      });
     });
 
     describe("approveProposal", async () => {
-      const propId = ethers.BigNumber.from(String("101961567783943702776260856100706021563881454261250812268232085547438724168156"))
+      const propId = ethers.BigNumber.from(
+        String(
+          "101961567783943702776260856100706021563881454261250812268232085547438724168156"
+        )
+      );
 
       it("reverts if not maintainer", async () => {
-        await testContract.proposeAndApproveMiniGov(newMiniGov.address, ethers.utils.toUtf8Bytes("mini-v2"), 11);
+        await testContract.proposeAndApproveMiniGov(
+          newMiniGov.address,
+          ethers.utils.toUtf8Bytes("mini-v2"),
+          11
+        );
         await mgContract.fetchUpgradeProposal();
-        await expect(mgContract.connect(user2).approveProposal(propId)).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
+        await expect(
+          mgContract.connect(user2).approveProposal(propId)
+        ).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
       });
 
       it("success", async () => {
-        await testContract.proposeAndApproveMiniGov(newMiniGov.address, ethers.utils.toUtf8Bytes("mini-v2"), 11);
+        await testContract.proposeAndApproveMiniGov(
+          newMiniGov.address,
+          ethers.utils.toUtf8Bytes("mini-v2"),
+          11
+        );
         await mgContract.fetchUpgradeProposal();
         await mgContract.connect(user1).approveProposal(propId);
       });
-      
     });
 
     describe("refreshSenate (change password)", async () => {
-
       it("reverts if not maintainer", async () => {
-        await expect(mgContract.connect(user2).refreshSenate(ethers.utils.formatBytes32String(""))).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
+        await expect(
+          mgContract
+            .connect(user2)
+            .refreshSenate(ethers.utils.formatBytes32String(""))
+        ).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
       });
 
       it("success", async () => {
         // to check senate is still same
-        await mgContract.connect(user1).refreshSenate(ethers.utils.keccak256(ethers.utils.AbiCoder.bind(planetId, ethers.utils.toUtf8Bytes("abc"))));
-        await mgContract.connect(user1).refreshSenate(ethers.utils.keccak256(ethers.utils.AbiCoder.bind(planetId, ethers.utils.toUtf8Bytes("def"))));
+        await mgContract
+          .connect(user1)
+          .refreshSenate(
+            ethers.utils.keccak256(
+              ethers.utils.AbiCoder.bind(
+                planetId,
+                ethers.utils.toUtf8Bytes("abc")
+              )
+            )
+          );
+        await mgContract
+          .connect(user1)
+          .refreshSenate(
+            ethers.utils.keccak256(
+              ethers.utils.AbiCoder.bind(
+                planetId,
+                ethers.utils.toUtf8Bytes("def")
+              )
+            )
+          );
       });
-      
     });
 
     describe("changeMaintainer", async () => {
-
       it("reverts if not portal", async () => {
-        await mgContract.connect(user1).refreshSenate(ethers.utils.keccak256(ethers.utils.solidityPack(["uint256", "bytes"], [planetId, ethers.utils.toUtf8Bytes("abc")])));
-        await expect(mgContract.connect(user1).changeMaintainer(ethers.utils.toUtf8Bytes("abc"), ethers.utils.keccak256(ethers.utils.solidityPack(["uint256", "bytes"], [planetId, ethers.utils.toUtf8Bytes("def")])), user2.address)).to.be.reverted;
+        await mgContract
+          .connect(user1)
+          .refreshSenate(
+            ethers.utils.keccak256(
+              ethers.utils.solidityPack(
+                ["uint256", "bytes"],
+                [planetId, ethers.utils.toUtf8Bytes("abc")]
+              )
+            )
+          );
+        await expect(
+          mgContract
+            .connect(user1)
+            .changeMaintainer(
+              ethers.utils.toUtf8Bytes("abc"),
+              ethers.utils.keccak256(
+                ethers.utils.solidityPack(
+                  ["uint256", "bytes"],
+                  [planetId, ethers.utils.toUtf8Bytes("def")]
+                )
+              ),
+              user2.address
+            )
+        ).to.be.reverted;
       });
 
       it("reverts if password hash is not the same", async () => {
-        await mgContract.connect(user1).refreshSenate(ethers.utils.keccak256(ethers.utils.solidityPack(["uint256", "bytes"], [planetId, ethers.utils.toUtf8Bytes("abc")])));
-        await expect(testContract.miniGovChangeMaintainer(planetId, ethers.utils.toUtf8Bytes("qwe"), ethers.utils.keccak256(ethers.utils.solidityPack(["uint256", "bytes"], [planetId, ethers.utils.toUtf8Bytes("def")])), user2.address)).to.be.reverted;
+        await mgContract
+          .connect(user1)
+          .refreshSenate(
+            ethers.utils.keccak256(
+              ethers.utils.solidityPack(
+                ["uint256", "bytes"],
+                [planetId, ethers.utils.toUtf8Bytes("abc")]
+              )
+            )
+          );
+        await expect(
+          testContract.miniGovChangeMaintainer(
+            planetId,
+            ethers.utils.toUtf8Bytes("qwe"),
+            ethers.utils.keccak256(
+              ethers.utils.solidityPack(
+                ["uint256", "bytes"],
+                [planetId, ethers.utils.toUtf8Bytes("def")]
+              )
+            ),
+            user2.address
+          )
+        ).to.be.reverted;
       });
 
       it("success if password empty", async () => {
-        expect(await testContract.miniGovChangeMaintainer(planetId, ethers.utils.toUtf8Bytes("not important"), ethers.utils.keccak256(ethers.utils.solidityPack(["uint256", "bytes"], [planetId, ethers.utils.toUtf8Bytes("def")])), user2.address));
-        await expect(mgContract.connect(user1).refreshSenate(ethers.utils.formatBytes32String(""))).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
-        await mgContract.connect(user2).refreshSenate(ethers.utils.formatBytes32String(""));
+        expect(
+          await testContract.miniGovChangeMaintainer(
+            planetId,
+            ethers.utils.toUtf8Bytes("not important"),
+            ethers.utils.keccak256(
+              ethers.utils.solidityPack(
+                ["uint256", "bytes"],
+                [planetId, ethers.utils.toUtf8Bytes("def")]
+              )
+            ),
+            user2.address
+          )
+        );
+        await expect(
+          mgContract
+            .connect(user1)
+            .refreshSenate(ethers.utils.formatBytes32String(""))
+        ).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
+        await mgContract
+          .connect(user2)
+          .refreshSenate(ethers.utils.formatBytes32String(""));
       });
 
       it("success if password correct", async () => {
-        await mgContract.connect(user1).refreshSenate(ethers.utils.keccak256(ethers.utils.solidityPack(["uint256", "bytes"], [planetId, ethers.utils.toUtf8Bytes("abc")])));
-        expect(await testContract.miniGovChangeMaintainer(planetId, ethers.utils.toUtf8Bytes("abc"), ethers.utils.keccak256(ethers.utils.solidityPack(["uint256", "bytes"], [planetId, ethers.utils.toUtf8Bytes("def")])), user2.address));
-        await expect(mgContract.connect(user1).refreshSenate(ethers.utils.formatBytes32String(""))).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
-        await mgContract.connect(user2).refreshSenate(ethers.utils.formatBytes32String(""));
+        await mgContract
+          .connect(user1)
+          .refreshSenate(
+            ethers.utils.keccak256(
+              ethers.utils.solidityPack(
+                ["uint256", "bytes"],
+                [planetId, ethers.utils.toUtf8Bytes("abc")]
+              )
+            )
+          );
+        expect(
+          await testContract.miniGovChangeMaintainer(
+            planetId,
+            ethers.utils.toUtf8Bytes("abc"),
+            ethers.utils.keccak256(
+              ethers.utils.solidityPack(
+                ["uint256", "bytes"],
+                [planetId, ethers.utils.toUtf8Bytes("def")]
+              )
+            ),
+            user2.address
+          )
+        );
+        await expect(
+          mgContract
+            .connect(user1)
+            .refreshSenate(ethers.utils.formatBytes32String(""))
+        ).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
+        await mgContract
+          .connect(user2)
+          .refreshSenate(ethers.utils.formatBytes32String(""));
       });
-      
     });
 
     describe("pause unpause", async () => {
       it("pause reverts if not maintainer", async () => {
-        await expect(mgContract.connect(user2).pause()).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
+        await expect(mgContract.connect(user2).pause()).to.be.revertedWith(
+          "MiniGovernance: sender is NOT SENATE"
+        );
       });
 
       it("pause success", async () => {
         await mgContract.connect(user1).pause();
-        await expect(mgContract.connect(user1).refreshSenate(ethers.utils.formatBytes32String(""))).to.be.revertedWith("Pausable: paused");
+        await expect(
+          mgContract
+            .connect(user1)
+            .refreshSenate(ethers.utils.formatBytes32String(""))
+        ).to.be.revertedWith("Pausable: paused");
       });
 
       it("unpause reverts if not maintainer", async () => {
         await mgContract.connect(user1).pause();
-        await expect(mgContract.connect(user2).unpause()).to.be.revertedWith("MiniGovernance: sender is NOT SENATE");
+        await expect(mgContract.connect(user2).unpause()).to.be.revertedWith(
+          "MiniGovernance: sender is NOT SENATE"
+        );
       });
 
       it("unpause success", async () => {
         await mgContract.connect(user1).pause();
         await mgContract.connect(user1).unpause();
-        await mgContract.connect(user1).refreshSenate(ethers.utils.formatBytes32String(""));
+        await mgContract
+          .connect(user1)
+          .refreshSenate(ethers.utils.formatBytes32String(""));
       });
 
       it("reverts if pause directly after unpause", async () => {
         await mgContract.connect(user1).pause();
         await mgContract.connect(user1).unpause();
         await expect(mgContract.connect(user1).pause()).to.be.reverted;
-        await setTimestamp(await getCurrentBlockTimestamp() + 24 * 60 * 60 * 7 - 2);
+        await setTimestamp(
+          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 7 - 2
+        );
         await expect(mgContract.connect(user1).pause()).to.be.reverted;
       });
 
       it("success if pause after a week past over unpause", async () => {
         await mgContract.connect(user1).pause();
         await mgContract.connect(user1).unpause();
-        
-        await setTimestamp(await getCurrentBlockTimestamp() + 24 * 60 * 60 * 7);
+
+        await setTimestamp(
+          (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 7
+        );
         await mgContract.connect(user1).pause();
-        await expect(mgContract.connect(user1).refreshSenate(ethers.utils.formatBytes32String(""))).to.be.revertedWith("Pausable: paused");
+        await expect(
+          mgContract
+            .connect(user1)
+            .refreshSenate(ethers.utils.formatBytes32String(""))
+        ).to.be.revertedWith("Pausable: paused");
       });
     });
   });
