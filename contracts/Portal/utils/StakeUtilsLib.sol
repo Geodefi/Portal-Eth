@@ -973,6 +973,7 @@ library StakeUtils {
         );
         require(
             (DATASTORE.readUintForId(operatorId, "totalActiveValidators") +
+                DATASTORE.readUintForId(operatorId, "totalProposedValidators") +
                 pubkeys.length) <= self.TELESCOPE.MONOPOLY_THRESHOLD,
             "StakeUtils: IceBear does NOT like monopolies"
         );
@@ -1007,6 +1008,25 @@ library StakeUtils {
             (DCU.DEPOSIT_AMOUNT * pubkeys.length)
         );
 
+        DATASTORE.addUintForId(
+            poolId,
+            "secured",
+            (DCU.DEPOSIT_AMOUNT * pubkeys.length)
+        );
+
+        DATASTORE.addUintForId(
+            poolId,
+            DataStoreUtils.getKey(operatorId, "proposedValidators"),
+            pubkeys.length
+        );
+
+        DATASTORE.addUintForId(
+            operatorId,
+            "totalProposedValidators",
+            pubkeys.length
+        );
+
+        self.TELESCOPE.VALIDATORS_INDEX += pubkeys.length;
         {
             uint256[2] memory fees = [
                 DATASTORE.getMaintainerFee(poolId),
@@ -1054,19 +1074,6 @@ library StakeUtils {
                 emit ProposeStaked(pubkeys[i], poolId, operatorId);
             }
         }
-
-        DATASTORE.addUintForId(
-            poolId,
-            DataStoreUtils.getKey(operatorId, "proposedValidators"),
-            pubkeys.length
-        );
-        DATASTORE.addUintForId(
-            poolId,
-            "secured",
-            (DCU.DEPOSIT_AMOUNT * pubkeys.length)
-        );
-
-        self.TELESCOPE.VALIDATORS_INDEX += pubkeys.length;
     }
 
     /**
@@ -1156,6 +1163,7 @@ library StakeUtils {
                     .TELESCOPE
                     ._validators[pubkeys[i]]
                     .signature;
+
                 DCU.depositValidator(
                     pubkeys[i],
                     withdrawalCredential,
@@ -1181,6 +1189,11 @@ library StakeUtils {
                 planetId,
                 proposedValKey,
                 (pubkeys.length - lastPlanetChange)
+            );
+            DATASTORE.subUintForId(
+                operatorId,
+                "totalProposedValidators",
+                pubkeys.length
             );
             DATASTORE.addUintForId(
                 operatorId,
