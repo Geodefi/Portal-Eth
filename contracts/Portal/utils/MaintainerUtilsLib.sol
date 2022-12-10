@@ -63,10 +63,9 @@ library MaintainerUtils {
         );
 
         DATASTORE.writeAddressForId(_id, "maintainer", _maintainer);
+        DATASTORE.writeUintForId(_id, "initiated", block.timestamp);
 
         _;
-
-        DATASTORE.writeUintForId(_id, "initiated", block.timestamp);
 
         emit IdInitiated(_id, _TYPE);
     }
