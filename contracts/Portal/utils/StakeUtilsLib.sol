@@ -160,15 +160,26 @@ library StakeUtils {
         self.gETH.setInterface(_interface, id, true);
     }
 
-    function setInterface(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage DATASTORE,
-        uint256 id,
-        address _interface
-    ) external {
-        DATASTORE.authenticate(id, true, [false, true, true]);
-        _setInterface(self, DATASTORE, id, _interface);
-    }
+    /**
+     * @dev Consensys Diligence Audit team advised that there are many issues with having multiple interfaces,
+     * as well as the possibility of setting a malicious interface.
+     *
+     * Interfaces are developed to provide a flexibility for the owners of a Staking Pools, however these risks
+     * are very strong blockers, even with gETH.Avoiders implementation.
+     *
+     * Until there is a request for other interfaces, with proper solutions for provided issues,
+     * we are limiting the abilities of Maintainers on Interfaces, except standard ERC20.
+     */
+
+    // function setInterface(
+    //     StakePool storage self,
+    //     DataStoreUtils.DataStore storage DATASTORE,
+    //     uint256 id,
+    //     address _interface
+    // ) external {
+    //     DATASTORE.authenticate(id, true, [false, true, true]);
+    //     _setInterface(self, DATASTORE, id, _interface);
+    // }
 
     /**
      * @notice unsets a erc1155Interface for gETH with given index -acquired from allInterfaces()-
@@ -177,29 +188,28 @@ library StakeUtils {
      * * even if unsetted, it just replaces the implementation with address(0) for obvious security reasons
      * @dev old Interfaces will still be active if not unsetted
      */
-    function unsetInterface(
-        StakePool storage self,
-        DataStoreUtils.DataStore storage DATASTORE,
-        uint256 id,
-        uint256 index
-    ) external {
-        DATASTORE.authenticate(id, true, [false, true, true]);
-
-        address _interface = DATASTORE.readAddressForId(
-            id,
-            DataStoreUtils.getKey(index, "interfaces")
-        );
-        require(
-            _interface != address(0) && self.gETH.isInterface(_interface, id),
-            "StakeUtils: already NOT interface"
-        );
-        DATASTORE.writeAddressForId(
-            id,
-            DataStoreUtils.getKey(index, "interfaces"),
-            address(0)
-        );
-        self.gETH.setInterface(_interface, id, false);
-    }
+    // function unsetInterface(
+    //     StakePool storage self,
+    //     DataStoreUtils.DataStore storage DATASTORE,
+    //     uint256 id,
+    //     uint256 index
+    // ) external {
+    //     DATASTORE.authenticate(id, true, [false, true, true]);
+    //     address _interface = DATASTORE.readAddressForId(
+    //         id,
+    //         DataStoreUtils.getKey(index, "interfaces")
+    //     );
+    //     require(
+    //         _interface != address(0) && self.gETH.isInterface(_interface, id),
+    //         "StakeUtils: already NOT interface"
+    //     );
+    //     DATASTORE.writeAddressForId(
+    //         id,
+    //         DataStoreUtils.getKey(index, "interfaces"),
+    //         address(0)
+    //     );
+    //     self.gETH.setInterface(_interface, id, false);
+    // }
 
     /**
      * @notice lists all interfaces, unsetted interfaces will return address(0)
