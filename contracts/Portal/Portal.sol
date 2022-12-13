@@ -449,24 +449,6 @@ contract Portal is
         return StakeUtils.allInterfaces(DATASTORE, id);
     }
 
-    function setInterface(uint256 id, address _interface)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        STAKEPOOL.setInterface(DATASTORE, id, _interface);
-    }
-
-    function unsetInterface(uint256 id, uint256 index)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        STAKEPOOL.unsetInterface(DATASTORE, id, index);
-    }
-
     /**
      *                                     ** Oracle Operations **
      */
@@ -930,7 +912,7 @@ contract Portal is
             );
     }
 
-    function updateValidatorPeriod(uint256 operatorId, uint256 newPeriod)
+    function switchValidatorPeriod(uint256 operatorId, uint256 newPeriod)
         external
         virtual
         override
@@ -1092,6 +1074,11 @@ contract Portal is
     function Do_we_care() external pure returns (bool) {
         return true;
     }
+
+    /// @dev fallbacks
+    fallback() external payable {}
+
+    receive() external payable {}
 
     /// @notice keep the contract size at 50
     uint256[46] private __gap;

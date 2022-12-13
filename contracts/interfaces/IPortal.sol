@@ -92,10 +92,6 @@ interface IPortal {
 
     function allInterfaces(uint256 id) external view returns (address[] memory);
 
-    function setInterface(uint256 id, address _interface) external;
-
-    function unsetInterface(uint256 id, uint256 index) external;
-
     function TelescopeParams()
         external
         view
@@ -217,7 +213,7 @@ interface IPortal {
         uint256 allowance
     ) external returns (bool);
 
-    function updateValidatorPeriod(uint256 operatorId, uint256 newPeriod)
+    function switchValidatorPeriod(uint256 operatorId, uint256 newPeriod)
         external;
 
     function canDeposit(uint256 _id) external view returns (bool);
