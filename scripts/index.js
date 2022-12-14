@@ -55,9 +55,9 @@ task("change-maintainer", "Change operator of an ID")
 
 // maintainers
 task("initiate-planet", "initiate a planet with correct parameters")
-  .addParam("id", "id for planet")
   .addParam("f", "maintainerFee")
   .addParam("m", "maintainer address")
+  .addParam("name", "planet name")
   .addParam("n", "interface name")
   .addParam("s", "interface symbol")
   .setAction(initiatePlanet);

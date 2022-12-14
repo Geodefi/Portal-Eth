@@ -256,8 +256,17 @@ library StakeUtils {
             _fee <= self.MAX_MAINTAINER_FEE,
             "StakeUtils: MAX_MAINTAINER_FEE ERROR"
         );
+        require(
+            _validatorPeriod >= MIN_VALIDATOR_PERIOD,
+            "StekeUtils: should be more than MIN_VALIDATOR_PERIOD"
+        );
+        require(
+            _validatorPeriod <= MAX_VALIDATOR_PERIOD,
+            "StekeUtils: should be less than MAX_VALIDATOR_PERIOD"
+        );
+
         DATASTORE.initiateOperator(_id, _fee, _maintainer);
-        _updateValidatorPeriod(DATASTORE, _id, _validatorPeriod);
+        DATASTORE.writeUintForId(_id, "validatorPeriod", _validatorPeriod);
     }
 
     /**

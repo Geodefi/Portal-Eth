@@ -264,14 +264,6 @@ contract TestStakeUtils is ERC1155Holder {
         return STAKEPOOL.gETH.pricePerShare(_planetId);
     }
 
-    function setInterface(uint256 _planetId, address _interface) external {
-        STAKEPOOL.setInterface(DATASTORE, _planetId, _interface);
-    }
-
-    function unsetInterface(uint256 _planetId, uint256 _index) external {
-        STAKEPOOL.unsetInterface(DATASTORE, _planetId, _index);
-    }
-
     function allInterfaces(uint256 _planetId)
         external
         view

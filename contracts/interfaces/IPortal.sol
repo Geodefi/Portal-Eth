@@ -173,6 +173,7 @@ interface IPortal {
         uint256 _id,
         uint256 _fee,
         address _maintainer,
+        bytes calldata _name,
         string calldata _interfaceName,
         string calldata _interfaceSymbol
     ) external;

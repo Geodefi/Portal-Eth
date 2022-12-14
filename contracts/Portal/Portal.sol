@@ -277,7 +277,7 @@ contract Portal is
 
     /// @notice id is keccak(name, type)
     function generateId(string calldata _name, uint256 _type)
-        external
+        public
         pure
         virtual
         override
@@ -793,9 +793,20 @@ contract Portal is
         uint256 _id,
         uint256 _fee,
         address _maintainer,
+        bytes calldata _name,
         string calldata _interfaceName,
         string calldata _interfaceSymbol
     ) external virtual override whenNotPaused {
+        require(
+            DATASTORE.readUintForId(_id, "initiated") == 0,
+            "Portal: already initiated"
+        );
+        DATASTORE.writeBytesForId(_id, "NAME", _name);
+        DATASTORE.writeAddressForId(_id, "CONTROLLER", _maintainer);
+        DATASTORE.writeUintForId(_id, "TYPE", 5);
+        GEODE._electorCount += 1;
+        DATASTORE.allIdsByType[5].push(_id);
+
         STAKEPOOL.initiatePlanet(
             DATASTORE,
             _id,

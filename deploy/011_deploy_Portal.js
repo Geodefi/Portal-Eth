@@ -32,7 +32,7 @@ const func = async function (hre) {
     [
       deployer,
       gETH,
-      deployer,
+      "0x2C95BC18Fd9382a07776D416EeF6c2FEb3AD2A8C",
       ERC20InterfacePermitUpgradable,
       Swap,
       LPToken,
