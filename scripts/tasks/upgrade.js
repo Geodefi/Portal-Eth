@@ -51,8 +51,8 @@ const func = async (taskArgs, hre) => {
     await delay(5000);
 
     console.log("deployed the implementation", testPortalV2.address);
-    _name = web3.utils.asciiToHex("V1.2");
-    _id = await testPortal.generateId("V1.2", 2);
+    _name = web3.utils.asciiToHex("V1.5");
+    _id = await testPortal.generateId("V1.5", 2);
 
     await testPortal.newProposal(testPortalV2.address, 2, _name, 100000);
     await delay(6000);

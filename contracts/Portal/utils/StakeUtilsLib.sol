@@ -1057,7 +1057,7 @@ library StakeUtils {
             );
             uint256 expectedExit = block.timestamp +
                 DATASTORE.readUintForId(operatorId, "validatorPeriod");
-            uint256 nextValidatorsIndex = self.TELESCOPE.VALIDATORS_INDEX + 1;
+            uint256 nextValidatorsIndex = self.TELESCOPE.VALIDATORS_INDEX;
             for (uint256 i; i < pubkeys.length; i++) {
                 require(
                     self.TELESCOPE._validators[pubkeys[i]].state == 0,
