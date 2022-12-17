@@ -2,6 +2,7 @@ const { task } = require("hardhat/config");
 const accounts = require("./tasks/accounts");
 const details = require("./tasks/details");
 const activatePortal = require("./tasks/activatePortal");
+const upgradePortal = require("./tasks/upgrade");
 
 const propose = require("./tasks/propose");
 const approveProposal = require("./tasks/approveProposal");
@@ -22,6 +23,7 @@ task("accounts", "Prints the list of accounts", accounts);
 // portal management
 task("details", "", details);
 task("activate-portal", "", activatePortal);
+task("upgrade-portal", "", upgradePortal);
 
 // proposals
 task("propose", "Creates a proposal with desired parameters")
