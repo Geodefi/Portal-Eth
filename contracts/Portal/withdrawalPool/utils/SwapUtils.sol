@@ -1151,52 +1151,6 @@ library SwapUtils {
     }
 
     /**
-     * @notice donate ETH and gETH to the pool as fee with respect to derivative price
-     * @param self Swap struct to deposit fees
-     * @param EthDonation amount of ETH to donate into the pool
-     * @param gEthDonation amount of gETH to donate into the pool
-     */
-    function donateBalancedFees(
-        Swap storage self,
-        uint256 EthDonation,
-        uint256 gEthDonation
-    ) external returns (uint256, uint256) {
-        {
-            IgETH gETHReference = self.gETH;
-            // Transfer tokens first
-            uint256 beforeBalance = gETHReference.balanceOf(
-                address(this),
-                self.pooledTokenId
-            );
-            gETHReference.safeTransferFrom(
-                msg.sender,
-                address(this),
-                self.pooledTokenId,
-                gEthDonation,
-                ""
-            );
-
-            // Use the actual transferred amount
-            gEthDonation =
-                gETHReference.balanceOf(address(this), self.pooledTokenId) -
-                beforeBalance;
-        }
-        require(
-            _pricedIn(self, gEthDonation, 1) == EthDonation,
-            "SwapUtils: MUST respect to derivative price"
-        );
-        self.balances[0] +=
-            EthDonation -
-            (EthDonation * self.adminFee) /
-            PERCENTAGE_DENOMINATOR;
-        self.balances[1] +=
-            gEthDonation -
-            (gEthDonation * self.adminFee) /
-            PERCENTAGE_DENOMINATOR;
-        return (EthDonation, gEthDonation);
-    }
-
-    /**
      * @notice withdraw all admin fees to a given address
      * @param self Swap struct to withdraw fees from
      * @param to Address to send the fees to

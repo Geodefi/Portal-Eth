@@ -461,24 +461,6 @@ contract Swap is
         return swapStorage.removeLiquidityImbalance(amounts, maxBurnAmount);
     }
 
-    /**
-     * @notice donate ether as fee, respecting the admin fee
-     * @return amount of fees paid, basically EthDonation and gEthDonation if successful
-     */
-    function donateBalancedFees(uint256 EthDonation, uint256 gEthDonation)
-        external
-        payable
-        override
-        nonReentrant
-        returns (uint256, uint256)
-    {
-        require(
-            msg.value == EthDonation,
-            "Swap: received less or more ETH than expected"
-        );
-        return swapStorage.donateBalancedFees(EthDonation, gEthDonation);
-    }
-
     /*** ADMIN FUNCTIONS ***/
 
     /**
