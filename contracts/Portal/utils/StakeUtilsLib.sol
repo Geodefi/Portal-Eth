@@ -640,7 +640,7 @@ library StakeUtils {
     {
         return
             (DATASTORE.readUintForId(_id, "stakePaused") == 0) &&
-            !(miniGovernanceById(DATASTORE, _id).isolationMode());
+            !(miniGovernanceById(DATASTORE, _id).recoveryMode());
     }
 
     /**
@@ -906,7 +906,7 @@ library StakeUtils {
 
     /**
      * @notice internal function that checks if validator is allowed
-     * by Telescope and also not in isolationMode
+     * by Telescope and also not in recoveryMode
      */
     function _canStake(
         StakePool storage self,
@@ -920,7 +920,7 @@ library StakeUtils {
                 miniGovernanceById(
                     DATASTORE,
                     self.TELESCOPE._validators[pubkey].poolId
-                ).isolationMode()
+                ).recoveryMode()
             );
     }
 

@@ -20,7 +20,7 @@ interface IMiniGovernance {
 
     function getProposedVersion() external view returns (uint256);
 
-    function isolationMode() external view returns (bool);
+    function recoveryMode() external view returns (bool);
 
     function fetchUpgradeProposal() external;
 

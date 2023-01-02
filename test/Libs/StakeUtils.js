@@ -2908,15 +2908,15 @@ describe("StakeUtils", () => {
       );
     });
 
-    describe("isolationMode", async () => {
+    describe("recoveryMode", async () => {
       it("returns false since not expired and no new proposal exist", async () => {
-        let isInIsolation = await mgContract.isolationMode();
+        let isInIsolation = await mgContract.recoveryMode();
         expect(isInIsolation).to.be.eq(false);
 
         await setTimestamp(
           (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 180
         );
-        isInIsolation = await mgContract.isolationMode();
+        isInIsolation = await mgContract.recoveryMode();
         expect(isInIsolation).to.be.eq(false);
       });
 
@@ -2924,7 +2924,7 @@ describe("StakeUtils", () => {
         await setTimestamp(
           (await getCurrentBlockTimestamp()) + 24 * 60 * 60 * 180 + 1
         );
-        let isInIsolation = await mgContract.isolationMode();
+        let isInIsolation = await mgContract.recoveryMode();
         expect(isInIsolation).to.be.eq(true);
       });
 
@@ -2935,7 +2935,7 @@ describe("StakeUtils", () => {
           11
         );
         await mgContract.fetchUpgradeProposal();
-        let isInIsolation = await mgContract.isolationMode();
+        let isInIsolation = await mgContract.recoveryMode();
         expect(isInIsolation).to.be.eq(true);
       });
     });

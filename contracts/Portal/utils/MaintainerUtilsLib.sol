@@ -266,11 +266,7 @@ library MaintainerUtils {
     }
 
     /**
-     * @notice CONTROLLER of the ID can change the maintainer to any address other than ZERO_ADDRESS
-     * @dev it is wise to change the CONTROLLER before the maintainer, in case of any migration
-     * @dev handle with care
-     * NOTE intended (suggested) usage is to set a contract address that will govern the id for maintainer,
-     * while keeping the controller as a multisig or provide smt like 0x000000000000000000000000000000000000dEaD
+     * @notice
      */
     function changeMaintainer(
         DataStoreUtils.DataStore storage DATASTORE,

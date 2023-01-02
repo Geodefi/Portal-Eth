@@ -22,7 +22,7 @@ import "../../interfaces/IMiniGovernance.sol";
  * *
  * * However there are such improvements planned to be implemented to make
  * * the staking environment more trustless.
- * * * "isolationMode" is one of them, currently only rules of the isolation mode is Senate_Expiry and
+ * * * "recoveryMode" is one of them, currently only rules of the isolation mode is Senate_Expiry and
  * * * isUpgraded check. However, this is a good start to ensure that the future implementations will be
  * * * enforced to incentivise the trustless behaviour! The end goal is to create mini-portals
  * * * with different mechanics and allow auto-staking contracts...
@@ -163,7 +163,7 @@ contract MiniGovernance is
         return SELF.proposedVersion;
     }
 
-    function isolationMode() public view virtual override returns (bool) {
+    function recoveryMode() public view virtual override returns (bool) {
         return
             SELF.contractVersion != SELF.proposedVersion ||
             block.timestamp > GEM.SENATE_EXPIRY;
