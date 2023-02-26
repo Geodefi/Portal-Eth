@@ -15,10 +15,10 @@ const func = async (taskArgs, hre) => {
       GEODE: {
         SENATE: GeodeParams.SENATE,
         GOVERNANCE: GeodeParams.GOVERNANCE,
-        GOVERNANCE_TAX: `${GeodeParams.GOVERNANCE_TAX.div(
+        GOVERNANCE_FEE: `${GeodeParams.GOVERNANCE_FEE.div(
           10 ** 8
         ).toString()}%`,
-        MAX_GOVERNANCE_TAX: `${GeodeParams.MAX_GOVERNANCE_TAX.div(
+        MAX_GOVERNANCE_FEE: `${GeodeParams.MAX_GOVERNANCE_FEE.div(
           10 ** 8
         ).toString()}%`,
         SENATE_EXPIRY: new Date(GeodeParams.SENATE_EXPIRY),
@@ -82,7 +82,7 @@ const func = async (taskArgs, hre) => {
           withdrawalBoost: `${p.withdrawalBoost}`,
           withdrawalPool: `${p.withdrawalPool}`,
           LPToken: `${p.LPToken}`,
-          miniGovernance: `${p.miniGovernance}`,
+          WithdrawalContract: `${p.WithdrawalContract}`,
         };
       })
     );

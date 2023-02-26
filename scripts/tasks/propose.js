@@ -1,10 +1,10 @@
 const web3 = require("web3");
 const func = async (taskArgs, hre) => {
-  types = {
+  const types = {
     senate: 1,
     upgrade: 2,
     operator: 4,
-    planet: 5,
+    pool: 5,
   };
   const { deployer } = await getNamedAccounts();
   const { deployments } = hre;
@@ -29,5 +29,5 @@ const func = async (taskArgs, hre) => {
     console.log("try --network");
   }
 };
-
+// done
 module.exports = func;

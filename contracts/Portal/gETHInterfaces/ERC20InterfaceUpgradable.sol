@@ -8,6 +8,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20Metadat
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../interfaces/IgETH.sol";
+import "../../interfaces/IgETHInterface.sol";
+import "../helpers/BytesLib.sol";
 
 /**
  * @dev differences between ERC20InterfaceUpgradable and Openzeppelin's implementation of ERC20Upgradeable is:
@@ -47,392 +49,395 @@ import "../../interfaces/IgETH.sol";
  */
 
 contract ERC20InterfaceUpgradable is
-    Initializable,
-    ContextUpgradeable,
-    IERC20Upgradeable,
-    IERC20MetadataUpgradeable
+  Initializable,
+  ContextUpgradeable,
+  IERC20Upgradeable,
+  IERC20MetadataUpgradeable
 {
-    /**
-     * @dev gETH ERC20 interface doesn't use balance info, catches it from ERC1155.
-     * mapping(address => uint256) private _balances;
-     **/
+  /**
+   * @dev gETH ERC20 interface doesn't use balance info, catches it from ERC1155.
+   * mapping(address => uint256) private _balances;
+   **/
 
-    mapping(address => mapping(address => uint256)) private _allowances;
+  mapping(address => mapping(address => uint256)) private _allowances;
 
-    /**
-     * @dev gETH ERC20 interface doesn't use totalSupply info, catches it from ERC1155.
-     * uint256 private _totalSupply;
-     **/
+  /**
+   * @dev gETH ERC20 interface doesn't use totalSupply info, catches it from ERC1155.
+   * uint256 private _totalSupply;
+   **/
 
-    string private _name;
-    string private _symbol;
+  string private _name;
+  string private _symbol;
 
-    uint256 private _id;
-    IgETH private _ERC1155;
+  uint256 private _id;
+  IgETH private _ERC1155;
 
-    /**
-     * @dev Sets the values for {name} and {symbol}.
-     *
-     * The default value of {decimals} is 18. To select a different value for
-     * {decimals} you should overload it.
-     *
-     * All two of these values are immutable: they can only be set once during
-     * construction.
-     */
+  /**
+   * @dev Sets the values for {name} and {symbol}.
+   *
+   * The default value of {decimals} is 18. To select a different value for
+   * {decimals} you should overload it.
+   *
+   */
+  function initialize(
+    uint256 id_,
+    address gETH_,
+    bytes calldata data
+  ) public virtual initializer returns (bool) {
+    uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
+    __ERC20interface_init(
+      id_,
+      gETH_,
+      string(BytesLib.slice(data, 32, nameLen)),
+      string(BytesLib.slice(data, 32 + nameLen, data.length - (32 + nameLen)))
+    );
+    return true;
+  }
 
-    function __ERC20interface_init(
-        uint256 id_,
-        string calldata name_,
-        string calldata symbol_,
-        address gETH_1155
-    ) internal onlyInitializing {
-        __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);
+  /**
+   * @dev Sets the values for {name} and {symbol}.
+   *
+   * The default value of {decimals} is 18. To select a different value for
+   * {decimals} you should overload it.
+   *
+   * All two of these values are immutable: they can only be set once during
+   * construction.
+   */
+
+  function __ERC20interface_init(
+    uint256 id_,
+    address gETH_,
+    string memory name_,
+    string memory symbol_
+  ) internal onlyInitializing {
+    __ERC20interface_init_unchained(id_, gETH_, name_, symbol_);
+  }
+
+  function __ERC20interface_init_unchained(
+    uint256 id_,
+    address gETH_,
+    string memory name_,
+    string memory symbol_
+  ) internal onlyInitializing {
+    _id = id_;
+    _name = name_;
+    _symbol = symbol_;
+    _ERC1155 = IgETH(gETH_);
+  }
+
+  /**
+   * @dev Returns the name of the token.
+   */
+  function name() public view virtual override returns (string memory) {
+    return _name;
+  }
+
+  /**
+   * @dev Returns the symbol of the token, usually a shorter version of the
+   * name.
+   */
+  function symbol() public view virtual override returns (string memory) {
+    return _symbol;
+  }
+
+  /**
+   * @dev Returns the number of decimals used to get its user representation.
+   * For example, if `decimals` equals `2`, a balance of `505` tokens should
+   * be displayed to a user as `5.05` (`505 / 10 ** 2`).
+   *
+   * Tokens usually opt for a value of 18, imitating the relationship between
+   * Ether and Wei. This is the value {ERC20} uses, unless this function is
+   * overridden;
+   *
+   * NOTE: This information is only used for _display_ purposes: it in
+   * no way affects any of the arithmetic of the contract, including
+   * {IERC20-balanceOf} and {IERC20-transfer}.
+   */
+  function decimals() public view virtual override returns (uint8) {
+    return 18;
+  }
+
+  /**
+   * @dev See {IERC20-totalSupply}.
+   * @dev CHANGED for gETH.
+   * @dev See {gETH-totalSupply}.
+   */
+  function totalSupply() public view virtual override returns (uint256) {
+    return _ERC1155.totalSupply(_id);
+  }
+
+  /**
+   * @dev See {IERC20-balanceOf}.
+   * @dev CHANGED for gETH.
+   * @dev See {gETH-balanceOf}.
+   */
+  function balanceOf(
+    address account
+  ) public view virtual override returns (uint256) {
+    return _ERC1155.balanceOf(account, _id);
+  }
+
+  /**
+   * @dev shows the underlying ETH for 1 staked ether for a given id
+   * @dev CHANGED for gETH.
+   * @dev See {gETH-pricePerShare}.
+   */
+  function pricePerShare() public view returns (uint256) {
+    return _ERC1155.pricePerShare(_id);
+  }
+
+  /**
+   * @dev See {IERC20-transfer}.
+   *
+   * Requirements:
+   *
+   * - `to` cannot be the zero address.
+   * - the caller must have a balance of at least `amount`.
+   */
+  function transfer(
+    address to,
+    uint256 amount
+  ) public virtual override returns (bool) {
+    address owner = _msgSender();
+    _transfer(owner, to, amount);
+    return true;
+  }
+
+  /**
+   * @dev See {IERC20-allowance}.
+   */
+  function allowance(
+    address owner,
+    address spender
+  ) public view virtual override returns (uint256) {
+    return _allowances[owner][spender];
+  }
+
+  /**
+   * @dev See {IERC20-approve}.
+   *
+   * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
+   * `transferFrom`. This is semantically equivalent to an infinite approval.
+   *
+   * Requirements:
+   *
+   * - `spender` cannot be the zero address.
+   */
+  function approve(
+    address spender,
+    uint256 amount
+  ) public virtual override returns (bool) {
+    address owner = _msgSender();
+    _approve(owner, spender, amount);
+    return true;
+  }
+
+  /**
+   * @dev See {IERC20-transferFrom}.
+   *
+   * Emits an {Approval} event indicating the updated allowance. This is not
+   * required by the EIP. See the note at the beginning of {ERC20}.
+   *
+   * NOTE: Does not update the allowance if the current allowance
+   * is the maximum `uint256`.
+   *
+   * Requirements:
+   *
+   * - `from` and `to` cannot be the zero address.
+   * - `from` must have a balance of at least `amount`.
+   * - the caller must have allowance for ``from``'s tokens of at least
+   * `amount`.
+   */
+  function transferFrom(
+    address from,
+    address to,
+    uint256 amount
+  ) public virtual override returns (bool) {
+    address spender = _msgSender();
+    _spendAllowance(from, spender, amount);
+    _transfer(from, to, amount);
+    return true;
+  }
+
+  /**
+   * @dev Atomically increases the allowance granted to `spender` by the caller.
+   *
+   * This is an alternative to {approve} that can be used as a mitigation for
+   * problems described in {IERC20-approve}.
+   *
+   * Emits an {Approval} event indicating the updated allowance.
+   *
+   * Requirements:
+   *
+   * - `spender` cannot be the zero address.
+   */
+  function increaseAllowance(
+    address spender,
+    uint256 addedValue
+  ) public virtual returns (bool) {
+    address owner = _msgSender();
+    _approve(owner, spender, allowance(owner, spender) + addedValue);
+    return true;
+  }
+
+  /**
+   * @dev Atomically decreases the allowance granted to `spender` by the caller.
+   *
+   * This is an alternative to {approve} that can be used as a mitigation for
+   * problems described in {IERC20-approve}.
+   *
+   * Emits an {Approval} event indicating the updated allowance.
+   *
+   * Requirements:
+   *
+   * - `spender` cannot be the zero address.
+   * - `spender` must have allowance for the caller of at least
+   * `subtractedValue`.
+   */
+  function decreaseAllowance(
+    address spender,
+    uint256 subtractedValue
+  ) public virtual returns (bool) {
+    address owner = _msgSender();
+    uint256 currentAllowance = allowance(owner, spender);
+    require(
+      currentAllowance >= subtractedValue,
+      "ERC20: decreased allowance below zero"
+    );
+    unchecked {
+      _approve(owner, spender, currentAllowance - subtractedValue);
     }
 
-    function __ERC20interface_init_unchained(
-        uint256 id_,
-        string calldata name_,
-        string calldata symbol_,
-        address gETH_1155
-    ) internal onlyInitializing {
-        _id = id_;
-        _name = name_;
-        _symbol = symbol_;
-        _ERC1155 = IgETH(gETH_1155);
+    return true;
+  }
+
+  /**
+   * @dev Moves `amount` of tokens from `from` to `to`.
+   *
+   * This internal function is equivalent to {transfer}, and can be used to
+   * e.g. implement automatic token fees, slashing mechanisms, etc.
+   *
+   * Emits a {Transfer} event.
+   *
+   * Requirements:
+   *
+   * - `from` cannot be the zero address.
+   * - `to` cannot be the zero address.
+   * - `from` must have a balance of at least `amount`.
+   * @dev CHANGED for gETH.
+   * @dev See {gETH-safeTransferFrom}.
+   */
+  function _transfer(
+    address from,
+    address to,
+    uint256 amount
+  ) internal virtual {
+    require(from != address(0), "ERC20: transfer from the zero address");
+    require(to != address(0), "ERC20: transfer to the zero address");
+
+    _beforeTokenTransfer(from, to, amount);
+
+    uint256 fromBalance = balanceOf(from);
+    require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
+    _ERC1155.safeTransferFrom(from, to, _id, amount, "");
+
+    emit Transfer(from, to, amount);
+
+    _afterTokenTransfer(from, to, amount);
+  }
+
+  /**
+   * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
+   *
+   * This internal function is equivalent to `approve`, and can be used to
+   * e.g. set automatic allowances for certain subsystems, etc.
+   *
+   * Emits an {Approval} event.
+   *
+   * Requirements:
+   *
+   * - `owner` cannot be the zero address.
+   * - `spender` cannot be the zero address.
+   */
+  function _approve(
+    address owner,
+    address spender,
+    uint256 amount
+  ) internal virtual {
+    require(owner != address(0), "ERC20: approve from the zero address");
+    require(spender != address(0), "ERC20: approve to the zero address");
+
+    _allowances[owner][spender] = amount;
+    emit Approval(owner, spender, amount);
+  }
+
+  /**
+   * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
+   *
+   * Does not update the allowance amount in case of infinite allowance.
+   * Revert if not enough allowance is available.
+   *
+   * Might emit an {Approval} event.
+   */
+  function _spendAllowance(
+    address owner,
+    address spender,
+    uint256 amount
+  ) internal virtual {
+    uint256 currentAllowance = allowance(owner, spender);
+    if (currentAllowance != type(uint256).max) {
+      require(currentAllowance >= amount, "ERC20: insufficient allowance");
+      unchecked {
+        _approve(owner, spender, currentAllowance - amount);
+      }
     }
+  }
 
-    /**
-     * @dev Returns the name of the token.
-     */
-    function name() public view virtual override returns (string memory) {
-        return _name;
-    }
+  /**
+   * @dev Hook that is called before any transfer of tokens. This includes
+   * minting and burning.
+   *
+   * Calling conditions:
+   *
+   * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+   * will be transferred to `to`.
+   * - when `from` is zero, `amount` tokens will be minted for `to`.
+   * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
+   * - `from` and `to` are never both zero.
+   *
+   * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+   */
+  function _beforeTokenTransfer(
+    address from,
+    address to,
+    uint256 amount
+  ) internal virtual {}
 
-    /**
-     * @dev Returns the symbol of the token, usually a shorter version of the
-     * name.
-     */
-    function symbol() public view virtual override returns (string memory) {
-        return _symbol;
-    }
+  /**
+   * @dev Hook that is called after any transfer of tokens. This includes
+   * minting and burning.
+   *
+   * Calling conditions:
+   *
+   * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+   * has been transferred to `to`.
+   * - when `from` is zero, `amount` tokens have been minted for `to`.
+   * - when `to` is zero, `amount` of ``from``'s tokens have been burned.
+   * - `from` and `to` are never both zero.
+   *
+   * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+   */
+  function _afterTokenTransfer(
+    address from,
+    address to,
+    uint256 amount
+  ) internal virtual {}
 
-    /**
-     * @dev Returns the number of decimals used to get its user representation.
-     * For example, if `decimals` equals `2`, a balance of `505` tokens should
-     * be displayed to a user as `5.05` (`505 / 10 ** 2`).
-     *
-     * Tokens usually opt for a value of 18, imitating the relationship between
-     * Ether and Wei. This is the value {ERC20} uses, unless this function is
-     * overridden;
-     *
-     * NOTE: This information is only used for _display_ purposes: it in
-     * no way affects any of the arithmetic of the contract, including
-     * {IERC20-balanceOf} and {IERC20-transfer}.
-     */
-    function decimals() public view virtual override returns (uint8) {
-        return 18;
-    }
+  /**
+   * @dev This empty reserved space is put in place to allow future versions to add new
+   * variables without shifting down storage in the inheritance chain.
+   * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+   */
 
-    /**
-     * @dev See {IERC20-totalSupply}.
-     * @dev CHANGED for gETH.
-     * @dev See {gETH-totalSupply}.
-     */
-    function totalSupply() public view virtual override returns (uint256) {
-        return _ERC1155.totalSupply(_id);
-    }
-
-    /**
-     * @dev See {IERC20-balanceOf}.
-     * @dev CHANGED for gETH.
-     * @dev See {gETH-balanceOf}.
-     */
-    function balanceOf(address account)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _ERC1155.balanceOf(account, _id);
-    }
-
-    /**
-     * @dev shows the underlying ETH for 1 staked ether for a given id
-     * @dev CHANGED for gETH.
-     * @dev See {gETH-pricePerShare}.
-     */
-    function pricePerShare() public view returns (uint256) {
-        return _ERC1155.pricePerShare(_id);
-    }
-
-    /**
-     * @dev See {IERC20-transfer}.
-     *
-     * Requirements:
-     *
-     * - `to` cannot be the zero address.
-     * - the caller must have a balance of at least `amount`.
-     */
-    function transfer(address to, uint256 amount)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        address owner = _msgSender();
-        _transfer(owner, to, amount);
-        return true;
-    }
-
-    /**
-     * @dev See {IERC20-allowance}.
-     */
-    function allowance(address owner, address spender)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _allowances[owner][spender];
-    }
-
-    /**
-     * @dev See {IERC20-approve}.
-     *
-     * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
-     * `transferFrom`. This is semantically equivalent to an infinite approval.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     */
-    function approve(address spender, uint256 amount)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        address owner = _msgSender();
-        _approve(owner, spender, amount);
-        return true;
-    }
-
-    /**
-     * @dev See {IERC20-transferFrom}.
-     *
-     * Emits an {Approval} event indicating the updated allowance. This is not
-     * required by the EIP. See the note at the beginning of {ERC20}.
-     *
-     * NOTE: Does not update the allowance if the current allowance
-     * is the maximum `uint256`.
-     *
-     * Requirements:
-     *
-     * - `from` and `to` cannot be the zero address.
-     * - `from` must have a balance of at least `amount`.
-     * - the caller must have allowance for ``from``'s tokens of at least
-     * `amount`.
-     */
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
-        address spender = _msgSender();
-        _spendAllowance(from, spender, amount);
-        _transfer(from, to, amount);
-        return true;
-    }
-
-    /**
-     * @dev Atomically increases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
-     * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     */
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        virtual
-        returns (bool)
-    {
-        address owner = _msgSender();
-        _approve(owner, spender, allowance(owner, spender) + addedValue);
-        return true;
-    }
-
-    /**
-     * @dev Atomically decreases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
-     * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     * - `spender` must have allowance for the caller of at least
-     * `subtractedValue`.
-     */
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        virtual
-        returns (bool)
-    {
-        address owner = _msgSender();
-        uint256 currentAllowance = allowance(owner, spender);
-        require(
-            currentAllowance >= subtractedValue,
-            "ERC20: decreased allowance below zero"
-        );
-        unchecked {
-            _approve(owner, spender, currentAllowance - subtractedValue);
-        }
-
-        return true;
-    }
-
-    /**
-     * @dev Moves `amount` of tokens from `from` to `to`.
-     *
-     * This internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
-     * Emits a {Transfer} event.
-     *
-     * Requirements:
-     *
-     * - `from` cannot be the zero address.
-     * - `to` cannot be the zero address.
-     * - `from` must have a balance of at least `amount`.
-     * @dev CHANGED for gETH.
-     * @dev See {gETH-safeTransferFrom}.
-     */
-    function _transfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(to != address(0), "ERC20: transfer to the zero address");
-
-        _beforeTokenTransfer(from, to, amount);
-
-        uint256 fromBalance = balanceOf(from);
-        require(
-            fromBalance >= amount,
-            "ERC20: transfer amount exceeds balance"
-        );
-        _ERC1155.safeTransferFrom(from, to, _id, amount, "");
-
-        emit Transfer(from, to, amount);
-
-        _afterTokenTransfer(from, to, amount);
-    }
-
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
-     *
-     * This internal function is equivalent to `approve`, and can be used to
-     * e.g. set automatic allowances for certain subsystems, etc.
-     *
-     * Emits an {Approval} event.
-     *
-     * Requirements:
-     *
-     * - `owner` cannot be the zero address.
-     * - `spender` cannot be the zero address.
-     */
-    function _approve(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal virtual {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
-
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
-    }
-
-    /**
-     * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
-     *
-     * Does not update the allowance amount in case of infinite allowance.
-     * Revert if not enough allowance is available.
-     *
-     * Might emit an {Approval} event.
-     */
-    function _spendAllowance(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal virtual {
-        uint256 currentAllowance = allowance(owner, spender);
-        if (currentAllowance != type(uint256).max) {
-            require(
-                currentAllowance >= amount,
-                "ERC20: insufficient allowance"
-            );
-            unchecked {
-                _approve(owner, spender, currentAllowance - amount);
-            }
-        }
-    }
-
-    /**
-     * @dev Hook that is called before any transfer of tokens. This includes
-     * minting and burning.
-     *
-     * Calling conditions:
-     *
-     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-     * will be transferred to `to`.
-     * - when `from` is zero, `amount` tokens will be minted for `to`.
-     * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
-     * - `from` and `to` are never both zero.
-     *
-     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual {}
-
-    /**
-     * @dev Hook that is called after any transfer of tokens. This includes
-     * minting and burning.
-     *
-     * Calling conditions:
-     *
-     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-     * has been transferred to `to`.
-     * - when `from` is zero, `amount` tokens have been minted for `to`.
-     * - when `to` is zero, `amount` of ``from``'s tokens have been burned.
-     * - `from` and `to` are never both zero.
-     *
-     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
-     */
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual {}
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-
-    uint256[45] private __gap;
+  uint256[45] private __gap;
 }

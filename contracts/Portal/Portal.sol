@@ -9,1077 +9,965 @@
 //
 
 pragma solidity =0.8.7;
-
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "./utils/DataStoreUtilsLib.sol";
-import "./utils/GeodeUtilsLib.sol";
-import "./utils/OracleUtilsLib.sol";
-import "./utils/MaintainerUtilsLib.sol";
-import "./utils/StakeUtilsLib.sol";
-
-import "../interfaces/IPortal.sol";
 import "../interfaces/IgETH.sol";
+import "../interfaces/IPortal.sol";
+import "../interfaces/IWithdrawalContract.sol";
+
+import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "./utils/globals.sol";
 
 /**
  * @author Icebear & Crash Bandicoot
- * @title Geode Finance Ethereum Portal: Trustless Dynamic Liquid Staking Pools
+ * @title Geode Portal : Configurable Trustless Staking Pools
  * *
- * @notice Geode Portal provides a first of its kind trustless implementation on LSDs: gETH
- * * * These derivatives are maintained within Portal's functionality.
+ * @dev Portal doesn't have any functionality other than hosting and combining the functionalities of some libraries:
+ * Provides a first of its kind trustless implementation on Staking Derivatives: gETH
+ * The Portal utilizes an isolated storage which allows storing infinitely many different
+ * * types of dynamic structs, easily with ID and KEY pairs.
+ * Portal is secured by The Dual Governance and Limited Upgradability.
+ * Portal hosts The Staking Library allowing the creation and maintanence of configurable
+ * * staking pools and validator creation process.
+ * Underlying validator balances for each pool is secured with unique Withdrawal Contracts.
  *
- * * Global trustlessness is achieved by GeodeUtils, which makes sure that
- * * * every update is approved by a Senate before being effective.
- * * * Senate is elected by the all maintainers.
+ * @dev TYPE: seperates the proposals and related functionality between different ID types on the Isolated Storage.
+ * * Currently RESERVED TYPES are written on globals.sol.
  *
- * * Local trustlessness is achieved by MiniGovernances, which is used as a withdrawal
- * * * credential contract. However, similar to Portal, upgrade requires the approval of
- * * * local Senate. Isolation Mode (WIP), will allow these contracts to become mini-portals
- * * * and allow the unstaking operations to be done directly, in the future.
+ * @dev authentication:
+ * * geodeUtils has OnlyGovernance, OnlySenate and OnlyController checks with modifiers.
+ * * stakeUtils has "authenticate()" function which checks for Maintainer, Controllers, and TYPE.
+ * * oracleutils has OnlyOracle checks with a modifier.
+ * * Portal has an OnlyGovernance check on : pause, unpause, pausegETH, unpausegETH, setEarlyExitFee, releasePrisoned.
  *
- * * StakeUtils contains all the staking related functionalities, including pool management
- * * * and Oracle activities.
- * * * These operations relies on a Dynamic Withdrawal Pool, which is a StableSwap
- * * * pool with a dynamic peg.
+ * @dev first review DataStoreUtils
+ * @dev then review GeodeUtils
+ * @dev then review StakeUtils
+ * @dev then review OracleUtils
  *
- * * * One thing to consider is that currently private pools implementation is WIP, but the overall
- * * * design is done while ensuring it is possible without much changes in the future.
- *
- * @dev refer to DataStoreUtils before reviewing
- * @dev refer to GeodeUtils > Includes the logic for management of Geode Portal with Senate/Governance.
- * @dev refer to StakeUtils > Includes the logic for staking functionality with Withdrawal Pools
- * * * MaintainerUtils is a library used by StakeUtils, handling the maintainer related functionalities
- * * * OracleUtils is a library used by StakeUtils, handling the Oracle related functionalities
- *
- * @notice TYPE: seperates the proposals and related functionality between different ID types.
- * * CURRENTLY RESERVED TYPES on Portal:
- * * * TYPE 0: *invalid*
- * * * TYPE 1: Senate Election
- * * * TYPE 2: Portal Upgrade
- * * * TYPE 3: *gap*
- * * * TYPE 4: Validator Operator
- * * * TYPE 5: Planet (public pool)
- * * * TYPE 6: Comet (private pool)
- * * * TYPE 11: MiniGovernance Upgrade
- *
- * note ctrl+k+2 and ctrl+k+1 then scroll while reading the function names and opening the comments.
+ * note ctrl+k+2 and ctrl+k+1 then scroll while reading the function names and the comments.
  */
 
 contract Portal is
-    IPortal,
-    ReentrancyGuardUpgradeable,
-    PausableUpgradeable,
-    ERC1155HolderUpgradeable,
-    UUPSUpgradeable
+  IPortal,
+  ContextUpgradeable,
+  ReentrancyGuardUpgradeable,
+  PausableUpgradeable,
+  ERC1155HolderUpgradeable,
+  UUPSUpgradeable
 {
-    using DataStoreUtils for DataStoreUtils.DataStore;
-    using MaintainerUtils for DataStoreUtils.DataStore;
-    using GeodeUtils for GeodeUtils.Universe;
-    using StakeUtils for StakeUtils.StakePool;
-    using OracleUtils for OracleUtils.Oracle;
+  using DataStoreUtils for DataStoreUtils.IsolatedStorage;
+  using GeodeUtils for GeodeUtils.DualGovernance;
+  using StakeUtils for StakeUtils.PooledStaking;
 
-    /**
-     * @dev following events are added to help fellow devs with a better ABI
-     */
+  /**
+   * @notice                                     ** EVENTS **
+   *
+   * @dev following events are added to help fellow devs with a better ABI
+   */
 
-    /// GeodeUtils EVENTS
-    event GovernanceTaxUpdated(uint256 newFee);
-    event MaxGovernanceTaxUpdated(uint256 newMaxFee);
-    event ControllerChanged(uint256 id, address newCONTROLLER);
-    event Proposed(
-        uint256 id,
-        address CONTROLLER,
-        uint256 TYPE,
-        uint256 deadline
+  /**
+   * @dev GeodeUtils events
+   */
+  event GovernanceFeeUpdated(uint256 newFee);
+  event ControllerChanged(uint256 indexed id, address newCONTROLLER);
+  event Proposed(
+    uint256 id,
+    address CONTROLLER,
+    uint256 indexed TYPE,
+    uint256 deadline
+  );
+  event ProposalApproved(uint256 id);
+  event ElectorTypeSet(uint256 TYPE, bool isElector);
+  event Vote(uint256 indexed proposalId, uint256 indexed voterId);
+  event NewSenate(address senate, uint256 senateExpiry);
+
+  /**
+   * @dev StakeUtils events
+   */
+  event IdInitiated(uint256 indexed id, uint256 indexed TYPE);
+  event MaintainerChanged(uint256 indexed id, address newMaintainer);
+  event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
+  event ValidatorPeriodSwitched(
+    uint256 indexed id,
+    uint256 period,
+    uint256 effectiveAfter
+  );
+  event OperatorApproval(
+    uint256 indexed poolId,
+    uint256 indexed operatorId,
+    uint256 allowance
+  );
+  event Prisoned(uint256 indexed id, bytes proof, uint256 releaseTimestamp);
+  event Released(uint256 indexed id);
+  event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
+  event ProposalStaked(
+    uint256 indexed poolId,
+    uint256 operatorId,
+    bytes[] pubkeys
+  );
+  event BeaconStaked(bytes[] pubkeys);
+
+  /**
+   * @dev OracleUtils events
+   */
+  event Alienated(bytes indexed pubkey);
+  event VerificationIndexUpdated(uint256 validatorVerificationIndex);
+  event FeeTheft(uint256 indexed id, bytes proofs);
+  event OracleReported(bytes32 merkleRoot, uint256 monopolyThreshold);
+
+  /**
+   * @dev Portal Native events
+   */
+  event ContractVersionSet(uint256 version);
+
+  /**
+   * @notice                                     ** VARIABLES **
+   */
+  DataStoreUtils.IsolatedStorage private DATASTORE;
+  GeodeUtils.DualGovernance private GEODE;
+  StakeUtils.PooledStaking private STAKER;
+
+  /**
+   * @notice CONTRACT_VERSION always refers to the upgrade proposal' (TYPE2) ID.
+   * @dev Does NOT increase uniformly like one might expect.
+   */
+  uint256 public CONTRACT_VERSION;
+
+  /**
+   * @notice                                     ** PORTAL SPECIFIC **
+   */
+
+  /**
+   * @notice initializer function that sets initial parameters like,
+   * Oracle Address, Governance, fee etc.
+   * Then, creates proposals for the Withdrawal Contract, Liquidity Pools and gETHInterfaces.
+   * Finally, it creates an Upgrade Proposal for itself and approves it, setting its version.
+   */
+  function initialize(
+    address _GOVERNANCE,
+    address _SENATE,
+    address _gETH,
+    address _ORACLE_POSITION,
+    address _DEFAULT_WITHDRAWAL_CONTRACT_MODULE,
+    address _DEFAULT_LP_MODULE,
+    address _DEFAULT_LP_TOKEN_MODULE,
+    address[] calldata _ALLOWED_GETH_INTERFACE_MODULES,
+    bytes[] calldata _ALLOWED_GETH_INTERFACE_MODULE_NAMES,
+    uint256 _GOVERNANCE_FEE
+  ) public virtual override initializer {
+    __ReentrancyGuard_init();
+    __Pausable_init();
+    __ERC1155Holder_init();
+    __UUPSUpgradeable_init();
+
+    require(_GOVERNANCE != address(0), "PORTAL: GOVERNANCE can NOT be ZERO");
+    require(_SENATE != address(0), "PORTAL: SENATE can NOT be ZERO");
+    require(_gETH != address(0), "PORTAL: gETH can NOT be ZERO");
+    require(
+      _ORACLE_POSITION != address(0),
+      "PORTAL: ORACLE_POSITION can NOT be ZERO"
     );
-    event ProposalApproved(uint256 id);
-    event ElectorTypeSet(uint256 TYPE, bool isElector);
-    event Vote(uint256 proposalId, uint256 electorId);
-    event NewSenate(address senate, uint256 senateExpiry);
-
-    /// MaintainerUtils EVENTS
-    event IdInitiated(uint256 id, uint256 TYPE);
-    event MaintainerChanged(uint256 id, address newMaintainer);
-    event MaintainerFeeSwitched(
-        uint256 id,
-        uint256 fee,
-        uint256 effectiveTimestamp
+    require(
+      _DEFAULT_LP_MODULE != address(0),
+      "PORTAL: DEFAULT_LP can NOT be ZERO"
     );
-
-    /// OracleUtils EVENTS
-    event Alienated(bytes pubkey);
-    event Busted(bytes pubkey);
-    event Prisoned(uint256 id, uint256 releaseTimestamp);
-    event Released(uint256 id);
-    event VerificationIndexUpdated(uint256 validatorVerificationIndex);
-
-    /// StakeUtils EVENTS
-    event ValidatorPeriodUpdated(uint256 operatorId, uint256 newPeriod);
-    event OperatorApproval(
-        uint256 planetId,
-        uint256 operatorId,
-        uint256 allowance
+    require(
+      _DEFAULT_LP_TOKEN_MODULE != address(0),
+      "PORTAL: DEFAULT_LP_TOKEN can NOT be ZERO"
     );
-    event PausedPool(uint256 id);
-    event UnpausedPool(uint256 id);
-    event ProposeStaked(bytes pubkey, uint256 planetId, uint256 operatorId);
-    event BeaconStaked(bytes pubkey);
-    event UnstakeSignal(bytes pubkey);
-
-    // Portal Events
-    event ContractVersionSet(uint256 version);
-    event ParamsUpdated(
-        address DEFAULT_gETH_INTERFACE,
-        address DEFAULT_DWP,
-        address DEFAULT_LP_TOKEN,
-        uint256 MAX_MAINTAINER_FEE,
-        uint256 BOOSTRAP_PERIOD,
-        uint256 PERIOD_PRICE_INCREASE_LIMIT,
-        uint256 PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 COMET_TAX,
-        uint256 BOOST_SWITCH_LATENCY
+    require(
+      _DEFAULT_WITHDRAWAL_CONTRACT_MODULE != address(0),
+      "PORTAL: WITHDRAWAL_CONTRACT_POSITION can NOT be ZERO"
     );
+    require(
+      _ALLOWED_GETH_INTERFACE_MODULES.length ==
+        _ALLOWED_GETH_INTERFACE_MODULE_NAMES.length,
+      "PORTAL: wrong _ALLOWED_GETH_INTERFACE_MODULES"
+    );
+    GEODE.GOVERNANCE = msg.sender;
+    GEODE.SENATE = msg.sender;
+    GEODE.SENATE_EXPIRY = type(uint256).max;
 
-    // Portal VARIABLES
-    /**
-     * @notice always refers to the proposal (TYPE2) id.
-     * Does NOT increase uniformly like the expected versioning style.
-     */
-    uint256 public CONTRACT_VERSION;
-    DataStoreUtils.DataStore private DATASTORE;
-    GeodeUtils.Universe private GEODE;
-    StakeUtils.StakePool private STAKEPOOL;
+    GEODE.setGovernanceFee(_GOVERNANCE_FEE);
+    GEODE.setElectorType(DATASTORE, ID_TYPE.POOL, true);
 
-    function initialize(
-        address _GOVERNANCE,
-        address _gETH,
-        address _ORACLE_POSITION,
-        address _DEFAULT_gETH_INTERFACE,
-        address _DEFAULT_DWP,
-        address _DEFAULT_LP_TOKEN,
-        address _MINI_GOVERNANCE_POSITION,
-        uint256 _GOVERNANCE_TAX,
-        uint256 _COMET_TAX,
-        uint256 _MAX_MAINTAINER_FEE,
-        uint256 _BOOSTRAP_PERIOD
-    ) public virtual override initializer {
-        __ReentrancyGuard_init();
-        __Pausable_init();
-        __ERC1155Holder_init();
-        __UUPSUpgradeable_init();
+    STAKER.gETH = IgETH(_gETH);
+    STAKER.MONOPOLY_THRESHOLD = type(uint256).max;
 
-        GEODE.SENATE = _GOVERNANCE;
-        GEODE.GOVERNANCE = _GOVERNANCE;
-        GEODE.GOVERNANCE_TAX = _GOVERNANCE_TAX;
-        GEODE.MAX_GOVERNANCE_TAX = _GOVERNANCE_TAX;
-        GEODE.SENATE_EXPIRY = type(uint256).max;
+    STAKER.ORACLE_POSITION = _ORACLE_POSITION;
+    STAKER.DAILY_PRICE_INCREASE_LIMIT = (5 * PERCENTAGE_DENOMINATOR) / 100;
+    STAKER.DAILY_PRICE_DECREASE_LIMIT = (5 * PERCENTAGE_DENOMINATOR) / 100;
 
-        STAKEPOOL.GOVERNANCE = _GOVERNANCE;
-        STAKEPOOL.gETH = IgETH(_gETH);
-        STAKEPOOL.TELESCOPE.gETH = IgETH(_gETH);
-        STAKEPOOL.TELESCOPE.ORACLE_POSITION = _ORACLE_POSITION;
-        STAKEPOOL.TELESCOPE.MONOPOLY_THRESHOLD = 20000;
-
-        _updateStakingParams(
-            _DEFAULT_gETH_INTERFACE,
-            _DEFAULT_DWP,
-            _DEFAULT_LP_TOKEN,
-            _MAX_MAINTAINER_FEE,
-            _BOOSTRAP_PERIOD,
-            type(uint256).max,
-            type(uint256).max,
-            _COMET_TAX,
-            3 days
-        );
-
-        uint256 _MINI_GOVERNANCE_VERSION = GEODE.newProposal(
-            _MINI_GOVERNANCE_POSITION,
-            11,
-            "mini-v1",
-            2 days
-        );
-        GEODE.approveProposal(DATASTORE, _MINI_GOVERNANCE_VERSION);
-        STAKEPOOL.MINI_GOVERNANCE_VERSION = _MINI_GOVERNANCE_VERSION;
-
-        // currently only planet controllers has a say on Senate elections
-        GEODE.setElectorType(DATASTORE, 5, true);
-        uint256 version_id = GEODE.newProposal(
-            _getImplementation(),
-            2,
-            "V1",
-            2 days
-        );
-        GEODE.approveProposal(DATASTORE, version_id);
-        CONTRACT_VERSION = version_id;
-        GEODE.approvedUpgrade = address(0);
-
-        emit ContractVersionSet(getVersion());
+    {
+      uint256 liqPoolVersion = GEODE.newProposal(
+        DATASTORE,
+        _DEFAULT_LP_MODULE,
+        ID_TYPE.MODULE_LIQUDITY_POOL,
+        "v1",
+        1 days
+      );
+      approveProposal(liqPoolVersion);
     }
 
-    /**
-     * @dev required by the OZ UUPS module
-     * note that there is no Governance check, as upgrades are effective
-     * * right after the Senate approval
-     */
-    function _authorizeUpgrade(address proposed_implementation)
-        internal
-        virtual
-        override
     {
-        require(proposed_implementation != address(0));
+      uint256 lpTokenVersion = GEODE.newProposal(
+        DATASTORE,
+        _DEFAULT_LP_TOKEN_MODULE,
+        ID_TYPE.MODULE_LIQUDITY_POOL_TOKEN,
+        "v1",
+        1 days
+      );
+      approveProposal(lpTokenVersion);
+    }
+
+    {
+      uint256 withdrawalContractVersion = GEODE.newProposal(
+        DATASTORE,
+        _DEFAULT_WITHDRAWAL_CONTRACT_MODULE,
+        ID_TYPE.MODULE_WITHDRAWAL_CONTRACT,
+        "v1",
+        1 days
+      );
+      approveProposal(withdrawalContractVersion);
+    }
+
+    {
+      uint256 gETHInterfaceVersion;
+      for (uint256 i = 0; i < _ALLOWED_GETH_INTERFACE_MODULES.length; ) {
         require(
-            GEODE.isUpgradeAllowed(proposed_implementation),
-            "Portal: is not allowed to upgrade"
+          _ALLOWED_GETH_INTERFACE_MODULES[i] != address(0),
+          "PORTAL: GETH_INTERFACE_MODULE can NOT be ZERO"
         );
-    }
 
-    function pause() external virtual override {
-        require(
-            msg.sender == GEODE.GOVERNANCE,
-            "Portal: sender not GOVERNANCE"
+        gETHInterfaceVersion = GEODE.newProposal(
+          DATASTORE,
+          _ALLOWED_GETH_INTERFACE_MODULES[i],
+          ID_TYPE.MODULE_GETH_INTERFACE,
+          _ALLOWED_GETH_INTERFACE_MODULE_NAMES[i],
+          1 days
         );
-        _pause();
+
+        approveProposal(gETHInterfaceVersion);
+        unchecked {
+          i += 1;
+        }
+      }
     }
 
-    function unpause() external virtual override {
-        require(
-            msg.sender == GEODE.GOVERNANCE,
-            "Portal: sender not GOVERNANCE"
-        );
-        _unpause();
-    }
-
-    function getVersion() public view virtual override returns (uint256) {
-        return CONTRACT_VERSION;
-    }
-
-    function gETH() external view virtual override returns (address) {
-        return address(STAKEPOOL.gETH);
-    }
-
-    /// @return returns an array of IDs of the given TYPE from Datastore
-    function allIdsByType(uint256 _type)
-        external
-        view
-        virtual
-        override
-        returns (uint256[] memory)
     {
-        return DATASTORE.allIdsByType[_type];
+      uint256 portalVersion = GEODE.newProposal(
+        DATASTORE,
+        address(this),
+        ID_TYPE.CONTRACT_UPGRADE,
+        "v1",
+        1 days
+      );
+      approveProposal(portalVersion);
+      _setContractVersion(portalVersion);
     }
 
-    /**
-     *                                  ** DataStore Functionalities **
-     */
+    GEODE.GOVERNANCE = _GOVERNANCE;
+    GEODE.SENATE = _SENATE;
+  }
 
-    /// @notice id is keccak(name, type)
-    function generateId(string calldata _name, uint256 _type)
-        external
-        pure
-        virtual
-        override
-        returns (uint256 id)
-    {
-        id = uint256(keccak256(abi.encodePacked(_name, _type)));
-    }
+  /**
+   * @dev  ->  modifier
+   */
 
-    function readAddressForId(uint256 id, bytes32 key)
-        external
-        view
-        virtual
-        override
-        returns (address data)
-    {
-        data = DATASTORE.readAddressForId(id, key);
-    }
+  modifier onlyGovernance() {
+    require(msg.sender == GEODE.getGovernance(), "Portal: ONLY GOVERNANCE");
+    _;
+  }
 
-    function readUintForId(uint256 id, bytes32 key)
-        external
-        view
-        virtual
-        override
-        returns (uint256 data)
-    {
-        data = DATASTORE.readUintForId(id, key);
-    }
+  /**
+   * @dev  ->  internal
+   */
 
-    function readBytesForId(uint256 id, bytes32 key)
-        external
-        view
-        virtual
-        override
-        returns (bytes memory data)
-    {
-        data = DATASTORE.readBytesForId(id, key);
-    }
+  /**
+   * @dev required by the OZ UUPS module
+   * note that there is no Governance check, as upgrades are effective
+   * * right after the Senate approval
+   */
+  function _authorizeUpgrade(
+    address proposed_implementation
+  ) internal virtual override {
+    require(proposed_implementation != address(0));
+    require(
+      GEODE.isUpgradeAllowed(proposed_implementation),
+      "Portal: is not allowed to upgrade"
+    );
+  }
 
-    /**
-     *                                  ** Geode Functionalities **
-     */
+  function _setContractVersion(uint256 versionId) internal virtual {
+    CONTRACT_VERSION = versionId;
+    GEODE.approvedVersion = address(0);
+    emit ContractVersionSet(getContractVersion());
+  }
 
-    function GeodeParams()
-        external
-        view
-        virtual
-        override
-        returns (
-            address SENATE,
-            address GOVERNANCE,
-            uint256 GOVERNANCE_TAX,
-            uint256 MAX_GOVERNANCE_TAX,
-            uint256 SENATE_EXPIRY
-        )
-    {
-        SENATE = GEODE.getSenate();
-        GOVERNANCE = GEODE.getGovernance();
-        GOVERNANCE_TAX = GEODE.getGovernanceTax();
-        MAX_GOVERNANCE_TAX = GEODE.getMaxGovernanceTax();
-        SENATE_EXPIRY = GEODE.getSenateExpiry();
-    }
+  /**
+   * @dev  ->  view
+   */
 
-    function getProposal(uint256 id)
-        external
-        view
-        virtual
-        override
-        returns (GeodeUtils.Proposal memory proposal)
-    {
-        proposal = GEODE.getProposal(id);
-    }
+  function getContractVersion() public view virtual override returns (uint256) {
+    return CONTRACT_VERSION;
+  }
 
-    function isUpgradeAllowed(address proposedImplementation)
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return GEODE.isUpgradeAllowed(proposedImplementation);
-    }
+  /**
+   * @dev  ->  external
+   */
 
-    /**
-     * @notice GOVERNANCE Functions
-     */
+  function pause() external virtual override onlyGovernance {
+    _pause();
+  }
 
-    function setGovernanceTax(uint256 newFee)
-        external
-        virtual
-        override
-        whenNotPaused
-        returns (bool)
-    {
-        return GEODE.setGovernanceTax(newFee);
-    }
+  function unpause() external virtual override onlyGovernance {
+    _unpause();
+  }
 
-    function newProposal(
-        address _CONTROLLER,
-        uint256 _TYPE,
-        bytes calldata _NAME,
-        uint256 duration
-    ) external virtual override whenNotPaused {
-        require(
-            msg.sender == GEODE.GOVERNANCE,
-            "Portal: sender not GOVERNANCE"
-        );
-        GEODE.newProposal(_CONTROLLER, _TYPE, _NAME, duration);
-    }
+  /**
+   * @notice                                     ** gETH  **
+   */
 
-    /**
-     * @notice SENATE Functions
-     */
+  /**
+   * @dev  ->  view
+   */
 
-    function setMaxGovernanceTax(uint256 newMaxFee)
-        external
-        virtual
-        override
-        whenNotPaused
-        returns (bool)
-    {
-        return GEODE.setMaxGovernanceTax(newMaxFee);
-    }
+  /**
+   * @notice get the position of ERC1155
+   */
+  function gETH() external view virtual override returns (address) {
+    return address(STAKER.gETH);
+  }
 
-    function approveProposal(uint256 id)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        GEODE.approveProposal(DATASTORE, id);
-        if (DATASTORE.readUintForId(id, "TYPE") == 11)
-            STAKEPOOL.setMiniGovernanceVersion(DATASTORE, id);
-    }
+  /**
+   * @notice read the list of interfaces for a gETH ID
+   */
+  function gETHInterfaces(
+    uint256 id,
+    uint256 index
+  ) external view virtual override returns (address) {
+    return StakeUtils.gETHInterfaces(DATASTORE, id, index);
+  }
 
-    /**
-     * @notice CONTROLLER Functions
-     */
+  /**
+   * @dev  ->  external
+   */
 
-    function changeIdCONTROLLER(uint256 id, address newCONTROLLER)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        GeodeUtils.changeIdCONTROLLER(DATASTORE, id, newCONTROLLER);
-    }
+  function pausegETH() external virtual override onlyGovernance {
+    STAKER.gETH.pause();
+  }
 
-    function approveSenate(uint256 proposalId, uint256 electorId)
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-    {
-        GEODE.approveSenate(DATASTORE, proposalId, electorId);
-    }
+  function unpausegETH() external virtual override onlyGovernance {
+    STAKER.gETH.unpause();
+  }
 
-    /**
-     *                                  ** gETH Functionalities **
-     */
+  /**
+   * @notice                                     ** DATASTORE **
+   */
 
-    function allInterfaces(uint256 id)
-        external
-        view
-        virtual
-        override
-        returns (address[] memory)
-    {
-        return StakeUtils.allInterfaces(DATASTORE, id);
-    }
+  /**
+   * @dev  ->  view
+   */
 
-    /**
-     *                                     ** Oracle Operations **
-     */
-    function TelescopeParams()
-        external
-        view
-        virtual
-        override
-        returns (
-            address ORACLE_POSITION,
-            uint256 ORACLE_UPDATE_TIMESTAMP,
-            uint256 MONOPOLY_THRESHOLD,
-            uint256 VALIDATORS_INDEX,
-            uint256 VERIFICATION_INDEX,
-            uint256 PERIOD_PRICE_INCREASE_LIMIT,
-            uint256 PERIOD_PRICE_DECREASE_LIMIT,
-            bytes32 PRICE_MERKLE_ROOT
-        )
-    {
-        ORACLE_POSITION = STAKEPOOL.TELESCOPE.ORACLE_POSITION;
-        ORACLE_UPDATE_TIMESTAMP = STAKEPOOL.TELESCOPE.ORACLE_UPDATE_TIMESTAMP;
-        MONOPOLY_THRESHOLD = STAKEPOOL.TELESCOPE.MONOPOLY_THRESHOLD;
-        VALIDATORS_INDEX = STAKEPOOL.TELESCOPE.VALIDATORS_INDEX;
-        VERIFICATION_INDEX = STAKEPOOL.TELESCOPE.VERIFICATION_INDEX;
-        PERIOD_PRICE_INCREASE_LIMIT = STAKEPOOL
-            .TELESCOPE
-            .PERIOD_PRICE_INCREASE_LIMIT;
-        PERIOD_PRICE_DECREASE_LIMIT = STAKEPOOL
-            .TELESCOPE
-            .PERIOD_PRICE_DECREASE_LIMIT;
-        PRICE_MERKLE_ROOT = STAKEPOOL.TELESCOPE.PRICE_MERKLE_ROOT;
-    }
+  /**
+   * @dev useful for outside reach, shouldn't be used within contracts as a referance
+   * @return allIdsByType is an array of IDs of the given TYPE from Datastore,
+   * returns a specific index
+   */
+  function allIdsByType(
+    uint256 _type,
+    uint256 _index
+  ) external view virtual override returns (uint256) {
+    return DATASTORE.allIdsByType[_type][_index];
+  }
 
-    function getValidator(bytes calldata pubkey)
-        external
-        view
-        virtual
-        override
-        returns (OracleUtils.Validator memory)
-    {
-        return STAKEPOOL.TELESCOPE.getValidator(pubkey);
-    }
+  /**
+   * @notice useful view function for string inputs - returns same with the DATASTOREUTILS.generateId
+   * @dev id is keccak(name, type)
+   */
+  function generateId(
+    string calldata _name,
+    uint256 _type
+  ) external pure virtual override returns (uint256 id) {
+    id = uint256(keccak256(abi.encodePacked(_name, _type)));
+  }
 
-    /**
-     * @notice Updating PricePerShare
-     */
-    function isOracleActive() external view virtual override returns (bool) {
-        return STAKEPOOL.TELESCOPE._isOracleActive();
-    }
+  /**
+   * @notice useful view function for string inputs - returns same with the DATASTOREUTILS.generateId
+   */
+  function getKey(
+    uint256 _id,
+    bytes32 _param
+  ) external pure virtual override returns (bytes32 key) {
+    return DataStoreUtils.getKey(_id, _param);
+  }
 
-    function reportOracle(
-        bytes32 merkleRoot,
-        uint256[] calldata beaconBalances,
-        bytes32[][] calldata priceProofs
-    ) external virtual override nonReentrant {
-        STAKEPOOL.TELESCOPE.reportOracle(
-            DATASTORE,
-            merkleRoot,
-            beaconBalances,
-            priceProofs
-        );
-    }
+  function readUintForId(
+    uint256 id,
+    bytes32 key
+  ) external view virtual override returns (uint256 data) {
+    data = DATASTORE.readUintForId(id, key);
+  }
 
-    /**
-     * @notice Batch validator verification and regulating operators
-     */
-    function isPrisoned(uint256 operatorId)
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return OracleUtils.isPrisoned(DATASTORE, operatorId);
-    }
+  function readAddressForId(
+    uint256 id,
+    bytes32 key
+  ) external view virtual override returns (address data) {
+    data = DATASTORE.readAddressForId(id, key);
+  }
 
-    function updateVerificationIndex(
-        uint256 allValidatorsCount,
-        uint256 validatorVerificationIndex,
-        bytes[] calldata alienatedPubkeys
-    ) external virtual override {
-        STAKEPOOL.TELESCOPE.updateVerificationIndex(
-            DATASTORE,
-            allValidatorsCount,
-            validatorVerificationIndex,
-            alienatedPubkeys
-        );
-    }
+  function readBytesForId(
+    uint256 id,
+    bytes32 key
+  ) external view virtual override returns (bytes memory data) {
+    data = DATASTORE.readBytesForId(id, key);
+  }
 
-    function regulateOperators(
-        bytes[] calldata bustedExits,
-        bytes[] calldata bustedSignals,
-        uint256[2][] calldata feeThefts
-    ) external virtual override {
-        STAKEPOOL.TELESCOPE.regulateOperators(
-            DATASTORE,
-            bustedExits,
-            bustedSignals,
-            feeThefts
-        );
-    }
+  function readUintArrayForId(
+    uint256 id,
+    bytes32 key,
+    uint256 index
+  ) external view virtual override returns (uint256 data) {
+    data = DATASTORE.readUintArrayForId(id, key, index);
+  }
 
-    /**
-     *                                       ** Staking Operations **
-     */
-    function StakingParams()
-        external
-        view
-        virtual
-        override
-        returns (
-            address DEFAULT_gETH_INTERFACE,
-            address DEFAULT_DWP,
-            address DEFAULT_LP_TOKEN,
-            uint256 MINI_GOVERNANCE_VERSION,
-            uint256 MAX_MAINTAINER_FEE,
-            uint256 BOOSTRAP_PERIOD,
-            uint256 COMET_TAX
-        )
-    {
-        DEFAULT_gETH_INTERFACE = STAKEPOOL.DEFAULT_gETH_INTERFACE;
-        DEFAULT_DWP = STAKEPOOL.DEFAULT_DWP;
-        DEFAULT_LP_TOKEN = STAKEPOOL.DEFAULT_LP_TOKEN;
-        MINI_GOVERNANCE_VERSION = STAKEPOOL.MINI_GOVERNANCE_VERSION;
-        MAX_MAINTAINER_FEE = STAKEPOOL.MAX_MAINTAINER_FEE;
-        BOOSTRAP_PERIOD = STAKEPOOL.BOOSTRAP_PERIOD;
-        COMET_TAX = STAKEPOOL.COMET_TAX;
-    }
+  function readBytesArrayForId(
+    uint256 id,
+    bytes32 key,
+    uint256 index
+  ) external view virtual override returns (bytes memory data) {
+    data = DATASTORE.readBytesArrayForId(id, key, index);
+  }
 
-    // function getPlanet(uint256 planetId)
-    //     external
-    //     view
-    //     virtual
-    //     override
-    //     returns (
-    //         bytes memory name,
-    //         address CONTROLLER,
-    //         address maintainer,
-    //         uint256 initiated,
-    //         uint256 fee,
-    //         uint256 feeSwitch,
-    //         uint256 surplus,
-    //         uint256 secured,
-    //         uint256 withdrawalBoost,
-    //         address withdrawalPool,
-    //         address LPToken,
-    //         address miniGovernance
-    //     )
-    // {
-    //     name = DATASTORE.readBytesForId(planetId, "NAME");
-    //     CONTROLLER = DATASTORE.readAddressForId(planetId, "CONTROLLER");
-    //     maintainer = DATASTORE.readAddressForId(planetId, "maintainer");
-    //     initiated = DATASTORE.readUintForId(planetId, "initiated");
-    //     fee = DATASTORE.getMaintainerFee(planetId);
-    //     feeSwitch = DATASTORE.readUintForId(planetId, "feeSwitch");
-    //     surplus = DATASTORE.readUintForId(planetId, "surplus");
-    //     secured = DATASTORE.readUintForId(planetId, "secured");
-    //     withdrawalBoost = DATASTORE.readUintForId(planetId, "withdrawalBoost");
-    //     withdrawalPool = DATASTORE.readAddressForId(planetId, "withdrawalPool");
-    //     LPToken = DATASTORE.readAddressForId(planetId, "LPToken");
-    //     miniGovernance = DATASTORE.readAddressForId(planetId, "miniGovernance");
-    // }
+  function readAddressArrayForId(
+    uint256 id,
+    bytes32 key,
+    uint256 index
+  ) external view virtual override returns (address data) {
+    data = DATASTORE.readAddressArrayForId(id, key, index);
+  }
 
-    // function getOperator(uint256 operatorId)
-    //     external
-    //     view
-    //     virtual
-    //     override
-    //     returns (
-    //         bytes memory name,
-    //         address CONTROLLER,
-    //         address maintainer,
-    //         uint256 initiated,
-    //         uint256 fee,
-    //         uint256 feeSwitch,
-    //         uint256 totalActiveValidators,
-    //         uint256 validatorPeriod,
-    //         uint256 released
-    //     )
-    // {
-    //     name = DATASTORE.readBytesForId(operatorId, "NAME");
-    //     CONTROLLER = DATASTORE.readAddressForId(operatorId, "CONTROLLER");
-    //     maintainer = DATASTORE.readAddressForId(operatorId, "maintainer");
-    //     initiated = DATASTORE.readUintForId(operatorId, "initiated");
-    //     fee = DATASTORE.getMaintainerFee(operatorId);
-    //     feeSwitch = DATASTORE.readUintForId(operatorId, "feeSwitch");
-    //     totalActiveValidators = DATASTORE.readUintForId(
-    //         operatorId,
-    //         "totalActiveValidators"
-    //     );
-    //     validatorPeriod = DATASTORE.readUintForId(
-    //         operatorId,
-    //         "validatorPeriod"
-    //     );
-    //     released = DATASTORE.readUintForId(operatorId, "released");
-    // }
+  /**
+   * @notice                                     ** GEODE **
+   */
 
-    function miniGovernanceVersion()
-        external
-        view
-        virtual
-        override
-        returns (uint256 version)
-    {
-        version = STAKEPOOL.MINI_GOVERNANCE_VERSION;
-    }
+  /**
+   * @dev  ->  view
+   */
 
-    /**
-     * @notice Governance functions on pools
-     */
-
-    /**
-     * @notice updating the StakePool Params that does NOT require Senate approval
-     * @dev onlyGovernance on external funciton
-     */
-    function _updateStakingParams(
-        address _DEFAULT_gETH_INTERFACE,
-        address _DEFAULT_DWP,
-        address _DEFAULT_LP_TOKEN,
-        uint256 _MAX_MAINTAINER_FEE,
-        uint256 _BOOSTRAP_PERIOD,
-        uint256 _PERIOD_PRICE_INCREASE_LIMIT,
-        uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 _COMET_TAX,
-        uint256 _BOOST_SWITCH_LATENCY
-    ) internal virtual {
-        require(
-            _DEFAULT_gETH_INTERFACE.code.length > 0,
-            "Portal: DEFAULT_gETH_INTERFACE NOT contract"
-        );
-        require(
-            _DEFAULT_DWP.code.length > 0,
-            "Portal: DEFAULT_DWP NOT contract"
-        );
-        require(
-            _DEFAULT_LP_TOKEN.code.length > 0,
-            "Portal: DEFAULT_LP_TOKEN NOT contract"
-        );
-        require(
-            _MAX_MAINTAINER_FEE > 0 &&
-                _MAX_MAINTAINER_FEE <= StakeUtils.PERCENTAGE_DENOMINATOR,
-            "Portal: incorrect MAX_MAINTAINER_FEE"
-        );
-        require(
-            _PERIOD_PRICE_INCREASE_LIMIT > 0,
-            "Portal: incorrect PERIOD_PRICE_INCREASE_LIMIT"
-        );
-        require(
-            _PERIOD_PRICE_DECREASE_LIMIT > 0,
-            "Portal: incorrect PERIOD_PRICE_DECREASE_LIMIT"
-        );
-        require(
-            _COMET_TAX <= _MAX_MAINTAINER_FEE,
-            "Portal: COMET_TAX should be less than MAX_MAINTAINER_FEE"
-        );
-        STAKEPOOL.DEFAULT_gETH_INTERFACE = _DEFAULT_gETH_INTERFACE;
-        STAKEPOOL.DEFAULT_DWP = _DEFAULT_DWP;
-        STAKEPOOL.DEFAULT_LP_TOKEN = _DEFAULT_LP_TOKEN;
-        STAKEPOOL.MAX_MAINTAINER_FEE = _MAX_MAINTAINER_FEE;
-        STAKEPOOL.COMET_TAX = _COMET_TAX;
-        STAKEPOOL.BOOSTRAP_PERIOD = _BOOSTRAP_PERIOD;
-        STAKEPOOL.BOOST_SWITCH_LATENCY = _BOOST_SWITCH_LATENCY;
-        STAKEPOOL
-            .TELESCOPE
-            .PERIOD_PRICE_INCREASE_LIMIT = _PERIOD_PRICE_INCREASE_LIMIT;
-        STAKEPOOL
-            .TELESCOPE
-            .PERIOD_PRICE_DECREASE_LIMIT = _PERIOD_PRICE_DECREASE_LIMIT;
-        emit ParamsUpdated(
-            _DEFAULT_gETH_INTERFACE,
-            _DEFAULT_DWP,
-            _DEFAULT_LP_TOKEN,
-            _MAX_MAINTAINER_FEE,
-            _BOOSTRAP_PERIOD,
-            _PERIOD_PRICE_INCREASE_LIMIT,
-            _PERIOD_PRICE_DECREASE_LIMIT,
-            _COMET_TAX,
-            _BOOST_SWITCH_LATENCY
-        );
-    }
-
-    function updateStakingParams(
-        address _DEFAULT_gETH_INTERFACE,
-        address _DEFAULT_DWP,
-        address _DEFAULT_LP_TOKEN,
-        uint256 _MAX_MAINTAINER_FEE,
-        uint256 _BOOSTRAP_PERIOD,
-        uint256 _PERIOD_PRICE_INCREASE_LIMIT,
-        uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 _COMET_TAX,
-        uint256 _BOOST_SWITCH_LATENCY
-    ) external virtual override {
-        require(
-            msg.sender == GEODE.GOVERNANCE,
-            "Portal: sender not GOVERNANCE"
-        );
-        _updateStakingParams(
-            _DEFAULT_gETH_INTERFACE,
-            _DEFAULT_DWP,
-            _DEFAULT_LP_TOKEN,
-            _MAX_MAINTAINER_FEE,
-            _BOOSTRAP_PERIOD,
-            _PERIOD_PRICE_INCREASE_LIMIT,
-            _PERIOD_PRICE_DECREASE_LIMIT,
-            _COMET_TAX,
-            _BOOST_SWITCH_LATENCY
-        );
-    }
-
-    /**
-     * @dev onlyGovernance
-     */
-    function releasePrisoned(uint256 operatorId) external virtual override {
-        require(
-            msg.sender == GEODE.GOVERNANCE,
-            "Portal: sender not GOVERNANCE"
-        );
-        OracleUtils.releasePrisoned(DATASTORE, operatorId);
-    }
-
-    /**
-     * @notice ID initiatiors for different types
-     * @dev comets(private pools) are not implemented yet
-     */
-
-    function initiateOperator(
-        uint256 _id,
-        uint256 _fee,
-        address _maintainer,
-        uint256 _validatorPeriod
-    ) external virtual override whenNotPaused {
-        STAKEPOOL.initiateOperator(
-            DATASTORE,
-            _id,
-            _fee,
-            _maintainer,
-            _validatorPeriod
-        );
-    }
-
-    function initiatePlanet(
-        uint256 _id,
-        uint256 _fee,
-        address _maintainer,
-        string calldata _interfaceName,
-        string calldata _interfaceSymbol
-    ) external virtual override whenNotPaused {
-        STAKEPOOL.initiatePlanet(
-            DATASTORE,
-            _id,
-            _fee,
-            _maintainer,
-            [_interfaceName, _interfaceSymbol]
-        );
-    }
-
-    /**
-     * @notice Maintainer functions
-     */
-    function changeMaintainer(uint256 id, address newMaintainer)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        StakeUtils.changeMaintainer(DATASTORE, id, newMaintainer);
-    }
-
-    function switchMaintainerFee(uint256 id, uint256 newFee)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        STAKEPOOL.switchMaintainerFee(DATASTORE, id, newFee);
-    }
-
-    /**
-     * @notice Maintainer wallet
-     */
-
-    function getMaintainerWalletBalance(uint256 id)
-        external
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return DATASTORE.getMaintainerWalletBalance(id);
-    }
-
-    function increaseMaintainerWallet(uint256 id)
-        external
-        payable
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-        returns (bool success)
-    {
-        success = StakeUtils.increaseMaintainerWallet(DATASTORE, id);
-    }
-
-    function decreaseMaintainerWallet(uint256 id, uint256 value)
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-        returns (bool success)
-    {
-        success = StakeUtils.decreaseMaintainerWallet(DATASTORE, id, value);
-    }
-
-    /**
-     * @notice Pool - Operator interactions
-     */
-
-    function switchWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        STAKEPOOL.switchWithdrawalBoost(DATASTORE, poolId, withdrawalBoost);
-    }
-
-    function operatorAllowance(uint256 poolId, uint256 operatorId)
-        external
-        view
-        virtual
-        override
-        returns (
-            uint256 allowance,
-            uint256 proposedValidators,
-            uint256 activeValidators
-        )
-    {
-        allowance = StakeUtils.operatorAllowance(DATASTORE, poolId, operatorId);
-        proposedValidators = DATASTORE.readUintForId(
-            poolId,
-            DataStoreUtils.getKey(operatorId, "proposedValidators")
-        );
-        activeValidators = DATASTORE.readUintForId(
-            poolId,
-            DataStoreUtils.getKey(operatorId, "activeValidators")
-        );
-    }
-
-    function approveOperator(
-        uint256 poolId,
-        uint256 operatorId,
-        uint256 allowance
-    ) external virtual override whenNotPaused returns (bool) {
-        return
-            StakeUtils.approveOperator(
-                DATASTORE,
-                poolId,
-                operatorId,
-                allowance
-            );
-    }
-
-    function switchValidatorPeriod(uint256 operatorId, uint256 newPeriod)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        StakeUtils.updateValidatorPeriod(DATASTORE, operatorId, newPeriod);
-    }
-
-    /**
-     * @notice Depositing functions (user)
-     * @dev comets(private pools) are not implemented yet
-     */
-
-    function canDeposit(uint256 id)
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return StakeUtils.canDeposit(DATASTORE, id);
-    }
-
-    function pauseStakingForPool(uint256 id) external virtual override {
-        StakeUtils.pauseStakingForPool(DATASTORE, id);
-    }
-
-    function unpauseStakingForPool(uint256 id)
-        external
-        virtual
-        override
-        whenNotPaused
-    {
-        StakeUtils.unpauseStakingForPool(DATASTORE, id);
-    }
-
-    function depositPlanet(
-        uint256 poolId,
-        uint256 mingETH,
-        uint256 deadline
+  function GeodeParams()
+    external
+    view
+    virtual
+    override
+    returns (
+      address SENATE,
+      address GOVERNANCE,
+      uint256 SENATE_EXPIRY,
+      uint256 GOVERNANCE_FEE
     )
-        external
-        payable
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256 gEthToSend)
-    {
-        gEthToSend = STAKEPOOL.depositPlanet(
-            DATASTORE,
-            poolId,
-            mingETH,
-            deadline
-        );
+  {
+    SENATE = GEODE.getSenate();
+    GOVERNANCE = GEODE.getGovernance();
+    SENATE_EXPIRY = GEODE.getSenateExpiry();
+    GOVERNANCE_FEE = GEODE.getGovernanceFee();
+  }
+
+  function getProposal(
+    uint256 id
+  )
+    external
+    view
+    virtual
+    override
+    returns (GeodeUtils.Proposal memory proposal)
+  {
+    proposal = GEODE.getProposal(id);
+  }
+
+  function isElector(
+    uint256 _TYPE
+  ) external view virtual override returns (bool) {
+    return GEODE._electorTypes[_TYPE];
+  }
+
+  function isUpgradeAllowed(
+    address proposedImplementation
+  ) external view virtual override returns (bool) {
+    return GEODE.isUpgradeAllowed(proposedImplementation);
+  }
+
+  /**
+   * @dev  ->  external
+   */
+
+  /**
+   * @dev Governance Functions
+   */
+
+  /**
+   * @notice only parameter of GeodeUtils that can be mutated is the fee
+   */
+  function setGovernanceFee(uint256 newFee) external virtual override {
+    GEODE.setGovernanceFee(newFee);
+  }
+
+  function setElectorType(
+    uint256 _TYPE,
+    bool _isElector
+  ) external virtual override {
+    GEODE.setElectorType(DATASTORE, _TYPE, _isElector);
+  }
+
+  function newProposal(
+    address _CONTROLLER,
+    uint256 _TYPE,
+    bytes calldata _NAME,
+    uint256 duration
+  ) external virtual override {
+    GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
+  }
+
+  /**
+   * @dev Senate Functions
+   */
+
+  /**
+   * @notice approves a specific proposal
+   * @dev OnlySenate is checked inside the GeodeUtils
+   */
+  function approveProposal(uint256 id) public virtual override {
+    (uint256 _type, ) = GEODE.approveProposal(DATASTORE, id);
+    if (
+      _type == ID_TYPE.MODULE_WITHDRAWAL_CONTRACT ||
+      _type == ID_TYPE.MODULE_LIQUDITY_POOL ||
+      _type == ID_TYPE.MODULE_LIQUDITY_POOL_TOKEN
+    ) {
+      STAKER._defaultModules[_type] = id;
+    } else if (_type == ID_TYPE.MODULE_GETH_INTERFACE) {
+      STAKER._allowedModules[_type][id] = true;
     }
+  }
 
-    /**
-     * @notice Withdrawal functions (user)
-     * @dev comets(private pools) are not implemented yet
-     */
+  /**
+   * @notice changes the Senate's address without extending the expiry
+   * @dev OnlySenate is checked inside the GeodeUtils
+   */
+  function changeSenate(address _newSenate) external virtual override {
+    GEODE.changeSenate(_newSenate);
+  }
 
-    function withdrawPlanet(
-        uint256 poolId,
-        uint256 gEthToWithdraw,
-        uint256 minETH,
-        uint256 deadline
+  /**
+   * @dev CONTROLLER Functions
+   */
+
+  function changeIdCONTROLLER(
+    uint256 id,
+    address newCONTROLLER
+  ) external virtual override whenNotPaused {
+    GeodeUtils.changeIdCONTROLLER(DATASTORE, id, newCONTROLLER);
+  }
+
+  function approveSenate(
+    uint256 proposalId,
+    uint256 electorId
+  ) external virtual override {
+    GEODE.approveSenate(DATASTORE, proposalId, electorId);
+  }
+
+  /**
+   * @notice                                     ** THE STAKING LIBRARY **
+   */
+
+  /**
+   * @dev  ->  view
+   */
+
+  function StakingParams()
+    external
+    view
+    virtual
+    override
+    returns (
+      uint256 VALIDATORS_INDEX,
+      uint256 VERIFICATION_INDEX,
+      uint256 MONOPOLY_THRESHOLD,
+      uint256 EARLY_EXIT_FEE,
+      uint256 ORACLE_UPDATE_TIMESTAMP,
+      uint256 DAILY_PRICE_INCREASE_LIMIT,
+      uint256 DAILY_PRICE_DECREASE_LIMIT,
+      bytes32 PRICE_MERKLE_ROOT,
+      address ORACLE_POSITION
     )
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256 EthToSend)
-    {
-        EthToSend = STAKEPOOL.withdrawPlanet(
-            DATASTORE,
-            poolId,
-            gEthToWithdraw,
-            minETH,
-            deadline
-        );
+  {
+    VALIDATORS_INDEX = STAKER.VALIDATORS_INDEX;
+    VERIFICATION_INDEX = STAKER.VERIFICATION_INDEX;
+    MONOPOLY_THRESHOLD = STAKER.MONOPOLY_THRESHOLD;
+    EARLY_EXIT_FEE = STAKER.EARLY_EXIT_FEE;
+    ORACLE_UPDATE_TIMESTAMP = STAKER.ORACLE_UPDATE_TIMESTAMP;
+    DAILY_PRICE_INCREASE_LIMIT = STAKER.DAILY_PRICE_INCREASE_LIMIT;
+    DAILY_PRICE_DECREASE_LIMIT = STAKER.DAILY_PRICE_DECREASE_LIMIT;
+    PRICE_MERKLE_ROOT = STAKER.PRICE_MERKLE_ROOT;
+    ORACLE_POSITION = STAKER.ORACLE_POSITION;
+  }
+
+  function getValidator(
+    bytes calldata pubkey
+  ) external view virtual override returns (StakeUtils.Validator memory) {
+    return STAKER._validators[pubkey];
+  }
+
+  function getValidatorByPool(
+    uint256 poolId,
+    uint256 index
+  ) external view virtual override returns (bytes memory) {
+    return DATASTORE.readBytesArrayForId(poolId, "validators", index);
+  }
+
+  function getMaintenanceFee(
+    uint256 id
+  ) external view virtual override returns (uint256 fee) {
+    fee = StakeUtils.getMaintenanceFee(DATASTORE, id);
+  }
+
+  function isPrisoned(
+    uint256 operatorId
+  ) external view virtual override returns (bool) {
+    return StakeUtils.isPrisoned(DATASTORE, operatorId);
+  }
+
+  function isPrivatePool(
+    uint256 poolId
+  ) external view virtual override returns (bool) {
+    return StakeUtils.isPrivatePool(DATASTORE, poolId);
+  }
+
+  function isPriceValid(
+    uint256 poolId
+  ) external view virtual override returns (bool) {
+    return STAKER.isPriceValid(poolId);
+  }
+
+  function isMintingAllowed(
+    uint256 poolId
+  ) external view virtual override returns (bool) {
+    return STAKER.isMintingAllowed(DATASTORE, poolId);
+  }
+
+  function canStake(
+    bytes calldata pubkey
+  ) external view virtual override returns (bool) {
+    return STAKER.canStake(DATASTORE, pubkey);
+  }
+
+  function getDefaultModule(
+    uint256 _type
+  ) external view virtual override returns (uint256 _version) {
+    _version = STAKER._defaultModules[_type];
+  }
+
+  function isAllowedModule(
+    uint256 _type,
+    uint256 _id
+  ) external view virtual override returns (bool) {
+    return STAKER._allowedModules[_type][_id];
+  }
+
+  /**
+   * @dev  ->  external
+   */
+
+  /**
+   * @dev MODULES
+   */
+
+  function fetchWithdrawalContractUpgradeProposal(
+    uint256 id
+  ) external virtual override returns (uint256 withdrawalContractVersion) {
+    withdrawalContractVersion = STAKER._defaultModules[
+      ID_TYPE.MODULE_WITHDRAWAL_CONTRACT
+    ];
+
+    StakeUtils.withdrawalContractById(DATASTORE, id).newProposal(
+      DATASTORE.readAddressForId(withdrawalContractVersion, "CONTROLLER"),
+      ID_TYPE.CONTRACT_UPGRADE,
+      DATASTORE.readBytesForId(withdrawalContractVersion, "NAME"),
+      4 weeks
+    );
+  }
+
+  function deployLiquidityPool(
+    uint256 poolId
+  ) external virtual override whenNotPaused {
+    STAKER.deployLiquidityPool(DATASTORE, poolId, GEODE.getGovernance());
+  }
+
+  function setPoolVisibility(
+    uint256 poolId,
+    bool isPrivate
+  ) external virtual override whenNotPaused {
+    StakeUtils.setPoolVisibility(DATASTORE, poolId, isPrivate);
+  }
+
+  function setWhitelist(
+    uint256 poolId,
+    address whitelist
+  ) external virtual override whenNotPaused {
+    StakeUtils.setWhitelist(DATASTORE, poolId, whitelist);
+  }
+
+  /**
+   * @dev INITIATORS
+   */
+
+  function initiateOperator(
+    uint256 id,
+    uint256 fee,
+    uint256 validatorPeriod,
+    address maintainer
+  ) external payable virtual override whenNotPaused {
+    StakeUtils.initiateOperator(
+      DATASTORE,
+      id,
+      fee,
+      validatorPeriod,
+      maintainer
+    );
+  }
+
+  function initiatePool(
+    uint256 fee,
+    uint256 interfaceVersion,
+    address maintainer,
+    bytes calldata NAME,
+    bytes calldata interface_data,
+    bool[3] calldata config
+  ) external payable virtual override whenNotPaused {
+    STAKER.initiatePool(
+      DATASTORE,
+      fee,
+      interfaceVersion,
+      maintainer,
+      GEODE.getGovernance(),
+      NAME,
+      interface_data,
+      config
+    );
+  }
+
+  /**
+   * @dev MAINTAINERS
+   */
+
+  function changeMaintainer(
+    uint256 id,
+    address newMaintainer
+  ) external virtual override whenNotPaused {
+    StakeUtils.changeMaintainer(DATASTORE, id, newMaintainer);
+  }
+
+  /**
+   * @dev MAINTENANCE FEE
+   */
+  function switchMaintenanceFee(
+    uint256 id,
+    uint256 newFee
+  ) external virtual override whenNotPaused {
+    StakeUtils.switchMaintenanceFee(DATASTORE, id, newFee);
+  }
+
+  /**
+   * @dev INTERNAL WALLET
+   */
+
+  function increaseWalletBalance(
+    uint256 id
+  ) external payable virtual override returns (bool success) {
+    success = StakeUtils.increaseWalletBalance(DATASTORE, id);
+  }
+
+  function decreaseWalletBalance(
+    uint256 id,
+    uint256 value
+  )
+    external
+    virtual
+    override
+    whenNotPaused
+    nonReentrant
+    returns (bool success)
+  {
+    success = StakeUtils.decreaseWalletBalance(DATASTORE, id, value);
+  }
+
+  /**
+   * @dev OPERATORS
+   */
+
+  function switchValidatorPeriod(
+    uint256 id,
+    uint256 newPeriod
+  ) external virtual override whenNotPaused {
+    StakeUtils.switchValidatorPeriod(DATASTORE, id, newPeriod);
+  }
+
+  function blameOperator(
+    bytes calldata pk
+  ) external virtual override whenNotPaused {
+    STAKER.blameOperator(DATASTORE, pk);
+  }
+
+  function setEarlyExitFee(
+    uint256 fee
+  ) external virtual override whenNotPaused onlyGovernance {
+    require(fee < StakeUtils.MAX_EARLY_EXIT_FEE);
+    STAKER.EARLY_EXIT_FEE = fee;
+  }
+
+  /**
+   * @dev PRISON
+   */
+
+  /**
+   * @notice releases an imprisoned operator immidately
+   * @dev in different situations such as a faulty imprisonment or coordinated testing periods
+   * * Governance can release the prisoners
+   * @dev onlyGovernance SHOULD be checked in Portal
+   */
+  function releasePrisoned(
+    uint256 operatorId
+  ) external virtual override whenNotPaused onlyGovernance {
+    DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
+
+    emit Released(operatorId);
+  }
+
+  /**
+   * @dev OPERATOR APPROVALS
+   */
+
+  function approveOperators(
+    uint256 poolId,
+    uint256[] calldata operatorIds,
+    uint256[] calldata allowances
+  ) external virtual override whenNotPaused {
+    StakeUtils.batchApproveOperators(
+      DATASTORE,
+      poolId,
+      operatorIds,
+      allowances
+    );
+  }
+
+  /**
+   * @dev STAKING
+   */
+
+  function deposit(
+    uint256 poolId,
+    uint256 mingETH,
+    uint256 deadline,
+    uint256 price,
+    bytes32[] calldata priceProof,
+    address receiver
+  ) external payable virtual override whenNotPaused nonReentrant {
+    if (!STAKER.isPriceValid(poolId)) {
+      OracleUtils.priceSync(DATASTORE, STAKER, poolId, price, priceProof);
     }
+    STAKER.deposit(DATASTORE, poolId, mingETH, deadline, receiver);
+  }
 
-    /**
-     * @notice Validator creation (Stake) functions (operator)
-     */
+  function proposeStake(
+    uint256 poolId,
+    uint256 operatorId,
+    bytes[] calldata pubkeys,
+    bytes[] calldata signatures1,
+    bytes[] calldata signatures31
+  ) external virtual override whenNotPaused nonReentrant {
+    STAKER.proposeStake(
+      DATASTORE,
+      poolId,
+      operatorId,
+      pubkeys,
+      signatures1,
+      signatures31
+    );
+  }
 
-    function canStake(bytes calldata pubkey)
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return STAKEPOOL.canStake(DATASTORE, pubkey);
-    }
+  function beaconStake(
+    uint256 operatorId,
+    bytes[] calldata pubkeys
+  ) external virtual override whenNotPaused nonReentrant {
+    STAKER.beaconStake(DATASTORE, operatorId, pubkeys);
+  }
 
-    function proposeStake(
-        uint256 poolId,
-        uint256 operatorId,
-        bytes[] calldata pubkeys,
-        bytes[] calldata signatures
-    ) external virtual override whenNotPaused nonReentrant {
-        STAKEPOOL.proposeStake(
-            DATASTORE,
-            poolId,
-            operatorId,
-            pubkeys,
-            signatures
-        );
-    }
+  /**
+   * @notice                                     ** ORACLE **
+   */
 
-    function beaconStake(uint256 operatorId, bytes[] calldata pubkeys)
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-    {
-        STAKEPOOL.beaconStake(DATASTORE, operatorId, pubkeys);
-    }
+  /**
+   * @dev  ->  external
+   */
 
-    /**
-     * @notice Validator exiting (Unstake) functions (operator)
-     */
+  function updateVerificationIndex(
+    uint256 validatorVerificationIndex,
+    bytes[] calldata alienatedPubkeys
+  ) external virtual override whenNotPaused {
+    OracleUtils.updateVerificationIndex(
+      DATASTORE,
+      STAKER,
+      validatorVerificationIndex,
+      alienatedPubkeys
+    );
+  }
 
-    function signalUnstake(bytes[] calldata pubkeys)
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-    {
-        STAKEPOOL.signalUnstake(DATASTORE, pubkeys);
-    }
+  function regulateOperators(
+    uint256[] calldata feeThefts,
+    bytes[] calldata stolenBlocks
+  ) external virtual override whenNotPaused {
+    OracleUtils.regulateOperators(DATASTORE, STAKER, feeThefts, stolenBlocks);
+  }
 
-    function fetchUnstake(
-        uint256 poolId,
-        uint256 operatorId,
-        bytes[] calldata pubkeys,
-        uint256[] calldata balances,
-        bool[] calldata isExit
-    ) external virtual override whenNotPaused nonReentrant {
-        STAKEPOOL.fetchUnstake(
-            DATASTORE,
-            poolId,
-            operatorId,
-            pubkeys,
-            balances,
-            isExit
-        );
-    }
+  function reportOracle(
+    bytes32 priceMerkleRoot,
+    uint256 allValidatorsCount
+  ) external virtual override whenNotPaused {
+    OracleUtils.reportOracle(STAKER, priceMerkleRoot, allValidatorsCount);
+  }
 
-    /**
-     * @notice We do care.
-     */
+  function priceSync(
+    uint256 poolId,
+    uint256 price,
+    bytes32[] calldata priceProofs
+  ) external virtual override whenNotPaused {
+    OracleUtils.priceSync(DATASTORE, STAKER, poolId, price, priceProofs);
+  }
 
-    function Do_we_care() external pure returns (bool) {
-        return true;
-    }
+  function priceSyncBatch(
+    uint256[] calldata poolIds,
+    uint256[] calldata prices,
+    bytes32[][] calldata priceProofs
+  ) external virtual override whenNotPaused {
+    OracleUtils.priceSyncBatch(DATASTORE, STAKER, poolIds, prices, priceProofs);
+  }
 
-    /// @dev fallbacks
-    fallback() external payable {}
+  /**
+   * @notice fallback functions
+   */
+  function Do_we_care() external pure returns (bool) {
+    return true;
+  }
 
-    receive() external payable {}
+  fallback() external payable {}
 
-    /// @notice keep the contract size at 50
-    uint256[46] private __gap;
+  receive() external payable {}
+
+  /**
+   * @notice keep the contract size at 50
+   */
+  uint256[46] private __gap;
 }

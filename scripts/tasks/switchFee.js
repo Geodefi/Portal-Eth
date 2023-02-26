@@ -8,7 +8,7 @@ const func = async (taskArgs, hre) => {
     await execute(
       "Portal",
       { from: deployer, log: true },
-      "switchMaintainerFee",
+      "switchMaintenanceFee",
       taskArgs.id,
       BN(Math.floor((taskArgs.f * 10 ** 10) / 100)).toString()
     );

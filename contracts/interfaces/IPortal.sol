@@ -1,258 +1,275 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
+import "../Portal/utils/DataStoreUtilsLib.sol";
 import "../Portal/utils/GeodeUtilsLib.sol";
 import "../Portal/utils/OracleUtilsLib.sol";
+import "../Portal/utils/StakeUtilsLib.sol";
 
 interface IPortal {
-    function initialize(
-        address _GOVERNANCE,
-        address _gETH,
-        address _ORACLE_POSITION,
-        address _DEFAULT_gETH_INTERFACE,
-        address _DEFAULT_DWP,
-        address _DEFAULT_LP_TOKEN,
-        address _MINI_GOVERNANCE_POSITION,
-        uint256 _GOVERNANCE_TAX,
-        uint256 _COMET_TAX,
-        uint256 _MAX_MAINTAINER_FEE,
-        uint256 _BOOSTRAP_PERIOD
-    ) external;
+  function initialize(
+    address _GOVERNANCE,
+    address _SENATE,
+    address _gETH,
+    address _ORACLE_POSITION,
+    address _DEFAULT_WITHDRAWAL_CONTRACT_MODULE,
+    address _DEFAULT_LP_MODULE,
+    address _DEFAULT_LP_TOKEN_MODULE,
+    address[] calldata _ALLOWED_GETH_INTERFACE_MODULES,
+    bytes[] calldata _ALLOWED_GETH_INTERFACE_MODULE_NAMES,
+    uint256 _GOVERNANCE_FEE
+  ) external;
 
-    function pause() external;
+  function getContractVersion() external view returns (uint256);
 
-    function unpause() external;
+  function pause() external;
 
-    function getVersion() external view returns (uint256);
+  function unpause() external;
 
-    function gETH() external view returns (address);
+  function pausegETH() external;
 
-    function allIdsByType(uint256 _type)
-        external
-        view
-        returns (uint256[] memory);
+  function unpausegETH() external;
 
-    function generateId(string calldata _name, uint256 _type)
-        external
-        pure
-        returns (uint256 id);
+  function fetchWithdrawalContractUpgradeProposal(
+    uint256 id
+  ) external returns (uint256 withdrawalContractVersion);
 
-    function readAddressForId(uint256 id, bytes32 key)
-        external
-        view
-        returns (address data);
+  function gETH() external view returns (address);
 
-    function readUintForId(uint256 id, bytes32 key)
-        external
-        view
-        returns (uint256 data);
+  function gETHInterfaces(
+    uint256 id,
+    uint256 index
+  ) external view returns (address);
 
-    function readBytesForId(uint256 id, bytes32 key)
-        external
-        view
-        returns (bytes memory data);
+  function allIdsByType(
+    uint256 _type,
+    uint256 _index
+  ) external view returns (uint256);
 
-    function GeodeParams()
-        external
-        view
-        returns (
-            address SENATE,
-            address GOVERNANCE,
-            uint256 GOVERNANCE_TAX,
-            uint256 MAX_GOVERNANCE_TAX,
-            uint256 SENATE_EXPIRY
-        );
+  function generateId(
+    string calldata _name,
+    uint256 _type
+  ) external pure returns (uint256 id);
 
-    function getProposal(uint256 id)
-        external
-        view
-        returns (GeodeUtils.Proposal memory proposal);
+  function getKey(
+    uint256 _id,
+    bytes32 _param
+  ) external pure returns (bytes32 key);
 
-    function isUpgradeAllowed(address proposedImplementation)
-        external
-        view
-        returns (bool);
+  function readAddressForId(
+    uint256 id,
+    bytes32 key
+  ) external view returns (address data);
 
-    function setGovernanceTax(uint256 newFee) external returns (bool);
+  function readUintForId(
+    uint256 id,
+    bytes32 key
+  ) external view returns (uint256 data);
 
-    function newProposal(
-        address _CONTROLLER,
-        uint256 _TYPE,
-        bytes calldata _NAME,
-        uint256 duration
-    ) external;
+  function readBytesForId(
+    uint256 id,
+    bytes32 key
+  ) external view returns (bytes memory data);
 
-    function setMaxGovernanceTax(uint256 newMaxFee) external returns (bool);
+  function readUintArrayForId(
+    uint256 id,
+    bytes32 key,
+    uint256 index
+  ) external view returns (uint256 data);
 
-    function approveProposal(uint256 id) external;
+  function readBytesArrayForId(
+    uint256 id,
+    bytes32 key,
+    uint256 index
+  ) external view returns (bytes memory data);
 
-    function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external;
+  function readAddressArrayForId(
+    uint256 id,
+    bytes32 key,
+    uint256 index
+  ) external view returns (address data);
 
-    function approveSenate(uint256 proposalId, uint256 electorId) external;
+  function GeodeParams()
+    external
+    view
+    returns (
+      address SENATE,
+      address GOVERNANCE,
+      uint256 SENATE_EXPIRY,
+      uint256 GOVERNANCE_FEE
+    );
 
-    function allInterfaces(uint256 id) external view returns (address[] memory);
+  function getProposal(
+    uint256 id
+  ) external view returns (GeodeUtils.Proposal memory proposal);
 
-    function TelescopeParams()
-        external
-        view
-        returns (
-            address ORACLE_POSITION,
-            uint256 ORACLE_UPDATE_TIMESTAMP,
-            uint256 MONOPOLY_THRESHOLD,
-            uint256 VALIDATORS_INDEX,
-            uint256 VERIFICATION_INDEX,
-            uint256 PERIOD_PRICE_INCREASE_LIMIT,
-            uint256 PERIOD_PRICE_DECREASE_LIMIT,
-            bytes32 PRICE_MERKLE_ROOT
-        );
+  function isElector(uint256 _TYPE) external view returns (bool);
 
-    function releasePrisoned(uint256 operatorId) external;
+  function isUpgradeAllowed(
+    address proposedImplementation
+  ) external view returns (bool);
 
-    function miniGovernanceVersion() external view returns (uint256 id);
+  function setGovernanceFee(uint256 newFee) external;
 
-    function getValidator(bytes calldata pubkey)
-        external
-        view
-        returns (OracleUtils.Validator memory);
+  function setElectorType(uint256 _TYPE, bool isElector) external;
 
-    function isOracleActive() external view returns (bool);
+  function newProposal(
+    address _CONTROLLER,
+    uint256 _TYPE,
+    bytes calldata _NAME,
+    uint256 duration
+  ) external;
 
-    function reportOracle(
-        bytes32 merkleRoot,
-        uint256[] calldata beaconBalances,
-        bytes32[][] calldata priceProofs
-    ) external;
+  function approveProposal(uint256 id) external;
 
-    function isPrisoned(uint256 operatorId) external view returns (bool);
+  function changeSenate(address _newSenate) external;
 
-    function updateVerificationIndex(
-        uint256 allValidatorsCount,
-        uint256 validatorVerificationIndex,
-        bytes[] calldata alienatedPubkeys
-    ) external;
+  function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external;
 
-    function regulateOperators(
-        bytes[] calldata bustedExits,
-        bytes[] calldata bustedSignals,
-        uint256[2][] calldata feeThefts
-    ) external;
+  function approveSenate(uint256 proposalId, uint256 electorId) external;
 
-    function StakingParams()
-        external
-        view
-        returns (
-            address DEFAULT_gETH_INTERFACE,
-            address DEFAULT_DWP,
-            address DEFAULT_LP_TOKEN,
-            uint256 MINI_GOVERNANCE_VERSION,
-            uint256 MAX_MAINTAINER_FEE,
-            uint256 BOOSTRAP_PERIOD,
-            uint256 COMET_TAX
-        );
+  function StakingParams()
+    external
+    view
+    returns (
+      uint256 VALIDATORS_INDEX,
+      uint256 VERIFICATION_INDEX,
+      uint256 MONOPOLY_THRESHOLD,
+      uint256 EARLY_EXIT_FEE,
+      uint256 ORACLE_UPDATE_TIMESTAMP,
+      uint256 DAILY_PRICE_INCREASE_LIMIT,
+      uint256 DAILY_PRICE_DECREASE_LIMIT,
+      bytes32 PRICE_MERKLE_ROOT,
+      address ORACLE_POSITION
+    );
 
-    function updateStakingParams(
-        address _DEFAULT_gETH_INTERFACE,
-        address _DEFAULT_DWP,
-        address _DEFAULT_LP_TOKEN,
-        uint256 _MAX_MAINTAINER_FEE,
-        uint256 _BOOSTRAP_PERIOD,
-        uint256 _PERIOD_PRICE_INCREASE_LIMIT,
-        uint256 _PERIOD_PRICE_DECREASE_LIMIT,
-        uint256 _COMET_TAX,
-        uint256 _BOOST_SWITCH_LATENCY
-    ) external;
+  function getDefaultModule(
+    uint256 _type
+  ) external view returns (uint256 _version);
 
-    function initiateOperator(
-        uint256 _id,
-        uint256 _fee,
-        address _maintainer,
-        uint256 _validatorPeriod
-    ) external;
+  function isAllowedModule(
+    uint256 _type,
+    uint256 _version
+  ) external view returns (bool);
 
-    function initiatePlanet(
-        uint256 _id,
-        uint256 _fee,
-        address _maintainer,
-        string calldata _interfaceName,
-        string calldata _interfaceSymbol
-    ) external;
+  function getValidator(
+    bytes calldata pubkey
+  ) external view returns (StakeUtils.Validator memory);
 
-    function changeMaintainer(uint256 id, address newMaintainer) external;
+  function getValidatorByPool(
+    uint256 poolId,
+    uint256 index
+  ) external view returns (bytes memory);
 
-    function getMaintainerWalletBalance(uint256 id)
-        external
-        view
-        returns (uint256);
+  function getMaintenanceFee(uint256 id) external view returns (uint256 fee);
 
-    function switchMaintainerFee(uint256 id, uint256 newFee) external;
+  // function operatorAllowance(
+  //   uint256 poolId,
+  //   uint256 operatorId
+  // ) external view returns (uint256 allowance);
 
-    function increaseMaintainerWallet(uint256 id)
-        external
-        payable
-        returns (bool success);
+  function isPrisoned(uint256 operatorId) external view returns (bool);
 
-    function decreaseMaintainerWallet(uint256 id, uint256 value)
-        external
-        returns (bool success);
+  function isPrivatePool(uint256 poolId) external view returns (bool);
 
-    function switchWithdrawalBoost(uint256 poolId, uint256 withdrawalBoost)
-        external;
+  function isPriceValid(uint256 poolId) external view returns (bool);
 
-    function operatorAllowance(uint256 poolId, uint256 operatorId)
-        external
-        view
-        returns (
-            uint256 allowance,
-            uint256 proposedValidators,
-            uint256 activeValidators
-        );
+  function isMintingAllowed(uint256 poolId) external view returns (bool);
 
-    function approveOperator(
-        uint256 poolId,
-        uint256 operatorId,
-        uint256 allowance
-    ) external returns (bool);
+  function canStake(bytes calldata pubkey) external view returns (bool);
 
-    function switchValidatorPeriod(uint256 operatorId, uint256 newPeriod)
-        external;
+  function initiateOperator(
+    uint256 id,
+    uint256 fee,
+    uint256 validatorPeriod,
+    address maintainer
+  ) external payable;
 
-    function canDeposit(uint256 _id) external view returns (bool);
+  function initiatePool(
+    uint256 fee,
+    uint256 interfaceVersion,
+    address maintainer,
+    bytes calldata NAME,
+    bytes calldata interface_data,
+    bool[3] calldata config
+  ) external payable;
 
-    function canStake(bytes calldata pubkey) external view returns (bool);
+  function setPoolVisibility(uint256 poolId, bool isPrivate) external;
 
-    function pauseStakingForPool(uint256 id) external;
+  function deployLiquidityPool(uint256 poolId) external;
 
-    function unpauseStakingForPool(uint256 id) external;
+  function changeMaintainer(uint256 id, address newMaintainer) external;
 
-    function depositPlanet(
-        uint256 poolId,
-        uint256 mingETH,
-        uint256 deadline
-    ) external payable returns (uint256 gEthToSend);
+  function switchMaintenanceFee(uint256 id, uint256 newFee) external;
 
-    function withdrawPlanet(
-        uint256 poolId,
-        uint256 gEthToWithdraw,
-        uint256 minETH,
-        uint256 deadline
-    ) external returns (uint256 EthToSend);
+  function increaseWalletBalance(
+    uint256 id
+  ) external payable returns (bool success);
 
-    function proposeStake(
-        uint256 poolId,
-        uint256 operatorId,
-        bytes[] calldata pubkeys,
-        bytes[] calldata signatures
-    ) external;
+  function decreaseWalletBalance(
+    uint256 id,
+    uint256 value
+  ) external returns (bool success);
 
-    function beaconStake(uint256 operatorId, bytes[] calldata pubkeys) external;
+  function switchValidatorPeriod(uint256 id, uint256 newPeriod) external;
 
-    function signalUnstake(bytes[] calldata pubkeys) external;
+  function blameOperator(bytes calldata pk) external;
 
-    function fetchUnstake(
-        uint256 poolId,
-        uint256 operatorId,
-        bytes[] calldata pubkeys,
-        uint256[] calldata balances,
-        bool[] calldata isExit
-    ) external;
+  function setEarlyExitFee(uint256 fee) external;
+
+  function releasePrisoned(uint256 operatorId) external;
+
+  function approveOperators(
+    uint256 poolId,
+    uint256[] calldata operatorIds,
+    uint256[] calldata allowances
+  ) external;
+
+  function setWhitelist(uint256 poolId, address whitelist) external;
+
+  function deposit(
+    uint256 poolId,
+    uint256 mingETH,
+    uint256 deadline,
+    uint256 price,
+    bytes32[] calldata priceProofs,
+    address receiver
+  ) external payable;
+
+  function proposeStake(
+    uint256 poolId,
+    uint256 operatorId,
+    bytes[] calldata pubkeys,
+    bytes[] calldata signatures1,
+    bytes[] calldata signatures31
+  ) external;
+
+  function beaconStake(uint256 operatorId, bytes[] calldata pubkeys) external;
+
+  function updateVerificationIndex(
+    uint256 validatorVerificationIndex,
+    bytes[] calldata alienatedPubkeys
+  ) external;
+
+  function regulateOperators(
+    uint256[] calldata feeThefts,
+    bytes[] calldata stolenBlocks
+  ) external;
+
+  function reportOracle(
+    bytes32 priceMerkleRoot,
+    uint256 allValidatorsCount
+  ) external;
+
+  function priceSync(
+    uint256 poolId,
+    uint256 price,
+    bytes32[] calldata priceProofs
+  ) external;
+
+  function priceSyncBatch(
+    uint256[] calldata poolIds,
+    uint256[] calldata prices,
+    bytes32[][] calldata priceProofs
+  ) external;
 }

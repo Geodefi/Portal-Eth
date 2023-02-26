@@ -11,8 +11,8 @@ const func = async (taskArgs, hre) => {
       "initiateOperator",
       taskArgs.id,
       BN(Math.floor((taskArgs.f * 10 ** 10) / 100)).toString(),
-      taskArgs.m,
-      taskArgs.p
+      taskArgs.p,
+      taskArgs.m
     );
     console.log(`initiated: ${taskArgs.id}`);
   } catch (error) {
@@ -21,5 +21,5 @@ const func = async (taskArgs, hre) => {
     console.log("try --network");
   }
 };
-
+// done
 module.exports = func;

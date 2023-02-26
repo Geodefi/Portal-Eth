@@ -4,22 +4,41 @@ import "./helpers/ERC1155SupplyMinterPauser.sol";
 
 /**
  * @author Icebear & Crash Bandicoot
- * @title Geode Finance Liquid Staking derivatives(g-derivatives) : gETH
+ * @title gETH : Geode Finance Liquid Staking Derivatives
+ * gETH is a special ERC1155 contract with additional functionalities:
  *
- * gETH is a special ERC1155 contract with additional functionalities.
- * One of the unique functionalities are the included price logic that tracks the underlaying ratio with
- * staked asset, ETH.
+ * Denominator
+ * * ERC1155 does not have decimals and it is not wise to use the name convention
+ * * but we need to provide some information on how to denominate the balances, price, etc.
+
+ * PricePerShare
+ * * Keeping track of the ratio between the derivative 
+ * * and the underlaying staked asset, Ether.
  *
- * Other and most important change is the implementation of ERC1155Interfaces.
- * This addition effectively result in changes in safeTransferFrom(), burn(), _doSafeTransferAcceptanceCheck()
- * functions, reasoning is in the comments.
- * However if one wants to remain unbound from Interfaces, it can be done so by calling "avoidInterfaces".
+ * gETHInterfaces
+ * * Most important functionality gETH provides:
+ * * Allowing any other contract to provide additional functionality 
+ * * around the balance and price data, such as using an ID like ERC20.
+ * * 
+ * * This addition effectively result in changes in 
+ * * safeTransferFrom(), burn(), _doSafeTransferAcceptanceCheck()
+ * * functions, reasoning is in the comments.
+ * 
+ * Avoiders
+ * * If one wants to remain unbound from gETHInterfaces, 
+ * * it can be done so by calling "avoidInterfaces" function.
  *
- * @dev recommended to check helpers/ERC1155SupplyMinterPauser.sol first
+ * @dev review first helpers/ERC1155SupplyMinterPauser.sol 
  */
 
 contract gETH is ERC1155SupplyMinterPauser {
     using Address for address;
+
+    event PriceUpdated(
+        uint256 id,
+        uint256 pricePerShare,
+        uint256 updateTimestamp
+    );
 
     event InterfaceChanged(
         address indexed newInterface,
@@ -27,39 +46,34 @@ contract gETH is ERC1155SupplyMinterPauser {
         bool isSet
     );
     event InterfacesAvoided(address indexed avoider, uint256 id, bool isAvoid);
-    event PriceUpdated(
-        uint256 id,
-        uint256 pricePerShare,
-        uint256 updateTimestamp
-    );
 
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
-    string public constant name = "Geode Staked ETH";
+    string public constant name = "Geode Staked Ether";
     string public constant symbol = "gETH";
     uint256 private constant _denominator = 1 ether;
 
     /**
-     * @notice Mapping from pool IDs to ERC1155interface implementation addresses
-     * There can be multiple Interfaces for 1 staking pool.
+     * @notice Mapping from pool IDs to gETHınterface implementation addresses
+     * @dev There can be multiple Interfaces for 1 staking pool.
      * @dev ADDED for gETH
      **/
     mapping(uint256 => mapping(address => bool)) private _interfaces;
 
     /**
-     * @notice Mapping of user addresses who chose to restrict the usage of interfaces
+     * @notice Mapping of user addresses who chose to restrict the access of interfaces
      * @dev ADDED for gETH
      **/
-    mapping(address => mapping(uint256 => bool)) private _interfaceAvoiders;
+    mapping(address => mapping(uint256 => bool)) private _avoiders;
 
     /**
-     * @notice shows the underlying ETH for 1 staked gETH for a given asset id
-     * @dev freshly assigned ids should return 1e18 since initally 1 ETH = 1 gETH
+     * @notice shows the underlying ETH for 1 staked gETH for a given asset ID
+     * @dev Freshly created IDs should return 1e18 since initally 1 ETH = 1 gETH
      * @dev ADDED for gETH
      **/
     mapping(uint256 => uint256) private _pricePerShare;
 
     /**
-     * @notice id to timestamp, pointing the second that the latest price update happened
+     * @notice ID to timestamp, pointing the second that the latest price update happened
      * @dev ADDED for gETH
      **/
     mapping(uint256 => uint256) private _priceUpdateTimestamp;
@@ -69,7 +83,12 @@ contract gETH is ERC1155SupplyMinterPauser {
     }
 
     /**
-     * @notice a centralized denominator = 1e18
+    *                                       ** DENOMINATOR **
+    */
+
+    /**
+     * @notice a centralized denominator for all contract using gETH
+     * @dev ERC1155 does not have a decimals, and it is not wise to use the same name
      * @dev ADDED for gETH
      */
     function denominator() external view virtual returns (uint256) {
@@ -77,15 +96,17 @@ contract gETH is ERC1155SupplyMinterPauser {
     }
 
     /**
-     * @notice checks if an address is defined as an interface for the given Planet id.
+    *                                       ** INTERFACES **
+    */
+
+    /**
+     * @notice Check if an address is approved as an interface for an ID
      * @dev ADDED for gETH
      */
-    function isInterface(address _interface, uint256 id)
-        public
-        view
-        virtual
-        returns (bool)
-    {
+    function isInterface(
+        address _interface,
+        uint256 id
+    ) public view virtual returns (bool) {
         require(
             _interface != address(0),
             "gETH: interface query for the zero address"
@@ -95,7 +116,7 @@ contract gETH is ERC1155SupplyMinterPauser {
     }
 
     /**
-     * @dev only authorized parties should set the interface as this is super crucial.
+     * @dev Only authorized parties should set the interface
      * @dev ADDED for gETH
      */
     function _setInterface(
@@ -112,8 +133,10 @@ contract gETH is ERC1155SupplyMinterPauser {
     }
 
     /**
-     * @notice to be used to set an address of a contract that will
+     * @notice Set an address of a contract that will
      * act as an interface on gETH contract for a spesific ID
+     * @param _interface Address of the contract that will act as an interface
+     * @param isSet true: sets as an interface, false: unsets
      * @dev ADDED for gETH
      */
     function setInterface(
@@ -134,40 +157,40 @@ contract gETH is ERC1155SupplyMinterPauser {
 
     /**
      * @notice Checks if the given address restricts the affect of the interfaces on their gETH
+     * @param account the potential avoider
      * @dev ADDED for gETH
      **/
-    function isAvoider(address account, uint256 id)
-        public
-        view
-        virtual
-        returns (bool)
-    {
-        return _interfaceAvoiders[account][id];
+    function isAvoider(
+        address account,
+        uint256 id
+    ) public view virtual returns (bool) {
+        return _avoiders[account][id];
     }
 
     /**
-     * @notice One can desire to restrict the affect of interfaces on their gETH,
-     * this can be achieved by simply calling this function
-     * @param isAvoid true: restrict interfaces, false: allow the interfaces,
+     * @notice Restrict any affect of interfaces on the tokens of caller
+     * @param isAvoid true: restrict interfaces, false: allow interfaces
      * @dev ADDED for gETH
      **/
-    function avoidInterfaces(bool isAvoid, uint256 id) external virtual {
-        _interfaceAvoiders[_msgSender()][id] = isAvoid;
+    function avoidInterfaces(uint256 id, bool isAvoid) external virtual {
+        _avoiders[_msgSender()][id] = isAvoid;
 
         emit InterfacesAvoided(_msgSender(), id, isAvoid);
     }
 
     /**
      * @dev ADDED for gETH
+     * @return price of the derivative in terms of underlying token, Ether
      */
-    function pricePerShare(uint256 id) external view returns (uint256) {
+    function pricePerShare(uint256 id) external virtual view returns (uint256) {
         return _pricePerShare[id];
     }
 
     /**
      * @dev ADDED for gETH
+     * @return timestamp of the latest price update for given ID
      */
-    function priceUpdateTimestamp(uint256 id) external view returns (uint256) {
+    function priceUpdateTimestamp(uint256 id) external virtual view returns (uint256) {
         return _priceUpdateTimestamp[id];
     }
 
@@ -284,7 +307,7 @@ contract gETH is ERC1155SupplyMinterPauser {
     }
 
     /**
-     * @notice interfaces should handle their own Checks in the contract
+     * @notice interfaces should handle these checks internally
      * @dev See {IERC1155-safeTransferFrom}.
      * @dev CHANGED for gETH
      * @dev ADDED "&& !isInterface(operator,id))"

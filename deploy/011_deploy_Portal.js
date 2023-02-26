@@ -1,29 +1,33 @@
 const { upgrades } = require("hardhat");
+
 const func = async function (hre) {
-  const { deployments, getNamedAccounts } = hre;
+  const { deployments, getNamedAccounts, Web3 } = hre;
   const { get, save } = deployments;
   const { deployer } = await getNamedAccounts();
 
+  const getBytes = (key) => {
+    return Web3.utils.toHex(key);
+  };
+
   const gETH = (await get("gETH")).address;
   const Swap = (await get("Swap")).address;
+  const ERC20InterfaceUpgradable = (await get("ERC20InterfaceUpgradable"))
+    .address;
+
   const ERC20InterfacePermitUpgradable = (
     await get("ERC20InterfacePermitUpgradable")
   ).address;
   const LPToken = (await get("LPToken")).address;
-  const MiniGovernance = (await get("MiniGovernance")).address;
+  const WithdrawalContract = (await get("WithdrawalContract")).address;
 
   // PARAMS
-  const _GOVERNANCE_TAX = (1 * 10 ** 10) / 100; // 1%
-  const _COMET_TAX = (3 * 10 ** 10) / 100; // 3%
-  const _MAX_MAINTAINER_FEE = (10 * 10 ** 10) / 100; // 10%
-  const _BOOSTRAP_PERIOD = 6 * 30 * 24 * 3600; // 6 Months
+  const _GOVERNANCE_FEE = (25 * 10 ** 10) / 1000; // 2.5%
 
   const Portal = await ethers.getContractFactory("Portal", {
     libraries: {
       GeodeUtils: (await get("GeodeUtils")).address,
       StakeUtils: (await get("StakeUtils")).address,
       OracleUtils: (await get("OracleUtils")).address,
-      MaintainerUtils: (await get("MaintainerUtils")).address,
     },
   });
 
@@ -31,16 +35,15 @@ const func = async function (hre) {
     Portal,
     [
       deployer,
+      deployer,
       gETH,
       deployer,
-      ERC20InterfacePermitUpgradable,
+      WithdrawalContract,
       Swap,
       LPToken,
-      MiniGovernance,
-      _GOVERNANCE_TAX,
-      _COMET_TAX,
-      _MAX_MAINTAINER_FEE,
-      _BOOSTRAP_PERIOD,
+      [ERC20InterfaceUpgradable, ERC20InterfacePermitUpgradable],
+      [getBytes("ERC20"), getBytes("ERC20Permit")],
+      _GOVERNANCE_FEE,
     ],
     {
       kind: "uups",

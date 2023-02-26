@@ -1,5 +1,9 @@
 const { BigNumber, utils } = require("ethers");
-const { ZERO_ADDRESS } = require("../testUtils");
+const {
+  ZERO_ADDRESS,
+  getCurrentBlockTimestamp,
+  setNextTimestamp,
+} = require("../testUtils");
 const { solidity } = require("ethereum-waffle");
 const { deployments } = require("hardhat");
 const web3 = require("web3");
@@ -24,6 +28,7 @@ let ERC20Interface;
 
 const firstTokenId = BigNumber.from(1);
 const secondTokenId = BigNumber.from(2);
+const poolTokenId = BigNumber.from(6969696);
 const unknownTokenId = BigNumber.from(6969696);
 
 const firstAmount = BigNumber.from(1000);
@@ -1415,6 +1420,18 @@ describe("gETH", async function () {
         });
       });
 
+      it("correct UpdateTimeStamp", async function () {
+        const now = await getCurrentBlockTimestamp();
+
+        await setNextTimestamp(now + 60 * 10);
+
+        await tokenContract
+          .connect(signers[7])
+          .setPricePerShare(firstAmount, firstTokenId);
+        const updateTS = await tokenContract.priceUpdateTimestamp(firstTokenId);
+        expect(updateTS).to.be.eq(now + 60 * 10);
+      });
+
       describe("ORACLE_ROLE can set", async function () {
         it("id = 1", async function () {
           await tokenContract
@@ -1486,27 +1503,46 @@ describe("gETH", async function () {
       beforeEach(async () => {
         await tokenContract
           .connect(signers[0])
-          .mint(firstTokenHolder, unknownTokenId, firstAmount, "0x");
+          .mint(firstTokenHolder, poolTokenId, firstAmount, "0x");
 
         ERC20InterfaceFac = await ethers.getContractFactory(
           "ERC20InterfacePermitUpgradable"
         );
         ERC20Interface = await ERC20InterfaceFac.deploy();
+
+        const getBytes32 = (x) => {
+          return ethers.utils.hexZeroPad(ethers.utils.hexlify(x), 32);
+        };
+
+        const getBytes = (key) => {
+          return Web3.utils.toHex(key);
+        };
+        const nameBytes = getBytes("* 420 name 420- ? ").substr(2);
+        const symbolBytes = getBytes("* 69symbol- ? ").substr(2);
+        const interfaceData =
+          getBytes32(nameBytes.length / 2) + nameBytes + symbolBytes;
+
         await ERC20Interface.initialize(
-          unknownTokenId,
-          "name",
-          "SYMBOL",
-          tokenContract.address
+          poolTokenId,
+          tokenContract.address,
+          interfaceData
         );
+
         // IMPORTANT LINE BELOW
         ERC20Interface.connect(signers[2]).approve(proxy, firstAmount);
 
         await tokenContract
           .connect(signers[0])
-          .setInterface(ERC20Interface.address, unknownTokenId, true);
+          .setInterface(ERC20Interface.address, poolTokenId, true);
       });
 
       describe("ERC20InterfacePermitUpgradable", async function () {
+        it("returns the correct Name", async function () {
+          expect(await ERC20Interface.name()).to.be.eq("* 420 name 420- ? ");
+        });
+        it("returns the correct Symbol", async function () {
+          expect(await ERC20Interface.symbol()).to.be.eq("* 69symbol- ? ");
+        });
         it("returns the correct totalSupply", async function () {
           expect(await ERC20Interface.totalSupply()).to.be.eq(firstAmount);
         });
@@ -1531,8 +1567,12 @@ describe("gETH", async function () {
           );
         });
         it("succeeds as approved", async function () {
-          await tokenContract.connect(signers[2]).avoidInterfaces(true);
-          await tokenContract.connect(signers[2]).avoidInterfaces(false);
+          await tokenContract
+            .connect(signers[2])
+            .avoidInterfaces(firstTokenId, true);
+          await tokenContract
+            .connect(signers[2])
+            .avoidInterfaces(firstTokenId, false);
           await ERC20Interface.connect(signers[6]).transferFrom(
             firstTokenHolder,
             secondTokenHolder,
@@ -1555,8 +1595,10 @@ describe("gETH", async function () {
           ).to.be.revertedWith("ERC20: insufficient allowance");
         });
         it("reverts: approved, but user avoided", async function () {
-          await tokenContract.connect(signers[2]).avoidInterfaces(true);
-          expect(
+          await tokenContract
+            .connect(signers[2])
+            .avoidInterfaces(poolTokenId, true);
+          await expect(
             ERC20Interface.connect(signers[6]).transferFrom(
               firstTokenHolder,
               secondTokenHolder,
@@ -1594,8 +1636,12 @@ describe("gETH", async function () {
         });
 
         it("succeeds", async function () {
-          await tokenContract.connect(signers[1]).avoidInterfaces(true);
-          await tokenContract.connect(signers[1]).avoidInterfaces(false);
+          await tokenContract
+            .connect(signers[1])
+            .avoidInterfaces(firstTokenId, true);
+          await tokenContract
+            .connect(signers[1])
+            .avoidInterfaces(firstTokenId, false);
 
           expect(
             await tokenContract.balanceOf(tokenHolder, firstTokenId)
@@ -1606,7 +1652,9 @@ describe("gETH", async function () {
           ).to.be.eq(BigNumber.from(0));
         });
         it("reverts if avoided", async function () {
-          await tokenContract.connect(signers[1]).avoidInterfaces(true);
+          await tokenContract
+            .connect(signers[1])
+            .avoidInterfaces(firstTokenId, true);
           expect(
             await tokenContract.balanceOf(tokenHolder, firstTokenId)
           ).to.be.eq(firstAmount.toString());
@@ -1628,7 +1676,7 @@ describe("gETH", async function () {
             "nonERC1155Receiver"
           );
           nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
-            unknownTokenId,
+            poolTokenId,
             tokenContract.address
           );
           await tokenContract
@@ -1653,7 +1701,7 @@ describe("gETH", async function () {
         await expect(
           tokenContract
             .connect(signers[0])
-            .setInterface(ZERO_ADDRESS, unknownTokenId, true)
+            .setInterface(ZERO_ADDRESS, poolTokenId, true)
         ).to.be.revertedWith("gETH: _interface must be a contract");
       });
 
@@ -1662,7 +1710,7 @@ describe("gETH", async function () {
           "nonERC1155Receiver"
         );
         const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
-          unknownTokenId,
+          poolTokenId,
           tokenContract.address
         );
         await ERC20Interface.connect(signers[2]).transfer(
@@ -1680,7 +1728,7 @@ describe("gETH", async function () {
           "nonERC1155Receiver"
         );
         const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
-          unknownTokenId,
+          poolTokenId,
           tokenContract.address
         );
         await tokenContract
@@ -1701,7 +1749,7 @@ describe("gETH", async function () {
           "nonERC1155Receiver"
         );
         const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
-          unknownTokenId,
+          poolTokenId,
           tokenContract.address
         );
         await expect(
@@ -1716,7 +1764,7 @@ describe("gETH", async function () {
       it("unset(old) interfaces can NOT act", async function () {
         await tokenContract
           .connect(signers[0])
-          .setInterface(ERC20Interface.address, unknownTokenId, false);
+          .setInterface(ERC20Interface.address, poolTokenId, false);
         await expect(
           ERC20Interface.connect(signers[6]).transferFrom(
             firstTokenHolder,

@@ -34,133 +34,131 @@ import "./ERC20InterfaceUpgradable.sol";
  * @custom:storage-size 51
  */
 contract ERC20InterfacePermitUpgradable is
-    Initializable,
-    ERC20InterfaceUpgradable,
-    IERC20PermitUpgradeable,
-    EIP712Upgradeable
+  Initializable,
+  ERC20InterfaceUpgradable,
+  IERC20PermitUpgradeable,
+  EIP712Upgradeable
 {
-    using CountersUpgradeable for CountersUpgradeable.Counter;
+  using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    mapping(address => CountersUpgradeable.Counter) private _nonces;
+  mapping(address => CountersUpgradeable.Counter) private _nonces;
 
-    // solhint-disable-next-line var-name-mixedcase
-    bytes32 private constant _PERMIT_TYPEHASH =
-        keccak256(
-            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-        );
-    /**
-     * @dev In previous versions `_PERMIT_TYPEHASH` was declared as `immutable`.
-     * However, to ensure consistency with the upgradeable transpiler, we will continue
-     * to reserve a slot.
-     * @custom:oz-renamed-from _PERMIT_TYPEHASH
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    bytes32 private _PERMIT_TYPEHASH_DEPRECATED_SLOT;
+  // solhint-disable-next-line var-name-mixedcase
+  bytes32 private constant _PERMIT_TYPEHASH =
+    keccak256(
+      "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+    );
+  /**
+   * @dev In previous versions `_PERMIT_TYPEHASH` was declared as `immutable`.
+   * However, to ensure consistency with the upgradeable transpiler, we will continue
+   * to reserve a slot.
+   * @custom:oz-renamed-from _PERMIT_TYPEHASH
+   */
+  // solhint-disable-next-line var-name-mixedcase
+  bytes32 private _PERMIT_TYPEHASH_DEPRECATED_SLOT;
 
-    /**
-     * @dev Sets the values for {name} and {symbol}.
-     *
-     * The default value of {decimals} is 18. To select a different value for
-     * {decimals} you should overload it.
-     *
-     */
-    function initialize(
-        uint256 id_,
-        string calldata name_,
-        string calldata symbol_,
-        address gETH_1155
-    ) public virtual initializer {
-        __ERC20interfacePermit_init(id_, name_, symbol_, gETH_1155);
-    }
+  /**
+   * @dev Sets the values for {name} and {symbol}.
+   *
+   * The default value of {decimals} is 18. To select a different value for
+   * {decimals} you should overload it.
+   *
+   */
+  function initialize(
+    uint256 id_,
+    address gETH_,
+    bytes calldata data
+  ) public virtual override initializer returns (bool) {
+    uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
+    __ERC20interfacePermit_init(
+      id_,
+      gETH_,
+      string(BytesLib.slice(data, 32, nameLen)),
+      string(BytesLib.slice(data, 32 + nameLen, data.length - (32 + nameLen)))
+    );
+    return true;
+  }
 
-    /**
-     * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
-     *
-     * It's a good idea to use the same `name` that is defined as the ERC20 token name.
-     */
-    function __ERC20interfacePermit_init(
-        uint256 id_,
-        string calldata name_,
-        string calldata symbol_,
-        address gETH_1155
-    ) internal onlyInitializing {
-        __ERC20interface_init_unchained(id_, name_, symbol_, gETH_1155);
-        __EIP712_init_unchained(name_, "1");
-    }
+  /**
+   * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
+   *
+   * It's a good idea to use the same `name` that is defined as the ERC20 token name.
+   */
+  function __ERC20interfacePermit_init(
+    uint256 id_,
+    address gETH_,
+    string memory name_,
+    string memory symbol_
+  ) internal onlyInitializing {
+    __ERC20interface_init_unchained(id_, gETH_, name_, symbol_);
+    __EIP712_init_unchained(name_, "1");
+  }
 
-    /**
-     * @dev See {IERC20Permit-permit}.
-     */
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual override {
-        require(block.timestamp <= deadline, "ERC20Permit: expired deadline");
+  /**
+   * @dev See {IERC20Permit-permit}.
+   */
+  function permit(
+    address owner,
+    address spender,
+    uint256 value,
+    uint256 deadline,
+    uint8 v,
+    bytes32 r,
+    bytes32 s
+  ) public virtual override {
+    require(block.timestamp <= deadline, "ERC20Permit: expired deadline");
 
-        bytes32 structHash = keccak256(
-            abi.encode(
-                _PERMIT_TYPEHASH,
-                owner,
-                spender,
-                value,
-                _useNonce(owner),
-                deadline
-            )
-        );
+    bytes32 structHash = keccak256(
+      abi.encode(
+        _PERMIT_TYPEHASH,
+        owner,
+        spender,
+        value,
+        _useNonce(owner),
+        deadline
+      )
+    );
 
-        bytes32 hash = _hashTypedDataV4(structHash);
+    bytes32 hash = _hashTypedDataV4(structHash);
 
-        address signer = ECDSAUpgradeable.recover(hash, v, r, s);
-        require(signer == owner, "ERC20Permit: invalid signature");
+    address signer = ECDSAUpgradeable.recover(hash, v, r, s);
+    require(signer == owner, "ERC20Permit: invalid signature");
 
-        _approve(owner, spender, value);
-    }
+    _approve(owner, spender, value);
+  }
 
-    /**
-     * @dev See {IERC20Permit-nonces}.
-     */
-    function nonces(address owner)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _nonces[owner].current();
-    }
+  /**
+   * @dev See {IERC20Permit-nonces}.
+   */
+  function nonces(
+    address owner
+  ) public view virtual override returns (uint256) {
+    return _nonces[owner].current();
+  }
 
-    /**
-     * @dev See {IERC20Permit-DOMAIN_SEPARATOR}.
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function DOMAIN_SEPARATOR() external view override returns (bytes32) {
-        return _domainSeparatorV4();
-    }
+  /**
+   * @dev See {IERC20Permit-DOMAIN_SEPARATOR}.
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function DOMAIN_SEPARATOR() external view override returns (bytes32) {
+    return _domainSeparatorV4();
+  }
 
-    /**
-     * @dev "Consume a nonce": return the current value and increment.
-     *
-     * _Available since v4.1._
-     */
-    function _useNonce(address owner)
-        internal
-        virtual
-        returns (uint256 current)
-    {
-        CountersUpgradeable.Counter storage nonce = _nonces[owner];
-        current = nonce.current();
-        nonce.increment();
-    }
+  /**
+   * @dev "Consume a nonce": return the current value and increment.
+   *
+   * _Available since v4.1._
+   */
+  function _useNonce(address owner) internal virtual returns (uint256 current) {
+    CountersUpgradeable.Counter storage nonce = _nonces[owner];
+    current = nonce.current();
+    nonce.increment();
+  }
 
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[49] private __gap;
+  /**
+   * @dev This empty reserved space is put in place to allow future versions to add new
+   * variables without shifting down storage in the inheritance chain.
+   * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+   */
+  uint256[49] private __gap;
 }

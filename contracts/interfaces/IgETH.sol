@@ -6,22 +6,22 @@ interface IgETH {
 
     function uri(uint256) external view returns (string memory);
 
-    function balanceOf(address account, uint256 id)
-        external
-        view
-        returns (uint256);
+    function balanceOf(
+        address account,
+        uint256 id
+    ) external view returns (uint256);
 
-    function balanceOfBatch(address[] memory accounts, uint256[] memory ids)
-        external
-        view
-        returns (uint256[] memory);
+    function balanceOfBatch(
+        address[] memory accounts,
+        uint256[] memory ids
+    ) external view returns (uint256[] memory);
 
     function setApprovalForAll(address operator, bool approved) external;
 
-    function isApprovedForAll(address account, address operator)
-        external
-        view
-        returns (bool);
+    function isApprovedForAll(
+        address account,
+        address operator
+    ) external view returns (bool);
 
     function safeTransferFrom(
         address from,
@@ -39,11 +39,7 @@ interface IgETH {
         bytes memory data
     ) external;
 
-    function burn(
-        address account,
-        uint256 id,
-        uint256 value
-    ) external;
+    function burn(address account, uint256 id, uint256 value) external;
 
     function burnBatch(
         address account,
@@ -73,6 +69,8 @@ interface IgETH {
 
     function unpause() external;
 
+    // gETH Specials
+
     function denominator() external view returns (uint256);
 
     function pricePerShare(uint256 id) external view returns (uint256);
@@ -81,16 +79,19 @@ interface IgETH {
 
     function setPricePerShare(uint256 price, uint256 id) external;
 
-    function isInterface(address _interface, uint256 id)
-        external
-        view
-        returns (bool);
-
-    function setInterface(
+    function isInterface(
         address _interface,
-        uint256 id,
-        bool isSet
-    ) external;
+        uint256 id
+    ) external view returns (bool);
+
+    function isAvoider(
+        address account,
+        uint256 id
+    ) external view returns (bool);
+
+    function avoidInterfaces(uint256 id, bool isAvoid) external;
+
+    function setInterface(address _interface, uint256 id, bool isSet) external;
 
     function updateMinterRole(address Minter) external;
 

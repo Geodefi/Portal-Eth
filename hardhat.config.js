@@ -28,8 +28,8 @@ const config = {
         version: "0.8.7",
         settings: {
           optimizer: {
-            enabled: true,
             runs: 200,
+            enabled: true,
           },
         },
       },
@@ -41,13 +41,12 @@ const config = {
       deploy: ["./deploy"],
       forking: FORK_MAINNET
         ? {
-            url: process.env.FORK_URL,
+            url: process.env.GOERLI,
           }
         : undefined,
-      // allowUnlimitedContractSize: true,
     },
-    prater: {
-      url: process.env.PRATER,
+    goerli: {
+      url: process.env.GOERLI,
       deploy: ["./deploy"],
       chainId: 5,
       gasPrice: ethers.utils.parseUnits("10", "gwei").toNumber(),
@@ -75,17 +74,20 @@ const config = {
   gasReporter: {
     currency: "USD",
     gasPrice: 30,
+    coinmarketcap: process.env.COINMARKETCAP,
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      goerli: process.env.ETHERSCAN_API_KEY,
+    },
   },
 };
 if (process.env.ACCOUNT_PRIVATE_KEYS) {
   config.networks = {
     ...config.networks,
-    prater: {
-      ...config.networks?.prater,
-      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(" "),
+    goerli: {
+      ...config.networks?.goerli,
+      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),
     },
   };
 }

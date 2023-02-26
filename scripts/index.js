@@ -5,23 +5,21 @@ const activatePortal = require("./tasks/activatePortal");
 
 const propose = require("./tasks/propose");
 const approveProposal = require("./tasks/approveProposal");
-const elect = require("./tasks/elect");
 
 const setController = require("./tasks/setController");
 const changeOperatorMaintainer = require("./tasks/changeMaintainer");
 
-const approveOperator = require("./tasks/approveOperator");
+const approveOperators = require("./tasks/approveOperators");
 const initiateOperator = require("./tasks/initiateOperator");
-const initiatePlanet = require("./tasks/initiatePlanet");
+const initiatePool = require("./tasks/initiatePool");
 
 const switchFee = require("./tasks/switchFee");
-const rampA = require("./tasks/rampA");
 
 task("accounts", "Prints the list of accounts", accounts);
 
 // portal management
-task("details", "", details);
-task("activate-portal", "", activatePortal);
+task("details", "describes the Portal detail and lists users", details);
+task("activate-portal", "makes Portal gETH minter", activatePortal);
 
 // proposals
 task("propose", "Creates a proposal with desired parameters")
@@ -37,11 +35,6 @@ task("approve-proposal", "Approves a proposal with given id")
   .addOptionalParam("id", "given proposal to approve")
   .setAction(approveProposal);
 
-task("elect", "Approves a Senate proposal")
-  .addParam("sid", "iven senate to approve")
-  .addParam("pid", "id of planet")
-  .setAction(elect);
-
 // controllers
 task("set-controller", "Approves a Senate proposal")
   .addParam("id", "id to change the controller")
@@ -54,34 +47,34 @@ task("change-maintainer", "Change operator of an ID")
   .setAction(changeOperatorMaintainer);
 
 // maintainers
-task("initiate-planet", "initiate a planet with correct parameters")
-  .addParam("id", "id for planet")
-  .addParam("f", "maintainerFee")
+task("initiate-pool", "initiate a pool with correct parameters")
+  .addParam("f", "maintenance fee")
+  .addOptionalParam("i", "interface name, default: none")
   .addParam("m", "maintainer address")
-  .addParam("n", "interface name")
-  .addParam("s", "interface symbol")
-  .setAction(initiatePlanet);
+  .addParam("n", "name of the pool")
+  .addOptionalParam("tn", "token name")
+  .addOptionalParam("ts", "token symbol")
+  .addOptionalParam("v", "visibility: public/private, default:public")
+  .addOptionalParam("lp", "liquidity pool, default: false")
+  .setAction(initiatePool);
 
 task("initiate-operator", "initiate an operator with correct parameters")
   .addParam("id", "id for planet")
-  .addParam("f", "maintainerFee")
+  .addParam("f", "MaintenanceFee")
   .addParam("m", "maintainer address")
   .addParam("p", "maintainer address")
   .setAction(initiateOperator);
 
-task("approve-operator", "Approves a Senate proposal")
+task("approve-operators", "Approves a Senate proposal")
   .addParam("pid", "pool ID")
-  .addParam("oid", "operator ID")
-  .addParam("a", "number of validators to allow")
-  .setAction(approveOperator);
+  .addParam("oids", "operator IDs array, separated by comma")
+  .addParam(
+    "as",
+    "number of validators to allow, separated by comma, relative to oids array"
+  )
+  .setAction(approveOperators);
 
 task("switch-fee", "Change fee of an ID")
   .addParam("id", "id for maintainer")
   .addParam("f", "fee")
   .setAction(switchFee);
-
-// DWP
-task("ramp-a", "Change A parameter of Withdrawal Pool of given ID ")
-  .addParam("id", "id of planet")
-  .addParam("a", "new A")
-  .setAction(rampA);
