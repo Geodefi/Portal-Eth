@@ -95,6 +95,7 @@ library StakeUtils {
 
   /// @notice EVENTS
   event IdInitiated(uint256 indexed id, uint256 indexed TYPE);
+  event VisibilitySet(uint256 id, bool indexed isPrivate);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(
@@ -156,7 +157,7 @@ library StakeUtils {
    * * Like default Withdrawal Contract version.
    * @param _allowedModules TYPE => version => isAllowed, useful to check if any version of the module can be used.
    * * Like all the whitelisted gETH interfaces.
-   * @param _validators pubkey => Validator, contains all the data about proposed or/and active validators
+   * @param _validators pubkey => Validator, contains all the data about proposed, alienated, active, exited validators
    * @param __gap keep the struct size at 16
    **/
   struct PooledStaking {
@@ -215,7 +216,7 @@ library StakeUtils {
    * @notice restricts the access to given function based on TYPE and msg.sender
    * @param expectCONTROLLER restricts the access to only CONTROLLER.
    * @param expectMaintainer restricts the access to only maintainer.
-   * @param restrictionMap Restricts which TYPEs can pass the authentication 0: Operator = TYPE(4), Pool = TYPE(5)
+   * @param restrictionMap Restricts which TYPEs can pass the authentication. 0: Operator = TYPE(4), 1: Pool = TYPE(5)
    * @dev authenticate can only be used after an ID is initiated
    * @dev CONTROLLERS and maintainers of the Prisoned Operators can not access.
    * @dev In principal, CONTROLLER should be able to do anything a maintainer is authenticated to do.
@@ -462,6 +463,10 @@ library StakeUtils {
     require(isPrivate != isPrivatePool(DATASTORE, poolId), "SU: already set");
 
     DATASTORE.writeUintForId(poolId, "private", isPrivate ? 1 : 0);
+    if (!isPrivate) {
+      DATASTORE.writeAddressForId(poolId, "whitelist", address(0));
+    }
+    emit VisibilitySet(poolId, isPrivate);
   }
 
   /**
@@ -567,7 +572,7 @@ library StakeUtils {
 
     uint256 id = DSU.generateId(NAME, ID_TYPE.POOL);
 
-    require(id > 10 ** 7, "SU: Wow! low id");
+    require(id > 10 ** 9, "SU: Wow! low id");
 
     require(
       DATASTORE.readUintForId(id, "initiated") == 0,
@@ -583,10 +588,15 @@ library StakeUtils {
     _setMaintenanceFee(DATASTORE, id, fee);
 
     _deployWithdrawalContract(self, DATASTORE, id);
-    if (config[0]) setPoolVisibility(DATASTORE, id, true);
-    if (config[1])
+    if (config[0]) {
+      setPoolVisibility(DATASTORE, id, true);
+    }
+    if (config[1]) {
       _deployInterface(self, DATASTORE, id, interfaceVersion, interface_data);
-    if (config[2]) deployLiquidityPool(self, DATASTORE, id, _GOVERNANCE);
+    }
+    if (config[2]) {
+      deployLiquidityPool(self, DATASTORE, id, _GOVERNANCE);
+    }
 
     // initially 1 ETHER = 1 ETHER
     self.gETH.setPricePerShare(1 ether, id);
@@ -635,13 +645,18 @@ library StakeUtils {
    * @notice CONTROLLER of the ID can change the maintainer to any address other than ZERO_ADDRESS
    * @dev there can only be 1 maintainer per ID.
    * @dev it is wise to change the maintainer before the CONTROLLER, in case of any migration
+   * @dev we don't use authenticate here because malicious authenticators can imprison operators
+   * * and prevent them entering here.
    */
   function changeMaintainer(
     DSU.IsolatedStorage storage DATASTORE,
     uint256 id,
     address newMaintainer
   ) external {
-    authenticate(DATASTORE, id, true, false, [true, true]);
+    require(
+      msg.sender == DATASTORE.readAddressForId(id, "CONTROLLER"),
+      "SU: sender NOT CONTROLLER"
+    );
     _setMaintainer(DATASTORE, id, newMaintainer);
   }
 
@@ -915,7 +930,7 @@ library StakeUtils {
     uint256 operatorId,
     uint256 newPeriod
   ) external {
-    authenticate(DATASTORE, operatorId, true, true, [true, false]);
+    authenticate(DATASTORE, operatorId, false, true, [true, false]);
 
     require(
       block.timestamp > DATASTORE.readUintForId(operatorId, "periodSwitch"),
@@ -1049,15 +1064,15 @@ library StakeUtils {
    * @notice checks if the Whitelist allows staker to use given private pool
    * @dev Owner of the pool doesn't need whitelisting
    * @dev Otherwise requires a whitelisting address to be set
-   * todo: add to portal
    */
   function isWhitelisted(
     DSU.IsolatedStorage storage DATASTORE,
     uint256 poolId,
     address staker
-  ) public view returns (bool) {
-    if (DATASTORE.readAddressForId(poolId, "CONTROLLER") == msg.sender)
+  ) internal view returns (bool) {
+    if (DATASTORE.readAddressForId(poolId, "CONTROLLER") == msg.sender) {
       return true;
+    }
 
     address whitelist = DATASTORE.readAddressForId(poolId, "whitelist");
     require(whitelist != address(0), "SU: this pool does not have whitelist");
@@ -1194,11 +1209,12 @@ library StakeUtils {
     require(deadline > block.timestamp, "SU: deadline not met");
     require(receiver != address(0), "SU: receiver is zero address");
 
-    if (isPrivatePool(DATASTORE, poolId))
+    if (isPrivatePool(DATASTORE, poolId)) {
       require(
         isWhitelisted(DATASTORE, poolId, msg.sender),
         "SU: sender NOT whitelisted"
       );
+    }
 
     uint256 remEth = msg.value;
 
@@ -1215,7 +1231,9 @@ library StakeUtils {
       }
     }
 
-    if (remEth > 0) mintedgETH = _mintgETH(self, DATASTORE, poolId, remEth);
+    if (remEth > 0) {
+      mintedgETH = _mintgETH(self, DATASTORE, poolId, remEth);
+    }
     require(boughtgETH + mintedgETH >= mingETH, "SU: less than minimum");
 
     // send back to user

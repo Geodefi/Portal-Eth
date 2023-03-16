@@ -11,6 +11,7 @@ import {GeodeUtils} from "../utils/GeodeUtilsLib.sol";
 
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IPortal} from "../../interfaces/IPortal.sol";
+import {IGeodeModule} from "../../interfaces/IGeodeModule.sol";
 import {IWithdrawalContract} from "../../interfaces/IWithdrawalContract.sol";
 
 /**
@@ -31,6 +32,7 @@ import {IWithdrawalContract} from "../../interfaces/IWithdrawalContract.sol";
 
 contract WithdrawalContract is
   IWithdrawalContract,
+  IGeodeModule,
   ReentrancyGuardUpgradeable,
   PausableUpgradeable,
   UUPSUpgradeable
@@ -191,7 +193,7 @@ contract WithdrawalContract is
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external virtual override {
+  ) external virtual override(IGeodeModule, IWithdrawalContract) {
     GEM.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
   }
 
@@ -214,8 +216,9 @@ contract WithdrawalContract is
    * it is still not public, but external
    */
   function fetchUpgradeProposal() external virtual override onlyController {
-    uint256 proposedVersion = getPortal()
-      .fetchWithdrawalContractUpgradeProposal(POOL_ID);
+    uint256 proposedVersion = getPortal().fetchModuleUpgradeProposal(
+      ID_TYPE.MODULE_WITHDRAWAL_CONTRACT
+    );
 
     require(
       proposedVersion != getContractVersion() && proposedVersion != 0,

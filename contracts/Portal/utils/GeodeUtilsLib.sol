@@ -25,7 +25,7 @@ import {DataStoreUtils as DSU} from "./DataStoreUtilsLib.sol";
  * * * Contract can be upgradable once Senate approves it.
  *
  * * Type 3 : __GAP__
- * * * ormally represented the admin contract, but we use UUPS. Reserved to be never used.
+ * * * Normally represented the admin contract, but we use UUPS. Reserved to be never used.
  *
  * @dev Contracts relying on this library must initialize GeodeUtils.DualGovernance
  * @dev Functions are already protected accordingly
@@ -275,8 +275,10 @@ library GeodeUtils {
 
     require(_CONTROLLER != address(0), "GU: CONTROLLER can NOT be ZERO");
     require(
-      _TYPE != ID_TYPE.NONE && _TYPE != ID_TYPE.__GAP__,
-      "GU: TYPE is NONE or GAP"
+      _TYPE != ID_TYPE.NONE &&
+        _TYPE != ID_TYPE.__GAP__ &&
+        _TYPE != ID_TYPE.POOL,
+      "GU: TYPE is NONE, GAP or POOL"
     );
     require(
       duration >= MIN_PROPOSAL_DURATION && duration <= MAX_PROPOSAL_DURATION,
@@ -296,13 +298,13 @@ library GeodeUtils {
   }
 
   /**
-   * @notice onlySenate, approves a proposal and records given data to
-   *  @notice specific changes for the reserved types (1,2,3) are implemented here,
-   *  any other addition should take place in Portal, as not related
-   *  @param id given ID proposal that has been approved by Senate
-   *  @dev Senate is not able to approve approved proposals
-   *  @dev Senate is not able to approve expired proposals
-   *  @dev Senate is not able to approve SENATE proposals
+   * @notice onlySenate, approves a proposal and records given data to DataStore
+   * @notice specific changes for the reserved types (1,2,3) are implemented here,
+   * any other addition should take place in Portal, as not related
+   * @param id given ID proposal that has been approved by Senate
+   * @dev Senate is not able to approve approved proposals
+   * @dev Senate is not able to approve expired proposals
+   * @dev Senate is not able to approve SENATE proposals
    */
   function approveProposal(
     DualGovernance storage self,

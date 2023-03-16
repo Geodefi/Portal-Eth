@@ -30,9 +30,9 @@ interface IPortal {
 
   function unpausegETH() external;
 
-  function fetchWithdrawalContractUpgradeProposal(
-    uint256 id
-  ) external returns (uint256 withdrawalContractVersion);
+  function fetchModuleUpgradeProposal(
+    uint256 moduleType
+  ) external returns (uint256 moduleVersion);
 
   function gETH() external view returns (address);
 

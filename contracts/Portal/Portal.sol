@@ -17,7 +17,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 import "../interfaces/IgETH.sol";
 import "../interfaces/IPortal.sol";
-import "../interfaces/IWithdrawalContract.sol";
+import "../interfaces/IGeodeModule.sol";
 
 import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "./utils/globals.sol";
 
@@ -50,8 +50,8 @@ import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "./utils/globals.sol";
  *
  * note ctrl+k+2 and ctrl+k+1 then scroll while reading the function names and the comments.
  */
-
 contract Portal is
+  IGeodeModule,
   IPortal,
   ContextUpgradeable,
   ReentrancyGuardUpgradeable,
@@ -89,6 +89,7 @@ contract Portal is
    * @dev StakeUtils events
    */
   event IdInitiated(uint256 indexed id, uint256 indexed TYPE);
+  event VisibilitySet(uint256 id, bool indexed isPrivate);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(
@@ -533,7 +534,7 @@ contract Portal is
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external virtual override {
+  ) external virtual override(IGeodeModule, IPortal) {
     GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
   }
 
@@ -690,17 +691,15 @@ contract Portal is
    * @dev MODULES
    */
 
-  function fetchWithdrawalContractUpgradeProposal(
-    uint256 id
-  ) external virtual override returns (uint256 withdrawalContractVersion) {
-    withdrawalContractVersion = STAKER._defaultModules[
-      ID_TYPE.MODULE_WITHDRAWAL_CONTRACT
-    ];
+  function fetchModuleUpgradeProposal(
+    uint256 moduleType
+  ) external virtual override returns (uint256 moduleVersion) {
+    moduleVersion = STAKER._defaultModules[moduleType];
 
-    StakeUtils.withdrawalContractById(DATASTORE, id).newProposal(
-      DATASTORE.readAddressForId(withdrawalContractVersion, "CONTROLLER"),
+    IGeodeModule(msg.sender).newProposal(
+      DATASTORE.readAddressForId(moduleVersion, "CONTROLLER"),
       ID_TYPE.CONTRACT_UPGRADE,
-      DATASTORE.readBytesForId(withdrawalContractVersion, "NAME"),
+      DATASTORE.readBytesForId(moduleVersion, "NAME"),
       4 weeks
     );
   }
