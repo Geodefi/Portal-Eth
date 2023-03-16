@@ -1505,11 +1505,6 @@ describe("gETH", async function () {
           .connect(signers[0])
           .mint(firstTokenHolder, poolTokenId, firstAmount, "0x");
 
-        ERC20InterfaceFac = await ethers.getContractFactory(
-          "ERC20InterfacePermitUpgradable"
-        );
-        ERC20Interface = await ERC20InterfaceFac.deploy();
-
         const getBytes32 = (x) => {
           return ethers.utils.hexZeroPad(ethers.utils.hexlify(x), 32);
         };
@@ -1522,11 +1517,16 @@ describe("gETH", async function () {
         const interfaceData =
           getBytes32(nameBytes.length / 2) + nameBytes + symbolBytes;
 
-        await ERC20Interface.initialize(
+        ERC20InterfaceFac = await ethers.getContractFactory(
+          "ERC20InterfacePermitUpgradable"
+        );
+
+        ERC20Interface = await upgrades.deployProxy(ERC20InterfaceFac, [
           poolTokenId,
           tokenContract.address,
-          interfaceData
-        );
+          interfaceData,
+        ]);
+        await ERC20Interface.deployed();
 
         // IMPORTANT LINE BELOW
         ERC20Interface.connect(signers[2]).approve(proxy, firstAmount);

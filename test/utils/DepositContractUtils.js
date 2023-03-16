@@ -25,7 +25,17 @@ describe("DepositContractUtils", async () => {
   describe("DepositContractUtils", () => {
     it("getDepositContract to get the address", async () => {
       const response = await testContract.getDepositContract();
-      expect(response).to.eq("0x00000000219ab540356cBB839Cbe05303d7705Fa");
+      const chainId = await web3.eth.getChainId();
+      console.log(chainId);
+
+      const depositContract =
+        chainId === 31337
+          ? "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b"
+          : chainId === 1
+          ? "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+          : 0;
+
+      expect(response).to.eq(depositContract);
     });
 
     it("addressToWC to get 0x01 instead of 0x00 as beginning", async () => {

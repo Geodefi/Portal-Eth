@@ -74,12 +74,14 @@ describe("ERC20Permit", function (accounts) {
     const symbolBytes = getBytes(symbol).substr(2);
     const interfaceData =
       getBytes32(nameBytes.length / 2) + nameBytes + symbolBytes;
-    ERC20Interface = await ERC20InterfaceFac.deploy();
-    await ERC20Interface.initialize(
+
+    ERC20Interface = await upgrades.deployProxy(ERC20InterfaceFac, [
       unknownTokenId,
       tokenContract.address,
-      interfaceData
-    );
+      interfaceData,
+    ]);
+    await ERC20Interface.deployed();
+
     token = ERC20Interface;
     chainId = await web3.eth.getChainId();
   });

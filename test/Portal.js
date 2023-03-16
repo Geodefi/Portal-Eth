@@ -922,7 +922,7 @@ describe("Portal", async () => {
             operatorName,
             MIN_PROPOSAL_DURATION
           )
-        ).to.be.revertedWith("GU: TYPE is NONE or GAP");
+        ).to.be.revertedWith("GU: TYPE is NONE, GAP or POOL");
         await expect(
           PORTAL.connect(GOVERNANCE).newProposal(
             operatorOwner.address,
@@ -930,7 +930,7 @@ describe("Portal", async () => {
             operatorName,
             MIN_PROPOSAL_DURATION
           )
-        ).to.be.revertedWith("GU: TYPE is NONE or GAP");
+        ).to.be.revertedWith("GU: TYPE is NONE, GAP or POOL");
       });
       it("reverts if already proposed", async () => {
         await PORTAL.connect(GOVERNANCE).newProposal(
@@ -1129,6 +1129,9 @@ describe("Portal", async () => {
     });
 
     describe("approveSenate", async () => {
+      let poolId10;
+      let wrongId10;
+      let randomId10;
       beforeEach(async () => {
         await PORTAL.connect(GOVERNANCE).newProposal(
           operatorOwner.address,
@@ -1138,29 +1141,34 @@ describe("Portal", async () => {
         );
         await PORTAL.connect(SENATE).approveProposal(operatorId);
 
+        poolId10 = await PORTAL.generateId("myPool", 10);
+        wrongId10 = await PORTAL.generateId("wrong", 10);
+        randomId10 = await PORTAL.generateId("random", 10);
+
         await PORTAL.connect(GOVERNANCE).newProposal(
           poolOwner.address,
-          5,
+          10,
           poolName,
           MIN_PROPOSAL_DURATION
         );
-        await PORTAL.connect(SENATE).approveProposal(poolId);
+        await PORTAL.connect(SENATE).approveProposal(poolId10);
 
         await PORTAL.connect(GOVERNANCE).newProposal(
           poolOwner.address,
-          5,
+          10,
           wrongName,
           MIN_PROPOSAL_DURATION
         );
-        await PORTAL.connect(SENATE).approveProposal(wrongId);
+        await PORTAL.connect(SENATE).approveProposal(wrongId10);
 
         await PORTAL.connect(GOVERNANCE).newProposal(
           poolOwner.address,
-          5,
+          10,
           randomName,
           MIN_PROPOSAL_DURATION
         );
 
+        PORTAL.connect(GOVERNANCE).setElectorType(10, true);
         await PORTAL.connect(GOVERNANCE).newProposal(
           attacker.address,
           1,
@@ -1173,23 +1181,26 @@ describe("Portal", async () => {
           (await getCurrentBlockTimestamp()) + MIN_PROPOSAL_DURATION + 1
         );
         await expect(
-          PORTAL.connect(poolOwner).approveSenate(senateId, poolId)
+          PORTAL.connect(poolOwner).approveSenate(senateId, poolId10)
         ).to.be.revertedWith("GU: proposal expired");
       });
       it("reverts when NOT CONTROLLER", async () => {
         await expect(
-          PORTAL.connect(attacker).approveSenate(senateId, poolId)
+          PORTAL.connect(attacker).approveSenate(senateId, poolId10)
         ).to.be.revertedWith("GU: CONTROLLER role needed");
       });
       it("reverts when NOT an election", async () => {
         await PORTAL.connect(GOVERNANCE).newProposal(
           attacker.address,
-          5,
+          10,
           extraName1,
           MIN_PROPOSAL_DURATION
         );
         await expect(
-          PORTAL.connect(poolOwner).approveSenate(extraId1, poolId)
+          PORTAL.connect(poolOwner).approveSenate(
+            await PORTAL.generateId("extra1", 10),
+            poolId10
+          )
         ).to.be.revertedWith("GU: NOT Senate Proposal");
       });
       it("reverts when TYPE is NOT elector", async () => {
@@ -1199,21 +1210,24 @@ describe("Portal", async () => {
       });
 
       it("reverts if already voted", async () => {
-        await PORTAL.connect(poolOwner).approveSenate(senateId, poolId);
+        await PORTAL.connect(poolOwner).approveSenate(senateId, poolId10);
         await expect(
-          PORTAL.connect(poolOwner).approveSenate(senateId, poolId)
+          PORTAL.connect(poolOwner).approveSenate(senateId, poolId10)
         ).to.be.revertedWith("GU: already approved");
       });
 
       describe("success", async () => {
         describe("Changes Senate if 2/3", async () => {
           beforeEach(async () => {
-            await PORTAL.connect(SENATE).approveProposal(randomId);
+            await PORTAL.connect(SENATE).approveProposal(randomId10);
           });
           describe("new senate", () => {
             beforeEach(async () => {
-              await PORTAL.connect(poolOwner).approveSenate(senateId, poolId);
-              await PORTAL.connect(poolOwner).approveSenate(senateId, randomId);
+              await PORTAL.connect(poolOwner).approveSenate(senateId, poolId10);
+              await PORTAL.connect(poolOwner).approveSenate(
+                senateId,
+                randomId10
+              );
             });
             it("correct deadline", async () => {
               expect(
@@ -1232,16 +1246,16 @@ describe("Portal", async () => {
             });
           });
           it("emits NewSenate", async () => {
-            PORTAL.connect(poolOwner).approveSenate(senateId, wrongId);
+            PORTAL.connect(poolOwner).approveSenate(senateId, wrongId10);
             await expect(
-              PORTAL.connect(poolOwner).approveSenate(senateId, randomId)
+              PORTAL.connect(poolOwner).approveSenate(senateId, randomId10)
             ).to.emit(PORTAL, "NewSenate");
           });
         });
 
         it("emits Vote", async () => {
           await expect(
-            PORTAL.connect(poolOwner).approveSenate(senateId, poolId)
+            PORTAL.connect(poolOwner).approveSenate(senateId, poolId10)
           ).to.emit(PORTAL, "Vote");
         });
       });
@@ -1291,13 +1305,20 @@ describe("Portal", async () => {
       it("reverts if TYPE is not OPERATOR", async () => {
         await PORTAL.connect(GOVERNANCE).newProposal(
           operatorOwner.address,
-          5,
+          10,
           wrongName,
           WEEK
         );
-        await PORTAL.connect(SENATE).approveProposal(wrongId);
+        await PORTAL.connect(SENATE).approveProposal(
+          await PORTAL.generateId("wrong", 10)
+        );
         await expect(
-          PORTAL.connect(attacker).initiateOperator(wrongId, 0, 0, ZERO_ADDRESS)
+          PORTAL.connect(attacker).initiateOperator(
+            await PORTAL.generateId("wrong", 10),
+            0,
+            0,
+            ZERO_ADDRESS
+          )
         ).to.be.revertedWith("SU: TYPE NOT allowed");
       });
       it("reverts if not CONTROLLER", async () => {
