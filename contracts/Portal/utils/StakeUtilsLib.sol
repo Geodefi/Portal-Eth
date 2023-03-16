@@ -531,14 +531,13 @@ library StakeUtils {
       msg.sender == DATASTORE.readAddressForId(id, "CONTROLLER"),
       "SU: sender NOT CONTROLLER"
     );
+    DATASTORE.writeUintForId(id, "initiated", block.timestamp);
 
     _setMaintainer(DATASTORE, id, maintainer);
     _setMaintenanceFee(DATASTORE, id, fee);
     _setValidatorPeriod(DATASTORE, id, validatorPeriod);
-
     _increaseWalletBalance(DATASTORE, id, msg.value);
 
-    DATASTORE.writeUintForId(id, "initiated", block.timestamp);
     emit IdInitiated(id, ID_TYPE.OPERATOR);
   }
 
@@ -578,10 +577,11 @@ library StakeUtils {
       DATASTORE.readUintForId(id, "initiated") == 0,
       "SU: already initiated"
     );
+    DATASTORE.writeUintForId(id, "initiated", block.timestamp);
+
     DATASTORE.writeUintForId(id, "TYPE", ID_TYPE.POOL);
     DATASTORE.writeAddressForId(id, "CONTROLLER", msg.sender);
     DATASTORE.writeBytesForId(id, "NAME", NAME);
-    DATASTORE.writeUintForId(id, "initiated", block.timestamp);
     DATASTORE.allIdsByType[ID_TYPE.POOL].push(id);
 
     _setMaintainer(DATASTORE, id, maintainer);

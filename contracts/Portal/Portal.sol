@@ -39,7 +39,7 @@ import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "./utils/globals.sol";
  *
  * @dev authentication:
  * * geodeUtils has OnlyGovernance, OnlySenate and OnlyController checks with modifiers.
- * * stakeUtils has "authenticate()" function which checks for Maintainer, Controllers, and TYPE.
+ * * stakeUtils has "authenticate()" function which checks for Maintainers, Controllers, and TYPE.
  * * oracleutils has OnlyOracle checks with a modifier.
  * * Portal has an OnlyGovernance check on : pause, unpause, pausegETH, unpausegETH, setEarlyExitFee, releasePrisoned.
  *
@@ -693,7 +693,14 @@ contract Portal is
 
   function fetchModuleUpgradeProposal(
     uint256 moduleType
-  ) external virtual override returns (uint256 moduleVersion) {
+  )
+    external
+    virtual
+    override
+    whenNotPaused
+    nonReentrant
+    returns (uint256 moduleVersion)
+  {
     moduleVersion = STAKER._defaultModules[moduleType];
 
     IGeodeModule(msg.sender).newProposal(
@@ -706,7 +713,7 @@ contract Portal is
 
   function deployLiquidityPool(
     uint256 poolId
-  ) external virtual override whenNotPaused {
+  ) external virtual override whenNotPaused nonReentrant {
     STAKER.deployLiquidityPool(DATASTORE, poolId, GEODE.getGovernance());
   }
 
@@ -733,7 +740,7 @@ contract Portal is
     uint256 fee,
     uint256 validatorPeriod,
     address maintainer
-  ) external payable virtual override whenNotPaused {
+  ) external payable virtual override whenNotPaused nonReentrant {
     StakeUtils.initiateOperator(
       DATASTORE,
       id,
@@ -750,7 +757,7 @@ contract Portal is
     bytes calldata NAME,
     bytes calldata interface_data,
     bool[3] calldata config
-  ) external payable virtual override whenNotPaused {
+  ) external payable virtual override whenNotPaused nonReentrant {
     STAKER.initiatePool(
       DATASTORE,
       fee,
@@ -790,7 +797,15 @@ contract Portal is
 
   function increaseWalletBalance(
     uint256 id
-  ) external payable virtual override returns (bool success) {
+  )
+    external
+    payable
+    virtual
+    override
+    whenNotPaused
+    nonReentrant
+    returns (bool success)
+  {
     success = StakeUtils.increaseWalletBalance(DATASTORE, id);
   }
 
@@ -827,7 +842,7 @@ contract Portal is
 
   function setEarlyExitFee(
     uint256 fee
-  ) external virtual override whenNotPaused onlyGovernance {
+  ) external virtual override onlyGovernance {
     require(fee < StakeUtils.MAX_EARLY_EXIT_FEE);
     STAKER.EARLY_EXIT_FEE = fee;
   }
@@ -844,7 +859,7 @@ contract Portal is
    */
   function releasePrisoned(
     uint256 operatorId
-  ) external virtual override whenNotPaused onlyGovernance {
+  ) external virtual override onlyGovernance {
     DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
 
     emit Released(operatorId);
