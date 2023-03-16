@@ -254,18 +254,17 @@ library OracleUtils {
 
     uint256 curPrice = STAKER.gETH.pricePerShare(_id);
 
-    uint256 maxPrice = curPrice +
-      ((curPrice * STAKER.DAILY_PRICE_INCREASE_LIMIT * dayPercentSinceUpdate) /
-        PERCENTAGE_DENOMINATOR) /
-      PERCENTAGE_DENOMINATOR;
+    uint256 maxPriceIncrease = ((curPrice *
+      STAKER.DAILY_PRICE_INCREASE_LIMIT *
+      dayPercentSinceUpdate) / PERCENTAGE_DENOMINATOR) / PERCENTAGE_DENOMINATOR;
 
-    uint256 minPrice = curPrice -
-      ((curPrice * STAKER.DAILY_PRICE_DECREASE_LIMIT * dayPercentSinceUpdate) /
-        PERCENTAGE_DENOMINATOR /
-        PERCENTAGE_DENOMINATOR);
+    uint256 maxPriceDecrease = ((curPrice *
+      STAKER.DAILY_PRICE_DECREASE_LIMIT *
+      dayPercentSinceUpdate) / PERCENTAGE_DENOMINATOR) / PERCENTAGE_DENOMINATOR;
 
     require(
-      _newPrice >= minPrice && _newPrice <= maxPrice,
+      _newPrice + maxPriceDecrease >= curPrice &&
+        _newPrice <= curPrice + maxPriceIncrease,
       "OU: price is insane"
     );
   }

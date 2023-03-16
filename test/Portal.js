@@ -443,11 +443,11 @@ describe("Portal", async () => {
       });
 
       it("DAILY_PRICE_INCREASE_LIMIT", async () => {
-        expect(StakingParams.DAILY_PRICE_INCREASE_LIMIT).to.be.eq(500000000);
+        expect(StakingParams.DAILY_PRICE_INCREASE_LIMIT).to.be.eq(700000000);
       });
 
       it("DAILY_PRICE_DECREASE_LIMIT", async () => {
-        expect(StakingParams.DAILY_PRICE_DECREASE_LIMIT).to.be.eq(500000000);
+        expect(StakingParams.DAILY_PRICE_DECREASE_LIMIT).to.be.eq(700000000);
       });
 
       describe("DEFAULT_WITHDRAWAL_CONTRACT_MODULE", async () => {
@@ -3525,12 +3525,12 @@ describe("Portal", async () => {
     describe("priceSync & priceSyncBatch", async () => {
       let tree;
       const prices = [
-        String(104e16),
         String(106e16),
-        String(151e16),
-        String(94e16),
-        String(49e16),
-        String(105e16),
+        String(108e16),
+        String(171e16),
+        String(92e16),
+        String(29e16),
+        String(107e16),
         String(1),
       ];
       beforeEach(async () => {
