@@ -23,7 +23,7 @@ task("activate-portal", "makes Portal gETH minter", activatePortal);
 
 // proposals
 task("propose", "Creates a proposal with desired parameters")
-  .addParam("t", "defines type such as planet , operator , senate , Upgrade")
+  .addParam("t", "defines type such as pool , operator , senate , Upgrade")
   .addParam(
     "c",
     "refers to the proposed address as the controller of resulting ID"
@@ -59,7 +59,7 @@ task("initiate-pool", "initiate a pool with correct parameters")
   .setAction(initiatePool);
 
 task("initiate-operator", "initiate an operator with correct parameters")
-  .addParam("id", "id for planet")
+  .addParam("id", "id for operator")
   .addParam("f", "MaintenanceFee")
   .addParam("m", "maintainer address")
   .addParam("p", "maintainer address")

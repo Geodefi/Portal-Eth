@@ -57,6 +57,11 @@ contract ERC20InterfacePermitUpgradable is
   // solhint-disable-next-line var-name-mixedcase
   bytes32 private _PERMIT_TYPEHASH_DEPRECATED_SLOT;
 
+  ///@custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   /**
    * @dev Sets the values for {name} and {symbol}.
    *

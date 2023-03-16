@@ -12,7 +12,6 @@ import {GeodeUtils} from "../utils/GeodeUtilsLib.sol";
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IPortal} from "../../interfaces/IPortal.sol";
 import {IWithdrawalContract} from "../../interfaces/IWithdrawalContract.sol";
-import "hardhat/console.sol";
 
 /**
  * @author Icebear & Crash Bandicoot
@@ -58,6 +57,11 @@ contract WithdrawalContract is
   address internal gETH;
   uint256 internal POOL_ID;
   uint256 internal CONTRACT_VERSION;
+
+  ///@custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
 
   function initialize(
     uint256 _VERSION,

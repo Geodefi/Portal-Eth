@@ -135,11 +135,16 @@ contract Portal is
    * @notice CONTRACT_VERSION always refers to the upgrade proposal' (TYPE2) ID.
    * @dev Does NOT increase uniformly like one might expect.
    */
-  uint256 public CONTRACT_VERSION;
+  uint256 private CONTRACT_VERSION;
 
   /**
    * @notice                                     ** PORTAL SPECIFIC **
    */
+
+  ///@custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
 
   /**
    * @notice initializer function that sets initial parameters like,

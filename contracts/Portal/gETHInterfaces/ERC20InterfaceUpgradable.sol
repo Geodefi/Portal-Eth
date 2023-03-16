@@ -72,6 +72,11 @@ contract ERC20InterfaceUpgradable is
   uint256 private _id;
   IgETH private _ERC1155;
 
+  ///@custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   /**
    * @dev Sets the values for {name} and {symbol}.
    *

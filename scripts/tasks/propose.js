@@ -11,8 +11,8 @@ const func = async (taskArgs, hre) => {
   const { execute, read } = deployments;
   try {
     if (!types[taskArgs.t]) throw Error("type should be one of defined");
-    console.log("Tx sent...");
     id = await read("Portal", "generateId", taskArgs.n, types[taskArgs.t]);
+    console.log("Tx sent...");
     await execute(
       "Portal",
       { from: deployer, log: true },
