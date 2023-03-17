@@ -81,8 +81,6 @@ contract Portal is
     uint256 deadline
   );
   event ProposalApproved(uint256 id);
-  event ElectorTypeSet(uint256 TYPE, bool isElector);
-  event Vote(uint256 indexed proposalId, uint256 indexed voterId);
   event NewSenate(address senate, uint256 senateExpiry);
 
   /**
@@ -196,10 +194,9 @@ contract Portal is
     );
     GEODE.GOVERNANCE = msg.sender;
     GEODE.SENATE = msg.sender;
-    GEODE.SENATE_EXPIRY = type(uint256).max;
+    GEODE.SENATE_EXPIRY = block.timestamp + 1;
 
     GEODE.setGovernanceFee(_GOVERNANCE_FEE);
-    GEODE.setElectorType(DATASTORE, ID_TYPE.POOL, true);
 
     STAKER.gETH = IgETH(_gETH);
     STAKER.MONOPOLY_THRESHOLD = type(uint256).max;
@@ -277,7 +274,7 @@ contract Portal is
     }
 
     GEODE.GOVERNANCE = _GOVERNANCE;
-    GEODE.SENATE = _SENATE;
+    GEODE._setSenate(_SENATE, block.timestamp + GeodeUtils.MAX_SENATE_PERIOD);
   }
 
   /**
@@ -495,15 +492,9 @@ contract Portal is
     proposal = GEODE.getProposal(id);
   }
 
-  function isElector(
-    uint256 _TYPE
-  ) external view virtual override returns (bool) {
-    return GEODE._electorTypes[_TYPE];
-  }
-
   function isUpgradeAllowed(
     address proposedImplementation
-  ) external view virtual override returns (bool) {
+  ) external view virtual override(IPortal, IGeodeModule) returns (bool) {
     return GEODE.isUpgradeAllowed(proposedImplementation);
   }
 
@@ -522,20 +513,19 @@ contract Portal is
     GEODE.setGovernanceFee(newFee);
   }
 
-  function setElectorType(
-    uint256 _TYPE,
-    bool _isElector
-  ) external virtual override {
-    GEODE.setElectorType(DATASTORE, _TYPE, _isElector);
-  }
-
   function newProposal(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external virtual override(IPortal, IGeodeModule) {
-    GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
+  )
+    external
+    virtual
+    override(IPortal, IGeodeModule)
+    returns (uint256 id, bool success)
+  {
+    id = GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
+    success = true;
   }
 
   /**
@@ -546,8 +536,15 @@ contract Portal is
    * @notice approves a specific proposal
    * @dev OnlySenate is checked inside the GeodeUtils
    */
-  function approveProposal(uint256 id) public virtual override {
-    (uint256 _type, ) = GEODE.approveProposal(DATASTORE, id);
+  function approveProposal(
+    uint256 id
+  )
+    public
+    virtual
+    override(IPortal, IGeodeModule)
+    returns (uint256 _type, address _controller)
+  {
+    (_type, _controller) = GEODE.approveProposal(DATASTORE, id);
     if (
       _type == ID_TYPE.MODULE_WITHDRAWAL_CONTRACT ||
       _type == ID_TYPE.MODULE_LIQUDITY_POOL ||
@@ -559,12 +556,8 @@ contract Portal is
     }
   }
 
-  /**
-   * @notice changes the Senate's address without extending the expiry
-   * @dev OnlySenate is checked inside the GeodeUtils
-   */
-  function changeSenate(address _newSenate) external virtual override {
-    GEODE.changeSenate(_newSenate);
+  function rescueSenate(address _newSenate) external virtual override {
+    GEODE.rescueSenate(_newSenate);
   }
 
   /**
@@ -576,13 +569,6 @@ contract Portal is
     address newCONTROLLER
   ) external virtual override whenNotPaused {
     GeodeUtils.changeIdCONTROLLER(DATASTORE, id, newCONTROLLER);
-  }
-
-  function approveSenate(
-    uint256 proposalId,
-    uint256 electorId
-  ) external virtual override {
-    GEODE.approveSenate(DATASTORE, proposalId, electorId);
   }
 
   /**
@@ -702,13 +688,13 @@ contract Portal is
     returns (uint256 moduleVersion)
   {
     moduleVersion = STAKER._defaultModules[moduleType];
-
-    IGeodeModule(msg.sender).newProposal(
+    (, bool success) = IGeodeModule(msg.sender).newProposal(
       DATASTORE.readAddressForId(moduleVersion, "CONTROLLER"),
       ID_TYPE.CONTRACT_UPGRADE,
       DATASTORE.readBytesForId(moduleVersion, "NAME"),
       4 weeks
     );
+    require(success, "PORTAL: cannot propose upgrade");
   }
 
   function deployLiquidityPool(

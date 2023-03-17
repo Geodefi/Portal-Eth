@@ -6,19 +6,25 @@ import {DataStoreUtils as DSU} from "./DataStoreUtilsLib.sol";
 
 /**
  * @author Icebear & Crash Bandicoot
- * @title Geode Dual Governance
+ * @title Geode Dual Governance and Limited Upgradability Logic
  * @notice Exclusively contains functions for the administration of the Isolated Storage,
  * and Limited Upgradability with Dual Governance of Governance and Senate
- * Note This library contains both functions called by users(ID) (approveSenate) and admins(GOVERNANCE, SENATE)
+ * Note This library contains both functions called by users(ID) like changeIdController, and admins(GOVERNANCE, SENATE)
  *
  * @dev Reserved ID_TYPEs:
  *
  * * Type 0 : NULL
  *
- * * Type 1 : SENATE ELECTIONS
- * * * Every SENATE has an expiration date, a new one should be elected before it ends.
- * * * Only the controllers of IDs with TYPEs that are set true on _electorTypes can vote.
- * * * 2/3 is the expected concensus, however this logic seems to be improved in the future.
+ * * Type 1 : SENATE
+ * * * Senate is a third party, expected to be an immutable contract that allows identified
+ * * * TYPE's CONTROLLERs to vote on proposals on Portal.
+ * * * Senate is the pool owner on Withdrawal Contracts.
+ * * * Senate can represent other entities within the Dual Governance if this library is
+ * * * used by other Geode Modules in the future.
+ * * * Senate can be changed by the Dual Governance with TYPE 1 proposals on Portal OR
+ * * * 'instantly' by the pool Owner on Withdrawal Contracts.
+ * * * @dev SENATE can have an expiration date, a new one should be set before it ends.
+ * * * * otherwise governance can set a new senate without any proposals.
  *
  * * Type 2 : CONTRACT UPGRADES
  * * * Provides Limited Upgradability on Portal and Withdrawal Contract
@@ -46,8 +52,6 @@ library GeodeUtils {
     uint256 deadline
   );
   event ProposalApproved(uint256 id);
-  event ElectorTypeSet(uint256 TYPE, bool isElector);
-  event Vote(uint256 indexed proposalId, uint256 indexed voterId);
   event NewSenate(address senate, uint256 senateExpiry);
 
   /**
@@ -70,17 +74,15 @@ library GeodeUtils {
   }
 
   /**
-   * @notice DualGovernance allows 2 parties to manage a contract with proposals and approvals
+   * @notice DualGovernance allows 2 parties to manage a contract with proposals and approvals.
    * @param GOVERNANCE a community that works to improve the core product and ensures its adoption in the DeFi ecosystem
    * Suggests updates, such as new operators, contract upgrades, a new Senate -without any permission to force them-
    * @param SENATE An address that protects the users by controlling the state of governance, contract updates and other crucial changes
-   * Note SENATE is proposed by Governance and voted by all elector TYPEs, approved if ⌊2/3⌋ votes.
-   * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Enforces a new election, limited by MAX_SENATE_PERIOD
+   * Note SENATE can be changed by a proposal TYPE 1 by Governance and approved by the current Senate.
+   * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Limited by MAX_SENATE_PERIOD
    * @param GOVERNANCE_FEE operation fee on the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_FEE
    * @param approvedVersion only 1 implementation contract SHOULD be "approved" at any given time.
    * * @dev safe to set to address(0) after every upgrade as isUpgradeAllowed returns false for address(0)
-   * @param _electorCount increased when a new id is added with _electorTypes[id] == true
-   * @param _electorTypes only given TYPEs can vote
    * @param _proposals till approved, proposals are kept separated from the Isolated Storage
    * @param __gap keep the struct size at 16
    **/
@@ -90,10 +92,8 @@ library GeodeUtils {
     uint256 SENATE_EXPIRY;
     uint256 GOVERNANCE_FEE;
     address approvedVersion;
-    uint256 _electorCount;
-    mapping(uint256 => bool) _electorTypes;
     mapping(uint256 => Proposal) _proposals;
-    uint256[8] __gap;
+    uint256[10] __gap;
   }
 
   /**
@@ -114,14 +114,14 @@ library GeodeUtils {
   uint32 public constant MAX_PROPOSAL_DURATION = 4 weeks;
   uint32 public constant MAX_SENATE_PERIOD = 365 days;
 
-  modifier onlySenate(DualGovernance storage self) {
-    require(msg.sender == self.SENATE, "GU: SENATE role needed");
-    require(block.timestamp < self.SENATE_EXPIRY, "GU: SENATE expired");
+  modifier onlyGovernance(DualGovernance storage self) {
+    require(msg.sender == self.GOVERNANCE, "GU: GOVERNANCE role needed");
     _;
   }
 
-  modifier onlyGovernance(DualGovernance storage self) {
-    require(msg.sender == self.GOVERNANCE, "GU: GOVERNANCE role needed");
+  modifier onlySenate(DualGovernance storage self) {
+    require(msg.sender == self.SENATE, "GU: SENATE role needed");
+    require(block.timestamp < self.SENATE_EXPIRY, "GU: SENATE expired");
     _;
   }
 
@@ -300,11 +300,10 @@ library GeodeUtils {
   /**
    * @notice onlySenate, approves a proposal and records given data to DataStore
    * @notice specific changes for the reserved types (1,2,3) are implemented here,
-   * any other addition should take place in Portal, as not related
+   * any other addition should take place in Portal, as not related.
    * @param id given ID proposal that has been approved by Senate
    * @dev Senate is not able to approve approved proposals
    * @dev Senate is not able to approve expired proposals
-   * @dev Senate is not able to approve SENATE proposals
    */
   function approveProposal(
     DualGovernance storage self,
@@ -319,19 +318,16 @@ library GeodeUtils {
     _type = self._proposals[id].TYPE;
     _controller = self._proposals[id].CONTROLLER;
 
-    require(_type != ID_TYPE.SENATE, "GU: can NOT approve SENATE election");
-
     DATASTORE.writeUintForId(id, "TYPE", _type);
     DATASTORE.writeAddressForId(id, "CONTROLLER", _controller);
     DATASTORE.writeBytesForId(id, "NAME", self._proposals[id].NAME);
     DATASTORE.allIdsByType[_type].push(id);
 
+    if (_type == ID_TYPE.SENATE) {
+      _setSenate(self, _controller, block.timestamp + MAX_SENATE_PERIOD);
+    }
     if (_type == ID_TYPE.CONTRACT_UPGRADE) {
       self.approvedVersion = _controller;
-    }
-
-    if (isElector(self, _type)) {
-      self._electorCount += 1;
     }
 
     // important
@@ -341,19 +337,8 @@ library GeodeUtils {
   }
 
   /**
-   * @notice                                       ** SENATE ELECTIONS **
+   * @notice                                       ** SENATE and GOVERNANCE **
    */
-
-  /**
-   * @dev  ->  view
-   */
-
-  function isElector(
-    DualGovernance storage self,
-    uint256 _TYPE
-  ) public view returns (bool) {
-    return self._electorTypes[_TYPE];
-  }
 
   /**
    * @dev  ->  internal
@@ -378,7 +363,8 @@ library GeodeUtils {
    */
 
   /**
-   * @notice onlySenate, Sometimes it is useful to be able to change the Senate's address.
+   * @notice onlySenate, sometimes it is useful to be able to change the Senate's address
+   * * without changing the expiry,for example in the withdrawal contracts.
    * @dev does not change the expiry
    */
   function changeSenate(
@@ -389,83 +375,20 @@ library GeodeUtils {
   }
 
   /**
-   * @notice onlyGovernance, only elector types can vote for senate
-   * @param _TYPE selected type
-   * @param _isElector true if selected _type can vote for senate from now on
-   * @dev can not set with the same value again, preventing double increment/decrements
+   * @notice onlyGovernance, changes Senate in a scenerio where the current Senate acts maliciously.
+   * * We are sure this will not be the case, but creating a method for possible recovery is a must.
+   * @notice Normally, Governance creates Senate Proposals frequently to signal it does not have
+   * * any intent of malicious overtake.
+   * note: If Governance does not send a Senate Proposal a while before the SENATE_EXPIRY,
+   * * we recommend users to take their money out.
+   * @dev Obviously, Governance needs to wait for SENATE_EXPIRY.
    */
-  function setElectorType(
+  function rescueSenate(
     DualGovernance storage self,
-    DSU.IsolatedStorage storage DATASTORE,
-    uint256 _TYPE,
-    bool _isElector
+    address _newSenate
   ) external onlyGovernance(self) {
-    require(_isElector != isElector(self, _TYPE), "GU: type already elector");
-    require(
-      _TYPE > ID_TYPE.__GAP__,
-      "GU: 0, Senate, Upgrade, GAP cannot be elector"
-    );
-
-    self._electorTypes[_TYPE] = _isElector;
-
-    if (_isElector) {
-      self._electorCount += DATASTORE.allIdsByType[_TYPE].length;
-    } else {
-      self._electorCount -= DATASTORE.allIdsByType[_TYPE].length;
-    }
-
-    emit ElectorTypeSet(_TYPE, _isElector);
-  }
-
-  /**
-   * @notice onlyController, Proposed CONTROLLER is the new Senate after 2/3 of the electors approved
-   * NOTE mathematically, min 3 elector is needed for (c+1)*2/3 to work properly
-   * @notice id can not vote if:
-   * - approved already
-   * - proposal is expired
-   * - not its type is elector
-   * - not senate proposal
-   * @param voterId should have the voting rights, msg.sender should be the CONTROLLER of given ID
-   * @dev pins id as "voted" when approved
-   * @dev increases "approvalCount" of proposalId by 1 when approved
-   */
-  function approveSenate(
-    DualGovernance storage self,
-    DSU.IsolatedStorage storage DATASTORE,
-    uint256 proposalId,
-    uint256 voterId
-  ) external onlyController(DATASTORE, voterId) {
-    uint256 _type = self._proposals[proposalId].TYPE;
-    require(_type == ID_TYPE.SENATE, "GU: NOT Senate Proposal");
-    require(
-      self._proposals[proposalId].deadline >= block.timestamp,
-      "GU: proposal expired"
-    );
-    require(
-      isElector(self, DATASTORE.readUintForId(voterId, "TYPE")),
-      "GU: NOT an elector"
-    );
-    require(
-      DATASTORE.readUintForId(proposalId, DSU.getKey(voterId, "voted")) == 0,
-      " GU: already approved"
-    );
-
-    DATASTORE.writeUintForId(proposalId, DSU.getKey(voterId, "voted"), 1);
-    DATASTORE.addUintForId(proposalId, "approvalCount", 1);
-
-    if (
-      DATASTORE.readUintForId(proposalId, "approvalCount") >=
-      ((self._electorCount + 1) * 2) / 3
-    ) {
-      self._proposals[proposalId].deadline = block.timestamp;
-      _setSenate(
-        self,
-        self._proposals[proposalId].CONTROLLER,
-        block.timestamp + MAX_SENATE_PERIOD
-      );
-    }
-
-    emit Vote(proposalId, voterId);
+    require(block.timestamp > self.SENATE_EXPIRY, "GU: cannot rescue yet");
+    _setSenate(self, _newSenate, block.timestamp + MAX_SENATE_PERIOD);
   }
 
   /**

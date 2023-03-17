@@ -103,30 +103,26 @@ interface IPortal {
     uint256 id
   ) external view returns (GeodeUtils.Proposal memory proposal);
 
-  function isElector(uint256 _TYPE) external view returns (bool);
-
   function isUpgradeAllowed(
     address proposedImplementation
   ) external view returns (bool);
 
   function setGovernanceFee(uint256 newFee) external;
 
-  function setElectorType(uint256 _TYPE, bool isElector) external;
-
   function newProposal(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external;
+  ) external returns (uint256 id, bool success);
 
-  function approveProposal(uint256 id) external;
-
-  function changeSenate(address _newSenate) external;
+  function approveProposal(
+    uint256 id
+  ) external returns (uint256 _type, address _controller);
 
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external;
 
-  function approveSenate(uint256 proposalId, uint256 electorId) external;
+  function rescueSenate(address _newSenate) external;
 
   function StakingParams()
     external
@@ -162,11 +158,6 @@ interface IPortal {
   ) external view returns (bytes memory);
 
   function getMaintenanceFee(uint256 id) external view returns (uint256 fee);
-
-  // function operatorAllowance(
-  //   uint256 poolId,
-  //   uint256 operatorId
-  // ) external view returns (uint256 allowance);
 
   function isPrisoned(uint256 operatorId) external view returns (bool);
 

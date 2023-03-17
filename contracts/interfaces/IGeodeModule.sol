@@ -7,5 +7,13 @@ interface IGeodeModule {
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external;
+  ) external returns (uint256 id, bool success);
+
+  function approveProposal(
+    uint256 id
+  ) external returns (uint256 _type, address _controller);
+
+  function isUpgradeAllowed(
+    address proposedImplementation
+  ) external view returns (bool);
 }

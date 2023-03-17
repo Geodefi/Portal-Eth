@@ -13,7 +13,7 @@ library ID_TYPE {
   /// @notice TYPE 0: *invalid*
   uint256 internal constant NONE = 0;
 
-  /// @notice TYPE 1: Senate and Senate Election Proposals
+  /// @notice TYPE 1: Senate
   uint256 internal constant SENATE = 1;
 
   /// @notice TYPE 2: Contract Upgrade

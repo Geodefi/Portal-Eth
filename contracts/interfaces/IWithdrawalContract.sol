@@ -29,12 +29,16 @@ interface IWithdrawalContract {
 
   function recoveryMode() external view returns (bool);
 
+  function isUpgradeAllowed(
+    address proposedImplementation
+  ) external view returns (bool);
+
   function newProposal(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external;
+  ) external returns (uint256 id, bool success);
 
   function approveProposal(
     uint256 id

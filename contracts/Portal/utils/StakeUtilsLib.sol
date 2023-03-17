@@ -657,6 +657,11 @@ library StakeUtils {
       msg.sender == DATASTORE.readAddressForId(id, "CONTROLLER"),
       "SU: sender NOT CONTROLLER"
     );
+    uint256 typeOfId = DATASTORE.readUintForId(id, "TYPE");
+    require(
+      typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL,
+      "SU: invalid TYPE"
+    );
     _setMaintainer(DATASTORE, id, newMaintainer);
   }
 
@@ -1269,7 +1274,7 @@ library StakeUtils {
    *   - pubkey should be proposed
    *   - pubkey should not be alienated (https://bit.ly/3Tkc6UC)
    *   - validator's index should be lower than VERIFICATION_INDEX. Updated by Telescope.
-   * Note: TODO while distributing the rewards, if a validator has 1 Eth, it is safe to assume that the balance belongs to Operator
+   * Note: while distributing the rewards, if a validator has 1 Eth, it is safe to assume that the balance belongs to Operator
    */
   function _canStake(
     PooledStaking storage self,

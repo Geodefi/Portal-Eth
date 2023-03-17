@@ -90,18 +90,12 @@ contract WithdrawalContract is
   }
 
   modifier onlyPortal() {
-    require(
-      msg.sender == GEM.getGovernance(),
-      "WithdrawalContract: sender NOT PORTAL"
-    );
+    require(msg.sender == GEM.getGovernance(), "WC: sender NOT PORTAL");
     _;
   }
 
   modifier onlyController() {
-    require(
-      msg.sender == GEM.getSenate(),
-      "WithdrawalContract: sender NOT CONTROLLER"
-    );
+    require(msg.sender == GEM.getSenate(), "WC: sender NOT CONTROLLER");
     _;
   }
 
@@ -111,7 +105,7 @@ contract WithdrawalContract is
   ) internal virtual override onlyController {
     require(
       GEM.isUpgradeAllowed(proposed_implementation),
-      "WithdrawalContract: NOT allowed to upgrade"
+      "WC: NOT allowed to upgrade"
     );
   }
 
@@ -184,6 +178,18 @@ contract WithdrawalContract is
       block.timestamp >= GEM.getSenateExpiry();
   }
 
+  function isUpgradeAllowed(
+    address proposedImplementation
+  )
+    external
+    view
+    virtual
+    override(IWithdrawalContract, IGeodeModule)
+    returns (bool)
+  {
+    return GEM.isUpgradeAllowed(proposedImplementation);
+  }
+
   /**
    * @notice Creates a new Proposal within Withdrawal Contract, used by Portal
    * @dev only Governance check is inside, note Governance is Portal.
@@ -193,8 +199,14 @@ contract WithdrawalContract is
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external virtual override(IWithdrawalContract, IGeodeModule) {
-    GEM.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
+  )
+    external
+    virtual
+    override(IWithdrawalContract, IGeodeModule)
+    returns (uint256 id, bool success)
+  {
+    id = GEM.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
+    success = true;
   }
 
   function approveProposal(
@@ -202,7 +214,7 @@ contract WithdrawalContract is
   )
     public
     virtual
-    override
+    override(IWithdrawalContract, IGeodeModule)
     whenNotPaused
     returns (uint256 _type, address _controller)
   {
@@ -222,7 +234,7 @@ contract WithdrawalContract is
 
     require(
       proposedVersion != getContractVersion() && proposedVersion != 0,
-      "WithdrawalContract: PROPOSED_VERSION ERROR"
+      "WC: PROPOSED_VERSION ERROR"
     );
 
     approveProposal(proposedVersion);

@@ -39,6 +39,8 @@ describe("Portal", async () => {
   const GOVERNANCE_FEE = (2 * 10 ** 10) / 100; // 2%
   const MAX_GOVERNANCE_FEE = 5 * 10 ** 8;
   const SWITCH_LATENCY = 3 * DAY;
+  const MAX_SENATE_PERIOD = 365 * DAY;
+
   let PortalFac;
   let gETH;
   let PORTAL;
@@ -302,6 +304,32 @@ describe("Portal", async () => {
           )
         ).to.be.revertedWith("PORTAL: wrong _ALLOWED_GETH_INTERFACE_MODULES");
       });
+      it("_WITHDRAWAL_CONTRACT_POSITION can NOT be ZERO", async () => {
+        await expect(
+          upgrades.deployProxy(
+            PortalFac,
+            [
+              GOVERNANCE.address,
+              SENATE.address,
+              gETH.address,
+              ORACLE.address,
+              (await get("WithdrawalContract")).address,
+              (await get("Swap")).address,
+              (await get("LPToken")).address,
+              [
+                ZERO_ADDRESS,
+                (await get("ERC20InterfacePermitUpgradable")).address,
+              ],
+              [getBytes("ERC20"), getBytes("ERC20Permit")],
+              GOVERNANCE_FEE,
+            ],
+            {
+              kind: "uups",
+              unsafeAllow: ["external-library-linking"],
+            }
+          )
+        ).to.be.revertedWith("PORTAL: GETH_INTERFACE_MODULE can NOT be ZERO");
+      });
       it("_DEFAULT_LP can NOT be ZERO", async () => {
         await expect(
           upgrades.deployProxy(
@@ -404,7 +432,9 @@ describe("Portal", async () => {
       });
 
       it("SENATE_EXPIRY", async () => {
-        expect(geodeParams.SENATE_EXPIRY).to.be.eq(MAX_UINT256);
+        expect(geodeParams.SENATE_EXPIRY).to.be.eq(
+          creationTime + MAX_SENATE_PERIOD
+        );
       });
 
       it("GOVERNANCE_FEE", async () => {
@@ -754,11 +784,6 @@ describe("Portal", async () => {
           "Pausable: paused"
         );
       });
-      it("releasePrisoned", async () => {
-        await expect(
-          PORTAL.connect(GOVERNANCE).releasePrisoned(operatorId)
-        ).to.be.revertedWith("Pausable: paused");
-      });
       it("approveOperators", async () => {
         await expect(
           PORTAL.approveOperators(poolId, [operatorId], [0])
@@ -914,7 +939,7 @@ describe("Portal", async () => {
           )
         ).to.be.revertedWith("GU: CONTROLLER can NOT be ZERO");
       });
-      it("reverts TYPE = 0 or 3", async () => {
+      it("reverts TYPE = 0 or 3 or 5", async () => {
         await expect(
           PORTAL.connect(GOVERNANCE).newProposal(
             operatorOwner.address,
@@ -928,6 +953,14 @@ describe("Portal", async () => {
             operatorOwner.address,
             3,
             operatorName,
+            MIN_PROPOSAL_DURATION
+          )
+        ).to.be.revertedWith("GU: TYPE is NONE, GAP or POOL");
+        await expect(
+          PORTAL.connect(GOVERNANCE).newProposal(
+            poolOwner.address,
+            5,
+            poolName,
             MIN_PROPOSAL_DURATION
           )
         ).to.be.revertedWith("GU: TYPE is NONE, GAP or POOL");
@@ -1022,18 +1055,6 @@ describe("Portal", async () => {
           PORTAL.connect(SENATE).approveProposal(operatorId)
         ).to.be.revertedWith("GU: NOT an active proposal");
       });
-      it("reverts if an Election proposal", async () => {
-        await PORTAL.connect(GOVERNANCE).newProposal(
-          SENATE.address,
-          1,
-          senateName,
-          MIN_PROPOSAL_DURATION
-        );
-
-        await expect(
-          PORTAL.connect(SENATE).approveProposal(senateId)
-        ).to.be.revertedWith("GU: can NOT approve SENATE election");
-      });
 
       describe("success", async () => {
         let ts;
@@ -1065,6 +1086,23 @@ describe("Portal", async () => {
         });
       });
 
+      it("change SENATE if TYPE 1", async () => {
+        await PORTAL.connect(GOVERNANCE).newProposal(
+          user.address,
+          1,
+          getBytes("newSenate"),
+          MIN_PROPOSAL_DURATION
+        );
+        await PORTAL.connect(SENATE).approveProposal(
+          await PORTAL.generateId("newSenate", 1)
+        );
+        const params = await PORTAL.GeodeParams();
+        expect(params.SENATE).to.be.eq(user.address);
+        expect(params.SENATE_EXPIRY).to.be.eq(
+          (await getCurrentBlockTimestamp()) + MAX_SENATE_PERIOD
+        );
+      });
+
       it("approved upgrade if TYPE 2", async () => {
         expect(await PORTAL.isUpgradeAllowed(gETH.address)).to.be.eq(false);
         await PORTAL.connect(GOVERNANCE).newProposal(
@@ -1087,204 +1125,71 @@ describe("Portal", async () => {
       });
     });
 
-    describe("setElectorType", async () => {
-      it("reverts when NOT GOVERNANCE", async () => {
-        await expect(
-          PORTAL.connect(attacker).setElectorType(4, true)
-        ).to.be.revertedWith("GU: GOVERNANCE role needed");
-      });
-      it("reverts if already elector", async () => {
-        await expect(
-          PORTAL.connect(GOVERNANCE).setElectorType(5, true)
-        ).to.be.revertedWith("type already elector");
-      });
-      it("reverts if reserved TYPE", async () => {
-        await expect(
-          PORTAL.connect(GOVERNANCE).setElectorType(0, true)
-        ).to.be.revertedWith("GU: 0, Senate, Upgrade, GAP cannot be elector");
-        await expect(
-          PORTAL.connect(GOVERNANCE).setElectorType(1, true)
-        ).to.be.revertedWith("GU: 0, Senate, Upgrade, GAP cannot be elector");
-        await expect(
-          PORTAL.connect(GOVERNANCE).setElectorType(2, true)
-        ).to.be.revertedWith("GU: 0, Senate, Upgrade, GAP cannot be elector");
-        await expect(
-          PORTAL.connect(GOVERNANCE).setElectorType(3, true)
-        ).to.be.revertedWith("GU: 0, Senate, Upgrade, GAP cannot be elector");
-      });
+    // TODO: This test should be inside the withdrawalContract tests!
 
-      describe("success", async () => {
-        it("sets", async () => {
-          await PORTAL.connect(GOVERNANCE).setElectorType(4, true);
-          expect(await PORTAL.isElector(4)).to.be.eq(true);
-          await PORTAL.connect(GOVERNANCE).setElectorType(4, false);
-          expect(await PORTAL.isElector(4)).to.be.eq(false);
+    // describe("changeSenate", async () => {
+    //   it("reverts when NOT SENATE", async () => {
+    //     await expect(
+    //       PORTAL.connect(attacker).changeSenate(attacker.address)
+    //     ).to.be.revertedWith("GU: SENATE role needed");
+    //   });
+
+    //   describe("success", async () => {
+    //     it("changes SENATE", async () => {
+    //       await PORTAL.connect(SENATE).changeSenate(attacker.address);
+    //       expect((await PORTAL.GeodeParams()).SENATE).to.be.eq(
+    //         attacker.address
+    //       );
+    //     });
+    //     it("does NOT change SENATE_EXPIRY", async () => {
+    //       await PORTAL.connect(SENATE).changeSenate(attacker.address);
+    //       expect((await PORTAL.GeodeParams()).SENATE).to.be.eq(
+    //         attacker.address
+    //       );
+    //     });
+    //     it("emits NewSenate", async () => {
+    //       await expect(
+    //         PORTAL.connect(SENATE).changeSenate(attacker.address)
+    //       ).to.emit(PORTAL, "NewSenate");
+    //     });
+    //   });
+    // });
+
+    describe("rescueSenate", async () => {
+      it("before SENATE_EXPIRY", async () => {
+        await expect(
+          PORTAL.connect(GOVERNANCE).rescueSenate(attacker.address)
+        ).to.be.revertedWith("GU: cannot rescue yet");
+      });
+      describe("later", async () => {
+        beforeEach(async () => {
+          const tmstmp =
+            (await getCurrentBlockTimestamp()) + MAX_SENATE_PERIOD + 1;
+          await setTimestamp(tmstmp);
         });
-        it("emits ElectorTypeSet", async () => {
+        it("reverts when NOT GOVERNANCE", async () => {
           await expect(
-            PORTAL.connect(GOVERNANCE).setElectorType(4, true)
-          ).to.emit(PORTAL, "ElectorTypeSet");
+            PORTAL.connect(attacker).rescueSenate(attacker.address)
+          ).to.be.revertedWith("GU: GOVERNANCE role needed");
         });
-      });
-    });
-
-    describe("approveSenate", async () => {
-      let poolId10;
-      let wrongId10;
-      let randomId10;
-      beforeEach(async () => {
-        await PORTAL.connect(GOVERNANCE).newProposal(
-          operatorOwner.address,
-          4,
-          operatorName,
-          MIN_PROPOSAL_DURATION
-        );
-        await PORTAL.connect(SENATE).approveProposal(operatorId);
-
-        poolId10 = await PORTAL.generateId("myPool", 10);
-        wrongId10 = await PORTAL.generateId("wrong", 10);
-        randomId10 = await PORTAL.generateId("random", 10);
-
-        await PORTAL.connect(GOVERNANCE).newProposal(
-          poolOwner.address,
-          10,
-          poolName,
-          MIN_PROPOSAL_DURATION
-        );
-        await PORTAL.connect(SENATE).approveProposal(poolId10);
-
-        await PORTAL.connect(GOVERNANCE).newProposal(
-          poolOwner.address,
-          10,
-          wrongName,
-          MIN_PROPOSAL_DURATION
-        );
-        await PORTAL.connect(SENATE).approveProposal(wrongId10);
-
-        await PORTAL.connect(GOVERNANCE).newProposal(
-          poolOwner.address,
-          10,
-          randomName,
-          MIN_PROPOSAL_DURATION
-        );
-
-        PORTAL.connect(GOVERNANCE).setElectorType(10, true);
-        await PORTAL.connect(GOVERNANCE).newProposal(
-          attacker.address,
-          1,
-          senateName,
-          MIN_PROPOSAL_DURATION
-        );
-      });
-      it("reverts when expired", async () => {
-        await setTimestamp(
-          (await getCurrentBlockTimestamp()) + MIN_PROPOSAL_DURATION + 1
-        );
-        await expect(
-          PORTAL.connect(poolOwner).approveSenate(senateId, poolId10)
-        ).to.be.revertedWith("GU: proposal expired");
-      });
-      it("reverts when NOT CONTROLLER", async () => {
-        await expect(
-          PORTAL.connect(attacker).approveSenate(senateId, poolId10)
-        ).to.be.revertedWith("GU: CONTROLLER role needed");
-      });
-      it("reverts when NOT an election", async () => {
-        await PORTAL.connect(GOVERNANCE).newProposal(
-          attacker.address,
-          10,
-          extraName1,
-          MIN_PROPOSAL_DURATION
-        );
-        await expect(
-          PORTAL.connect(poolOwner).approveSenate(
-            await PORTAL.generateId("extra1", 10),
-            poolId10
-          )
-        ).to.be.revertedWith("GU: NOT Senate Proposal");
-      });
-      it("reverts when TYPE is NOT elector", async () => {
-        await expect(
-          PORTAL.connect(operatorOwner).approveSenate(senateId, operatorId)
-        ).to.be.revertedWith("GU: NOT an elector");
-      });
-
-      it("reverts if already voted", async () => {
-        await PORTAL.connect(poolOwner).approveSenate(senateId, poolId10);
-        await expect(
-          PORTAL.connect(poolOwner).approveSenate(senateId, poolId10)
-        ).to.be.revertedWith("GU: already approved");
-      });
-
-      describe("success", async () => {
-        describe("Changes Senate if 2/3", async () => {
-          beforeEach(async () => {
-            await PORTAL.connect(SENATE).approveProposal(randomId10);
+        describe("success", async () => {
+          it("changes SENATE", async () => {
+            await PORTAL.connect(GOVERNANCE).rescueSenate(attacker.address);
+            expect((await PORTAL.GeodeParams()).SENATE).to.be.eq(
+              attacker.address
+            );
           });
-          describe("new senate", () => {
-            beforeEach(async () => {
-              await PORTAL.connect(poolOwner).approveSenate(senateId, poolId10);
-              await PORTAL.connect(poolOwner).approveSenate(
-                senateId,
-                randomId10
-              );
-            });
-            it("correct deadline", async () => {
-              expect(
-                (await PORTAL.connect(poolOwner).getProposal(senateId)).deadline
-              ).to.be.eq(await getCurrentBlockTimestamp());
-            });
-            it("correct SENATE", async () => {
-              expect((await PORTAL.GeodeParams()).SENATE).to.be.eq(
-                attacker.address
-              );
-            });
-            it("correct SENATE_EXPIRY", async () => {
-              expect((await PORTAL.GeodeParams()).SENATE_EXPIRY).to.be.eq(
-                (await getCurrentBlockTimestamp()) + 365 * DAY
-              );
-            });
+          it("changes SENATE_EXPIRY", async () => {
+            await PORTAL.connect(GOVERNANCE).rescueSenate(attacker.address);
+            expect((await PORTAL.GeodeParams()).SENATE_EXPIRY).to.be.eq(
+              (await getCurrentBlockTimestamp()) + MAX_SENATE_PERIOD
+            );
           });
           it("emits NewSenate", async () => {
-            PORTAL.connect(poolOwner).approveSenate(senateId, wrongId10);
             await expect(
-              PORTAL.connect(poolOwner).approveSenate(senateId, randomId10)
+              PORTAL.connect(GOVERNANCE).rescueSenate(attacker.address)
             ).to.emit(PORTAL, "NewSenate");
           });
-        });
-
-        it("emits Vote", async () => {
-          await expect(
-            PORTAL.connect(poolOwner).approveSenate(senateId, poolId10)
-          ).to.emit(PORTAL, "Vote");
-        });
-      });
-    });
-
-    describe("changeSenate", async () => {
-      it("reverts when NOT SENATE", async () => {
-        await expect(
-          PORTAL.connect(attacker).changeSenate(attacker.address)
-        ).to.be.revertedWith("GU: SENATE role needed");
-      });
-
-      describe("success", async () => {
-        it("changes SENATE", async () => {
-          await PORTAL.connect(SENATE).changeSenate(attacker.address);
-          expect((await PORTAL.GeodeParams()).SENATE).to.be.eq(
-            attacker.address
-          );
-        });
-        it("does NOT change SENATE_EXPIRY", async () => {
-          await PORTAL.connect(SENATE).changeSenate(attacker.address);
-          expect((await PORTAL.GeodeParams()).SENATE).to.be.eq(
-            attacker.address
-          );
-        });
-        it("emits NewSenate", async () => {
-          await expect(
-            PORTAL.connect(SENATE).changeSenate(attacker.address)
-          ).to.emit(PORTAL, "NewSenate");
         });
       });
     });
