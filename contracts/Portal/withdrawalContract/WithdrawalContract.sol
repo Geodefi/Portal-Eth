@@ -193,7 +193,7 @@ contract WithdrawalContract is
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external virtual override(IGeodeModule, IWithdrawalContract) {
+  ) external virtual override(IWithdrawalContract, IGeodeModule) {
     GEM.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
   }
 

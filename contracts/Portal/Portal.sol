@@ -51,8 +51,8 @@ import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "./utils/globals.sol";
  * note ctrl+k+2 and ctrl+k+1 then scroll while reading the function names and the comments.
  */
 contract Portal is
-  IGeodeModule,
   IPortal,
+  IGeodeModule,
   ContextUpgradeable,
   ReentrancyGuardUpgradeable,
   PausableUpgradeable,
@@ -534,7 +534,7 @@ contract Portal is
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external virtual override(IGeodeModule, IPortal) {
+  ) external virtual override(IPortal, IGeodeModule) {
     GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
   }
 
