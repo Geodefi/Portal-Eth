@@ -7,7 +7,7 @@ uint256 constant PERCENTAGE_DENOMINATOR = 10 ** 10;
 /**
  * @notice ID_TYPE is like an ENUM, widely used within Portal and Modules like Withdrawal Contract
  * @dev Why not use enums, they basically do the same thing?
- * * We like using a explicit defined uints than linearly increasing ones.
+ * * We like using explicitly defined uints than linearly increasing ones.
  */
 library ID_TYPE {
   /// @notice TYPE 0: *invalid*
