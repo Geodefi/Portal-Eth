@@ -53,7 +53,7 @@ contract gETH is ERC1155SupplyMinterPauser {
     uint256 private constant _denominator = 1 ether;
 
     /**
-     * @notice Mapping from pool IDs to gETHınterface implementation addresses
+     * @notice Mapping from pool IDs to gETHinterface implementation addresses
      * @dev There can be multiple Interfaces for 1 staking pool.
      * @dev ADDED for gETH
      **/
