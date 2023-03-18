@@ -89,11 +89,6 @@ contract WithdrawalContract is
     return true;
   }
 
-  modifier onlyPortal() {
-    require(msg.sender == GEM.getGovernance(), "WC: sender NOT PORTAL");
-    _;
-  }
-
   modifier onlyController() {
     require(msg.sender == GEM.getSenate(), "WC: sender NOT CONTROLLER");
     _;
