@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "../Portal/utils/DataStoreUtilsLib.sol";
-import "../Portal/utils/GeodeUtilsLib.sol";
-import "../Portal/utils/OracleUtilsLib.sol";
-import "../Portal/utils/StakeUtilsLib.sol";
+import {GeodeUtils} from "../Portal/utils/GeodeUtilsLib.sol";
+import {StakeUtils} from "../Portal/utils/StakeUtilsLib.sol";
 
 interface IPortal {
   function initialize(

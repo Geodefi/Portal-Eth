@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "../../interfaces/IDepositContract.sol";
-import "../helpers/BytesLib.sol";
+import {IDepositContract} from "../../interfaces/IDepositContract.sol";
+import {BytesLib} from "../helpers/BytesLib.sol";
 
 library DepositContractUtils {
   IDepositContract internal constant DEPOSIT_CONTRACT =

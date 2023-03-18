@@ -2,7 +2,7 @@
 
 pragma solidity =0.8.7;
 
-import "./IgETH.sol";
+import {IgETH} from "./IgETH.sol";
 
 interface ISwap {
   // pool data view functions

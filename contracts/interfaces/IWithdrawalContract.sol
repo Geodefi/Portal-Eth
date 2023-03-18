@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "./IgETH.sol";
-import "./IPortal.sol";
+import {IgETH} from "./IgETH.sol";
+import {IPortal} from "./IPortal.sol";
 
 interface IWithdrawalContract {
   function initialize(

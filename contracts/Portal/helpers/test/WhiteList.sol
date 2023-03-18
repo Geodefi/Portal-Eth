@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../../../interfaces/IWhitelist.sol";
+import {IWhitelist} from "../../../interfaces/IWhitelist.sol";
 
 contract Whitelist is IWhitelist, Ownable {
   event Listed(address indexed account, bool isWhitelisted);

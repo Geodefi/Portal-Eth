@@ -15,11 +15,16 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "../interfaces/IgETH.sol";
-import "../interfaces/IPortal.sol";
-import "../interfaces/IGeodeModule.sol";
+import {IgETH} from "../interfaces/IgETH.sol";
+import {IPortal} from "../interfaces/IPortal.sol";
+import {IGeodeModule} from "../interfaces/IGeodeModule.sol";
 
 import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "./utils/globals.sol";
+
+import {DataStoreUtils} from "../Portal/utils/DataStoreUtilsLib.sol";
+import {GeodeUtils} from "../Portal/utils/GeodeUtilsLib.sol";
+import {OracleUtils} from "../Portal/utils/OracleUtilsLib.sol";
+import {StakeUtils} from "../Portal/utils/StakeUtilsLib.sol";
 
 /**
  * @author Icebear & Crash Bandicoot
