@@ -141,6 +141,10 @@ contract Swap is
     swapStorage.swapFee = (4 * PERCENTAGE_DENOMINATOR) / 10000;
     swapStorage.adminFee = 0;
 
+    // Do not trust Portal or Interfaces. Protect LPs gETH tokens from any
+    // issues that can be surfaced with future implementations.
+    swapStorage.gETH.avoidInterfaces(_pooledTokenId, true);
+
     super.transferOwnership(owner);
     return address(lpToken);
   }
