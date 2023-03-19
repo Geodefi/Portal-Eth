@@ -597,6 +597,9 @@ library StakeUtils {
     // initially 1 ETHER = 1 ETHER
     self.gETH.setPricePerShare(1 ether, id);
 
+    // isolate the contract from interface risk for ID
+    self.gETH.avoidInterfaces(id, true);
+
     // mint gETH and send back to the caller
     uint256 mintedgETH = _mintgETH(self, DATASTORE, id, DCU.DEPOSIT_AMOUNT);
     self.gETH.safeTransferFrom(address(this), msg.sender, id, mintedgETH, "");
