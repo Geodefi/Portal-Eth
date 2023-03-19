@@ -2,7 +2,7 @@
   "manifestVersion": "3.2",
   "admin": {
     "address": "0x75E4B425FB124b8F68f2Db405386116fE8eB26B1",
-    "txHash": "0x288b0fd13cb693d27d4b3199431146483e0f1ba0c03b451900a816f44d390929"
+    "txHash": "0xed806945235885936edf71954e750a384d9caabf4a27797d4454ff1297e16fe4"
   },
   "proxies": [
     {
@@ -217,22 +217,22 @@
     },
     {
       "address": "0x7DF688e95907EAEff514c842FF0133676de99ECa",
-      "txHash": "0xddb7cbdd60e295c004ec42064e99cc6ce58cee085a329eae027d89402901bde8",
+      "txHash": "0x5059d89bfbd16aa788f5457d06c2dcb173f64c9f6387cef46c087667061e8692",
       "kind": "uups"
     },
     {
       "address": "0x5AE825D2332ae932D4816ba20297c60DF8d25B22",
-      "txHash": "0x9d5550e7a676b0e9eaae54f22b6a86c86b5c52a325e2a91acce20b76790200c7",
+      "txHash": "0x0552e4e672e4b5758b382aac26d9512e8dc2f03dba93342a24a2cbc037078224",
       "kind": "uups"
     },
     {
       "address": "0xDCA5CE2bE1151d6b421682774bcc796eca333500",
-      "txHash": "0x74ce84e7c02c204aec77623efdd0220588d1a5fef5f0855406ad2254ee071af9",
+      "txHash": "0x8f43680c89279fc99d4b5d5ca91d4520194eb1b66a69f24f493e0a20e17c6beb",
       "kind": "transparent"
     },
     {
       "address": "0x3bf53C3DA3Aa626986b098dca2e3a57a0bCEf145",
-      "txHash": "0x6a8ffcfbd04d72ed56333933ddd25e47101e7a9678c4fff98c659619dec958c5",
+      "txHash": "0xb060f04665758189c23ca96fa84eb8fd1b402af25dd8e807b744dbc8b1713c79",
       "kind": "transparent"
     }
   ],
@@ -15587,7 +15587,7 @@
     },
     "5256acb4dc0d2bb709f43d3625255ac636803aa9143ee16783377084e50e3e4d": {
       "address": "0xeA278D25cDEBaf20a4691fc4e1F43D138d6f8916",
-      "txHash": "0x24e81277dfe6a1d78a6324594118f0cbe66dd6b4a698d2318f8dc5408246c776",
+      "txHash": "0x3cfb8f50c6d40bd5c7c83eaa117b96983e38635ce292f651474f87e83e811261",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [
@@ -15784,7 +15784,7 @@
     },
     "667665b9c3384115208a53f957204e5773f4a4bb4a4638d31ea6c6822a8a8c85": {
       "address": "0x00161100000978B946001181bf4cCfF2598aC63a",
-      "txHash": "0x192298a9aa905ed354a5ab70ecf76b80b67651f1e3dbc76490d44fcd414c201a",
+      "txHash": "0x633026d517bf35edbd3632ef5a4641112728b3142d4fe372950412a7f8784f66",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [
@@ -15891,7 +15891,7 @@
             "slot": "401",
             "type": "t_struct(IsolatedStorage)5217_storage",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:144"
+            "src": "contracts/Portal/Portal.sol:147"
           },
           {
             "label": "GEODE",
@@ -15899,7 +15899,7 @@
             "slot": "417",
             "type": "t_struct(DualGovernance)6225_storage",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:146"
+            "src": "contracts/Portal/Portal.sol:149"
           },
           {
             "label": "STAKER",
@@ -15907,7 +15907,7 @@
             "slot": "433",
             "type": "t_struct(PooledStaking)7620_storage",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:147"
+            "src": "contracts/Portal/Portal.sol:150"
           },
           {
             "label": "CONTRACT_VERSION",
@@ -15915,7 +15915,7 @@
             "slot": "449",
             "type": "t_uint256",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:151"
+            "src": "contracts/Portal/Portal.sol:154"
           },
           {
             "label": "__gap",
@@ -15923,7 +15923,7 @@
             "slot": "450",
             "type": "t_array(t_uint256)46_storage",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:893"
+            "src": "contracts/Portal/Portal.sol:898"
           }
         ],
         "types": {
@@ -15975,7 +15975,7 @@
             "label": "bytes",
             "numberOfBytes": "32"
           },
-          "t_contract(IgETH)12355": {
+          "t_contract(IgETH)12346": {
             "label": "contract IgETH",
             "numberOfBytes": "20"
           },
@@ -16104,7 +16104,7 @@
             "members": [
               {
                 "label": "gETH",
-                "type": "t_contract(IgETH)12355",
+                "type": "t_contract(IgETH)12346",
                 "offset": 0,
                 "slot": "0"
               },

@@ -25,7 +25,8 @@ import {IWithdrawalContract} from "../../interfaces/IWithdrawalContract.sol";
  * @dev This contract utilizes Dual Governance between Portal (GOVERNANCE) and 
  the Pool Owner (SENATE) to empower the Limited Upgradability.
  *
- * @dev Recovery Mode stops pool operations while allowing withdrawal queue to operate as usual
+ * @dev Recovery Mode is a geodeModule circuit braker for other contracts to stop relying on this contract.
+ * * For example, PORTAL stops deposits and validator proposals to protect users and operators.
  *
  * @dev todo: Withdrawal Queue
  */
@@ -163,10 +164,15 @@ contract WithdrawalContract is
   }
 
   /**
-   * @notice Recovery Mode allows Withdrawal Contract to isolate itself
-   * from Portal and continue handling the withdrawals.
-   * @return isRecovering true if recoveryMode is active
-   * @dev most likely Senate never expires
+   * @notice Recovery Mode is an external view function signaling other contracts
+   * * to isolate themselves from WithdrawalContract. Withdrawals will continue per usual.
+   * @return isRecovering true if recoveryMode is active:
+   * * 1. Contract is paused
+   * * 2. An upgrade needs to fetched from Portal
+   * * 3. Contract needs to be upgraded
+   * * 4. Pool owner and Contract owner are different
+   * * 5. Senate expired
+   * @dev Senate should never expire
    */
   function recoveryMode()
     external

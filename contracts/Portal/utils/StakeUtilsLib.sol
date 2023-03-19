@@ -1242,7 +1242,7 @@ library StakeUtils {
     {
       uint256 pkLen = pubkeys.length;
 
-      require((pkLen > 0) && (pkLen <= DCU.MAX_DEPOSITS_PER_CALL), "SU: 0 - 50 validators");
+      require((pkLen > 0) && (pkLen <= DCU.MAX_DEPOSITS_PER_CALL), "SU: 1 - 50 validators");
       require(pkLen == signatures1.length, "SU: invalid signatures1 length");
       require(pkLen == signatures31.length, "SU: invalid signatures31 length");
 
@@ -1349,7 +1349,7 @@ library StakeUtils {
 
     require(
       (pubkeys.length > 0) && (pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL),
-      "SU: 0 - 50 validators"
+      "SU: 1 - 50 validators"
     );
 
     {

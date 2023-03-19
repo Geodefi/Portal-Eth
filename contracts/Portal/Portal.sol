@@ -42,6 +42,9 @@ import {StakeUtils} from "../Portal/utils/StakeUtilsLib.sol";
  * @dev TYPE: seperates the proposals and related functionality between different ID types on the Isolated Storage.
  * * Currently RESERVED TYPES are written on globals.sol.
  *
+ * @dev Recovery Mode is a geodeModule circuit braker for other contracts to stop relying on this contract.
+ * * For example, Upgradable Modules stop fetching upgrades
+
  * @dev authentication:
  * * geodeUtils has OnlyGovernance, OnlySenate and OnlyController checks with modifiers.
  * * stakeUtils has "authenticate()" function which checks for Maintainers, Controllers, and TYPE.
@@ -463,9 +466,12 @@ contract Portal is
   }
 
   /**
-   * @notice Recovery Mode allows Portal to isolate itself
-   * @return isRecovering true if recoveryMode is active
-   * @dev most likely Senate never expires
+   * @notice Recovery Mode is an external view function signaling other contracts
+   * * to isolate themselves from Portal. For example, withdrawalContract will not fetch upgrades.
+   * @return isRecovering true if recoveryMode is active:
+   * * 1. Portal is paused
+   * * 2. Portal needs to be upgraded
+   * * 3. Senate expired
    */
   function recoveryMode()
     external

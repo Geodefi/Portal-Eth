@@ -2231,7 +2231,7 @@ describe("Portal", async () => {
             it("reverts if not 1 to 50 pubkey given ", async () => {
               await expect(
                 PORTAL.connect(operatorOwner).proposeStake(poolId, operatorId, [], [], [])
-              ).to.be.revertedWith("SU: 0 - 50 validators");
+              ).to.be.revertedWith("SU: 1 - 50 validators");
               await expect(
                 PORTAL.connect(operatorOwner).proposeStake(
                   poolId,
@@ -2240,7 +2240,7 @@ describe("Portal", async () => {
                   new Array(51).fill(signature01),
                   new Array(51).fill(signature031)
                 )
-              ).to.be.revertedWith("SU: 0 - 50 validators");
+              ).to.be.revertedWith("SU: 1 - 50 validators");
             });
             it("reverts if length != signatures1.length", async () => {
               await expect(
@@ -2683,10 +2683,10 @@ describe("Portal", async () => {
             it("reverts if >= 50 nodes", async () => {
               await expect(
                 PORTAL.connect(operatorOwner).beaconStake(operatorId, [])
-              ).to.be.revertedWith("SU: 0 - 50 validators'");
+              ).to.be.revertedWith("SU: 1 - 50 validators'");
               await expect(
                 PORTAL.connect(operatorOwner).beaconStake(operatorId, new Array(51).fill(pubkey0))
-              ).to.be.revertedWith("SU: 0 - 50 validators'");
+              ).to.be.revertedWith("SU: 1 - 50 validators'");
             });
 
             describe("success", async () => {
