@@ -9,11 +9,7 @@ interface IGeodeModule {
     uint256 duration
   ) external returns (uint256 id, bool success);
 
-  function approveProposal(
-    uint256 id
-  ) external returns (uint256 _type, address _controller);
+  function approveProposal(uint256 id) external returns (uint256 _type, address _controller);
 
-  function isUpgradeAllowed(
-    address proposedImplementation
-  ) external view returns (bool);
+  function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 }

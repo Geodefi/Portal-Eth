@@ -28,46 +28,23 @@ interface IPortal {
 
   function unpausegETH() external;
 
-  function fetchModuleUpgradeProposal(
-    uint256 moduleType
-  ) external returns (uint256 moduleVersion);
+  function fetchModuleUpgradeProposal(uint256 moduleType) external returns (uint256 moduleVersion);
 
   function gETH() external view returns (address);
 
-  function gETHInterfaces(
-    uint256 id,
-    uint256 index
-  ) external view returns (address);
+  function gETHInterfaces(uint256 id, uint256 index) external view returns (address);
 
-  function allIdsByType(
-    uint256 _type,
-    uint256 _index
-  ) external view returns (uint256);
+  function allIdsByType(uint256 _type, uint256 _index) external view returns (uint256);
 
-  function generateId(
-    string calldata _name,
-    uint256 _type
-  ) external pure returns (uint256 id);
+  function generateId(string calldata _name, uint256 _type) external pure returns (uint256 id);
 
-  function getKey(
-    uint256 _id,
-    bytes32 _param
-  ) external pure returns (bytes32 key);
+  function getKey(uint256 _id, bytes32 _param) external pure returns (bytes32 key);
 
-  function readAddressForId(
-    uint256 id,
-    bytes32 key
-  ) external view returns (address data);
+  function readAddressForId(uint256 id, bytes32 key) external view returns (address data);
 
-  function readUintForId(
-    uint256 id,
-    bytes32 key
-  ) external view returns (uint256 data);
+  function readUintForId(uint256 id, bytes32 key) external view returns (uint256 data);
 
-  function readBytesForId(
-    uint256 id,
-    bytes32 key
-  ) external view returns (bytes memory data);
+  function readBytesForId(uint256 id, bytes32 key) external view returns (bytes memory data);
 
   function readUintArrayForId(
     uint256 id,
@@ -90,20 +67,11 @@ interface IPortal {
   function GeodeParams()
     external
     view
-    returns (
-      address SENATE,
-      address GOVERNANCE,
-      uint256 SENATE_EXPIRY,
-      uint256 GOVERNANCE_FEE
-    );
+    returns (address SENATE, address GOVERNANCE, uint256 SENATE_EXPIRY, uint256 GOVERNANCE_FEE);
 
-  function getProposal(
-    uint256 id
-  ) external view returns (GeodeUtils.Proposal memory proposal);
+  function getProposal(uint256 id) external view returns (GeodeUtils.Proposal memory proposal);
 
-  function isUpgradeAllowed(
-    address proposedImplementation
-  ) external view returns (bool);
+  function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 
   function setGovernanceFee(uint256 newFee) external;
 
@@ -114,9 +82,7 @@ interface IPortal {
     uint256 duration
   ) external returns (uint256 id, bool success);
 
-  function approveProposal(
-    uint256 id
-  ) external returns (uint256 _type, address _controller);
+  function approveProposal(uint256 id) external returns (uint256 _type, address _controller);
 
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external;
 
@@ -137,23 +103,13 @@ interface IPortal {
       address ORACLE_POSITION
     );
 
-  function getDefaultModule(
-    uint256 _type
-  ) external view returns (uint256 _version);
+  function getDefaultModule(uint256 _type) external view returns (uint256 _version);
 
-  function isAllowedModule(
-    uint256 _type,
-    uint256 _version
-  ) external view returns (bool);
+  function isAllowedModule(uint256 _type, uint256 _version) external view returns (bool);
 
-  function getValidator(
-    bytes calldata pubkey
-  ) external view returns (StakeUtils.Validator memory);
+  function getValidator(bytes calldata pubkey) external view returns (StakeUtils.Validator memory);
 
-  function getValidatorByPool(
-    uint256 poolId,
-    uint256 index
-  ) external view returns (bytes memory);
+  function getValidatorByPool(uint256 poolId, uint256 index) external view returns (bytes memory);
 
   function getMaintenanceFee(uint256 id) external view returns (uint256 fee);
 
@@ -191,14 +147,9 @@ interface IPortal {
 
   function switchMaintenanceFee(uint256 id, uint256 newFee) external;
 
-  function increaseWalletBalance(
-    uint256 id
-  ) external payable returns (bool success);
+  function increaseWalletBalance(uint256 id) external payable returns (bool success);
 
-  function decreaseWalletBalance(
-    uint256 id,
-    uint256 value
-  ) external returns (bool success);
+  function decreaseWalletBalance(uint256 id, uint256 value) external returns (bool success);
 
   function switchValidatorPeriod(uint256 id, uint256 newPeriod) external;
 
@@ -240,21 +191,11 @@ interface IPortal {
     bytes[] calldata alienatedPubkeys
   ) external;
 
-  function regulateOperators(
-    uint256[] calldata feeThefts,
-    bytes[] calldata stolenBlocks
-  ) external;
+  function regulateOperators(uint256[] calldata feeThefts, bytes[] calldata stolenBlocks) external;
 
-  function reportOracle(
-    bytes32 priceMerkleRoot,
-    uint256 allValidatorsCount
-  ) external;
+  function reportOracle(bytes32 priceMerkleRoot, uint256 allValidatorsCount) external;
 
-  function priceSync(
-    uint256 poolId,
-    uint256 price,
-    bytes32[] calldata priceProofs
-  ) external;
+  function priceSync(uint256 poolId, uint256 price, bytes32[] calldata priceProofs) external;
 
   function priceSyncBatch(
     uint256[] calldata poolIds,

@@ -36,9 +36,7 @@ interface ISwap {
     bool deposit
   ) external view returns (uint256);
 
-  function calculateRemoveLiquidity(
-    uint256 amount
-  ) external view returns (uint256[2] memory);
+  function calculateRemoveLiquidity(uint256 amount) external view returns (uint256[2] memory);
 
   function calculateRemoveLiquidityOneToken(
     uint256 tokenAmount,
