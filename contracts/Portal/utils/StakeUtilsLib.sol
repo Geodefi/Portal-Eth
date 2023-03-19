@@ -1229,7 +1229,7 @@ library StakeUtils {
           boughtgETH = _buyback(DATASTORE, poolId, debt, 0, deadline);
           remEth -= debt;
         } else {
-          boughtgETH = _buyback(DATASTORE, poolId, remEth, mingETH, deadline);
+          boughtgETH = _buyback(DATASTORE, poolId, remEth, 0, deadline);
           remEth = 0;
         }
       }
