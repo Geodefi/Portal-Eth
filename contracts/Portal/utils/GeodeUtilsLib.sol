@@ -76,7 +76,7 @@ library GeodeUtils {
    * Note SENATE can be changed by a proposal TYPE 1 by Governance and approved by the current Senate.
    * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Limited by MAX_SENATE_PERIOD
    * @param GOVERNANCE_FEE operation fee on the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_FEE
-   * @param approvedVersion only 1 implementation contract SHOULD be "approved" at any given time.
+   * @param approvedUpgrade only 1 implementation contract SHOULD be "approved" at any given time.
    * * @dev safe to set to address(0) after every upgrade as isUpgradeAllowed returns false for address(0)
    * @param _proposals till approved, proposals are kept separated from the Isolated Storage
    * @param __gap keep the struct size at 16
@@ -86,7 +86,7 @@ library GeodeUtils {
     address SENATE;
     uint256 SENATE_EXPIRY;
     uint256 GOVERNANCE_FEE;
-    address approvedVersion;
+    address approvedUpgrade;
     mapping(uint256 => Proposal) _proposals;
     uint256[10] __gap;
   }
@@ -300,7 +300,7 @@ library GeodeUtils {
     if (_type == ID_TYPE.SENATE) {
       _setSenate(self, _controller, block.timestamp + MAX_SENATE_PERIOD);
     } else if (_type == ID_TYPE.CONTRACT_UPGRADE) {
-      self.approvedVersion = _controller;
+      self.approvedUpgrade = _controller;
     }
 
     // important
@@ -376,6 +376,6 @@ library GeodeUtils {
     DualGovernance storage self,
     address proposedImplementation
   ) external view returns (bool) {
-    return (self.approvedVersion != address(0)) && (self.approvedVersion == proposedImplementation);
+    return (self.approvedUpgrade != address(0)) && (self.approvedUpgrade == proposedImplementation);
   }
 }

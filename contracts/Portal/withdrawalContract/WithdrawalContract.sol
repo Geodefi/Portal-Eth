@@ -42,12 +42,7 @@ contract WithdrawalContract is
 
   ///@notice Events
   event ControllerChanged(uint256 id, address newCONTROLLER);
-  event Proposed(
-    uint256 id,
-    address CONTROLLER,
-    uint256 TYPE,
-    uint256 deadline
-  );
+  event Proposed(uint256 id, address CONTROLLER, uint256 TYPE, uint256 deadline);
   event ProposalApproved(uint256 id);
   event NewSenate(address senate, uint256 senateExpiry);
 
@@ -98,10 +93,7 @@ contract WithdrawalContract is
   function _authorizeUpgrade(
     address proposed_implementation
   ) internal virtual override onlyController {
-    require(
-      GEM.isUpgradeAllowed(proposed_implementation),
-      "WC: NOT allowed to upgrade"
-    );
+    require(GEM.isUpgradeAllowed(proposed_implementation), "WC: NOT allowed to upgrade");
   }
 
   /**
@@ -157,31 +149,19 @@ contract WithdrawalContract is
    * @notice Recovery Mode allows Withdrawal Contract to isolate itself
    * from Portal and continue handling the withdrawals.
    * @return isRecovering true if recoveryMode is active
+   * @dev most likely Senate never expires
    */
-  function recoveryMode()
-    public
-    view
-    virtual
-    override
-    returns (bool isRecovering)
-  {
+  function recoveryMode() public view virtual override returns (bool isRecovering) {
     isRecovering =
-      getContractVersion() != getProposedVersion() ||
       paused() ||
-      getPortal().readAddressForId(getPoolId(), "CONTROLLER") !=
-      GEM.getSenate() ||
+      getContractVersion() != getProposedVersion() ||
+      getPortal().readAddressForId(getPoolId(), "CONTROLLER") != GEM.getSenate() ||
       block.timestamp >= GEM.getSenateExpiry();
   }
 
   function isUpgradeAllowed(
     address proposedImplementation
-  )
-    external
-    view
-    virtual
-    override(IWithdrawalContract, IGeodeModule)
-    returns (bool)
-  {
+  ) external view virtual override(IWithdrawalContract, IGeodeModule) returns (bool) {
     return GEM.isUpgradeAllowed(proposedImplementation);
   }
 
@@ -218,7 +198,7 @@ contract WithdrawalContract is
 
   /**
    * @notice Fetching an upgradeProposal from Portal creates an upgrade proposal
-   * @notice approving the version changes the approvedVersion on GeodeUtils
+   * @notice approving the version changes the approvedUpgrade on GeodeUtils
    * @dev remaining code is basically taken from upgradeTo of UUPS since
    * it is still not public, but external
    */
@@ -233,8 +213,8 @@ contract WithdrawalContract is
     );
 
     approveProposal(proposedVersion);
-    _authorizeUpgrade(GEM.approvedVersion);
-    _upgradeToAndCallUUPS(GEM.approvedVersion, new bytes(0), false);
+    _authorizeUpgrade(GEM.approvedUpgrade);
+    _upgradeToAndCallUUPS(GEM.approvedUpgrade, new bytes(0), false);
   }
 
   /**

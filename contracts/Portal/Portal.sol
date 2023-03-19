@@ -282,7 +282,7 @@ contract Portal is
 
   function _setContractVersion(uint256 versionId) internal virtual {
     CONTRACT_VERSION = versionId;
-    GEODE.approvedVersion = address(0);
+    GEODE.approvedUpgrade = address(0);
 
     emit ContractVersionSet(getContractVersion());
   }
