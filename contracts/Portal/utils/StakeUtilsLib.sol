@@ -344,7 +344,7 @@ library StakeUtils {
         DATASTORE.readAddressForId(version, "CONTROLLER"),
         abi.encodeWithSelector(
           IWithdrawalContract(address(0)).initialize.selector,
-          version,
+          DATASTORE.readBytesForId(version, "NAME"),
           _id,
           self.gETH,
           address(this),
@@ -1234,6 +1234,11 @@ library StakeUtils {
     // checks and effects
     authenticate(DATASTORE, operatorId, true, true, [true, false]);
     authenticate(DATASTORE, poolId, false, false, [false, true]);
+    require(
+      !(withdrawalContractById(DATASTORE, poolId).recoveryMode()),
+      "SU: withdrawalContract is in recovery"
+    );
+
     {
       uint256 pkLen = pubkeys.length;
 

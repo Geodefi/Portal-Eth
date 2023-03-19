@@ -73,6 +73,8 @@ interface IPortal {
 
   function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 
+  function recoveryMode() external view returns (bool);
+
   function setGovernanceFee(uint256 newFee) external;
 
   function newProposal(

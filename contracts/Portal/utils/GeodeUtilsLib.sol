@@ -370,12 +370,17 @@ library GeodeUtils {
    * @notice Get if it is allowed to change a specific contract with the current version.
    * @return True if it is allowed by senate and false if not.
    * @dev address(0) should return false
+   * @dev currentImplementation should always be UUPS._getImplementation()
    * @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022
    **/
   function isUpgradeAllowed(
     DualGovernance storage self,
-    address proposedImplementation
+    address proposedImplementation,
+    address currentImplementation
   ) external view returns (bool) {
-    return (self.approvedUpgrade != address(0)) && (self.approvedUpgrade == proposedImplementation);
+    return
+      (self.approvedUpgrade != address(0)) &&
+      (proposedImplementation != currentImplementation) &&
+      (self.approvedUpgrade == proposedImplementation);
   }
 }

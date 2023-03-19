@@ -61,7 +61,7 @@ contract WithdrawalContract is
   }
 
   function initialize(
-    uint256 _VERSION,
+    bytes memory _NAME,
     uint256 _ID,
     address _gETH,
     address _PORTAL,
@@ -75,12 +75,24 @@ contract WithdrawalContract is
     POOL_ID = _ID;
 
     GEM.GOVERNANCE = _PORTAL;
-    GEM.SENATE = _OWNER;
+    GEM.SENATE = _PORTAL;
     GEM.SENATE_EXPIRY = type(uint256).max;
 
-    CONTRACT_VERSION = _VERSION;
-    emit ContractVersionSet(_VERSION);
+    {
+      uint256 portalVersion = GEM.newProposal(
+        DATASTORE,
+        _getImplementation(),
+        ID_TYPE.CONTRACT_UPGRADE,
+        _NAME,
+        1 days
+      );
+      approveProposal(portalVersion);
+      _setContractVersion(
+        DataStoreUtils.generateId(_NAME, ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT)
+      );
+    }
 
+    GEM.SENATE = _OWNER;
     return true;
   }
 
@@ -93,7 +105,12 @@ contract WithdrawalContract is
   function _authorizeUpgrade(
     address proposed_implementation
   ) internal virtual override onlyController {
-    require(GEM.isUpgradeAllowed(proposed_implementation), "WC: NOT allowed to upgrade");
+    require(isUpgradeAllowed(proposed_implementation), "WC: NOT allowed to upgrade");
+  }
+
+  function _setContractVersion(uint256 versionId) internal virtual {
+    CONTRACT_VERSION = versionId;
+    emit ContractVersionSet(getContractVersion());
   }
 
   /**
@@ -151,18 +168,25 @@ contract WithdrawalContract is
    * @return isRecovering true if recoveryMode is active
    * @dev most likely Senate never expires
    */
-  function recoveryMode() public view virtual override returns (bool isRecovering) {
+  function recoveryMode()
+    external
+    view
+    virtual
+    override(IWithdrawalContract, IGeodeModule)
+    returns (bool isRecovering)
+  {
     isRecovering =
       paused() ||
       getContractVersion() != getProposedVersion() ||
+      GEM.approvedUpgrade != _getImplementation() ||
       getPortal().readAddressForId(getPoolId(), "CONTROLLER") != GEM.getSenate() ||
       block.timestamp >= GEM.getSenateExpiry();
   }
 
   function isUpgradeAllowed(
     address proposedImplementation
-  ) external view virtual override(IWithdrawalContract, IGeodeModule) returns (bool) {
-    return GEM.isUpgradeAllowed(proposedImplementation);
+  ) public view virtual override(IWithdrawalContract, IGeodeModule) returns (bool) {
+    return GEM.isUpgradeAllowed(proposedImplementation, _getImplementation());
   }
 
   /**
@@ -203,6 +227,8 @@ contract WithdrawalContract is
    * it is still not public, but external
    */
   function fetchUpgradeProposal() external virtual override onlyController {
+    require(!(getPortal().recoveryMode()), "WC: Portal is in recovery");
+
     uint256 proposedVersion = getPortal().fetchModuleUpgradeProposal(
       ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT
     );

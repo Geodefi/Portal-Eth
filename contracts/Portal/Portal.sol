@@ -277,13 +277,11 @@ contract Portal is
    */
   function _authorizeUpgrade(address proposed_implementation) internal virtual override {
     require(proposed_implementation != address(0));
-    require(GEODE.isUpgradeAllowed(proposed_implementation), "Portal: is not allowed to upgrade");
+    require(isUpgradeAllowed(proposed_implementation), "Portal: not allowed to upgrade");
   }
 
   function _setContractVersion(uint256 versionId) internal virtual {
     CONTRACT_VERSION = versionId;
-    GEODE.approvedUpgrade = address(0);
-
     emit ContractVersionSet(getContractVersion());
   }
 
@@ -460,8 +458,26 @@ contract Portal is
 
   function isUpgradeAllowed(
     address proposedImplementation
-  ) external view virtual override(IPortal, IGeodeModule) returns (bool) {
-    return GEODE.isUpgradeAllowed(proposedImplementation);
+  ) public view virtual override(IPortal, IGeodeModule) returns (bool) {
+    return GEODE.isUpgradeAllowed(proposedImplementation, _getImplementation());
+  }
+
+  /**
+   * @notice Recovery Mode allows Portal to isolate itself
+   * @return isRecovering true if recoveryMode is active
+   * @dev most likely Senate never expires
+   */
+  function recoveryMode()
+    external
+    view
+    virtual
+    override(IPortal, IGeodeModule)
+    returns (bool isRecovering)
+  {
+    isRecovering =
+      paused() ||
+      GEODE.approvedUpgrade != _getImplementation() ||
+      block.timestamp >= GEODE.getSenateExpiry();
   }
 
   /**

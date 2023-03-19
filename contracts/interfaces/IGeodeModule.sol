@@ -12,4 +12,6 @@ interface IGeodeModule {
   function approveProposal(uint256 id) external returns (uint256 _type, address _controller);
 
   function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
+
+  function recoveryMode() external view returns (bool);
 }
