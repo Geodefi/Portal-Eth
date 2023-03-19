@@ -9,15 +9,15 @@ contract Whitelist is IWhitelist, Ownable {
 
   mapping(address => bool) private whitelist;
 
-  function isAllowed(
-    address _address
-  ) external view virtual override returns (bool) {
+  function isAllowed(address _address) external view virtual override returns (bool) {
     return whitelist[_address];
   }
 
   function setAddress(address _address, bool allow) external virtual onlyOwner {
     require(whitelist[_address] != allow);
+
     whitelist[_address] = allow;
+
     emit Listed(_address, allow);
   }
 }

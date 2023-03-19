@@ -5,12 +5,7 @@ import "../../../interfaces/IDepositContract.sol";
 import "../../utils/DepositContractUtilsLib.sol";
 
 contract TestDepositContractUtils {
-  function getDepositContract()
-    external
-    view
-    virtual
-    returns (IDepositContract)
-  {
+  function getDepositContract() external view virtual returns (IDepositContract) {
     return DepositContractUtils.DEPOSIT_CONTRACT;
   }
 
@@ -29,9 +24,7 @@ contract TestDepositContractUtils {
       );
   }
 
-  function addressToWC(
-    address _wc_address
-  ) external view virtual returns (bytes memory) {
+  function addressToWC(address _wc_address) external view virtual returns (bytes memory) {
     return DepositContractUtils.addressToWC(_wc_address);
   }
 

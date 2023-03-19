@@ -28,11 +28,7 @@ contract nonERC1155Receiver is Context {
     }
   }
 
-  function _transfer(
-    address sender,
-    address recipient,
-    uint256 amount
-  ) internal virtual {
+  function _transfer(address sender, address recipient, uint256 amount) internal virtual {
     unchecked {
       _ERC1155.safeTransferFrom(sender, recipient, _id, amount, "");
     }

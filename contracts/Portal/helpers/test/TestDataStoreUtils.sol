@@ -8,10 +8,7 @@ contract TestDataStoreUtils {
 
   /// @notice helpers
 
-  function generateId(
-    bytes calldata NAME,
-    uint256 TYPE
-  ) external pure returns (uint256) {
+  function generateId(bytes calldata NAME, uint256 TYPE) external pure returns (uint256) {
     return DataStoreUtils.generateId(NAME, TYPE);
   }
 
@@ -21,24 +18,15 @@ contract TestDataStoreUtils {
 
   /// @notice READ
 
-  function readUintForId(
-    uint256 _id,
-    bytes32 _key
-  ) external view returns (uint256) {
+  function readUintForId(uint256 _id, bytes32 _key) external view returns (uint256) {
     return DATASTORE.readUintForId(_id, _key);
   }
 
-  function readBytesForId(
-    uint256 _id,
-    bytes32 _key
-  ) external view returns (bytes memory) {
+  function readBytesForId(uint256 _id, bytes32 _key) external view returns (bytes memory) {
     return DATASTORE.readBytesForId(_id, _key);
   }
 
-  function readAddressForId(
-    uint256 _id,
-    bytes32 _key
-  ) external view returns (address) {
+  function readAddressForId(uint256 _id, bytes32 _key) external view returns (address) {
     return DATASTORE.readAddressForId(_id, _key);
   }
 
@@ -80,59 +68,31 @@ contract TestDataStoreUtils {
     DATASTORE.subUintForId(_id, _key, minuend);
   }
 
-  function writeBytesForId(
-    uint256 _id,
-    bytes32 _key,
-    bytes memory _data
-  ) external {
+  function writeBytesForId(uint256 _id, bytes32 _key, bytes memory _data) external {
     DATASTORE.writeBytesForId(_id, _key, _data);
   }
 
-  function writeAddressForId(
-    uint256 _id,
-    bytes32 _key,
-    address _data
-  ) external {
+  function writeAddressForId(uint256 _id, bytes32 _key, address _data) external {
     DATASTORE.writeAddressForId(_id, _key, _data);
   }
 
-  function appendUintArrayForId(
-    uint256 _id,
-    bytes32 _key,
-    uint256 _data
-  ) external {
+  function appendUintArrayForId(uint256 _id, bytes32 _key, uint256 _data) external {
     DATASTORE.appendUintArrayForId(_id, _key, _data);
   }
 
-  function appendBytesArrayForId(
-    uint256 _id,
-    bytes32 _key,
-    bytes memory _data
-  ) external {
+  function appendBytesArrayForId(uint256 _id, bytes32 _key, bytes memory _data) external {
     DATASTORE.appendBytesArrayForId(_id, _key, _data);
   }
 
-  function appendAddressArrayForId(
-    uint256 _id,
-    bytes32 _key,
-    address _data
-  ) external {
+  function appendAddressArrayForId(uint256 _id, bytes32 _key, address _data) external {
     DATASTORE.appendAddressArrayForId(_id, _key, _data);
   }
 
-  function appendUintArrayForIdBatch(
-    uint256 _id,
-    bytes32 _key,
-    uint256[] memory _data
-  ) external {
+  function appendUintArrayForIdBatch(uint256 _id, bytes32 _key, uint256[] memory _data) external {
     DATASTORE.appendUintArrayForIdBatch(_id, _key, _data);
   }
 
-  function appendBytesArrayForIdBatch(
-    uint256 _id,
-    bytes32 _key,
-    bytes[] memory _data
-  ) external {
+  function appendBytesArrayForIdBatch(uint256 _id, bytes32 _key, bytes[] memory _data) external {
     DATASTORE.appendBytesArrayForIdBatch(_id, _key, _data);
   }
 
