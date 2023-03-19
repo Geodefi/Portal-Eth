@@ -79,12 +79,7 @@ contract Portal is
    */
   event GovernanceFeeUpdated(uint256 newFee);
   event ControllerChanged(uint256 indexed id, address newCONTROLLER);
-  event Proposed(
-    uint256 id,
-    address CONTROLLER,
-    uint256 indexed TYPE,
-    uint256 deadline
-  );
+  event Proposed(uint256 id, address CONTROLLER, uint256 indexed TYPE, uint256 deadline);
   event ProposalApproved(uint256 id);
   event NewSenate(address senate, uint256 senateExpiry);
 
@@ -95,24 +90,12 @@ contract Portal is
   event VisibilitySet(uint256 id, bool indexed isPrivate);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
-  event ValidatorPeriodSwitched(
-    uint256 indexed id,
-    uint256 period,
-    uint256 effectiveAfter
-  );
-  event OperatorApproval(
-    uint256 indexed poolId,
-    uint256 indexed operatorId,
-    uint256 allowance
-  );
+  event ValidatorPeriodSwitched(uint256 indexed id, uint256 period, uint256 effectiveAfter);
+  event OperatorApproval(uint256 indexed poolId, uint256 indexed operatorId, uint256 allowance);
   event Prisoned(uint256 indexed id, bytes proof, uint256 releaseTimestamp);
   event Released(uint256 indexed id);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
-  event ProposalStaked(
-    uint256 indexed poolId,
-    uint256 operatorId,
-    bytes[] pubkeys
-  );
+  event ProposalStaked(uint256 indexed poolId, uint256 operatorId, bytes[] pubkeys);
   event BeaconStaked(bytes[] pubkeys);
 
   /**
@@ -176,27 +159,19 @@ contract Portal is
     require(_GOVERNANCE != address(0), "PORTAL: GOVERNANCE can NOT be ZERO");
     require(_SENATE != address(0), "PORTAL: SENATE can NOT be ZERO");
     require(_gETH != address(0), "PORTAL: gETH can NOT be ZERO");
-    require(
-      _ORACLE_POSITION != address(0),
-      "PORTAL: ORACLE_POSITION can NOT be ZERO"
-    );
-    require(
-      _DEFAULT_LP_MODULE != address(0),
-      "PORTAL: DEFAULT_LP can NOT be ZERO"
-    );
-    require(
-      _DEFAULT_LP_TOKEN_MODULE != address(0),
-      "PORTAL: DEFAULT_LP_TOKEN can NOT be ZERO"
-    );
+    require(_ORACLE_POSITION != address(0), "PORTAL: ORACLE_POSITION can NOT be ZERO");
+    require(_DEFAULT_LP_MODULE != address(0), "PORTAL: DEFAULT_LP can NOT be ZERO");
+    require(_DEFAULT_LP_TOKEN_MODULE != address(0), "PORTAL: DEFAULT_LP_TOKEN can NOT be ZERO");
     require(
       _DEFAULT_WITHDRAWAL_CONTRACT_MODULE != address(0),
       "PORTAL: WITHDRAWAL_CONTRACT_POSITION can NOT be ZERO"
     );
     require(
-      _ALLOWED_GETH_INTERFACE_MODULES.length ==
-        _ALLOWED_GETH_INTERFACE_MODULE_NAMES.length,
+      _ALLOWED_GETH_INTERFACE_MODULES.length == _ALLOWED_GETH_INTERFACE_MODULE_NAMES.length,
       "PORTAL: wrong _ALLOWED_GETH_INTERFACE_MODULES"
     );
+
+    // need to do this for propose-approve operations
     GEODE.GOVERNANCE = msg.sender;
     GEODE.SENATE = msg.sender;
     GEODE.SENATE_EXPIRY = block.timestamp + 1;
@@ -300,19 +275,15 @@ contract Portal is
    * note that there is no Governance check, as upgrades are effective
    * * right after the Senate approval
    */
-  function _authorizeUpgrade(
-    address proposed_implementation
-  ) internal virtual override {
+  function _authorizeUpgrade(address proposed_implementation) internal virtual override {
     require(proposed_implementation != address(0));
-    require(
-      GEODE.isUpgradeAllowed(proposed_implementation),
-      "Portal: is not allowed to upgrade"
-    );
+    require(GEODE.isUpgradeAllowed(proposed_implementation), "Portal: is not allowed to upgrade");
   }
 
   function _setContractVersion(uint256 versionId) internal virtual {
     CONTRACT_VERSION = versionId;
     GEODE.approvedVersion = address(0);
+
     emit ContractVersionSet(getContractVersion());
   }
 
@@ -473,12 +444,7 @@ contract Portal is
     view
     virtual
     override
-    returns (
-      address SENATE,
-      address GOVERNANCE,
-      uint256 SENATE_EXPIRY,
-      uint256 GOVERNANCE_FEE
-    )
+    returns (address SENATE, address GOVERNANCE, uint256 SENATE_EXPIRY, uint256 GOVERNANCE_FEE)
   {
     SENATE = GEODE.getSenate();
     GOVERNANCE = GEODE.getGovernance();
@@ -488,13 +454,7 @@ contract Portal is
 
   function getProposal(
     uint256 id
-  )
-    external
-    view
-    virtual
-    override
-    returns (GeodeUtils.Proposal memory proposal)
-  {
+  ) external view virtual override returns (GeodeUtils.Proposal memory proposal) {
     proposal = GEODE.getProposal(id);
   }
 
@@ -524,12 +484,7 @@ contract Portal is
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  )
-    external
-    virtual
-    override(IPortal, IGeodeModule)
-    returns (uint256 id, bool success)
-  {
+  ) external virtual override(IPortal, IGeodeModule) returns (uint256 id, bool success) {
     id = GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
     success = true;
   }
@@ -544,13 +499,9 @@ contract Portal is
    */
   function approveProposal(
     uint256 id
-  )
-    public
-    virtual
-    override(IPortal, IGeodeModule)
-    returns (uint256 _type, address _controller)
-  {
+  ) public virtual override(IPortal, IGeodeModule) returns (uint256 _type, address _controller) {
     (_type, _controller) = GEODE.approveProposal(DATASTORE, id);
+
     if (
       _type == ID_TYPE.MODULE_WITHDRAWAL_CONTRACT ||
       _type == ID_TYPE.MODULE_LIQUDITY_POOL ||
@@ -626,39 +577,27 @@ contract Portal is
     return DATASTORE.readBytesArrayForId(poolId, "validators", index);
   }
 
-  function getMaintenanceFee(
-    uint256 id
-  ) external view virtual override returns (uint256 fee) {
+  function getMaintenanceFee(uint256 id) external view virtual override returns (uint256 fee) {
     fee = StakeUtils.getMaintenanceFee(DATASTORE, id);
   }
 
-  function isPrisoned(
-    uint256 operatorId
-  ) external view virtual override returns (bool) {
+  function isPrisoned(uint256 operatorId) external view virtual override returns (bool) {
     return StakeUtils.isPrisoned(DATASTORE, operatorId);
   }
 
-  function isPrivatePool(
-    uint256 poolId
-  ) external view virtual override returns (bool) {
+  function isPrivatePool(uint256 poolId) external view virtual override returns (bool) {
     return StakeUtils.isPrivatePool(DATASTORE, poolId);
   }
 
-  function isPriceValid(
-    uint256 poolId
-  ) external view virtual override returns (bool) {
+  function isPriceValid(uint256 poolId) external view virtual override returns (bool) {
     return STAKER.isPriceValid(poolId);
   }
 
-  function isMintingAllowed(
-    uint256 poolId
-  ) external view virtual override returns (bool) {
+  function isMintingAllowed(uint256 poolId) external view virtual override returns (bool) {
     return STAKER.isMintingAllowed(DATASTORE, poolId);
   }
 
-  function canStake(
-    bytes calldata pubkey
-  ) external view virtual override returns (bool) {
+  function canStake(bytes calldata pubkey) external view virtual override returns (bool) {
     return STAKER.canStake(DATASTORE, pubkey);
   }
 
@@ -685,14 +624,7 @@ contract Portal is
 
   function fetchModuleUpgradeProposal(
     uint256 moduleType
-  )
-    external
-    virtual
-    override
-    whenNotPaused
-    nonReentrant
-    returns (uint256 moduleVersion)
-  {
+  ) external virtual override whenNotPaused nonReentrant returns (uint256 moduleVersion) {
     moduleVersion = STAKER._defaultModules[moduleType];
     (, bool success) = IGeodeModule(msg.sender).newProposal(
       DATASTORE.readAddressForId(moduleVersion, "CONTROLLER"),
@@ -700,6 +632,7 @@ contract Portal is
       DATASTORE.readBytesForId(moduleVersion, "NAME"),
       4 weeks
     );
+
     require(success, "PORTAL: cannot propose upgrade");
   }
 
@@ -716,10 +649,7 @@ contract Portal is
     StakeUtils.setPoolVisibility(DATASTORE, poolId, isPrivate);
   }
 
-  function setWhitelist(
-    uint256 poolId,
-    address whitelist
-  ) external virtual override whenNotPaused {
+  function setWhitelist(uint256 poolId, address whitelist) external virtual override whenNotPaused {
     StakeUtils.setWhitelist(DATASTORE, poolId, whitelist);
   }
 
@@ -733,13 +663,7 @@ contract Portal is
     uint256 validatorPeriod,
     address maintainer
   ) external payable virtual override whenNotPaused nonReentrant {
-    StakeUtils.initiateOperator(
-      DATASTORE,
-      id,
-      fee,
-      validatorPeriod,
-      maintainer
-    );
+    StakeUtils.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
   }
 
   function initiatePool(
@@ -789,29 +713,14 @@ contract Portal is
 
   function increaseWalletBalance(
     uint256 id
-  )
-    external
-    payable
-    virtual
-    override
-    whenNotPaused
-    nonReentrant
-    returns (bool success)
-  {
+  ) external payable virtual override whenNotPaused nonReentrant returns (bool success) {
     success = StakeUtils.increaseWalletBalance(DATASTORE, id);
   }
 
   function decreaseWalletBalance(
     uint256 id,
     uint256 value
-  )
-    external
-    virtual
-    override
-    whenNotPaused
-    nonReentrant
-    returns (bool success)
-  {
+  ) external virtual override whenNotPaused nonReentrant returns (bool success) {
     success = StakeUtils.decreaseWalletBalance(DATASTORE, id, value);
   }
 
@@ -826,16 +735,13 @@ contract Portal is
     StakeUtils.switchValidatorPeriod(DATASTORE, id, newPeriod);
   }
 
-  function blameOperator(
-    bytes calldata pk
-  ) external virtual override whenNotPaused {
+  function blameOperator(bytes calldata pk) external virtual override whenNotPaused {
     STAKER.blameOperator(DATASTORE, pk);
   }
 
-  function setEarlyExitFee(
-    uint256 fee
-  ) external virtual override onlyGovernance {
+  function setEarlyExitFee(uint256 fee) external virtual override onlyGovernance {
     require(fee < StakeUtils.MAX_EARLY_EXIT_FEE);
+
     STAKER.EARLY_EXIT_FEE = fee;
   }
 
@@ -849,9 +755,7 @@ contract Portal is
    * * Governance can release the prisoners
    * @dev onlyGovernance SHOULD be checked in Portal
    */
-  function releasePrisoned(
-    uint256 operatorId
-  ) external virtual override onlyGovernance {
+  function releasePrisoned(uint256 operatorId) external virtual override onlyGovernance {
     DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
 
     emit Released(operatorId);
@@ -866,12 +770,7 @@ contract Portal is
     uint256[] calldata operatorIds,
     uint256[] calldata allowances
   ) external virtual override whenNotPaused {
-    StakeUtils.batchApproveOperators(
-      DATASTORE,
-      poolId,
-      operatorIds,
-      allowances
-    );
+    StakeUtils.batchApproveOperators(DATASTORE, poolId, operatorIds, allowances);
   }
 
   /**
@@ -889,6 +788,7 @@ contract Portal is
     if (!STAKER.isPriceValid(poolId)) {
       OracleUtils.priceSync(DATASTORE, STAKER, poolId, price, priceProof);
     }
+
     STAKER.deposit(DATASTORE, poolId, mingETH, deadline, receiver);
   }
 
@@ -899,14 +799,7 @@ contract Portal is
     bytes[] calldata signatures1,
     bytes[] calldata signatures31
   ) external virtual override whenNotPaused nonReentrant {
-    STAKER.proposeStake(
-      DATASTORE,
-      poolId,
-      operatorId,
-      pubkeys,
-      signatures1,
-      signatures31
-    );
+    STAKER.proposeStake(DATASTORE, poolId, operatorId, pubkeys, signatures1, signatures31);
   }
 
   function beaconStake(
