@@ -53,21 +53,21 @@ import {IgETHInterface} from "../../interfaces/IgETHInterface.sol";
  * DEFAULT MODULES:
  * * Some Modules has only 1 version that can be used by the Pool Owners.
  *
- * * Type 21 : Withdrawal Contract implementation version
+ * * Type 10011 : Withdrawal Contract implementation version
  * * * Mandatory.
  * * * CONTROLLER is the implementation contract position (like always)
  * * * Requires the approval of Senate
  * * * Pools are in "Recovery Mode" until their Withdrawal Contract is upgraded.
  * * * * Meaning, no more Depositing or Staking can happen.
  *
- * * Type 41 : Liquidity Pool version
+ * * Type 10021 : Liquidity Pool version
  * * * Optional.
  * * * CONTROLLER is the implementation contract position (like always)
  * * * Requires the approval of Senate.
  * * * Pools can simply deploy the new version of this Module and start using it, if ever changed.
  * * * Liquidity Providers however, need to migrate.
  *
- * * Type 42 : Liquidity Pool Token version
+ * * Type 10022 : Liquidity Pool Token version
  * * * Optional, dependant to Liquidity Pool Module.
  * * * CONTROLLER is the implementation contract position (like always)
  * * * Requires the approval of Senate
@@ -76,7 +76,7 @@ import {IgETHInterface} from "../../interfaces/IgETHInterface.sol";
  * ALLOWED MODULES:
  * * Some Modules can support many different versions that can be used by the Pool Owners.
  *
- * * Type 31 : gETH interface version
+ * * Type 20031 : gETH interface version
  * * * Optional.
  * * * CONTROLLER is the implementation contract position (like always)
  * * * Requires the approval of Senate
