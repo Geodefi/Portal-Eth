@@ -62,11 +62,11 @@ contract WithdrawalContract is
   }
 
   function initialize(
-    bytes memory _NAME,
     uint256 _ID,
     address _gETH,
     address _PORTAL,
-    address _OWNER
+    address _OWNER,
+    bytes memory _versionName
   ) public virtual override initializer returns (bool) {
     __ReentrancyGuard_init();
     __Pausable_init();
@@ -84,13 +84,11 @@ contract WithdrawalContract is
         DATASTORE,
         _getImplementation(),
         ID_TYPE.CONTRACT_UPGRADE,
-        _NAME,
+        _versionName,
         1 days
       );
       approveProposal(portalVersion);
-      _setContractVersion(
-        DataStoreUtils.generateId(_NAME, ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT)
-      );
+      _setContractVersion(_versionName);
     }
 
     GEM.SENATE = _OWNER;
@@ -109,8 +107,11 @@ contract WithdrawalContract is
     require(isUpgradeAllowed(proposed_implementation), "WC: NOT allowed to upgrade");
   }
 
-  function _setContractVersion(uint256 versionId) internal virtual {
-    CONTRACT_VERSION = versionId;
+  function _setContractVersion(bytes memory versionName) internal virtual {
+    CONTRACT_VERSION = DataStoreUtils.generateId(
+      versionName,
+      ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT
+    );
     emit ContractVersionSet(getContractVersion());
   }
 

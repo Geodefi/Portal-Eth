@@ -253,7 +253,7 @@ contract Portal is
         1 days
       );
       approveProposal(portalVersion);
-      _setContractVersion(portalVersion);
+      _setContractVersion("v1");
     }
 
     GEODE.GOVERNANCE = _GOVERNANCE;
@@ -283,8 +283,8 @@ contract Portal is
     require(isUpgradeAllowed(proposed_implementation), "Portal: not allowed to upgrade");
   }
 
-  function _setContractVersion(uint256 versionId) internal virtual {
-    CONTRACT_VERSION = versionId;
+  function _setContractVersion(bytes memory versionName) internal virtual {
+    CONTRACT_VERSION = DataStoreUtils.generateId(versionName, ID_TYPE.CONTRACT_UPGRADE);
     emit ContractVersionSet(getContractVersion());
   }
 

@@ -2,7 +2,7 @@
   "manifestVersion": "3.2",
   "admin": {
     "address": "0x75E4B425FB124b8F68f2Db405386116fE8eB26B1",
-    "txHash": "0xed806945235885936edf71954e750a384d9caabf4a27797d4454ff1297e16fe4"
+    "txHash": "0x27ccc38d07d0a72f3d5dae83de2a6bc10b77641c11661b75ca174002adf72ba7"
   },
   "proxies": [
     {
@@ -216,23 +216,23 @@
       "kind": "transparent"
     },
     {
+      "address": "0x3bf53C3DA3Aa626986b098dca2e3a57a0bCEf145",
+      "txHash": "0xb512f069c91005c286ee5fbaa8fac7f7e80424de9da76ac770145384320ebc8b",
+      "kind": "transparent"
+    },
+    {
       "address": "0x7DF688e95907EAEff514c842FF0133676de99ECa",
-      "txHash": "0x5059d89bfbd16aa788f5457d06c2dcb173f64c9f6387cef46c087667061e8692",
+      "txHash": "0x77442590477ae30d4a3cd804b4cc3d1d50a01e1f5dc35adb861208e406c79eed",
       "kind": "uups"
     },
     {
       "address": "0x5AE825D2332ae932D4816ba20297c60DF8d25B22",
-      "txHash": "0x0552e4e672e4b5758b382aac26d9512e8dc2f03dba93342a24a2cbc037078224",
+      "txHash": "0x8a205576855f19a713d95d1173b02cecb1630b373016dbacabb670d8dcdcfde8",
       "kind": "uups"
     },
     {
       "address": "0xDCA5CE2bE1151d6b421682774bcc796eca333500",
-      "txHash": "0x8f43680c89279fc99d4b5d5ca91d4520194eb1b66a69f24f493e0a20e17c6beb",
-      "kind": "transparent"
-    },
-    {
-      "address": "0x3bf53C3DA3Aa626986b098dca2e3a57a0bCEf145",
-      "txHash": "0xb060f04665758189c23ca96fa84eb8fd1b402af25dd8e807b744dbc8b1713c79",
+      "txHash": "0xcd7ef9a2067c87b16d7a8f9eb5702c6eb8e5f34b5b67a307a0262aa67e0cb4e8",
       "kind": "transparent"
     }
   ],
@@ -15587,7 +15587,7 @@
     },
     "5256acb4dc0d2bb709f43d3625255ac636803aa9143ee16783377084e50e3e4d": {
       "address": "0xeA278D25cDEBaf20a4691fc4e1F43D138d6f8916",
-      "txHash": "0x3cfb8f50c6d40bd5c7c83eaa117b96983e38635ce292f651474f87e83e811261",
+      "txHash": "0x378937fb588aef52309326f7e4ecfcd37f6a3e25cdfbdefe0b9d339bae295612",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [
@@ -15782,9 +15782,9 @@
         }
       }
     },
-    "667665b9c3384115208a53f957204e5773f4a4bb4a4638d31ea6c6822a8a8c85": {
+    "22f0bbb89f22567b4881f722ac92e821f2a03d36c5429fe6b41a379b2a97a4a9": {
       "address": "0x00161100000978B946001181bf4cCfF2598aC63a",
-      "txHash": "0x633026d517bf35edbd3632ef5a4641112728b3142d4fe372950412a7f8784f66",
+      "txHash": "0x8f00a8a9230691da24c41ebcc239525112e78a6afda98024615d9bb3dbd8c80c",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [
@@ -15889,7 +15889,7 @@
             "label": "DATASTORE",
             "offset": 0,
             "slot": "401",
-            "type": "t_struct(IsolatedStorage)5217_storage",
+            "type": "t_struct(IsolatedStorage)5222_storage",
             "contract": "Portal",
             "src": "contracts/Portal/Portal.sol:147"
           },
@@ -15897,7 +15897,7 @@
             "label": "GEODE",
             "offset": 0,
             "slot": "417",
-            "type": "t_struct(DualGovernance)6225_storage",
+            "type": "t_struct(DualGovernance)6230_storage",
             "contract": "Portal",
             "src": "contracts/Portal/Portal.sol:149"
           },
@@ -15905,7 +15905,7 @@
             "label": "STAKER",
             "offset": 0,
             "slot": "433",
-            "type": "t_struct(PooledStaking)7620_storage",
+            "type": "t_struct(PooledStaking)7625_storage",
             "contract": "Portal",
             "src": "contracts/Portal/Portal.sol:150"
           },
@@ -15975,7 +15975,7 @@
             "label": "bytes",
             "numberOfBytes": "32"
           },
-          "t_contract(IgETH)12346": {
+          "t_contract(IgETH)11827": {
             "label": "contract IgETH",
             "numberOfBytes": "20"
           },
@@ -15991,7 +15991,7 @@
             "label": "mapping(bytes32 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7579_storage)": {
+          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7584_storage)": {
             "label": "mapping(bytes => struct StakeUtils.Validator)",
             "numberOfBytes": "32"
           },
@@ -16007,7 +16007,7 @@
             "label": "mapping(uint256 => mapping(uint256 => bool))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Proposal)6205_storage)": {
+          "t_mapping(t_uint256,t_struct(Proposal)6210_storage)": {
             "label": "mapping(uint256 => struct GeodeUtils.Proposal)",
             "numberOfBytes": "32"
           },
@@ -16015,7 +16015,7 @@
             "label": "mapping(uint256 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_struct(DualGovernance)6225_storage": {
+          "t_struct(DualGovernance)6230_storage": {
             "label": "struct GeodeUtils.DualGovernance",
             "members": [
               {
@@ -16050,7 +16050,7 @@
               },
               {
                 "label": "_proposals",
-                "type": "t_mapping(t_uint256,t_struct(Proposal)6205_storage)",
+                "type": "t_mapping(t_uint256,t_struct(Proposal)6210_storage)",
                 "offset": 0,
                 "slot": "5"
               },
@@ -16063,7 +16063,7 @@
             ],
             "numberOfBytes": "512"
           },
-          "t_struct(IsolatedStorage)5217_storage": {
+          "t_struct(IsolatedStorage)5222_storage": {
             "label": "struct DataStoreUtils.IsolatedStorage",
             "members": [
               {
@@ -16099,12 +16099,12 @@
             ],
             "numberOfBytes": "512"
           },
-          "t_struct(PooledStaking)7620_storage": {
+          "t_struct(PooledStaking)7625_storage": {
             "label": "struct StakeUtils.PooledStaking",
             "members": [
               {
                 "label": "gETH",
-                "type": "t_contract(IgETH)12346",
+                "type": "t_contract(IgETH)11827",
                 "offset": 0,
                 "slot": "0"
               },
@@ -16176,7 +16176,7 @@
               },
               {
                 "label": "_validators",
-                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7579_storage)",
+                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7584_storage)",
                 "offset": 0,
                 "slot": "12"
               },
@@ -16189,7 +16189,7 @@
             ],
             "numberOfBytes": "512"
           },
-          "t_struct(Proposal)6205_storage": {
+          "t_struct(Proposal)6210_storage": {
             "label": "struct GeodeUtils.Proposal",
             "members": [
               {
@@ -16219,7 +16219,7 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(Validator)7579_storage": {
+          "t_struct(Validator)7584_storage": {
             "label": "struct StakeUtils.Validator",
             "members": [
               {

@@ -6,11 +6,11 @@ import {IPortal} from "./IPortal.sol";
 
 interface IWithdrawalContract {
   function initialize(
-    bytes memory _NAME,
     uint256 _ID,
     address _gETH,
     address _PORTAL,
-    address _CONTROLLER
+    address _CONTROLLER,
+    bytes memory _versionName
   ) external returns (bool);
 
   function pause() external;

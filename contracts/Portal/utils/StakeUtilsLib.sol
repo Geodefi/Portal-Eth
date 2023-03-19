@@ -344,11 +344,11 @@ library StakeUtils {
         DATASTORE.readAddressForId(version, "CONTROLLER"),
         abi.encodeWithSelector(
           IWithdrawalContract(address(0)).initialize.selector,
-          DATASTORE.readBytesForId(version, "NAME"),
           _id,
           self.gETH,
           address(this),
-          DATASTORE.readAddressForId(_id, "CONTROLLER")
+          DATASTORE.readAddressForId(_id, "CONTROLLER"),
+          DATASTORE.readBytesForId(version, "NAME")
         )
       )
     );
