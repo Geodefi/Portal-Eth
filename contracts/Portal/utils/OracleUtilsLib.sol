@@ -99,14 +99,12 @@ library OracleUtils {
     SU.PooledStaking storage STAKER,
     bytes calldata _pk
   ) internal {
+    require(STAKER._validators[_pk].index <= STAKER.VERIFICATION_INDEX, "OU: unexpected index");
     require(
       STAKER._validators[_pk].state == VALIDATOR_STATE.PROPOSED,
       "OU: NOT all pubkeys are pending"
     );
-    require(
-      STAKER._validators[_pk].index <= STAKER.VERIFICATION_INDEX,
-      "OU: unexpected index"
-    );
+
     SU._imprison(DATASTORE, STAKER._validators[_pk].operatorId, _pk);
 
     uint256 poolId = STAKER._validators[_pk].poolId;
@@ -115,11 +113,7 @@ library OracleUtils {
 
     uint256 operatorId = STAKER._validators[_pk].operatorId;
     DATASTORE.subUintForId(operatorId, "totalProposedValidators", 1);
-    DATASTORE.subUintForId(
-      poolId,
-      DSU.getKey(operatorId, "proposedValidators"),
-      1
-    );
+    DATASTORE.subUintForId(poolId, DSU.getKey(operatorId, "proposedValidators"), 1);
 
     STAKER._validators[_pk].state = VALIDATOR_STATE.ALIENATED;
 
@@ -142,14 +136,8 @@ library OracleUtils {
     uint256 validatorVerificationIndex,
     bytes[] calldata alienatedPubkeys
   ) external onlyOracle(STAKER) {
-    require(
-      STAKER.VALIDATORS_INDEX >= validatorVerificationIndex,
-      "OU: high VERIFICATION_INDEX"
-    );
-    require(
-      validatorVerificationIndex > STAKER.VERIFICATION_INDEX,
-      "OU: low VERIFICATION_INDEX"
-    );
+    require(STAKER.VALIDATORS_INDEX >= validatorVerificationIndex, "OU: high VERIFICATION_INDEX");
+    require(validatorVerificationIndex > STAKER.VERIFICATION_INDEX, "OU: low VERIFICATION_INDEX");
 
     STAKER.VERIFICATION_INDEX = validatorVerificationIndex;
 
@@ -181,6 +169,7 @@ library OracleUtils {
     bytes[] calldata proofs
   ) external onlyOracle(STAKER) {
     require(feeThefts.length == proofs.length, "OU: invalid proofs");
+
     for (uint256 i; i < feeThefts.length; ++i) {
       SU._imprison(DATASTORE, feeThefts[i], proofs[i]);
 
@@ -207,16 +196,12 @@ library OracleUtils {
     bytes32 priceMerkleRoot,
     uint256 allValidatorsCount
   ) external onlyOracle(STAKER) {
-    require(
-      allValidatorsCount > MIN_VALIDATOR_COUNT,
-      "OU: low validator count"
-    );
+    require(allValidatorsCount > MIN_VALIDATOR_COUNT, "OU: low validator count");
 
     STAKER.PRICE_MERKLE_ROOT = priceMerkleRoot;
     STAKER.ORACLE_UPDATE_TIMESTAMP = block.timestamp;
 
-    uint256 newThreshold = (allValidatorsCount * MONOPOLY_RATIO) /
-      PERCENTAGE_DENOMINATOR;
+    uint256 newThreshold = (allValidatorsCount * MONOPOLY_RATIO) / PERCENTAGE_DENOMINATOR;
     STAKER.MONOPOLY_THRESHOLD = newThreshold;
 
     emit OracleReported(priceMerkleRoot, newThreshold);
@@ -243,14 +228,11 @@ library OracleUtils {
     uint256 _id,
     uint256 _newPrice
   ) internal view {
-    require(
-      DATASTORE.readUintForId(_id, "TYPE") == ID_TYPE.POOL,
-      "OU: not a pool?"
-    );
+    require(DATASTORE.readUintForId(_id, "TYPE") == ID_TYPE.POOL, "OU: not a pool?");
 
     uint256 lastUpdate = STAKER.gETH.priceUpdateTimestamp(_id);
-    uint256 dayPercentSinceUpdate = ((block.timestamp - lastUpdate) *
-      PERCENTAGE_DENOMINATOR) / 1 days;
+    uint256 dayPercentSinceUpdate = ((block.timestamp - lastUpdate) * PERCENTAGE_DENOMINATOR) /
+      1 days;
 
     uint256 curPrice = STAKER.gETH.pricePerShare(_id);
 
@@ -263,8 +245,7 @@ library OracleUtils {
       dayPercentSinceUpdate) / PERCENTAGE_DENOMINATOR) / PERCENTAGE_DENOMINATOR;
 
     require(
-      _newPrice + maxPriceDecrease >= curPrice &&
-        _newPrice <= curPrice + maxPriceIncrease,
+      (_newPrice + maxPriceDecrease >= curPrice) && (_newPrice <= curPrice + maxPriceIncrease),
       "OU: price is insane"
     );
   }
@@ -281,9 +262,7 @@ library OracleUtils {
     uint256 _price,
     bytes32[] calldata _priceProof
   ) internal {
-    bytes32 leaf = keccak256(
-      bytes.concat(keccak256(abi.encode(_poolId, _price)))
-    );
+    bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(_poolId, _price))));
     require(
       MerkleProof.verify(_priceProof, STAKER.PRICE_MERKLE_ROOT, leaf),
       "OU: NOT all proofs are valid"
@@ -327,6 +306,7 @@ library OracleUtils {
   ) external {
     require(poolIds.length == prices.length);
     require(poolIds.length == priceProofs.length);
+
     for (uint256 i = 0; i < poolIds.length; ++i) {
       _priceSync(DATASTORE, STAKER, poolIds[i], prices[i], priceProofs[i]);
     }

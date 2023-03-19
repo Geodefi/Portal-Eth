@@ -1021,7 +1021,7 @@ library StakeUtils {
     uint256 poolId
   ) public view returns (bool) {
     return
-      isPriceValid(self, poolId) && !(withdrawalContractById(DATASTORE, poolId).recoveryMode());
+      (isPriceValid(self, poolId)) && !(withdrawalContractById(DATASTORE, poolId).recoveryMode());
   }
 
   /**
@@ -1167,8 +1167,8 @@ library StakeUtils {
     uint256 verificationIndex
   ) internal view returns (bool) {
     return
-      (self._validators[pubkey].state == VALIDATOR_STATE.PROPOSED &&
-        self._validators[pubkey].index <= verificationIndex) &&
+      (self._validators[pubkey].state == VALIDATOR_STATE.PROPOSED) &&
+      (self._validators[pubkey].index <= verificationIndex) &&
       !(withdrawalContractById(DATASTORE, self._validators[pubkey].poolId).recoveryMode());
   }
 
@@ -1234,7 +1234,7 @@ library StakeUtils {
     {
       uint256 pkLen = pubkeys.length;
 
-      require(pkLen > 0 && pkLen <= DCU.MAX_DEPOSITS_PER_CALL, "SU: MAX 50 nodes per call");
+      require((pkLen > 0) && (pkLen <= DCU.MAX_DEPOSITS_PER_CALL), "SU: 0 - 50 validators");
       require(pkLen == signatures1.length, "SU: invalid signatures1 length");
       require(pkLen == signatures31.length, "SU: invalid signatures31 length");
 
@@ -1339,7 +1339,10 @@ library StakeUtils {
   ) external {
     authenticate(DATASTORE, operatorId, true, true, [true, false]);
 
-    require(pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL, "SU: MAX 50 nodes");
+    require(
+      (pubkeys.length > 0) && (pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL),
+      "SU: 0 - 50 validators"
+    );
 
     {
       uint256 verificationIndex = self.VERIFICATION_INDEX;

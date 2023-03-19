@@ -52,10 +52,7 @@ library DataStoreUtils {
    * meaning malicious actors can claim names to mislead people. To prevent this
    * TYPEs will be considered during ID generation.
    */
-  function generateId(
-    bytes memory _name,
-    uint256 _type
-  ) internal pure returns (uint256 id) {
+  function generateId(bytes memory _name, uint256 _type) internal pure returns (uint256 id) {
     id = uint256(keccak256(abi.encodePacked(_name, _type)));
   }
 
@@ -63,10 +60,7 @@ library DataStoreUtils {
    * @notice hashes given id and a parameter to be used as key in getters and setters
    * @return key bytes32 hash of id and parameter to be stored
    **/
-  function getKey(
-    uint256 id,
-    bytes32 param
-  ) internal pure returns (bytes32 key) {
+  function getKey(uint256 id, bytes32 param) internal pure returns (bytes32 key) {
     key = keccak256(abi.encodePacked(id, param));
   }
 
@@ -224,12 +218,14 @@ library DataStoreUtils {
   ) internal {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
+
     for (uint256 i; i < _data.length; ) {
       self.uintData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
       }
     }
+
     self.uintData[arrayKey] = arrayLen;
   }
 
@@ -241,12 +237,14 @@ library DataStoreUtils {
   ) internal {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
+
     for (uint256 i; i < _data.length; ) {
       self.bytesData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
       }
     }
+
     self.uintData[arrayKey] = arrayLen;
   }
 
@@ -258,12 +256,14 @@ library DataStoreUtils {
   ) internal {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
+
     for (uint256 i; i < _data.length; ) {
       self.addressData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
       }
     }
+
     self.uintData[arrayKey] = arrayLen;
   }
 }

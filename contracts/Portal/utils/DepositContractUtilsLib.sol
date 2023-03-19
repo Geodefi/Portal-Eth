@@ -28,18 +28,14 @@ library DepositContractUtils {
     }
 
     if (32 == _b.length) return BytesLib.concat(_b, zero32);
-    else
-      return
-        BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64 - _b.length)));
+    else return BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64 - _b.length)));
   }
 
   /**
    * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
    * @param _value Number less than `2**64` for compatibility reasons
    */
-  function _toLittleEndian64(
-    uint256 _value
-  ) internal pure returns (uint256 result) {
+  function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
     result = 0;
     uint256 temp_value = _value;
     for (uint256 i = 0; i < 8; ++i) {
@@ -58,10 +54,7 @@ library DepositContractUtils {
     uint256 _stakeAmount
   ) internal pure returns (bytes32) {
     require(_stakeAmount >= 1 ether, "DepositContract: deposit value too low");
-    require(
-      _stakeAmount % 1 gwei == 0,
-      "DepositContract: deposit value not multiple of gwei"
-    );
+    require(_stakeAmount % 1 gwei == 0, "DepositContract: deposit value not multiple of gwei");
 
     uint256 deposit_amount = _stakeAmount / 1 gwei;
     bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
@@ -75,9 +68,7 @@ library DepositContractUtils {
     bytes32 depositDataRoot = sha256(
       abi.encodePacked(
         sha256(abi.encodePacked(pubkeyRoot, _withdrawalCredentials)),
-        sha256(
-          abi.encodePacked(_toLittleEndian64(deposit_amount), signatureRoot)
-        )
+        sha256(abi.encodePacked(_toLittleEndian64(deposit_amount), signatureRoot))
       )
     );
 
@@ -87,10 +78,7 @@ library DepositContractUtils {
   function addressToWC(address wcAddress) internal pure returns (bytes memory) {
     uint256 w = 1 << 248;
 
-    return
-      abi.encodePacked(
-        bytes32(w) | bytes32(uint256(uint160(address(wcAddress))))
-      );
+    return abi.encodePacked(bytes32(w) | bytes32(uint256(uint160(address(wcAddress)))));
   }
 
   function depositValidator(

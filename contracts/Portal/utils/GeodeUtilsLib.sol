@@ -45,12 +45,7 @@ library GeodeUtils {
   /// @notice EVENTS
   event GovernanceFeeUpdated(uint256 newFee);
   event ControllerChanged(uint256 indexed id, address newCONTROLLER);
-  event Proposed(
-    uint256 id,
-    address CONTROLLER,
-    uint256 indexed TYPE,
-    uint256 deadline
-  );
+  event Proposed(uint256 id, address CONTROLLER, uint256 indexed TYPE, uint256 deadline);
   event ProposalApproved(uint256 id);
   event NewSenate(address senate, uint256 senateExpiry);
 
@@ -99,8 +94,7 @@ library GeodeUtils {
   /**
    * @notice limiting the GOVERNANCE_FEE, 5%
    */
-  uint256 public constant MAX_GOVERNANCE_FEE =
-    (PERCENTAGE_DENOMINATOR * 5) / 100;
+  uint256 public constant MAX_GOVERNANCE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
 
   /**
    * @notice prevents Governance from collecting any fees till given timestamp:
@@ -144,27 +138,21 @@ library GeodeUtils {
   /**
    * @return address of SENATE
    **/
-  function getSenate(
-    DualGovernance storage self
-  ) external view returns (address) {
+  function getSenate(DualGovernance storage self) external view returns (address) {
     return self.SENATE;
   }
 
   /**
    * @return address of GOVERNANCE
    **/
-  function getGovernance(
-    DualGovernance storage self
-  ) external view returns (address) {
+  function getGovernance(DualGovernance storage self) external view returns (address) {
     return self.GOVERNANCE;
   }
 
   /**
    * @return the expiration date of current SENATE as a timestamp
    */
-  function getSenateExpiry(
-    DualGovernance storage self
-  ) external view returns (uint256) {
+  function getSenateExpiry(DualGovernance storage self) external view returns (uint256) {
     return self.SENATE_EXPIRY;
   }
 
@@ -173,13 +161,9 @@ library GeodeUtils {
    * @dev MAX_GOVERNANCE_FEE MUST limit GOVERNANCE_FEE even if MAX is changed later
    * @dev MUST return 0 until cooldown period is active
    */
-  function getGovernanceFee(
-    DualGovernance storage self
-  ) external view returns (uint256) {
+  function getGovernanceFee(DualGovernance storage self) external view returns (uint256) {
     return
-      block.timestamp < FEE_COOLDOWN
-        ? 0
-        : MAX_GOVERNANCE_FEE > self.GOVERNANCE_FEE
+      block.timestamp < FEE_COOLDOWN ? 0 : MAX_GOVERNANCE_FEE > self.GOVERNANCE_FEE
         ? self.GOVERNANCE_FEE
         : MAX_GOVERNANCE_FEE;
   }
@@ -267,21 +251,14 @@ library GeodeUtils {
     id = DSU.generateId(_NAME, _TYPE);
 
     require(self._proposals[id].deadline == 0, "GU: NAME already proposed");
-
-    require(
-      (DATASTORE.readBytesForId(id, "NAME")).length == 0,
-      "GU: ID already exist"
-    );
-
+    require((DATASTORE.readBytesForId(id, "NAME")).length == 0, "GU: ID already exist");
     require(_CONTROLLER != address(0), "GU: CONTROLLER can NOT be ZERO");
     require(
-      _TYPE != ID_TYPE.NONE &&
-        _TYPE != ID_TYPE.__GAP__ &&
-        _TYPE != ID_TYPE.POOL,
+      (_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.__GAP__) && (_TYPE != ID_TYPE.POOL),
       "GU: TYPE is NONE, GAP or POOL"
     );
     require(
-      duration >= MIN_PROPOSAL_DURATION && duration <= MAX_PROPOSAL_DURATION,
+      (duration >= MIN_PROPOSAL_DURATION) && (duration <= MAX_PROPOSAL_DURATION),
       "GU: invalid proposal duration"
     );
 
@@ -310,10 +287,7 @@ library GeodeUtils {
     DSU.IsolatedStorage storage DATASTORE,
     uint256 id
   ) external onlySenate(self) returns (uint256 _type, address _controller) {
-    require(
-      self._proposals[id].deadline > block.timestamp,
-      "GU: NOT an active proposal"
-    );
+    require(self._proposals[id].deadline > block.timestamp, "GU: NOT an active proposal");
 
     _type = self._proposals[id].TYPE;
     _controller = self._proposals[id].CONTROLLER;
@@ -325,8 +299,7 @@ library GeodeUtils {
 
     if (_type == ID_TYPE.SENATE) {
       _setSenate(self, _controller, block.timestamp + MAX_SENATE_PERIOD);
-    }
-    if (_type == ID_TYPE.CONTRACT_UPGRADE) {
+    } else if (_type == ID_TYPE.CONTRACT_UPGRADE) {
       self.approvedVersion = _controller;
     }
 
@@ -347,11 +320,7 @@ library GeodeUtils {
   /**
    * @notice internal function to set a new senate with a given period
    */
-  function _setSenate(
-    DualGovernance storage self,
-    address _newSenate,
-    uint256 _expiry
-  ) internal {
+  function _setSenate(DualGovernance storage self, address _newSenate, uint256 _expiry) internal {
     self.SENATE = _newSenate;
     self.SENATE_EXPIRY = _expiry;
 
@@ -367,10 +336,7 @@ library GeodeUtils {
    * * without changing the expiry,for example in the withdrawal contracts.
    * @dev does not change the expiry
    */
-  function changeSenate(
-    DualGovernance storage self,
-    address _newSenate
-  ) external onlySenate(self) {
+  function changeSenate(DualGovernance storage self, address _newSenate) external onlySenate(self) {
     _setSenate(self, _newSenate, self.SENATE_EXPIRY);
   }
 
@@ -388,6 +354,7 @@ library GeodeUtils {
     address _newSenate
   ) external onlyGovernance(self) {
     require(block.timestamp > self.SENATE_EXPIRY, "GU: cannot rescue yet");
+
     _setSenate(self, _newSenate, block.timestamp + MAX_SENATE_PERIOD);
   }
 
@@ -409,8 +376,6 @@ library GeodeUtils {
     DualGovernance storage self,
     address proposedImplementation
   ) external view returns (bool) {
-    return
-      self.approvedVersion != address(0) &&
-      self.approvedVersion == proposedImplementation;
+    return (self.approvedVersion != address(0)) && (self.approvedVersion == proposedImplementation);
   }
 }
