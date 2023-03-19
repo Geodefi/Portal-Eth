@@ -142,7 +142,7 @@ contract WithdrawalContract is
    * @notice get the latest version of the withdrawal contract module from Portal
    */
   function getProposedVersion() public view virtual override returns (uint256) {
-    return getPortal().getDefaultModule(ID_TYPE.MODULE_WITHDRAWAL_CONTRACT);
+    return getPortal().getDefaultModule(ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT);
   }
 
   /**
@@ -204,7 +204,7 @@ contract WithdrawalContract is
    */
   function fetchUpgradeProposal() external virtual override onlyController {
     uint256 proposedVersion = getPortal().fetchModuleUpgradeProposal(
-      ID_TYPE.MODULE_WITHDRAWAL_CONTRACT
+      ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT
     );
 
     require(

@@ -49,20 +49,20 @@ contract TestGlobals {
     return ID_TYPE.LIMIT_ALLOWED_MODULE_MAX;
   }
 
-  function getTypeMODULE_WITHDRAWAL_CONTRACT() public pure returns (uint256) {
-    return ID_TYPE.MODULE_WITHDRAWAL_CONTRACT;
+  function getTypeDEFAULT_MODULE_WITHDRAWAL_CONTRACT() public pure returns (uint256) {
+    return ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT;
   }
 
-  function getTypeMODULE_GETH_INTERFACE() public pure returns (uint256) {
-    return ID_TYPE.MODULE_GETH_INTERFACE;
+  function getTypeALLOWED_MODULE_GETH_INTERFACE() public pure returns (uint256) {
+    return ID_TYPE.ALLOWED_MODULE_GETH_INTERFACE;
   }
 
-  function getTypeMODULE_LIQUDITY_POOL() public pure returns (uint256) {
-    return ID_TYPE.MODULE_LIQUDITY_POOL;
+  function getTypeDEFAULT_MODULE_LIQUDITY_POOL() public pure returns (uint256) {
+    return ID_TYPE.DEFAULT_MODULE_LIQUDITY_POOL;
   }
 
-  function getTypeMODULE_LIQUDITY_POOL_TOKEN() public pure returns (uint256) {
-    return ID_TYPE.MODULE_LIQUDITY_POOL_TOKEN;
+  function getTypeDEFAULT_MODULE_LIQUDITY_POOL_TOKEN() public pure returns (uint256) {
+    return ID_TYPE.DEFAULT_MODULE_LIQUDITY_POOL_TOKEN;
   }
 
   // validator states

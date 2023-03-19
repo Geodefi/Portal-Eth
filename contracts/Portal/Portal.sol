@@ -189,7 +189,7 @@ contract Portal is
       uint256 liqPoolVersion = GEODE.newProposal(
         DATASTORE,
         _DEFAULT_LP_MODULE,
-        ID_TYPE.MODULE_LIQUDITY_POOL,
+        ID_TYPE.DEFAULT_MODULE_LIQUDITY_POOL,
         "v1",
         1 days
       );
@@ -200,7 +200,7 @@ contract Portal is
       uint256 lpTokenVersion = GEODE.newProposal(
         DATASTORE,
         _DEFAULT_LP_TOKEN_MODULE,
-        ID_TYPE.MODULE_LIQUDITY_POOL_TOKEN,
+        ID_TYPE.DEFAULT_MODULE_LIQUDITY_POOL_TOKEN,
         "v1",
         1 days
       );
@@ -211,7 +211,7 @@ contract Portal is
       uint256 withdrawalContractVersion = GEODE.newProposal(
         DATASTORE,
         _DEFAULT_WITHDRAWAL_CONTRACT_MODULE,
-        ID_TYPE.MODULE_WITHDRAWAL_CONTRACT,
+        ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT,
         "v1",
         1 days
       );
@@ -229,7 +229,7 @@ contract Portal is
         gETHInterfaceVersion = GEODE.newProposal(
           DATASTORE,
           _ALLOWED_GETH_INTERFACE_MODULES[i],
-          ID_TYPE.MODULE_GETH_INTERFACE,
+          ID_TYPE.ALLOWED_MODULE_GETH_INTERFACE,
           _ALLOWED_GETH_INTERFACE_MODULE_NAMES[i],
           1 days
         );

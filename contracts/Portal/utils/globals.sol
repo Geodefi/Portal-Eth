@@ -8,7 +8,7 @@ uint256 constant PERCENTAGE_DENOMINATOR = 10 ** 10;
  * @notice ID_TYPE is like an ENUM, widely used within Portal and Modules like Withdrawal Contract
  * @dev Why not use enums, they basically do the same thing?
  * * We like using explicitly defined uints than linearly increasing ones.
- * @dev all limit parameters are exclusive, this aims to prevent double usage.
+ * @dev all LIMIT parameters are exclusive, this aims to prevent double usage.
  */
 library ID_TYPE {
   /// @notice TYPE 0: *invalid*
@@ -35,13 +35,13 @@ library ID_TYPE {
   uint256 internal constant LIMIT_DEFAULT_MODULE_MIN = 10000;
 
   /// @notice TYPE 10011: Module: The Withdrawal Contract
-  uint256 internal constant MODULE_WITHDRAWAL_CONTRACT = 10011;
+  uint256 internal constant DEFAULT_MODULE_WITHDRAWAL_CONTRACT = 10011;
 
   /// @notice TYPE 10021: Module: A Liquidity Pool
-  uint256 internal constant MODULE_LIQUDITY_POOL = 10021;
+  uint256 internal constant DEFAULT_MODULE_LIQUDITY_POOL = 10021;
 
   /// @notice TYPE 10021: Module: A Liquidity Pool Token
-  uint256 internal constant MODULE_LIQUDITY_POOL_TOKEN = 10022;
+  uint256 internal constant DEFAULT_MODULE_LIQUDITY_POOL_TOKEN = 10022;
 
   /// @notice TYPE 19999: LIMIT: exclusive, maximum TYPE that will be percieved as a default module
   uint256 internal constant LIMIT_DEFAULT_MODULE_MAX = 19999;
@@ -52,7 +52,7 @@ library ID_TYPE {
   uint256 internal constant LIMIT_ALLOWED_MODULE_MIN = 20000;
 
   /// @notice TYPE 20031: Module: A new gETH interface
-  uint256 internal constant MODULE_GETH_INTERFACE = 20031;
+  uint256 internal constant ALLOWED_MODULE_GETH_INTERFACE = 20031;
 
   /// @notice TYPE 29999: LIMIT: exclusive, maximum TYPE that will be percieved as a allowed module
   uint256 internal constant LIMIT_ALLOWED_MODULE_MAX = 29999;

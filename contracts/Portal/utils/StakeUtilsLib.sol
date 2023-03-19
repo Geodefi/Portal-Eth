@@ -294,8 +294,8 @@ library StakeUtils {
   }
 
   /**
-   * @notice deploys a new gETHInterface by cloning the DEFAULT_gETH_INTERFACE
-   * @param _version id, can use any version as an interface that is allowed for TYPE = MODULE_GETH_INTERFACE
+   * @notice deploys a new gETHInterface by cloning the ALLOWED_MODULE_GETH_INTERFACE
+   * @param _version id, can use any version as an interface that is allowed for TYPE = ALLOWED_MODULE_GETH_INTERFACE
    * @param interface_data interfaces might require additional data on initialization; like name, symbol, etc.
    * @dev currrently, can NOT deploy an interface after initiation, thus only used by the initiator.
    * @dev currrently, can NOT unset an interface.
@@ -307,7 +307,10 @@ library StakeUtils {
     uint256 _version,
     bytes memory interface_data
   ) internal {
-    require(self._allowedModules[ID_TYPE.MODULE_GETH_INTERFACE][_version], "SU: not an interface");
+    require(
+      self._allowedModules[ID_TYPE.ALLOWED_MODULE_GETH_INTERFACE][_version],
+      "SU: not an interface"
+    );
 
     address gInterface = Clones.clone(DATASTORE.readAddressForId(_version, "CONTROLLER"));
 
@@ -321,7 +324,7 @@ library StakeUtils {
 
   /**
    * @notice Deploys a Withdrawal Contract that will be used as a withdrawal credential on validator creation
-   * @dev using the latest version of the MODULE_WITHDRAWAL_CONTRACT
+   * @dev using the latest version of the DEFAULT_MODULE_WITHDRAWAL_CONTRACT
    * @dev every pool requires a withdrawal Contract, thus this function is only used by the initiator
    */
   function _deployWithdrawalContract(
@@ -334,7 +337,7 @@ library StakeUtils {
       "SU: has a withdrawal contract"
     );
 
-    uint256 version = self._defaultModules[ID_TYPE.MODULE_WITHDRAWAL_CONTRACT];
+    uint256 version = self._defaultModules[ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT];
 
     address withdrawalContract = address(
       new ERC1967Proxy(
@@ -359,7 +362,7 @@ library StakeUtils {
    */
 
   /**
-   * @notice deploys a new liquidity pool using the latest version of MODULE_LIQUDITY_POOL
+   * @notice deploys a new liquidity pool using the latest version of DEFAULT_MODULE_LIQUDITY_POOL
    * @dev sets the liquidity pool, LP token and liquidityPoolVersion
    * @dev gives full allowance to the pool, should not be a problem as portal does not hold any tokens
    * @param _GOVERNANCE governance address will be the owner of the created pool.
@@ -373,7 +376,7 @@ library StakeUtils {
     address _GOVERNANCE
   ) public {
     authenticate(DATASTORE, poolId, true, false, [false, true]);
-    uint256 lpVersion = self._defaultModules[ID_TYPE.MODULE_LIQUDITY_POOL];
+    uint256 lpVersion = self._defaultModules[ID_TYPE.DEFAULT_MODULE_LIQUDITY_POOL];
 
     require(
       DATASTORE.readUintForId(poolId, "liquidityPoolVersion") != lpVersion,
@@ -390,7 +393,7 @@ library StakeUtils {
         string(abi.encodePacked(NAME, "-Geode LP Token")),
         string(abi.encodePacked(NAME, "-LP")),
         DATASTORE.readAddressForId(
-          self._defaultModules[ID_TYPE.MODULE_LIQUDITY_POOL_TOKEN],
+          self._defaultModules[ID_TYPE.DEFAULT_MODULE_LIQUDITY_POOL_TOKEN],
           "CONTROLLER"
         ),
         _GOVERNANCE
