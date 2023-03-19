@@ -33,6 +33,22 @@ contract TestGlobals {
     return ID_TYPE.POOL;
   }
 
+  function getTypeLIMIT_DEFAULT_MODULE_MIN() public pure returns (uint256) {
+    return ID_TYPE.LIMIT_DEFAULT_MODULE_MIN;
+  }
+
+  function getTypeLIMIT_DEFAULT_MODULE_MAX() public pure returns (uint256) {
+    return ID_TYPE.LIMIT_DEFAULT_MODULE_MAX;
+  }
+
+  function getTypeLIMIT_ALLOWED_MODULE_MIN() public pure returns (uint256) {
+    return ID_TYPE.LIMIT_ALLOWED_MODULE_MIN;
+  }
+
+  function getTypeLIMIT_ALLOWED_MODULE_MAX() public pure returns (uint256) {
+    return ID_TYPE.LIMIT_ALLOWED_MODULE_MAX;
+  }
+
   function getTypeMODULE_WITHDRAWAL_CONTRACT() public pure returns (uint256) {
     return ID_TYPE.MODULE_WITHDRAWAL_CONTRACT;
   }

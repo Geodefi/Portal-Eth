@@ -163,7 +163,7 @@ describe("Portal", async () => {
     extraId2 = await PORTAL.generateId("extra2", 5);
     extraId3 = await PORTAL.generateId("extra3", 5);
 
-    interfaceId = await PORTAL.generateId("ERC20Permit", 31);
+    interfaceId = await PORTAL.generateId("ERC20Permit", 20031);
 
     const nameBytes = getBytes("myPool Ether").substr(2);
     const symbolBytes = getBytes("mpETH").substr(2);
@@ -476,7 +476,7 @@ describe("Portal", async () => {
         let proposal;
 
         beforeEach(async () => {
-          proposal = await PORTAL.getProposal(await PORTAL.generateId("v1", 21));
+          proposal = await PORTAL.getProposal(await PORTAL.generateId("v1", 10011));
         });
 
         it("correct CONTROLLER", async () => {
@@ -484,7 +484,7 @@ describe("Portal", async () => {
         });
 
         it("correct TYPE", async () => {
-          expect(proposal.TYPE).to.be.eq(21);
+          expect(proposal.TYPE).to.be.eq(10011);
         });
 
         it("correct NAME", async () => {
@@ -496,7 +496,9 @@ describe("Portal", async () => {
         });
 
         it("added in defaultModules", async () => {
-          expect(await PORTAL.getDefaultModule(21)).to.be.eq(await PORTAL.generateId("v1", 21));
+          expect(await PORTAL.getDefaultModule(10011)).to.be.eq(
+            await PORTAL.generateId("v1", 10011)
+          );
         });
       });
 
@@ -504,7 +506,7 @@ describe("Portal", async () => {
         let proposal;
 
         beforeEach(async () => {
-          proposal = await PORTAL.getProposal(await PORTAL.generateId("v1", 41));
+          proposal = await PORTAL.getProposal(await PORTAL.generateId("v1", 10021));
         });
 
         it("correct CONTROLLER", async () => {
@@ -512,7 +514,7 @@ describe("Portal", async () => {
         });
 
         it("correct TYPE", async () => {
-          expect(proposal.TYPE).to.be.eq(41);
+          expect(proposal.TYPE).to.be.eq(10021);
         });
 
         it("correct NAME", async () => {
@@ -524,7 +526,9 @@ describe("Portal", async () => {
         });
 
         it("added in defaultModules", async () => {
-          expect(await PORTAL.getDefaultModule(41)).to.be.eq(await PORTAL.generateId("v1", 41));
+          expect(await PORTAL.getDefaultModule(10021)).to.be.eq(
+            await PORTAL.generateId("v1", 10021)
+          );
         });
       });
 
@@ -532,7 +536,7 @@ describe("Portal", async () => {
         let proposal;
 
         beforeEach(async () => {
-          proposal = await PORTAL.getProposal(await PORTAL.generateId("v1", 42));
+          proposal = await PORTAL.getProposal(await PORTAL.generateId("v1", 10022));
         });
 
         it("correct CONTROLLER", async () => {
@@ -540,7 +544,7 @@ describe("Portal", async () => {
         });
 
         it("correct TYPE", async () => {
-          expect(proposal.TYPE).to.be.eq(42);
+          expect(proposal.TYPE).to.be.eq(10022);
         });
 
         it("correct NAME", async () => {
@@ -552,7 +556,9 @@ describe("Portal", async () => {
         });
 
         it("added in defaultModules", async () => {
-          expect(await PORTAL.getDefaultModule(42)).to.be.eq(await PORTAL.generateId("v1", 42));
+          expect(await PORTAL.getDefaultModule(10022)).to.be.eq(
+            await PORTAL.generateId("v1", 10022)
+          );
         });
       });
 
@@ -561,8 +567,8 @@ describe("Portal", async () => {
         let proposal2;
 
         beforeEach(async () => {
-          proposal1 = await PORTAL.getProposal(await PORTAL.generateId("ERC20", 31));
-          proposal2 = await PORTAL.getProposal(await PORTAL.generateId("ERC20Permit", 31));
+          proposal1 = await PORTAL.getProposal(await PORTAL.generateId("ERC20", 20031));
+          proposal2 = await PORTAL.getProposal(await PORTAL.generateId("ERC20Permit", 20031));
         });
 
         it("correct CONTROLLER", async () => {
@@ -573,8 +579,8 @@ describe("Portal", async () => {
         });
 
         it("correct TYPE", async () => {
-          expect(proposal1.TYPE).to.be.eq(31);
-          expect(proposal2.TYPE).to.be.eq(31);
+          expect(proposal1.TYPE).to.be.eq(20031);
+          expect(proposal2.TYPE).to.be.eq(20031);
         });
 
         it("correct NAME", async () => {
@@ -588,12 +594,12 @@ describe("Portal", async () => {
         });
 
         it("added in defaultModules", async () => {
-          expect(await PORTAL.isAllowedModule(31, await PORTAL.generateId("ERC20", 31))).to.be.eq(
-            true
-          );
+          expect(
+            await PORTAL.isAllowedModule(20031, await PORTAL.generateId("ERC20", 20031))
+          ).to.be.eq(true);
 
           expect(
-            await PORTAL.isAllowedModule(31, await PORTAL.generateId("ERC20Permit", 31))
+            await PORTAL.isAllowedModule(20031, await PORTAL.generateId("ERC20Permit", 20031))
           ).to.be.eq(true);
         });
       });

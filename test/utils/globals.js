@@ -51,21 +51,37 @@ describe("geodeGlobals", async () => {
       const response = await testContract.getTypePOOL();
       expect(response).to.eq(5);
     });
+    it("getTypeLIMIT_DEFAULT_MODULE_MIN", async () => {
+      const response = await testContract.getTypeLIMIT_DEFAULT_MODULE_MIN();
+      expect(response).to.eq(10000);
+    });
+    it("getTypeLIMIT_DEFAULT_MODULE_MAX", async () => {
+      const response = await testContract.getTypeLIMIT_DEFAULT_MODULE_MAX();
+      expect(response).to.eq(19999);
+    });
+    it("getTypeLIMIT_ALLOWED_MODULE_MIN", async () => {
+      const response = await testContract.getTypeLIMIT_ALLOWED_MODULE_MIN();
+      expect(response).to.eq(20000);
+    });
+    it("getTypeLIMIT_ALLOWED_MODULE_MAX", async () => {
+      const response = await testContract.getTypeLIMIT_ALLOWED_MODULE_MAX();
+      expect(response).to.eq(29999);
+    });
     it("MODULE_WITHDRAWAL_CONTRACT", async () => {
       const response = await testContract.getTypeMODULE_WITHDRAWAL_CONTRACT();
-      expect(response).to.eq(21);
+      expect(response).to.eq(10011);
     });
     it("MODULE_GETH_INTERFACE", async () => {
       const response = await testContract.getTypeMODULE_GETH_INTERFACE();
-      expect(response).to.eq(31);
+      expect(response).to.eq(20031);
     });
     it("MODULE_LIQUDITY_POOL", async () => {
       const response = await testContract.getTypeMODULE_LIQUDITY_POOL();
-      expect(response).to.eq(41);
+      expect(response).to.eq(10021);
     });
     it("MODULE_LIQUDITY_POOL_TOKEN", async () => {
       const response = await testContract.getTypeMODULE_LIQUDITY_POOL_TOKEN();
-      expect(response).to.eq(42);
+      expect(response).to.eq(10022);
     });
   });
   describe("validatorStates", async () => {

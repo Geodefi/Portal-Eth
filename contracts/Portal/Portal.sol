@@ -502,13 +502,11 @@ contract Portal is
   ) public virtual override(IPortal, IGeodeModule) returns (uint256 _type, address _controller) {
     (_type, _controller) = GEODE.approveProposal(DATASTORE, id);
 
-    if (
-      _type == ID_TYPE.MODULE_WITHDRAWAL_CONTRACT ||
-      _type == ID_TYPE.MODULE_LIQUDITY_POOL ||
-      _type == ID_TYPE.MODULE_LIQUDITY_POOL_TOKEN
-    ) {
+    if (_type > ID_TYPE.LIMIT_DEFAULT_MODULE_MIN && _type < ID_TYPE.LIMIT_DEFAULT_MODULE_MAX) {
       STAKER._defaultModules[_type] = id;
-    } else if (_type == ID_TYPE.MODULE_GETH_INTERFACE) {
+    } else if (
+      _type > ID_TYPE.LIMIT_ALLOWED_MODULE_MIN && _type < ID_TYPE.LIMIT_ALLOWED_MODULE_MAX
+    ) {
       STAKER._allowedModules[_type][id] = true;
     }
   }

@@ -2,7 +2,7 @@
   "manifestVersion": "3.2",
   "admin": {
     "address": "0x9Cb8E6E414bFb4ced3969A665597792EEAe49Dac",
-    "txHash": "0x3f94aedb69c547c03f6c9165730a4f8a9a709d95e1c3c9785aaa889409ba93b1"
+    "txHash": "0xbb3d0296593aa019ec3d36038495d4015f206b92e91d3852d685bb29fd1e66d0"
   },
   "proxies": [
     {
@@ -197,22 +197,22 @@
     },
     {
       "address": "0xF3Ef831c561971d76a2214e0EcAb67F92d023DdF",
-      "txHash": "0xe1277c47ddedcc2fe20322637f5bc1b5063fce2addde5cbaf41f4382861b3263",
+      "txHash": "0x49b5f587ee2924321d38513b9422954c2c2e34a67f3fece8a8088041f57abb34",
       "kind": "uups"
     },
     {
       "address": "0x140BBe17D5e84D855162F5d5C87f1993043b0B4b",
-      "txHash": "0x4a82ed106f64f69d85380aebca4635cbade686dd4c26a425298aa1f44c4bebf7",
+      "txHash": "0xb13f880902e55b0ddb7f0b474b81b6608f3b987fbbe493d8ef621c7b5ed4c8c1",
       "kind": "uups"
     },
     {
       "address": "0xc42Fd913E641D4c17DA963e73372A346Ed018d02",
-      "txHash": "0x89caee89bd9737d15539c34d136191e4c927a7f89d4972048d975e59f9d3fd3c",
+      "txHash": "0x2c05ffd786c723871ffca6cc0271eba79bc66f3556ca87c9e444cc049f596e0e",
       "kind": "transparent"
     },
     {
       "address": "0x499c1D095E6Ac834958c665aDf63245479729C22",
-      "txHash": "0x970028d1f11c7e30fea34fa0c4b0579b6a360ceb77c2b302c575198058ed01e2",
+      "txHash": "0xe824a297bbd41a4b0e4044991e50170e4d3addaf21770ee32162c215f5374d74",
       "kind": "transparent"
     }
   ],
@@ -13313,8 +13313,8 @@
       }
     },
     "17fd1a0b8421e1017988c9476b7d9438ab53fd09770be74dfc60ae6a2bdc154e": {
-      "address": "0xAC6c3dA6dCdF275E08A2cC45B01c6AABa79C5225",
-      "txHash": "0x280eea9f36a5ac53d7e84ee2676cd7dac5c7f1d04285947cb5bfa628dd9c85fc",
+      "address": "0x266770AD206252A2BEa3b125C85e1aF96288D044",
+      "txHash": "0xe49b6dd134b3fc361ac36380f15a3596e172640817c63078ca68ffc9c01a042d",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [
@@ -13379,7 +13379,7 @@
             "label": "_ERC1155",
             "offset": 0,
             "slot": "55",
-            "type": "t_contract(IgETH)38008",
+            "type": "t_contract(IgETH)37702",
             "contract": "ERC20InterfaceUpgradable",
             "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:77"
           },
@@ -13466,7 +13466,7 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IgETH)38008": {
+          "t_contract(IgETH)37702": {
             "label": "contract IgETH",
             "numberOfBytes": "20"
           },
@@ -15051,206 +15051,9 @@
         }
       }
     },
-    "5256acb4dc0d2bb709f43d3625255ac636803aa9143ee16783377084e50e3e4d": {
-      "address": "0x266770AD206252A2BEa3b125C85e1aF96288D044",
-      "txHash": "0x5e9755a336258abc137bf08a557e3d2856bf471efe60a027d4089f804b23dc93",
-      "layout": {
-        "solcVersion": "0.8.7",
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_uint8",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
-            "retypedFrom": "bool"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
-          },
-          {
-            "label": "_allowances",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
-            "contract": "ERC20InterfaceUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:62"
-          },
-          {
-            "label": "_name",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_string_storage",
-            "contract": "ERC20InterfaceUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:69"
-          },
-          {
-            "label": "_symbol",
-            "offset": 0,
-            "slot": "53",
-            "type": "t_string_storage",
-            "contract": "ERC20InterfaceUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:70"
-          },
-          {
-            "label": "_id",
-            "offset": 0,
-            "slot": "54",
-            "type": "t_uint256",
-            "contract": "ERC20InterfaceUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:72"
-          },
-          {
-            "label": "_ERC1155",
-            "offset": 0,
-            "slot": "55",
-            "type": "t_contract(IgETH)20590",
-            "contract": "ERC20InterfaceUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:73"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "56",
-            "type": "t_array(t_uint256)45_storage",
-            "contract": "ERC20InterfaceUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:447"
-          },
-          {
-            "label": "_HASHED_NAME",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_bytes32",
-            "contract": "EIP712Upgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:32"
-          },
-          {
-            "label": "_HASHED_VERSION",
-            "offset": 0,
-            "slot": "102",
-            "type": "t_bytes32",
-            "contract": "EIP712Upgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:33"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "103",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "EIP712Upgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol:120"
-          },
-          {
-            "label": "_nonces",
-            "offset": 0,
-            "slot": "153",
-            "type": "t_mapping(t_address,t_struct(Counter)1662_storage)",
-            "contract": "ERC20InterfacePermitUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfacePermitUpgradable.sol:44"
-          },
-          {
-            "label": "_PERMIT_TYPEHASH_DEPRECATED_SLOT",
-            "offset": 0,
-            "slot": "154",
-            "type": "t_bytes32",
-            "contract": "ERC20InterfacePermitUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfacePermitUpgradable.sol:58",
-            "renamedFrom": "_PERMIT_TYPEHASH"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "155",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "ERC20InterfacePermitUpgradable",
-            "src": "contracts/Portal/gETHInterfaces/ERC20InterfacePermitUpgradable.sol:168"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_uint256)45_storage": {
-            "label": "uint256[45]",
-            "numberOfBytes": "1440"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_bytes32": {
-            "label": "bytes32",
-            "numberOfBytes": "32"
-          },
-          "t_contract(IgETH)20590": {
-            "label": "contract IgETH",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
-            "label": "mapping(address => mapping(address => uint256))",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_struct(Counter)1662_storage)": {
-            "label": "mapping(address => struct CountersUpgradeable.Counter)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_uint256)": {
-            "label": "mapping(address => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_string_storage": {
-            "label": "string",
-            "numberOfBytes": "32"
-          },
-          "t_struct(Counter)1662_storage": {
-            "label": "struct CountersUpgradeable.Counter",
-            "members": [
-              {
-                "label": "_value",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          },
-          "t_uint8": {
-            "label": "uint8",
-            "numberOfBytes": "1"
-          }
-        }
-      }
-    },
-    "e69fd2467e967d0e9d0f6eca216d2d1816b41bd382eaca65fefe278980a6788f": {
+    "3446fefae4551863926898855a7a391465f73be2f985541ea2f835a2d9ac77c1": {
       "address": "0xF0122303D6db5f4aD8cc56b5F154842A2B6c9E6b",
-      "txHash": "0x06bc4fea1766d874ed59c301cc775cb0b469d4b4f4b51952e24532571de63394",
+      "txHash": "0x22d088984324b971dbe7bd0a36b94a5ad50029289f430adc92d1e6abc5ecdf2a",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [
@@ -15355,15 +15158,15 @@
             "label": "DATASTORE",
             "offset": 0,
             "slot": "401",
-            "type": "t_struct(IsolatedStorage)5197_storage",
+            "type": "t_struct(IsolatedStorage)25901_storage",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:144"
+            "src": "contracts/Portal/Portal.sol:145"
           },
           {
             "label": "GEODE",
             "offset": 0,
             "slot": "417",
-            "type": "t_struct(DualGovernance)6205_storage",
+            "type": "t_struct(DualGovernance)27557_storage",
             "contract": "Portal",
             "src": "contracts/Portal/Portal.sol:146"
           },
@@ -15371,9 +15174,9 @@
             "label": "STAKER",
             "offset": 0,
             "slot": "433",
-            "type": "t_struct(PooledStaking)7593_storage",
+            "type": "t_struct(PooledStaking)30003_storage",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:147"
+            "src": "contracts/Portal/Portal.sol:146"
           },
           {
             "label": "CONTRACT_VERSION",
@@ -15389,7 +15192,7 @@
             "slot": "450",
             "type": "t_array(t_uint256)46_storage",
             "contract": "Portal",
-            "src": "contracts/Portal/Portal.sol:878"
+            "src": "contracts/Portal/Portal.sol:1237"
           }
         ],
         "types": {
@@ -15441,7 +15244,7 @@
             "label": "bytes",
             "numberOfBytes": "32"
           },
-          "t_contract(IgETH)12218": {
+          "t_contract(IgETH)37702": {
             "label": "contract IgETH",
             "numberOfBytes": "20"
           },
@@ -15457,7 +15260,7 @@
             "label": "mapping(bytes32 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7552_storage)": {
+          "t_mapping(t_bytes_memory_ptr,t_struct(Validator)29962_storage)": {
             "label": "mapping(bytes => struct StakeUtils.Validator)",
             "numberOfBytes": "32"
           },
@@ -15473,7 +15276,7 @@
             "label": "mapping(uint256 => mapping(uint256 => bool))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Proposal)6185_storage)": {
+          "t_mapping(t_uint256,t_struct(Proposal)27537_storage)": {
             "label": "mapping(uint256 => struct GeodeUtils.Proposal)",
             "numberOfBytes": "32"
           },
@@ -15481,7 +15284,7 @@
             "label": "mapping(uint256 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_struct(DualGovernance)6205_storage": {
+          "t_struct(DualGovernance)27557_storage": {
             "label": "struct GeodeUtils.DualGovernance",
             "members": [
               {
@@ -15516,7 +15319,7 @@
               },
               {
                 "label": "_proposals",
-                "type": "t_mapping(t_uint256,t_struct(Proposal)6185_storage)",
+                "type": "t_mapping(t_uint256,t_struct(Proposal)27537_storage)",
                 "offset": 0,
                 "slot": "5"
               },
@@ -15529,7 +15332,7 @@
             ],
             "numberOfBytes": "512"
           },
-          "t_struct(IsolatedStorage)5197_storage": {
+          "t_struct(IsolatedStorage)25901_storage": {
             "label": "struct DataStoreUtils.IsolatedStorage",
             "members": [
               {
@@ -15565,12 +15368,12 @@
             ],
             "numberOfBytes": "512"
           },
-          "t_struct(PooledStaking)7593_storage": {
+          "t_struct(PooledStaking)30003_storage": {
             "label": "struct StakeUtils.PooledStaking",
             "members": [
               {
                 "label": "gETH",
-                "type": "t_contract(IgETH)12218",
+                "type": "t_contract(IgETH)37702",
                 "offset": 0,
                 "slot": "0"
               },
@@ -15642,7 +15445,7 @@
               },
               {
                 "label": "_validators",
-                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)7552_storage)",
+                "type": "t_mapping(t_bytes_memory_ptr,t_struct(Validator)29962_storage)",
                 "offset": 0,
                 "slot": "12"
               },
@@ -15655,7 +15458,7 @@
             ],
             "numberOfBytes": "512"
           },
-          "t_struct(Proposal)6185_storage": {
+          "t_struct(Proposal)27537_storage": {
             "label": "struct GeodeUtils.Proposal",
             "members": [
               {
@@ -15685,7 +15488,7 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(Validator)7552_storage": {
+          "t_struct(Validator)29962_storage": {
             "label": "struct StakeUtils.Validator",
             "members": [
               {
