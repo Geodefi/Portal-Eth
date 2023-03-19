@@ -98,23 +98,11 @@ library StakeUtils {
   event VisibilitySet(uint256 id, bool indexed isPrivate);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
-  event ValidatorPeriodSwitched(
-    uint256 indexed id,
-    uint256 period,
-    uint256 effectiveAfter
-  );
-  event OperatorApproval(
-    uint256 indexed poolId,
-    uint256 indexed operatorId,
-    uint256 allowance
-  );
+  event ValidatorPeriodSwitched(uint256 indexed id, uint256 period, uint256 effectiveAfter);
+  event OperatorApproval(uint256 indexed poolId, uint256 indexed operatorId, uint256 allowance);
   event Prisoned(uint256 indexed id, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
-  event ProposalStaked(
-    uint256 indexed poolId,
-    uint256 operatorId,
-    bytes[] pubkeys
-  );
+  event ProposalStaked(uint256 indexed poolId, uint256 operatorId, bytes[] pubkeys);
   event BeaconStaked(bytes[] pubkeys);
 
   /**
@@ -181,12 +169,10 @@ library StakeUtils {
    */
 
   /// @notice limiting the pool and operator maintenance fee, 10%
-  uint256 public constant MAX_MAINTENANCE_FEE =
-    (PERCENTAGE_DENOMINATOR * 10) / 100;
+  uint256 public constant MAX_MAINTENANCE_FEE = (PERCENTAGE_DENOMINATOR * 10) / 100;
 
   /// @notice limiting EARLY_EXIT_FEE, 5%
-  uint256 public constant MAX_EARLY_EXIT_FEE =
-    (PERCENTAGE_DENOMINATOR * 5) / 100;
+  uint256 public constant MAX_EARLY_EXIT_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
 
   /// @notice price of gETH is only valid for 24H, after that minting is not allowed.
   uint256 public constant PRICE_EXPIRY = 24 hours;
@@ -216,7 +202,8 @@ library StakeUtils {
    * @notice restricts the access to given function based on TYPE and msg.sender
    * @param expectCONTROLLER restricts the access to only CONTROLLER.
    * @param expectMaintainer restricts the access to only maintainer.
-   * @param restrictionMap Restricts which TYPEs can pass the authentication. 0: Operator = TYPE(4), 1: Pool = TYPE(5)
+   * @param restrictionMap Restricts which TYPEs can pass the authentication.
+   * * 0: Operator = TYPE(4), 1: Pool = TYPE(5)
    * @dev authenticate can only be used after an ID is initiated
    * @dev CONTROLLERS and maintainers of the Prisoned Operators can not access.
    * @dev In principal, CONTROLLER should be able to do anything a maintainer is authenticated to do.
@@ -228,15 +215,13 @@ library StakeUtils {
     bool expectMaintainer,
     bool[2] memory restrictionMap
   ) internal view {
-    require(
-      DATASTORE.readUintForId(id, "initiated") != 0,
-      "SU: ID is not initiated"
-    );
+    require(DATASTORE.readUintForId(id, "initiated") != 0, "SU: ID is not initiated");
 
     uint256 typeOfId = DATASTORE.readUintForId(id, "TYPE");
 
     if (typeOfId == ID_TYPE.OPERATOR) {
       require(restrictionMap[0], "SU: TYPE NOT allowed");
+
       if (expectCONTROLLER || expectMaintainer) {
         require(
           !isPrisoned(DATASTORE, id),
@@ -276,14 +261,6 @@ library StakeUtils {
   /**
    * @dev  ->  view
    */
-
-  function gETHInterfaces(
-    DSU.IsolatedStorage storage DATASTORE,
-    uint256 id,
-    uint256 index
-  ) external view returns (address _interface) {
-    _interface = DATASTORE.readAddressArrayForId(id, "interfaces", index);
-  }
 
   /**
    * @notice returns true if the pool is private
@@ -330,21 +307,12 @@ library StakeUtils {
     uint256 _version,
     bytes memory interface_data
   ) internal {
-    require(
-      self._allowedModules[ID_TYPE.MODULE_GETH_INTERFACE][_version],
-      "SU: not an interface"
-    );
+    require(self._allowedModules[ID_TYPE.MODULE_GETH_INTERFACE][_version], "SU: not an interface");
 
-    address gInterface = Clones.clone(
-      DATASTORE.readAddressForId(_version, "CONTROLLER")
-    );
+    address gInterface = Clones.clone(DATASTORE.readAddressForId(_version, "CONTROLLER"));
 
     require(
-      IgETHInterface(gInterface).initialize(
-        _id,
-        address(self.gETH),
-        interface_data
-      ),
+      IgETHInterface(gInterface).initialize(_id, address(self.gETH), interface_data),
       "SU: could not init interface"
     );
 
@@ -363,7 +331,7 @@ library StakeUtils {
   ) internal {
     require(
       DATASTORE.readAddressForId(_id, "withdrawalContract") == address(0),
-      "SU: already has a withdrawal contract"
+      "SU: has a withdrawal contract"
     );
 
     uint256 version = self._defaultModules[ID_TYPE.MODULE_WITHDRAWAL_CONTRACT];
@@ -383,12 +351,7 @@ library StakeUtils {
     );
 
     DATASTORE.writeAddressForId(_id, "withdrawalContract", withdrawalContract);
-
-    DATASTORE.writeBytesForId(
-      _id,
-      "withdrawalCredential",
-      DCU.addressToWC(withdrawalContract)
-    );
+    DATASTORE.writeBytesForId(_id, "withdrawalCredential", DCU.addressToWC(withdrawalContract));
   }
 
   /**
@@ -417,9 +380,7 @@ library StakeUtils {
       "SU: already latest version"
     );
 
-    address lp = Clones.clone(
-      DATASTORE.readAddressForId(lpVersion, "CONTROLLER")
-    );
+    address lp = Clones.clone(DATASTORE.readAddressForId(lpVersion, "CONTROLLER"));
     bytes memory NAME = DATASTORE.readBytesForId(poolId, "NAME");
 
     require(
@@ -480,6 +441,7 @@ library StakeUtils {
   ) external {
     authenticate(DATASTORE, poolId, true, false, [false, true]);
     require(isPrivatePool(DATASTORE, poolId), "SU: must be private pool");
+
     DATASTORE.writeAddressForId(poolId, "whitelist", whitelist);
   }
 
@@ -513,20 +475,13 @@ library StakeUtils {
     uint256 validatorPeriod,
     address maintainer
   ) external {
-    require(
-      DATASTORE.readUintForId(id, "initiated") == 0,
-      "SU: already initiated"
-    );
-
-    require(
-      DATASTORE.readUintForId(id, "TYPE") == ID_TYPE.OPERATOR,
-      "SU: TYPE NOT allowed"
-    );
-
+    require(DATASTORE.readUintForId(id, "initiated") == 0, "SU: already initiated");
+    require(DATASTORE.readUintForId(id, "TYPE") == ID_TYPE.OPERATOR, "SU: TYPE NOT allowed");
     require(
       msg.sender == DATASTORE.readAddressForId(id, "CONTROLLER"),
       "SU: sender NOT CONTROLLER"
     );
+
     DATASTORE.writeUintForId(id, "initiated", block.timestamp);
 
     _setMaintainer(DATASTORE, id, maintainer);
@@ -560,19 +515,13 @@ library StakeUtils {
     bytes calldata interface_data,
     bool[3] calldata config
   ) external {
-    require(
-      msg.value == DCU.DEPOSIT_AMOUNT,
-      "SU: requires 1 validator worth of Ether"
-    );
+    require(msg.value == DCU.DEPOSIT_AMOUNT, "SU: need 1 validator worth of funds");
 
     uint256 id = DSU.generateId(NAME, ID_TYPE.POOL);
 
     require(id > 10 ** 9, "SU: Wow! low id");
+    require(DATASTORE.readUintForId(id, "initiated") == 0, "SU: already initiated");
 
-    require(
-      DATASTORE.readUintForId(id, "initiated") == 0,
-      "SU: already initiated"
-    );
     DATASTORE.writeUintForId(id, "initiated", block.timestamp);
 
     DATASTORE.writeUintForId(id, "TYPE", ID_TYPE.POOL);
@@ -625,11 +574,8 @@ library StakeUtils {
     address newMaintainer
   ) internal {
     require(newMaintainer != address(0), "SU: maintainer can NOT be zero");
-
-    address currentMaintainer = DATASTORE.readAddressForId(id, "maintainer");
-
     require(
-      currentMaintainer != newMaintainer,
+      DATASTORE.readAddressForId(id, "maintainer") != newMaintainer,
       "SU: provided the current maintainer"
     );
 
@@ -657,10 +603,8 @@ library StakeUtils {
       "SU: sender NOT CONTROLLER"
     );
     uint256 typeOfId = DATASTORE.readUintForId(id, "TYPE");
-    require(
-      typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL,
-      "SU: invalid TYPE"
-    );
+    require(typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL, "SU: invalid TYPE");
+
     _setMaintainer(DATASTORE, id, newMaintainer);
   }
 
@@ -723,11 +667,7 @@ library StakeUtils {
       "SU: fee is currently switching"
     );
 
-    DATASTORE.writeUintForId(
-      id,
-      "priorFee",
-      DATASTORE.readUintForId(id, "fee")
-    );
+    DATASTORE.writeUintForId(id, "priorFee", DATASTORE.readUintForId(id, "fee"));
     DATASTORE.writeUintForId(id, "feeSwitch", block.timestamp + SWITCH_LATENCY);
 
     _setMaintenanceFee(DATASTORE, id, newFee);
@@ -769,10 +709,7 @@ library StakeUtils {
     uint256 _id,
     uint256 _value
   ) internal returns (bool success) {
-    require(
-      DATASTORE.readUintForId(_id, "wallet") >= _value,
-      "SU: NOT enough funds in wallet"
-    );
+    require(DATASTORE.readUintForId(_id, "wallet") >= _value, "SU: NOT enough funds in wallet");
     DATASTORE.subUintForId(_id, "wallet", _value);
     return true;
   }
@@ -808,10 +745,9 @@ library StakeUtils {
     require(address(this).balance >= value, "SU: not enough funds in Portal ?");
 
     bool decreased = _decreaseWalletBalance(DATASTORE, id, value);
+    address controller = DATASTORE.readAddressForId(id, "CONTROLLER");
 
-    (bool sent, ) = payable(DATASTORE.readAddressForId(id, "CONTROLLER")).call{
-      value: value
-    }("");
+    (bool sent, ) = payable(controller).call{value: value}("");
     require(decreased && sent, "SU: Failed to send ETH");
     return sent;
   }
@@ -857,11 +793,7 @@ library StakeUtils {
   ) internal {
     authenticate(DATASTORE, _operatorId, false, false, [true, false]);
 
-    DATASTORE.writeUintForId(
-      _operatorId,
-      "released",
-      block.timestamp + PRISON_SENTENCE
-    );
+    DATASTORE.writeUintForId(_operatorId, "released", block.timestamp + PRISON_SENTENCE);
 
     emit Prisoned(_operatorId, proof, block.timestamp + PRISON_SENTENCE);
   }
@@ -884,10 +816,7 @@ library StakeUtils {
       self._validators[pk].state == VALIDATOR_STATE.ACTIVE,
       "SU: validator is never activated"
     );
-    require(
-      block.timestamp > self._validators[pk].expectedExit,
-      "SU: validator is still active"
-    );
+    require(block.timestamp > self._validators[pk].expectedExit, "SU: validator is active");
 
     _imprison(DATASTORE, self._validators[pk].operatorId, pk);
   }
@@ -908,15 +837,8 @@ library StakeUtils {
     uint256 _operatorId,
     uint256 _newPeriod
   ) internal {
-    require(
-      _newPeriod >= MIN_VALIDATOR_PERIOD,
-      "SU: should be more than MIN_VALIDATOR_PERIOD"
-    );
-
-    require(
-      _newPeriod <= MAX_VALIDATOR_PERIOD,
-      "SU: should be less than MAX_VALIDATOR_PERIOD"
-    );
+    require(_newPeriod >= MIN_VALIDATOR_PERIOD, "SU: < MIN_VALIDATOR_PERIOD");
+    require(_newPeriod <= MAX_VALIDATOR_PERIOD, "SU: > MAX_VALIDATOR_PERIOD");
 
     DATASTORE.writeUintForId(_operatorId, "validatorPeriod", _newPeriod);
   }
@@ -946,19 +868,11 @@ library StakeUtils {
       "priorPeriod",
       DATASTORE.readUintForId(operatorId, "validatorPeriod")
     );
-    DATASTORE.writeUintForId(
-      operatorId,
-      "periodSwitch",
-      block.timestamp + SWITCH_LATENCY
-    );
+    DATASTORE.writeUintForId(operatorId, "periodSwitch", block.timestamp + SWITCH_LATENCY);
 
     _setValidatorPeriod(DATASTORE, operatorId, newPeriod);
 
-    emit ValidatorPeriodSwitched(
-      operatorId,
-      newPeriod,
-      block.timestamp + SWITCH_LATENCY
-    );
+    emit ValidatorPeriodSwitched(operatorId, newPeriod, block.timestamp + SWITCH_LATENCY);
   }
 
   /**
@@ -982,11 +896,8 @@ library StakeUtils {
     DSU.IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 operatorId
-  ) public view returns (uint256 allowance) {
-    allowance = DATASTORE.readUintForId(
-      poolId,
-      DSU.getKey(operatorId, "allowance")
-    );
+  ) internal view returns (uint256 allowance) {
+    allowance = DATASTORE.readUintForId(poolId, DSU.getKey(operatorId, "allowance"));
   }
 
   /**
@@ -1010,19 +921,12 @@ library StakeUtils {
   ) external returns (bool) {
     authenticate(DATASTORE, poolId, true, true, [false, true]);
 
-    require(
-      operatorIds.length == allowances.length,
-      "SU: allowances should match"
-    );
+    require(operatorIds.length == allowances.length, "SU: allowances should match");
 
     for (uint256 i = 0; i < operatorIds.length; ) {
       authenticate(DATASTORE, operatorIds[i], false, false, [true, false]);
 
-      DATASTORE.writeUintForId(
-        poolId,
-        DSU.getKey(operatorIds[i], "allowance"),
-        allowances[i]
-      );
+      DATASTORE.writeUintForId(poolId, DSU.getKey(operatorIds[i], "allowance"), allowances[i]);
 
       emit OperatorApproval(poolId, operatorIds[i], allowances[i]);
 
@@ -1048,10 +952,7 @@ library StakeUtils {
     DSU.IsolatedStorage storage DATASTORE,
     uint256 poolId
   ) public view returns (IWithdrawalContract) {
-    return
-      IWithdrawalContract(
-        DATASTORE.readAddressForId(poolId, "withdrawalContract")
-      );
+    return IWithdrawalContract(DATASTORE.readAddressForId(poolId, "withdrawalContract"));
   }
 
   /**
@@ -1079,7 +980,7 @@ library StakeUtils {
     }
 
     address whitelist = DATASTORE.readAddressForId(poolId, "whitelist");
-    require(whitelist != address(0), "SU: this pool does not have whitelist");
+    require(whitelist != address(0), "SU: no whitelist");
 
     return IWhitelist(whitelist).isAllowed(staker);
   }
@@ -1120,8 +1021,7 @@ library StakeUtils {
     uint256 poolId
   ) public view returns (bool) {
     return
-      isPriceValid(self, poolId) &&
-      !(withdrawalContractById(DATASTORE, poolId).recoveryMode());
+      isPriceValid(self, poolId) && !(withdrawalContractById(DATASTORE, poolId).recoveryMode());
   }
 
   /**
@@ -1142,15 +1042,9 @@ library StakeUtils {
     uint256 poolId,
     uint256 ethAmount
   ) internal returns (uint256 mintedgETH) {
-    require(
-      isMintingAllowed(self, DATASTORE, poolId),
-      "SU: minting is not allowed"
-    );
+    require(isMintingAllowed(self, DATASTORE, poolId), "SU: minting is not allowed");
 
-    mintedgETH = (
-      ((ethAmount * self.gETH.denominator()) / self.gETH.pricePerShare(poolId))
-    );
-
+    mintedgETH = (((ethAmount * self.gETH.denominator()) / self.gETH.pricePerShare(poolId)));
     self.gETH.mint(address(this), poolId, mintedgETH, "");
     DATASTORE.addUintForId(poolId, "surplus", ethAmount);
   }
@@ -1214,10 +1108,7 @@ library StakeUtils {
     require(receiver != address(0), "SU: receiver is zero address");
 
     if (isPrivatePool(DATASTORE, poolId)) {
-      require(
-        isWhitelisted(DATASTORE, poolId, msg.sender),
-        "SU: sender NOT whitelisted"
-      );
+      require(isWhitelisted(DATASTORE, poolId, msg.sender), "SU: sender NOT whitelisted");
     }
 
     uint256 remEth = msg.value;
@@ -1241,13 +1132,7 @@ library StakeUtils {
     require(boughtgETH + mintedgETH >= mingETH, "SU: less than minimum");
 
     // send back to user
-    self.gETH.safeTransferFrom(
-      address(this),
-      receiver,
-      poolId,
-      boughtgETH + mintedgETH,
-      ""
-    );
+    self.gETH.safeTransferFrom(address(this), receiver, poolId, boughtgETH + mintedgETH, "");
 
     emit Deposit(poolId, boughtgETH, mintedgETH);
   }
@@ -1284,10 +1169,7 @@ library StakeUtils {
     return
       (self._validators[pubkey].state == VALIDATOR_STATE.PROPOSED &&
         self._validators[pubkey].index <= verificationIndex) &&
-      !(
-        withdrawalContractById(DATASTORE, self._validators[pubkey].poolId)
-          .recoveryMode()
-      );
+      !(withdrawalContractById(DATASTORE, self._validators[pubkey].poolId).recoveryMode());
   }
 
   /**
@@ -1352,10 +1234,7 @@ library StakeUtils {
     {
       uint256 pkLen = pubkeys.length;
 
-      require(
-        pkLen > 0 && pkLen <= DCU.MAX_DEPOSITS_PER_CALL,
-        "SU: MAX 50 nodes per call"
-      );
+      require(pkLen > 0 && pkLen <= DCU.MAX_DEPOSITS_PER_CALL, "SU: MAX 50 nodes per call");
       require(pkLen == signatures1.length, "SU: invalid signatures1 length");
       require(pkLen == signatures31.length, "SU: invalid signatures31 length");
 
@@ -1368,41 +1247,23 @@ library StakeUtils {
         );
 
         require(
-          (DATASTORE.readUintForId(
-            poolId,
-            DSU.getKey(operatorId, "proposedValidators")
-          ) +
-            DATASTORE.readUintForId(
-              poolId,
-              DSU.getKey(operatorId, "activeValidators")
-            ) +
+          (DATASTORE.readUintForId(poolId, DSU.getKey(operatorId, "proposedValidators")) +
+            DATASTORE.readUintForId(poolId, DSU.getKey(operatorId, "activeValidators")) +
             pkLen) <= operatorAllowance(DATASTORE, poolId, operatorId),
           "SU: NOT enough allowance"
         );
 
         require(
-          DATASTORE.readUintForId(poolId, "surplus") >=
-            DCU.DEPOSIT_AMOUNT * pkLen,
+          DATASTORE.readUintForId(poolId, "surplus") >= DCU.DEPOSIT_AMOUNT * pkLen,
           "SU: NOT enough surplus"
         );
       }
 
-      _decreaseWalletBalance(
-        DATASTORE,
-        operatorId,
-        (pkLen * DCU.DEPOSIT_AMOUNT_PRESTAKE)
-      );
+      _decreaseWalletBalance(DATASTORE, operatorId, (pkLen * DCU.DEPOSIT_AMOUNT_PRESTAKE));
 
       DATASTORE.subUintForId(poolId, "surplus", (pkLen * DCU.DEPOSIT_AMOUNT));
-
       DATASTORE.addUintForId(poolId, "secured", (pkLen * DCU.DEPOSIT_AMOUNT));
-
-      DATASTORE.addUintForId(
-        poolId,
-        DSU.getKey(operatorId, "proposedValidators"),
-        pkLen
-      );
-
+      DATASTORE.addUintForId(poolId, DSU.getKey(operatorId, "proposedValidators"), pkLen);
       DATASTORE.addUintForId(operatorId, "totalProposedValidators", pkLen);
     }
 
@@ -1411,31 +1272,17 @@ library StakeUtils {
       poolFee: getMaintenanceFee(DATASTORE, poolId),
       operatorFee: getMaintenanceFee(DATASTORE, operatorId),
       earlyExitFee: self.EARLY_EXIT_FEE,
-      expectedExit: block.timestamp +
-        DATASTORE.readUintForId(operatorId, "validatorPeriod"),
-      withdrawalCredential: DATASTORE.readBytesForId(
-        poolId,
-        "withdrawalCredential"
-      )
+      expectedExit: block.timestamp + DATASTORE.readUintForId(operatorId, "validatorPeriod"),
+      withdrawalCredential: DATASTORE.readBytesForId(poolId, "withdrawalCredential")
     });
 
     for (uint256 i; i < pubkeys.length; ) {
+      require(pubkeys[i].length == DCU.PUBKEY_LENGTH, "SU: PUBKEY_LENGTH ERROR");
+      require(signatures1[i].length == DCU.SIGNATURE_LENGTH, "SU: SIGNATURE_LENGTH ERROR");
+      require(signatures31[i].length == DCU.SIGNATURE_LENGTH, "SU: SIGNATURE_LENGTH ERROR");
       require(
         self._validators[pubkeys[i]].state == VALIDATOR_STATE.NONE,
         "SU: Pubkey already used or alienated"
-      );
-      require(
-        pubkeys[i].length == DCU.PUBKEY_LENGTH,
-        "SU: PUBKEY_LENGTH ERROR"
-      );
-      require(
-        signatures1[i].length == DCU.SIGNATURE_LENGTH,
-        "SU: SIGNATURE_LENGTH ERROR"
-      );
-
-      require(
-        signatures31[i].length == DCU.SIGNATURE_LENGTH,
-        "SU: SIGNATURE_LENGTH ERROR"
       );
 
       self._validators[pubkeys[i]] = Validator(
@@ -1492,10 +1339,7 @@ library StakeUtils {
   ) external {
     authenticate(DATASTORE, operatorId, true, true, [true, false]);
 
-    require(
-      pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL,
-      "SU: MAX 50 nodes"
-    );
+    require(pubkeys.length > 0 && pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL, "SU: MAX 50 nodes");
 
     {
       uint256 verificationIndex = self.VERIFICATION_INDEX;
@@ -1513,13 +1357,8 @@ library StakeUtils {
     {
       bytes32 activeValKey = DSU.getKey(operatorId, "activeValidators");
       bytes32 proposedValKey = DSU.getKey(operatorId, "proposedValidators");
-
       uint256 poolId = self._validators[pubkeys[0]].poolId;
-
-      bytes memory withdrawalCredential = DATASTORE.readBytesForId(
-        poolId,
-        "withdrawalCredential"
-      );
+      bytes memory withdrawalCredential = DATASTORE.readBytesForId(poolId, "withdrawalCredential");
 
       uint256 lastIdChange;
       for (uint256 i; i < pubkeys.length; ) {
@@ -1530,19 +1369,12 @@ library StakeUtils {
             sinceLastIdChange = i - lastIdChange;
           }
 
-          DATASTORE.subUintForId(
-            poolId,
-            "secured",
-            (DCU.DEPOSIT_AMOUNT * (sinceLastIdChange))
-          );
+          DATASTORE.subUintForId(poolId, "secured", (DCU.DEPOSIT_AMOUNT * (sinceLastIdChange)));
           DATASTORE.addUintForId(poolId, activeValKey, (sinceLastIdChange));
           DATASTORE.subUintForId(poolId, proposedValKey, (sinceLastIdChange));
 
           poolId = self._validators[pubkeys[i]].poolId;
-          withdrawalCredential = DATASTORE.readBytesForId(
-            poolId,
-            "withdrawalCredential"
-          );
+          withdrawalCredential = DATASTORE.readBytesForId(poolId, "withdrawalCredential");
           lastIdChange = i;
         }
 
@@ -1557,6 +1389,7 @@ library StakeUtils {
 
         DATASTORE.appendBytesArrayForId(poolId, "validators", pubkeys[i]);
         self._validators[pubkeys[i]].state = VALIDATOR_STATE.ACTIVE;
+
         unchecked {
           i += 1;
         }
@@ -1567,29 +1400,13 @@ library StakeUtils {
           sinceLastIdChange = pubkeys.length - lastIdChange;
         }
 
-        DATASTORE.subUintForId(
-          poolId,
-          "secured",
-          DCU.DEPOSIT_AMOUNT * (sinceLastIdChange)
-        );
+        DATASTORE.subUintForId(poolId, "secured", DCU.DEPOSIT_AMOUNT * (sinceLastIdChange));
         DATASTORE.addUintForId(poolId, activeValKey, (sinceLastIdChange));
         DATASTORE.subUintForId(poolId, proposedValKey, (sinceLastIdChange));
+        DATASTORE.addUintForId(operatorId, "totalActiveValidators", pubkeys.length);
+        DATASTORE.subUintForId(operatorId, "totalProposedValidators", pubkeys.length);
 
-        DATASTORE.addUintForId(
-          operatorId,
-          "totalActiveValidators",
-          pubkeys.length
-        );
-        DATASTORE.subUintForId(
-          operatorId,
-          "totalProposedValidators",
-          pubkeys.length
-        );
-        _increaseWalletBalance(
-          DATASTORE,
-          operatorId,
-          DCU.DEPOSIT_AMOUNT_PRESTAKE * pubkeys.length
-        );
+        _increaseWalletBalance(DATASTORE, operatorId, DCU.DEPOSIT_AMOUNT_PRESTAKE * pubkeys.length);
       }
       emit BeaconStaked(pubkeys);
     }
