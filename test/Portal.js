@@ -1410,8 +1410,13 @@ describe("Portal", async () => {
               expect(
                 await PORTAL.readUintForId(poolId, getBytes32("interfaces"))
               ).to.be.eq(1);
-              expect(await PORTAL.gETHInterfaces(poolId, 0)).to.be.not.eq(
-                ZERO_ADDRESS
+              const gETHInterface = await PORTAL.readAddressArrayForId(
+                poolId,
+                getBytes32("interfaces"),
+                0
+              );
+              expect(await PORTAL.gETHInterfaces(poolId, 0)).to.be.eq(
+                gETHInterface
               );
             });
             it("added by gETH", async () => {

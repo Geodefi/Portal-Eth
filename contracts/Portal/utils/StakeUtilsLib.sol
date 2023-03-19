@@ -277,10 +277,6 @@ library StakeUtils {
    * @dev  ->  view
    */
 
-  /**
-   * @notice access all interfaces of a given ID.
-   * @dev for future referance: unsetted interfaces SHOULD return address(0)
-   */
   function gETHInterfaces(
     DSU.IsolatedStorage storage DATASTORE,
     uint256 id,

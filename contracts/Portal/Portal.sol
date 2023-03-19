@@ -352,13 +352,14 @@ contract Portal is
   }
 
   /**
-   * @notice read the list of interfaces for a gETH ID
+   * @notice access the list of interfaces for a given gETH/POOL ID
+   * @dev for future referance: unsetted interfaces SHOULD return address(0)
    */
   function gETHInterfaces(
     uint256 id,
     uint256 index
-  ) external view virtual override returns (address) {
-    return StakeUtils.gETHInterfaces(DATASTORE, id, index);
+  ) external view virtual override returns (address gETHInterface) {
+    gETHInterface = DATASTORE.readAddressArrayForId(id, "interfaces", index);
   }
 
   /**
