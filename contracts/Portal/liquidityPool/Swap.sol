@@ -62,11 +62,7 @@ contract Swap is
     uint256 invariant,
     uint256 lpTokenSupply
   );
-  event RemoveLiquidity(
-    address indexed provider,
-    uint256[2] tokenAmounts,
-    uint256 lpTokenSupply
-  );
+  event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
   event RemoveLiquidityOne(
     address indexed provider,
     uint256 lpTokenAmount,
@@ -84,12 +80,7 @@ contract Swap is
   event NewAdminFee(uint256 newAdminFee);
   event NewSwapFee(uint256 newSwapFee);
   event NewWithdrawFee(uint256 newWithdrawFee);
-  event RampA(
-    uint256 oldA,
-    uint256 newA,
-    uint256 initialTime,
-    uint256 futureTime
-  );
+  event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
   event StopRampA(uint256 currentA, uint256 time);
 
   /**
@@ -116,10 +107,7 @@ contract Swap is
     __ReentrancyGuard_init();
     __ERC1155Holder_init();
 
-    require(
-      lpTokenTargetAddress != address(0),
-      "Swap: lpTokenTargetAddress can not be zero"
-    );
+    require(lpTokenTargetAddress != address(0), "Swap: lpTokenTargetAddress can not be zero");
     require(owner != address(0), "Swap: owner can not be zero");
     require(address(_gETH) != address(0), "Swap: _gETH can not be zero");
     require(_pooledTokenId != 0, "Swap: _pooledTokenId can not be zero");
@@ -127,10 +115,7 @@ contract Swap is
     // Clone and initialize a LPToken contract
     ILPToken lpToken = ILPToken(Clones.clone(lpTokenTargetAddress));
 
-    require(
-      lpToken.initialize(lpTokenName, lpTokenSymbol),
-      "Swap: could not init lpToken clone"
-    );
+    require(lpToken.initialize(lpTokenName, lpTokenSymbol), "Swap: could not init lpToken clone");
 
     // Initialize swapStorage struct
     swapStorage.gETH = _gETH;
@@ -200,10 +185,7 @@ contract Swap is
    * @param index the index of the token
    * @return current balance of the pooled token at given index with token's native precision
    */
-  function getTokenBalance(
-    uint8 index
-  ) external view virtual override returns (uint256) {
-    require(index < 2, "Swap: Index out of range");
+  function getTokenBalance(uint8 index) external view virtual override returns (uint256) {
     return swapStorage.balances[index];
   }
 
@@ -218,9 +200,9 @@ contract Swap is
   /**
    * @notice Debt, The amount of buyback for stable pricing (1=1).
    * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
+   * @dev result might change when price is in.
    */
   function getDebt() external view virtual override returns (uint256) {
-    // might change when price is in.
     return swapStorage.getDebt();
   }
 
@@ -294,9 +276,7 @@ contract Swap is
    * @param index Index of the pooled token
    * @return admin's token balance in the token's precision
    */
-  function getAdminBalance(
-    uint256 index
-  ) external view virtual override returns (uint256) {
+  function getAdminBalance(uint256 index) external view virtual override returns (uint256) {
     return swapStorage.getAdminBalance(index);
   }
 
@@ -367,14 +347,7 @@ contract Swap is
     uint256 amount,
     uint256[2] calldata minAmounts,
     uint256 deadline
-  )
-    external
-    virtual
-    override
-    nonReentrant
-    deadlineCheck(deadline)
-    returns (uint256[2] memory)
-  {
+  ) external virtual override nonReentrant deadlineCheck(deadline) returns (uint256[2] memory) {
     return swapStorage.removeLiquidity(amount, minAmounts);
   }
 
@@ -391,17 +364,8 @@ contract Swap is
     uint8 tokenIndex,
     uint256 minAmount,
     uint256 deadline
-  )
-    external
-    virtual
-    override
-    nonReentrant
-    whenNotPaused
-    deadlineCheck(deadline)
-    returns (uint256)
-  {
-    return
-      swapStorage.removeLiquidityOneToken(tokenAmount, tokenIndex, minAmount);
+  ) external virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
+    return swapStorage.removeLiquidityOneToken(tokenAmount, tokenIndex, minAmount);
   }
 
   /**
@@ -417,15 +381,7 @@ contract Swap is
     uint256[2] calldata amounts,
     uint256 maxBurnAmount,
     uint256 deadline
-  )
-    external
-    virtual
-    override
-    nonReentrant
-    whenNotPaused
-    deadlineCheck(deadline)
-    returns (uint256)
-  {
+  ) external virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
     return swapStorage.removeLiquidityImbalance(amounts, maxBurnAmount);
   }
 
@@ -434,13 +390,7 @@ contract Swap is
   /**
    * @notice Withdraw all admin fees to the contract owner
    */
-  function withdrawAdminFees()
-    external
-    virtual
-    override
-    onlyOwner
-    nonReentrant
-  {
+  function withdrawAdminFees() external virtual override onlyOwner nonReentrant {
     swapStorage.withdrawAdminFees(owner());
   }
 
@@ -448,9 +398,7 @@ contract Swap is
    * @notice Update the admin fee. Admin fee takes portion of the swap fee.
    * @param newAdminFee new admin fee to be applied on future transactions
    */
-  function setAdminFee(
-    uint256 newAdminFee
-  ) external virtual override onlyOwner {
+  function setAdminFee(uint256 newAdminFee) external virtual override onlyOwner {
     swapStorage.setAdminFee(newAdminFee);
   }
 
@@ -469,10 +417,7 @@ contract Swap is
    * @param futureA the new A to ramp towards
    * @param futureTime timestamp when the new A should be reached
    */
-  function rampA(
-    uint256 futureA,
-    uint256 futureTime
-  ) external virtual override onlyOwner {
+  function rampA(uint256 futureA, uint256 futureTime) external virtual override onlyOwner {
     swapStorage.rampA(futureA, futureTime);
   }
 

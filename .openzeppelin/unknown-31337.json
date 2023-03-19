@@ -1,8 +1,8 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0x5Bb5E2B14d14adCe69Dc38e618e83F996d32b394",
-    "txHash": "0xec2600ecf7901c7773292e1133863cbd13fde33f5cea7add4f015ef63ee9b201"
+    "address": "0x9Cb8E6E414bFb4ced3969A665597792EEAe49Dac",
+    "txHash": "0x91d3cb18c6c644cc6d13b3a2ec26fea143373fc2e27fbd61e25911a97c701ff5"
   },
   "proxies": [
     {
@@ -197,13 +197,23 @@
     },
     {
       "address": "0xF3Ef831c561971d76a2214e0EcAb67F92d023DdF",
-      "txHash": "0xce710fabebf5ae581022e310829fdd0becf80e6a177feebff77010867896ddf9",
+      "txHash": "0x7fceb02eaf3a1843b094db8cdd114b84f18b656fd3f1623e6814624d2f08271e",
       "kind": "uups"
     },
     {
       "address": "0x140BBe17D5e84D855162F5d5C87f1993043b0B4b",
-      "txHash": "0xf969296aa6d39d45e5c96d9035ebf9053e8f231c7bb14b605c886f624036ab60",
+      "txHash": "0xd62280f387a12735be9b352531384c47266a6f11090aa89a09aa1888fae35f1e",
       "kind": "uups"
+    },
+    {
+      "address": "0xc42Fd913E641D4c17DA963e73372A346Ed018d02",
+      "txHash": "0x8971d4d58f1f280479ee6e3e28a7c0ab54d0e1b83dd28320cf31450d90e32d2d",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x499c1D095E6Ac834958c665aDf63245479729C22",
+      "txHash": "0xe88ad0e7b8fce1fd2724caea2733cc18de114e7fbdc445e35a35fd0bc64b9fd6",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -15042,8 +15052,8 @@
       }
     },
     "5256acb4dc0d2bb709f43d3625255ac636803aa9143ee16783377084e50e3e4d": {
-      "address": "0x140BBe17D5e84D855162F5d5C87f1993043b0B4b",
-      "txHash": "0xb1bcf20b7d84e8b8b97c05abf9d7e80232cc9f85bd1487d9fad2cf3cb4f02bff",
+      "address": "0x266770AD206252A2BEa3b125C85e1aF96288D044",
+      "txHash": "0x1737a071eb236ca1677e99ea3c9f1054f1f38a4d477ccbc26befe327aa0de5c5",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [
@@ -15108,7 +15118,7 @@
             "label": "_ERC1155",
             "offset": 0,
             "slot": "55",
-            "type": "t_contract(IgETH)26783",
+            "type": "t_contract(IgETH)20590",
             "contract": "ERC20InterfaceUpgradable",
             "src": "contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol:73"
           },
@@ -15148,7 +15158,7 @@
             "label": "_nonces",
             "offset": 0,
             "slot": "153",
-            "type": "t_mapping(t_address,t_struct(Counter)2338_storage)",
+            "type": "t_mapping(t_address,t_struct(Counter)1662_storage)",
             "contract": "ERC20InterfacePermitUpgradable",
             "src": "contracts/Portal/gETHInterfaces/ERC20InterfacePermitUpgradable.sol:44"
           },
@@ -15195,7 +15205,7 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IgETH)26783": {
+          "t_contract(IgETH)20590": {
             "label": "contract IgETH",
             "numberOfBytes": "20"
           },
@@ -15203,7 +15213,7 @@
             "label": "mapping(address => mapping(address => uint256))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_struct(Counter)2338_storage)": {
+          "t_mapping(t_address,t_struct(Counter)1662_storage)": {
             "label": "mapping(address => struct CountersUpgradeable.Counter)",
             "numberOfBytes": "32"
           },
@@ -15215,7 +15225,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Counter)2338_storage": {
+          "t_struct(Counter)1662_storage": {
             "label": "struct CountersUpgradeable.Counter",
             "members": [
               {
@@ -15240,7 +15250,7 @@
     },
     "e69fd2467e967d0e9d0f6eca216d2d1816b41bd382eaca65fefe278980a6788f": {
       "address": "0xF0122303D6db5f4aD8cc56b5F154842A2B6c9E6b",
-      "txHash": "0x69fed046a0e153853bd3de1b9e83a6f4f89c17a769187ed03fe964f90642a8e2",
+      "txHash": "0x69bab4cb29e0474209ab363f95fe8a270740fd937c4bd0c06c755ddd4caa1451",
       "layout": {
         "solcVersion": "0.8.7",
         "storage": [

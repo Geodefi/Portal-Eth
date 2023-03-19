@@ -42,11 +42,7 @@ library SwapUtils {
     uint256 invariant,
     uint256 lpTokenSupply
   );
-  event RemoveLiquidity(
-    address indexed provider,
-    uint256[2] tokenAmounts,
-    uint256 lpTokenSupply
-  );
+  event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
   event RemoveLiquidityOne(
     address indexed provider,
     uint256 lpTokenAmount,
@@ -145,8 +141,7 @@ library SwapUtils {
   ) internal view returns (uint256) {
     return
       i == 1
-        ? (balance * self.gETH.pricePerShare(self.pooledTokenId)) /
-          self.gETH.denominator()
+        ? (balance * self.gETH.pricePerShare(self.pooledTokenId)) / self.gETH.denominator()
         : balance;
   }
 
@@ -164,8 +159,7 @@ library SwapUtils {
   ) internal view returns (uint256) {
     return
       i == 1
-        ? (balance * self.gETH.denominator()) /
-          self.gETH.pricePerShare(self.pooledTokenId)
+        ? (balance * self.gETH.denominator()) / self.gETH.pricePerShare(self.pooledTokenId)
         : balance;
   }
 
@@ -180,9 +174,7 @@ library SwapUtils {
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
-    _p[1] =
-      (balances[1] * self.gETH.pricePerShare(self.pooledTokenId)) /
-      self.gETH.denominator();
+    _p[1] = (balances[1] * self.gETH.pricePerShare(self.pooledTokenId)) / self.gETH.denominator();
     return _p;
   }
 
@@ -197,9 +189,7 @@ library SwapUtils {
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
-    _p[1] =
-      (balances[1] * self.gETH.denominator()) /
-      self.gETH.pricePerShare(self.pooledTokenId);
+    _p[1] = (balances[1] * self.gETH.denominator()) / self.gETH.pricePerShare(self.pooledTokenId);
     return _p;
   }
 
@@ -235,12 +225,7 @@ library SwapUtils {
     uint256 newY;
     uint256 currentY;
 
-    (dy, newY, currentY) = calculateWithdrawOneTokenDY(
-      self,
-      tokenIndex,
-      tokenAmount,
-      totalSupply
-    );
+    (dy, newY, currentY) = calculateWithdrawOneTokenDY(self, tokenIndex, tokenAmount, totalSupply);
 
     uint256 dySwapFee = currentY - newY - dy;
 
@@ -265,21 +250,12 @@ library SwapUtils {
 
     require(tokenIndex < 2, "Token index out of range");
 
-    CalculateWithdrawOneTokenDYInfo memory v = CalculateWithdrawOneTokenDYInfo(
-      0,
-      0,
-      0,
-      0,
-      0
-    );
+    CalculateWithdrawOneTokenDYInfo memory v = CalculateWithdrawOneTokenDYInfo(0, 0, 0, 0, 0);
     v.preciseA = _getAPrecise(self);
     v.d0 = getD(_pricedInBatch(self, self.balances), v.preciseA);
     v.d1 = v.d0 - ((tokenAmount * v.d0) / totalSupply);
 
-    require(
-      tokenAmount <= self.balances[tokenIndex],
-      "Withdraw exceeds available"
-    );
+    require(tokenAmount <= self.balances[tokenIndex], "Withdraw exceeds available");
 
     v.newY = _pricedOut(
       self,
@@ -294,11 +270,8 @@ library SwapUtils {
       uint256 xpi = self.balances[i];
       xpReduced[i] =
         xpi -
-        (((
-          (i == tokenIndex)
-            ? (xpi * v.d1) / v.d0 - v.newY
-            : xpi - ((xpi * v.d1) / (v.d0))
-        ) * (v.feePerToken)) / (PERCENTAGE_DENOMINATOR));
+        ((((i == tokenIndex) ? (xpi * v.d1) / v.d0 - v.newY : xpi - ((xpi * v.d1) / (v.d0))) *
+          (v.feePerToken)) / (PERCENTAGE_DENOMINATOR));
     }
 
     uint256 dy = xpReduced[tokenIndex] -
@@ -332,17 +305,17 @@ library SwapUtils {
       uint256 dy = xp[1] - halfD;
       uint256 feeHalf = (dy * self.swapFee) / PERCENTAGE_DENOMINATOR / 2;
       uint256 debt = halfD - xp[0] + feeHalf;
+
       return debt;
     }
   }
 
   /**
    * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
+   * @dev might change when price is in.
    */
   function getDebt(Swap storage self) external view returns (uint256) {
-    // might change when price is in.
-    return
-      _getDebt(self, _pricedInBatch(self, self.balances), _getAPrecise(self));
+    return _getDebt(self, _pricedInBatch(self, self.balances), _getAPrecise(self));
   }
 
   /**
@@ -390,6 +363,7 @@ library SwapUtils {
     uint256 b = s + ((d * AmplificationUtils.A_PRECISION) / nA);
     uint256 yPrev;
     uint256 y = d;
+
     for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
       yPrev = y;
       y = ((y * y) + c) / (2 * y + b - d);
@@ -408,10 +382,7 @@ library SwapUtils {
    * See the StableSwap paper for details
    * @return the invariant, at the precision of the pool
    */
-  function getD(
-    uint256[2] memory xp,
-    uint256 a
-  ) internal pure returns (uint256) {
+  function getD(uint256[2] memory xp, uint256 a) internal pure returns (uint256) {
     uint256 numTokens = 2;
     uint256 s = xp[0] + xp[1];
     if (s == 0) {
@@ -423,8 +394,7 @@ library SwapUtils {
     uint256 nA = a * numTokens;
 
     for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
-      uint256 dP = (d ** (numTokens + 1)) /
-        (numTokens ** numTokens * xp[0] * xp[1]);
+      uint256 dP = (d ** (numTokens + 1)) / (numTokens ** numTokens * xp[0] * xp[1]);
       prevD = d;
       d =
         ((((nA * s) / AmplificationUtils.A_PRECISION) + dP * numTokens) * (d)) /
@@ -480,10 +450,7 @@ library SwapUtils {
   ) internal pure returns (uint256) {
     uint256 numTokens = 2;
     require(tokenIndexFrom != tokenIndexTo, "Can't compare token to itself");
-    require(
-      tokenIndexFrom < numTokens && tokenIndexTo < numTokens,
-      "Tokens must be in pool"
-    );
+    require(tokenIndexFrom < numTokens && tokenIndexTo < numTokens, "Tokens must be in pool");
 
     uint256 d = getD(xp, preciseA);
     uint256 c = d;
@@ -496,6 +463,7 @@ library SwapUtils {
 
     uint256 yPrev;
     uint256 y = d;
+
     for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
       yPrev = y;
       y = ((y * y) + c) / (2 * y + b - d);
@@ -521,13 +489,7 @@ library SwapUtils {
     uint8 tokenIndexTo,
     uint256 dx
   ) external view returns (uint256 dy) {
-    (dy, ) = _calculateSwap(
-      self,
-      tokenIndexFrom,
-      tokenIndexTo,
-      dx,
-      self.balances
-    );
+    (dy, ) = _calculateSwap(self, tokenIndexFrom, tokenIndexTo, dx, self.balances);
   }
 
   /**
@@ -555,10 +517,9 @@ library SwapUtils {
       tokenIndexFrom < balances.length && tokenIndexTo < balances.length,
       "Token index out of range"
     );
+
     uint256 x = _pricedIn(self, dx + balances[tokenIndexFrom], tokenIndexFrom);
-
     uint256[2] memory pricedBalances = _pricedInBatch(self, balances);
-
     uint256 y = _pricedOut(
       self,
       getY(_getAPrecise(self), tokenIndexFrom, tokenIndexTo, x, pricedBalances),
@@ -641,10 +602,7 @@ library SwapUtils {
       if (deposit) {
         balances[i] = balances[i] + amounts[i];
       } else {
-        require(
-          amounts[i] <= balances[i],
-          "Cannot withdraw more than available"
-        );
+        require(amounts[i] <= balances[i], "Cannot withdraw more than available");
         balances[i] = balances[i] - amounts[i];
       }
     }
@@ -664,17 +622,14 @@ library SwapUtils {
    * @param index Index of the pooled token
    * @return admin balance in the token's precision
    */
-  function getAdminBalance(
-    Swap storage self,
-    uint256 index
-  ) external view returns (uint256) {
+  function getAdminBalance(Swap storage self, uint256 index) external view returns (uint256) {
     require(index < 2, "Token index out of range");
-    if (index == 0) return address(this).balance - (self.balances[index]);
-
-    if (index == 1)
-      return
-        self.gETH.balanceOf(address(this), self.pooledTokenId) -
-        (self.balances[index]);
+    if (index == 0) {
+      return address(this).balance - (self.balances[index]);
+    }
+    if (index == 1) {
+      return self.gETH.balanceOf(address(this), self.pooledTokenId) - (self.balances[index]);
+    }
     return 0;
   }
 
@@ -711,22 +666,11 @@ library SwapUtils {
       );
 
       // Transfer tokens first
-      uint256 beforeBalance = gETHReference.balanceOf(
-        address(this),
-        self.pooledTokenId
-      );
-      gETHReference.safeTransferFrom(
-        msg.sender,
-        address(this),
-        self.pooledTokenId,
-        dx,
-        ""
-      );
+      uint256 beforeBalance = gETHReference.balanceOf(address(this), self.pooledTokenId);
+      gETHReference.safeTransferFrom(msg.sender, address(this), self.pooledTokenId, dx, "");
 
       // Use the actual transferred amount for AMM math
-      dx =
-        gETHReference.balanceOf(address(this), self.pooledTokenId) -
-        beforeBalance;
+      dx = gETHReference.balanceOf(address(this), self.pooledTokenId) - beforeBalance;
     }
 
     uint256 dy;
@@ -735,13 +679,7 @@ library SwapUtils {
     // However, when we call _calculateSwap, it uses pricedIn function before calculation,
     // and pricedOut function after the calculation. So, we don't need to use priceOut here.
     uint256[2] memory balances = self.balances;
-    (dy, dyFee) = _calculateSwap(
-      self,
-      tokenIndexFrom,
-      tokenIndexTo,
-      dx,
-      balances
-    );
+    (dy, dyFee) = _calculateSwap(self, tokenIndexFrom, tokenIndexTo, dx, balances);
 
     require(dy >= minDy, "Swap didn't result in min tokens");
     uint256 dyAdminFee = (dyFee * self.adminFee) / PERCENTAGE_DENOMINATOR;
@@ -757,13 +695,7 @@ library SwapUtils {
     }
     if (tokenIndexTo == 1) {
       // Means contract is going to send staked ETH (gETH)
-      gETHReference.safeTransferFrom(
-        address(this),
-        msg.sender,
-        self.pooledTokenId,
-        dy,
-        ""
-      );
+      gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, dy, "");
     }
 
     emit TokenSwap(msg.sender, dx, dy, tokenIndexFrom, tokenIndexTo);
@@ -785,10 +717,7 @@ library SwapUtils {
     uint256[2] memory amounts,
     uint256 minToMint
   ) external returns (uint256) {
-    require(
-      amounts[0] == msg.value,
-      "SwapUtils: received less or more ETH than expected"
-    );
+    require(amounts[0] == msg.value, "SwapUtils: received less or more ETH than expected");
     IgETH gETHReference = self.gETH;
     // current state
     ManageLiquidityInfo memory v = ManageLiquidityInfo(
@@ -809,30 +738,16 @@ library SwapUtils {
     newBalances[0] = v.balances[0] + msg.value;
 
     for (uint256 i = 0; i < 2; ++i) {
-      require(
-        v.totalSupply != 0 || amounts[i] > 0,
-        "Must supply all tokens in pool"
-      );
+      require(v.totalSupply != 0 || amounts[i] > 0, "Must supply all tokens in pool");
     }
 
     {
       // Transfer tokens first
-      uint256 beforeBalance = gETHReference.balanceOf(
-        address(this),
-        self.pooledTokenId
-      );
-      gETHReference.safeTransferFrom(
-        msg.sender,
-        address(this),
-        self.pooledTokenId,
-        amounts[1],
-        ""
-      );
+      uint256 beforeBalance = gETHReference.balanceOf(address(this), self.pooledTokenId);
+      gETHReference.safeTransferFrom(msg.sender, address(this), self.pooledTokenId, amounts[1], "");
 
       // Update the amounts[] with actual transfer amount
-      amounts[1] =
-        gETHReference.balanceOf(address(this), self.pooledTokenId) -
-        beforeBalance;
+      amounts[1] = gETHReference.balanceOf(address(this), self.pooledTokenId) - beforeBalance;
 
       newBalances[1] = v.balances[1] + amounts[1];
     }
@@ -902,11 +817,7 @@ library SwapUtils {
 
     uint256[2] memory amounts = _pricedOutBatch(
       self,
-      _calculateRemoveLiquidity(
-        _pricedInBatch(self, balances),
-        amount,
-        totalSupply
-      )
+      _calculateRemoveLiquidity(_pricedInBatch(self, balances), amount, totalSupply)
     );
 
     for (uint256 i = 0; i < amounts.length; ++i) {
@@ -920,13 +831,7 @@ library SwapUtils {
     (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
     require(sent, "SwapUtils: Failed to send Ether");
 
-    gETHReference.safeTransferFrom(
-      address(this),
-      msg.sender,
-      self.pooledTokenId,
-      amounts[1],
-      ""
-    );
+    gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
 
     emit RemoveLiquidity(msg.sender, amounts, totalSupply - amount);
     return amounts;
@@ -974,22 +879,10 @@ library SwapUtils {
       require(sent, "SwapUtils: Failed to send Ether");
     }
     if (tokenIndex == 1) {
-      gETHReference.safeTransferFrom(
-        address(this),
-        msg.sender,
-        self.pooledTokenId,
-        dy,
-        ""
-      );
+      gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, dy, "");
     }
 
-    emit RemoveLiquidityOne(
-      msg.sender,
-      tokenAmount,
-      totalSupply,
-      tokenIndex,
-      dy
-    );
+    emit RemoveLiquidityOne(msg.sender, tokenAmount, totalSupply, tokenIndex, dy);
 
     return dy;
   }
@@ -1035,10 +928,7 @@ library SwapUtils {
 
       v.d0 = getD(_pricedInBatch(self, v.balances), v.preciseA);
       for (uint256 i = 0; i < 2; ++i) {
-        require(
-          amounts[i] <= v.balances[i],
-          "Cannot withdraw more than available"
-        );
+        require(amounts[i] <= v.balances[i], "Cannot withdraw more than available");
         balances1[i] = v.balances[i] - amounts[i];
       }
       v.d1 = getD(_pricedInBatch(self, balances1), v.preciseA);
@@ -1049,9 +939,7 @@ library SwapUtils {
         fees[i] = (feePerToken * difference) / PERCENTAGE_DENOMINATOR;
         uint256 adminFee = self.adminFee;
         {
-          self.balances[i] =
-            balances1[i] -
-            ((fees[i] * adminFee) / PERCENTAGE_DENOMINATOR);
+          self.balances[i] = balances1[i] - ((fees[i] * adminFee) / PERCENTAGE_DENOMINATOR);
         }
         balances1[i] = balances1[i] - fees[i];
       }
@@ -1071,21 +959,9 @@ library SwapUtils {
     (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
     require(sent, "SwapUtils: Failed to send Ether");
 
-    gETHReference.safeTransferFrom(
-      address(this),
-      msg.sender,
-      self.pooledTokenId,
-      amounts[1],
-      ""
-    );
+    gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
 
-    emit RemoveLiquidityImbalance(
-      msg.sender,
-      amounts,
-      fees,
-      v.d1,
-      v.totalSupply - tokenAmount
-    );
+    emit RemoveLiquidityImbalance(msg.sender, amounts, fees, v.d1, v.totalSupply - tokenAmount);
 
     return tokenAmount;
   }
@@ -1097,18 +973,10 @@ library SwapUtils {
    */
   function withdrawAdminFees(Swap storage self, address to) external {
     IgETH gETHReference = self.gETH;
-    uint256 tokenBalance = gETHReference.balanceOf(
-      address(this),
-      self.pooledTokenId
-    ) - self.balances[1];
+    uint256 tokenBalance = gETHReference.balanceOf(address(this), self.pooledTokenId) -
+      self.balances[1];
     if (tokenBalance != 0) {
-      gETHReference.safeTransferFrom(
-        address(this),
-        to,
-        self.pooledTokenId,
-        tokenBalance,
-        ""
-      );
+      gETHReference.safeTransferFrom(address(this), to, self.pooledTokenId, tokenBalance, "");
     }
 
     uint256 etherBalance = address(this).balance - self.balances[0];
