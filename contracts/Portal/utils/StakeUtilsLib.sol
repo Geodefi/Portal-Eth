@@ -922,7 +922,7 @@ library StakeUtils {
     uint256[] calldata operatorIds,
     uint256[] calldata allowances
   ) external returns (bool) {
-    authenticate(DATASTORE, poolId, true, true, [false, true]);
+    authenticate(DATASTORE, poolId, false, true, [false, true]);
 
     require(operatorIds.length == allowances.length, "SU: allowances should match");
 
@@ -963,9 +963,9 @@ library StakeUtils {
    */
   function liquidityPoolById(
     DSU.IsolatedStorage storage DATASTORE,
-    uint256 _poolId
+    uint256 poolId
   ) public view returns (ISwap) {
-    return ISwap(DATASTORE.readAddressForId(_poolId, "liquidityPool"));
+    return ISwap(DATASTORE.readAddressForId(poolId, "liquidityPool"));
   }
 
   /**
@@ -1037,7 +1037,7 @@ library StakeUtils {
 
   /**
    * @notice mints gETH for a given ETH amount, keeps the tokens in Portal.
-   * @dev fails if the price if minting is not allowed
+   * @dev fails if minting is not allowed: invalid price or recoveryMode
    */
   function _mintgETH(
     PooledStaking storage self,
@@ -1146,8 +1146,21 @@ library StakeUtils {
    * Creation of a Validator takes 2 steps: propose and beacon stake.
    * Before entering beaconStake function, _canStake verifies the eligibility of
    * given pubKey that is proposed by an operator with proposeStake function.
-   * Eligibility is defined by an optimistic alienation, check alienate() for info.
+   * Eligibility is defined by an optimistic alienation, check OracleUtils._alienateValidator() for info.
    */
+
+  /**
+   * @notice Helper Struct to pack constant data that does not change per validator.
+   * * needed for that famous Solidity feature.
+   */
+  struct constantValidatorData {
+    uint256 index;
+    uint256 poolFee;
+    uint256 operatorFee;
+    uint256 earlyExitFee;
+    uint256 expectedExit;
+    bytes withdrawalCredential;
+  }
 
   /**
    * @dev  ->  view
@@ -1160,7 +1173,7 @@ library StakeUtils {
    *  @return true if:
    *   - pubkey should be proposed
    *   - pubkey should not be alienated (https://bit.ly/3Tkc6UC)
-   *   - validator's index should be lower than VERIFICATION_INDEX. Updated by Telescope.
+   *   - validator's index should be covered by VERIFICATION_INDEX. Updated by Telescope.
    * Note: while distributing the rewards, if a validator has 1 Eth, it is safe to assume that the balance belongs to Operator
    */
   function _canStake(
@@ -1191,19 +1204,6 @@ library StakeUtils {
    */
 
   /**
-   * @notice Helper Struct to pack constant data that does not change per validator.
-   * * needed for that famous Solidity feature.
-   */
-  struct constantValidatorData {
-    uint256 index;
-    uint256 poolFee;
-    uint256 operatorFee;
-    uint256 earlyExitFee;
-    uint256 expectedExit;
-    bytes withdrawalCredential;
-  }
-
-  /**
    * @notice Validator Credentials Proposal function, first step of crating validators.
    * * Once a pubKey is proposed and not alienated after verificationIndex updated,
    * * it is optimistically allowed to take funds from staking pools.
@@ -1220,7 +1220,7 @@ library StakeUtils {
    * 1 ether will be sent back to Node Operator when the finalized deposit is successful.
    * @dev ProposeStake requires enough allowance from Staking Pools to Operators.
    * @dev ProposeStake requires enough funds within Wallet.
-   * @dev Max number of validators to propose is per call is MAX_DEPOSITS_PER_CALL (currently 64)
+   * @dev Max number of validators to propose is per call is MAX_DEPOSITS_PER_CALL (currently 50)
    */
   function proposeStake(
     PooledStaking storage self,
@@ -1232,7 +1232,7 @@ library StakeUtils {
     bytes[] calldata signatures31
   ) external {
     // checks and effects
-    authenticate(DATASTORE, operatorId, true, true, [true, false]);
+    authenticate(DATASTORE, operatorId, false, true, [true, false]);
     authenticate(DATASTORE, poolId, false, false, [false, true]);
     require(
       !(withdrawalContractById(DATASTORE, poolId).recoveryMode()),
@@ -1294,7 +1294,7 @@ library StakeUtils {
       );
 
       self._validators[pubkeys[i]] = Validator(
-        1,
+        VALIDATOR_STATE.PROPOSED,
         valData.index + i,
         poolId,
         operatorId,
@@ -1336,7 +1336,7 @@ library StakeUtils {
    *  pk4, pk5 from pool2
    *  pk6 from pool3
    *  seperate them in similar groups as much as possible.
-   *  @dev Max number of validators to boostrap is MAX_DEPOSITS_PER_CALL (currently 64)
+   *  @dev Max number of validators to boostrap is MAX_DEPOSITS_PER_CALL (currently 50)
    *  @dev A pubkey that is alienated will not get through. Do not frontrun during ProposeStake.
    */
   function beaconStake(
@@ -1345,7 +1345,7 @@ library StakeUtils {
     uint256 operatorId,
     bytes[] calldata pubkeys
   ) external {
-    authenticate(DATASTORE, operatorId, true, true, [true, false]);
+    authenticate(DATASTORE, operatorId, false, true, [true, false]);
 
     require(
       (pubkeys.length > 0) && (pubkeys.length <= DCU.MAX_DEPOSITS_PER_CALL),
