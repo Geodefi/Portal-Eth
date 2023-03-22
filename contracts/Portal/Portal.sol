@@ -647,7 +647,7 @@ contract Portal is
       DATASTORE.readAddress(moduleVersion, "CONTROLLER"),
       ID_TYPE.CONTRACT_UPGRADE,
       DATASTORE.readBytes(moduleVersion, "NAME"),
-      4 weeks
+      3 weeks
     );
 
     require(success, "PORTAL: cannot propose upgrade");

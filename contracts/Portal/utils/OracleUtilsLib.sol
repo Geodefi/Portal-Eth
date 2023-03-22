@@ -262,6 +262,11 @@ library OracleUtils {
     uint256 _price,
     bytes32[] calldata _priceProof
   ) internal {
+    require(
+      STAKER.ORACLE_UPDATE_TIMESTAMP > STAKER.gETH.priceUpdateTimestamp(_poolId),
+      "OU: no price change"
+    );
+
     bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(_poolId, _price))));
     require(
       MerkleProof.verify(_priceProof, STAKER.PRICE_MERKLE_ROOT, leaf),

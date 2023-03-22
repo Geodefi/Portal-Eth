@@ -592,6 +592,7 @@ library StakeUtils {
     uint256 id,
     address newMaintainer
   ) external {
+    require(DATASTORE.readUint(id, "initiated") != 0, "SU: ID is not initiated");
     require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "SU: sender NOT CONTROLLER");
     uint256 typeOfId = DATASTORE.readUint(id, "TYPE");
     require(typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL, "SU: invalid TYPE");
@@ -995,7 +996,7 @@ library StakeUtils {
     uint256 lastupdate = self.gETH.priceUpdateTimestamp(poolId);
     unchecked {
       isValid =
-        lastupdate + PRICE_EXPIRY >= block.timestamp ||
+        lastupdate + PRICE_EXPIRY >= block.timestamp &&
         lastupdate >= self.ORACLE_UPDATE_TIMESTAMP;
     }
   }

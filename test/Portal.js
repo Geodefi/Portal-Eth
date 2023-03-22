@@ -1839,7 +1839,7 @@ describe("Portal", async () => {
             it("reverts if poolId is NOT POOL", async () => {
               await expect(
                 PORTAL.deposit(operatorId, 0, 0, 0, [], user.address)
-              ).to.be.revertedWith("SU: TYPE NOT allowed");
+              ).to.be.revertedWith("OU: no price change");
             });
             it("reverts if ZERO_ADDRESS is receiver", async () => {
               await expect(
