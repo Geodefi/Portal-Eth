@@ -108,12 +108,12 @@ library OracleUtils {
     SU._imprison(DATASTORE, STAKER._validators[_pk].operatorId, _pk);
 
     uint256 poolId = STAKER._validators[_pk].poolId;
-    DATASTORE.subUintForId(poolId, "secured", DCU.DEPOSIT_AMOUNT);
-    DATASTORE.addUintForId(poolId, "surplus", DCU.DEPOSIT_AMOUNT);
+    DATASTORE.subUint(poolId, "secured", DCU.DEPOSIT_AMOUNT);
+    DATASTORE.addUint(poolId, "surplus", DCU.DEPOSIT_AMOUNT);
 
     uint256 operatorId = STAKER._validators[_pk].operatorId;
-    DATASTORE.subUintForId(operatorId, "totalProposedValidators", 1);
-    DATASTORE.subUintForId(poolId, DSU.getKey(operatorId, "proposedValidators"), 1);
+    DATASTORE.subUint(operatorId, "totalProposedValidators", 1);
+    DATASTORE.subUint(poolId, DSU.getKey(operatorId, "proposedValidators"), 1);
 
     STAKER._validators[_pk].state = VALIDATOR_STATE.ALIENATED;
 
@@ -228,7 +228,7 @@ library OracleUtils {
     uint256 _id,
     uint256 _newPrice
   ) internal view {
-    require(DATASTORE.readUintForId(_id, "TYPE") == ID_TYPE.POOL, "OU: not a pool?");
+    require(DATASTORE.readUint(_id, "TYPE") == ID_TYPE.POOL, "OU: not a pool?");
 
     uint256 lastUpdate = STAKER.gETH.priceUpdateTimestamp(_id);
     uint256 dayPercentSinceUpdate = ((block.timestamp - lastUpdate) * PERCENTAGE_DENOMINATOR) /

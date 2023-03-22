@@ -40,25 +40,25 @@ interface IPortal {
 
   function getKey(uint256 _id, bytes32 _param) external pure returns (bytes32 key);
 
-  function readAddressForId(uint256 id, bytes32 key) external view returns (address data);
+  function readAddress(uint256 id, bytes32 key) external view returns (address data);
 
-  function readUintForId(uint256 id, bytes32 key) external view returns (uint256 data);
+  function readUint(uint256 id, bytes32 key) external view returns (uint256 data);
 
-  function readBytesForId(uint256 id, bytes32 key) external view returns (bytes memory data);
+  function readBytes(uint256 id, bytes32 key) external view returns (bytes memory data);
 
-  function readUintArrayForId(
+  function readUintArray(
     uint256 id,
     bytes32 key,
     uint256 index
   ) external view returns (uint256 data);
 
-  function readBytesArrayForId(
+  function readBytesArray(
     uint256 id,
     bytes32 key,
     uint256 index
   ) external view returns (bytes memory data);
 
-  function readAddressArrayForId(
+  function readAddressArray(
     uint256 id,
     bytes32 key,
     uint256 index

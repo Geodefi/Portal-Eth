@@ -827,7 +827,7 @@ describe("Portal", async () => {
           await PORTAL.connect(operatorOwner).changeIdCONTROLLER(operatorId, attacker.address);
         });
         it("changed CONTROLLER", async () => {
-          expect(await PORTAL.readAddressForId(operatorId, getBytes32("CONTROLLER"))).to.be.eq(
+          expect(await PORTAL.readAddress(operatorId, getBytes32("CONTROLLER"))).to.be.eq(
             attacker.address
           );
         });
@@ -984,17 +984,15 @@ describe("Portal", async () => {
         });
 
         it("correct CONTROLLER", async () => {
-          expect(await PORTAL.readAddressForId(operatorId, getBytes32("CONTROLLER"))).to.be.eq(
+          expect(await PORTAL.readAddress(operatorId, getBytes32("CONTROLLER"))).to.be.eq(
             operatorOwner.address
           );
         });
         it("correct NAME", async () => {
-          expect(await PORTAL.readBytesForId(operatorId, getBytes32("NAME"))).to.be.eq(
-            operatorName
-          );
+          expect(await PORTAL.readBytes(operatorId, getBytes32("NAME"))).to.be.eq(operatorName);
         });
         it("correct TYPE", async () => {
-          expect(await PORTAL.readUintForId(operatorId, getBytes32("TYPE"))).to.be.eq(4);
+          expect(await PORTAL.readUint(operatorId, getBytes32("TYPE"))).to.be.eq(4);
         });
         it("changed the deadline", async () => {
           expect((await PORTAL.getProposal(operatorId)).deadline).to.be.eq(ts);
@@ -1143,20 +1141,20 @@ describe("Portal", async () => {
           );
         });
         it("sets maintainer", async () => {
-          expect(await PORTAL.readAddressForId(operatorId, getBytes32("maintainer"))).to.be.eq(
+          expect(await PORTAL.readAddress(operatorId, getBytes32("maintainer"))).to.be.eq(
             operatorOwner.address
           );
         });
         it("sets MaintenanceFee", async () => {
-          expect(await PORTAL.readUintForId(operatorId, getBytes32("fee"))).to.be.eq(operatorFee);
+          expect(await PORTAL.readUint(operatorId, getBytes32("fee"))).to.be.eq(operatorFee);
         });
         it("sets validatorPeriod", async () => {
-          expect(await PORTAL.readUintForId(operatorId, getBytes32("validatorPeriod"))).to.be.eq(
+          expect(await PORTAL.readUint(operatorId, getBytes32("validatorPeriod"))).to.be.eq(
             MIN_VALIDATOR_PERIOD
           );
         });
         it("sets initiated", async () => {
-          expect(await PORTAL.readUintForId(operatorId, getBytes32("initiated"))).to.be.gt(1);
+          expect(await PORTAL.readUint(operatorId, getBytes32("initiated"))).to.be.gt(1);
         });
         it("reverts if already initiated", async () => {
           await expect(
@@ -1210,50 +1208,50 @@ describe("Portal", async () => {
         });
 
         it("sets NAME", async () => {
-          expect(await PORTAL.readBytesForId(poolId, getBytes32("NAME"))).to.be.eq(poolName);
+          expect(await PORTAL.readBytes(poolId, getBytes32("NAME"))).to.be.eq(poolName);
         });
         it("sets CONTROLLER", async () => {
-          expect(await PORTAL.readAddressForId(poolId, getBytes32("CONTROLLER"))).to.be.eq(
+          expect(await PORTAL.readAddress(poolId, getBytes32("CONTROLLER"))).to.be.eq(
             poolOwner.address
           );
         });
         it("sets TYPE", async () => {
-          expect(await PORTAL.readUintForId(poolId, getBytes32("TYPE"))).to.be.eq(5);
+          expect(await PORTAL.readUint(poolId, getBytes32("TYPE"))).to.be.eq(5);
         });
         it("added to allIdsByType", async () => {
           expect(await PORTAL.allIdsByType(5, 0)).to.be.eq(poolId);
         });
         it("sets maintainer", async () => {
-          expect(await PORTAL.readAddressForId(poolId, getBytes32("maintainer"))).to.be.eq(
+          expect(await PORTAL.readAddress(poolId, getBytes32("maintainer"))).to.be.eq(
             poolOwner.address
           );
         });
 
         it("sets MaintenanceFee", async () => {
-          expect(await PORTAL.readUintForId(poolId, getBytes32("fee"))).to.be.eq(poolFee);
+          expect(await PORTAL.readUint(poolId, getBytes32("fee"))).to.be.eq(poolFee);
         });
         it("sets gETH price to 1 ETH", async () => {
           expect(await gETH.pricePerShare(poolId)).to.be.eq(String(1e18));
         });
         it("sets initiated", async () => {
-          expect(await PORTAL.readUintForId(poolId, getBytes32("initiated"))).to.be.gt(1);
+          expect(await PORTAL.readUint(poolId, getBytes32("initiated"))).to.be.gt(1);
         });
 
         describe("makes PublicPool", async () => {
           it("correct implementation address", async () => {
-            expect(await PORTAL.readUintForId(poolId, getBytes32("private"))).to.be.eq(0);
+            expect(await PORTAL.readUint(poolId, getBytes32("private"))).to.be.eq(0);
           });
         });
 
         describe("_deployWithdrawalContract", async () => {
           let wc;
           beforeEach(async () => {
-            wc = await PORTAL.readAddressForId(poolId, getBytes32("withdrawalContract"));
+            wc = await PORTAL.readAddress(poolId, getBytes32("withdrawalContract"));
           });
           it("withdrawalContract = withdrawalCredential", async () => {
-            expect(
-              await PORTAL.readBytesForId(poolId, getBytes32("withdrawalCredential"))
-            ).to.be.eq("0x010000000000000000000000" + wc.substr(2).toLowerCase());
+            expect(await PORTAL.readBytes(poolId, getBytes32("withdrawalCredential"))).to.be.eq(
+              "0x010000000000000000000000" + wc.substr(2).toLowerCase()
+            );
           });
           it("correct implementation address", async () => {
             expect(await upgrades.erc1967.getImplementationAddress(wc)).to.be.eq(
@@ -1278,8 +1276,8 @@ describe("Portal", async () => {
           });
           describe("_setInterface", async () => {
             it("added to interfaces array", async () => {
-              expect(await PORTAL.readUintForId(poolId, getBytes32("interfaces"))).to.be.eq(1);
-              const gETHInterface = await PORTAL.readAddressArrayForId(
+              expect(await PORTAL.readUint(poolId, getBytes32("interfaces"))).to.be.eq(1);
+              const gETHInterface = await PORTAL.readAddressArray(
                 poolId,
                 getBytes32("interfaces"),
                 0
@@ -1297,7 +1295,7 @@ describe("Portal", async () => {
         describe("deployLiquidityPool", async () => {
           let liquidityPool;
           beforeEach(async () => {
-            liquidityPool = await PORTAL.readAddressForId(poolId, getBytes32("liquidityPool"));
+            liquidityPool = await PORTAL.readAddress(poolId, getBytes32("liquidityPool"));
           });
           it("sets liquidityPool", async () => {
             expect().to.be.not.eq(ZERO_ADDRESS);
@@ -1481,7 +1479,7 @@ describe("Portal", async () => {
           describe("success", async () => {
             it("changes maintainer", async () => {
               await PORTAL.connect(operatorOwner).changeMaintainer(operatorId, attacker.address);
-              expect(await PORTAL.readAddressForId(operatorId, getBytes32("maintainer"))).to.be.eq(
+              expect(await PORTAL.readAddress(operatorId, getBytes32("maintainer"))).to.be.eq(
                 attacker.address
               );
             });
@@ -1515,15 +1513,13 @@ describe("Portal", async () => {
             ts = await getCurrentBlockTimestamp();
           });
           it("sets priorFee", async () => {
-            expect(await PORTAL.readUintForId(operatorId, getBytes32("priorFee"))).to.be.eq(
-              operatorFee
-            );
+            expect(await PORTAL.readUint(operatorId, getBytes32("priorFee"))).to.be.eq(operatorFee);
           });
           it("sets fee", async () => {
-            expect(await PORTAL.readUintForId(operatorId, getBytes32("fee"))).to.be.eq(100);
+            expect(await PORTAL.readUint(operatorId, getBytes32("fee"))).to.be.eq(100);
           });
           it("sets feeSwitch", async () => {
-            expect(await PORTAL.readUintForId(operatorId, getBytes32("feeSwitch"))).to.be.eq(
+            expect(await PORTAL.readUint(operatorId, getBytes32("feeSwitch"))).to.be.eq(
               ts + SWITCH_LATENCY
             );
           });
@@ -1552,13 +1548,11 @@ describe("Portal", async () => {
         describe("success: not maintainer or controller", async () => {
           describe("_increaseWalletBalance", async () => {
             it("increases wallet", async () => {
-              expect(await PORTAL.readUintForId(operatorId, getBytes32("wallet"))).to.be.eq(
-                String(0)
-              );
+              expect(await PORTAL.readUint(operatorId, getBytes32("wallet"))).to.be.eq(String(0));
               await PORTAL.increaseWalletBalance(operatorId, {
                 value: String(1e17),
               });
-              expect(await PORTAL.readUintForId(operatorId, getBytes32("wallet"))).to.be.eq(
+              expect(await PORTAL.readUint(operatorId, getBytes32("wallet"))).to.be.eq(
                 String(1e17)
               );
             });
@@ -1597,11 +1591,11 @@ describe("Portal", async () => {
         describe("success", async () => {
           describe("_decreaseWalletBalance", async () => {
             it("decreases wallet", async () => {
-              expect(await PORTAL.readUintForId(operatorId, getBytes32("wallet"))).to.be.eq(
+              expect(await PORTAL.readUint(operatorId, getBytes32("wallet"))).to.be.eq(
                 String(1e17)
               );
               await PORTAL.connect(operatorOwner).decreaseWalletBalance(operatorId, String(2e16));
-              expect(await PORTAL.readUintForId(operatorId, getBytes32("wallet"))).to.be.eq(
+              expect(await PORTAL.readUint(operatorId, getBytes32("wallet"))).to.be.eq(
                 String(8e16)
               );
             });
@@ -1681,17 +1675,17 @@ describe("Portal", async () => {
             ts = await getCurrentBlockTimestamp();
           });
           it("sets priorPeriod", async () => {
-            expect(await PORTAL.readUintForId(operatorId, getBytes32("priorPeriod"))).to.be.eq(
+            expect(await PORTAL.readUint(operatorId, getBytes32("priorPeriod"))).to.be.eq(
               MIN_VALIDATOR_PERIOD
             );
           });
           it("sets validatorPeriod", async () => {
-            expect(await PORTAL.readUintForId(operatorId, getBytes32("validatorPeriod"))).to.be.eq(
+            expect(await PORTAL.readUint(operatorId, getBytes32("validatorPeriod"))).to.be.eq(
               MAX_VALIDATOR_PERIOD
             );
           });
           it("sets periodSwitch", async () => {
-            expect(await PORTAL.readUintForId(operatorId, getBytes32("periodSwitch"))).to.be.eq(
+            expect(await PORTAL.readUint(operatorId, getBytes32("periodSwitch"))).to.be.eq(
               ts + SWITCH_LATENCY
             );
           });
@@ -1750,7 +1744,7 @@ describe("Portal", async () => {
             it("sets allowance", async () => {
               await PORTAL.connect(poolOwner).approveOperators(poolId, [operatorId], [10]);
               expect(
-                await PORTAL.readUintForId(
+                await PORTAL.readUint(
                   poolId,
                   await PORTAL.getKey(operatorId, getBytes32("allowance"))
                 )
@@ -1916,7 +1910,7 @@ describe("Portal", async () => {
                   await (
                     await ethers.getContractAt(
                       "WithdrawalContract",
-                      await PORTAL.readAddressForId(poolId, getBytes32("withdrawalContract"))
+                      await PORTAL.readAddress(poolId, getBytes32("withdrawalContract"))
                     )
                   )
                     .connect(poolOwner)
@@ -1950,7 +1944,7 @@ describe("Portal", async () => {
                 portalgEth = await gETH.balanceOf(PORTAL.address, poolId);
                 totSup = await gETH.totalSupply(poolId);
                 usergETH = await gETH.balanceOf(user.address, poolId);
-                surplus = await PORTAL.readUintForId(poolId, getBytes32("surplus"));
+                surplus = await PORTAL.readUint(poolId, getBytes32("surplus"));
 
                 await PORTAL.connect(user).deposit(
                   poolId,
@@ -1971,7 +1965,7 @@ describe("Portal", async () => {
                 );
               });
               it("surplus increased accordingly", async () => {
-                expect(await PORTAL.readUintForId(poolId, getBytes32("surplus"))).to.be.eq(
+                expect(await PORTAL.readUint(poolId, getBytes32("surplus"))).to.be.eq(
                   BigNumber.from(surplus).add(String(69e17))
                 );
               });
@@ -2014,10 +2008,7 @@ describe("Portal", async () => {
                   }
                 );
 
-                const lpAddress = await PORTAL.readAddressForId(
-                  poolId,
-                  getBytes32("liquidityPool")
-                );
+                const lpAddress = await PORTAL.readAddress(poolId, getBytes32("liquidityPool"));
                 await gETH.setApprovalForAll(lpAddress, true);
                 liqPool = await ethers.getContractAt("Swap", lpAddress);
 
@@ -2030,7 +2021,7 @@ describe("Portal", async () => {
                 totSup = await gETH.totalSupply(poolId);
                 usergETH = await gETH.balanceOf(user.address, poolId);
                 receivergETH = await gETH.balanceOf(attacker.address, poolId);
-                surplus = await PORTAL.readUintForId(poolId, getBytes32("surplus"));
+                surplus = await PORTAL.readUint(poolId, getBytes32("surplus"));
               });
 
               describe("debt < IGNORABLE_DEBT (0)", async () => {
@@ -2054,7 +2045,7 @@ describe("Portal", async () => {
                   );
                 });
                 it("surplus increased accordingly", async () => {
-                  expect(await PORTAL.readUintForId(poolId, getBytes32("surplus"))).to.be.eq(
+                  expect(await PORTAL.readUint(poolId, getBytes32("surplus"))).to.be.eq(
                     BigNumber.from(surplus).add(String(69e17))
                   );
                 });
@@ -2098,7 +2089,7 @@ describe("Portal", async () => {
                   expect(await gETH.totalSupply(poolId)).to.be.eq(totSup);
                 });
                 it("surplus not increased", async () => {
-                  expect(await PORTAL.readUintForId(poolId, getBytes32("surplus"))).to.be.eq(
+                  expect(await PORTAL.readUint(poolId, getBytes32("surplus"))).to.be.eq(
                     BigNumber.from(surplus)
                   );
                 });
@@ -2143,7 +2134,7 @@ describe("Portal", async () => {
                   expect(await gETH.totalSupply(poolId)).to.be.eq(totSup.add(expMint));
                 });
                 it("surplus increased accordingly", async () => {
-                  expect(await PORTAL.readUintForId(poolId, getBytes32("surplus"))).to.be.eq(
+                  expect(await PORTAL.readUint(poolId, getBytes32("surplus"))).to.be.eq(
                     BigNumber.from(surplus).add(expMint)
                   );
                 });
@@ -2426,14 +2417,14 @@ describe("Portal", async () => {
                 value: String(3e18),
               });
 
-              wallet = await PORTAL.readUintForId(operatorId, getBytes32("wallet"));
-              surplus = await PORTAL.readUintForId(poolId, getBytes32("surplus"));
-              secured = await PORTAL.readUintForId(poolId, getBytes32("secured"));
-              proposedValidators = await PORTAL.readUintForId(
+              wallet = await PORTAL.readUint(operatorId, getBytes32("wallet"));
+              surplus = await PORTAL.readUint(poolId, getBytes32("surplus"));
+              secured = await PORTAL.readUint(poolId, getBytes32("secured"));
+              proposedValidators = await PORTAL.readUint(
                 poolId,
                 await PORTAL.getKey(operatorId, getBytes32("proposedValidators"))
               );
-              totalProposedValidators = await PORTAL.readUintForId(
+              totalProposedValidators = await PORTAL.readUint(
                 operatorId,
                 getBytes32("totalProposedValidators")
               );
@@ -2450,22 +2441,22 @@ describe("Portal", async () => {
             });
             it("wallet decreased", async () => {
               expect(wallet.sub(String(2e18))).to.be.eq(
-                await PORTAL.readUintForId(operatorId, getBytes32("wallet"))
+                await PORTAL.readUint(operatorId, getBytes32("wallet"))
               );
             });
             it("surplus decreased", async () => {
               expect(surplus.sub(String(64e18))).to.be.eq(
-                await PORTAL.readUintForId(poolId, getBytes32("surplus"))
+                await PORTAL.readUint(poolId, getBytes32("surplus"))
               );
             });
             it("secured increased", async () => {
               expect(secured.add(String(64e18))).to.be.eq(
-                await PORTAL.readUintForId(poolId, getBytes32("secured"))
+                await PORTAL.readUint(poolId, getBytes32("secured"))
               );
             });
             it("proposedValidators increased", async () => {
               expect(proposedValidators.add(2)).to.be.eq(
-                await PORTAL.readUintForId(
+                await PORTAL.readUint(
                   poolId,
                   await PORTAL.getKey(operatorId, getBytes32("proposedValidators"))
                 )
@@ -2473,7 +2464,7 @@ describe("Portal", async () => {
             });
             it("totalProposedValidators increased", async () => {
               expect(totalProposedValidators.add(2)).to.be.eq(
-                await PORTAL.readUintForId(operatorId, getBytes32("totalProposedValidators"))
+                await PORTAL.readUint(operatorId, getBytes32("totalProposedValidators"))
               );
             });
             it("Contract balance decreased accordingly", async () => {
@@ -2572,7 +2563,7 @@ describe("Portal", async () => {
             await (
               await ethers.getContractAt(
                 "WithdrawalContract",
-                await PORTAL.readAddressForId(poolId, getBytes32("withdrawalContract"))
+                await PORTAL.readAddress(poolId, getBytes32("withdrawalContract"))
               )
             )
               .connect(poolOwner)
@@ -2700,24 +2691,24 @@ describe("Portal", async () => {
               beforeEach(async () => {
                 await PORTAL.connect(ORACLE).updateVerificationIndex(3, []);
 
-                secured = await PORTAL.readUintForId(poolId, getBytes32("secured"));
-                proposedValidators = await PORTAL.readUintForId(
+                secured = await PORTAL.readUint(poolId, getBytes32("secured"));
+                proposedValidators = await PORTAL.readUint(
                   poolId,
                   await PORTAL.getKey(operatorId, getBytes32("proposedValidators"))
                 );
-                activeValidators = await PORTAL.readUintForId(
+                activeValidators = await PORTAL.readUint(
                   poolId,
                   await PORTAL.getKey(operatorId, getBytes32("activeValidators"))
                 );
-                totalActiveValidators = await PORTAL.readUintForId(
+                totalActiveValidators = await PORTAL.readUint(
                   operatorId,
                   getBytes32("totalActiveValidators")
                 );
-                totalProposedValidators = await PORTAL.readUintForId(
+                totalProposedValidators = await PORTAL.readUint(
                   operatorId,
                   getBytes32("totalProposedValidators")
                 );
-                wallet = await PORTAL.readUintForId(operatorId, getBytes32("wallet"));
+                wallet = await PORTAL.readUint(operatorId, getBytes32("wallet"));
 
                 await PORTAL.connect(operatorOwner).beaconStake(operatorId, [
                   pubkey0,
@@ -2740,12 +2731,12 @@ describe("Portal", async () => {
               });
               it("secured decreased", async () => {
                 expect(secured.sub(String(64e18))).to.be.eq(
-                  await PORTAL.readUintForId(poolId, getBytes32("secured"))
+                  await PORTAL.readUint(poolId, getBytes32("secured"))
                 );
               });
               it("proposedValidators decreased", async () => {
                 expect(proposedValidators.sub(2)).to.be.eq(
-                  await PORTAL.readUintForId(
+                  await PORTAL.readUint(
                     poolId,
                     await PORTAL.getKey(operatorId, getBytes32("proposedValidators"))
                   )
@@ -2753,7 +2744,7 @@ describe("Portal", async () => {
               });
               it("activeValidators increased", async () => {
                 expect(activeValidators.add(2)).to.be.eq(
-                  await PORTAL.readUintForId(
+                  await PORTAL.readUint(
                     poolId,
                     await PORTAL.getKey(operatorId, getBytes32("activeValidators"))
                   )
@@ -2761,17 +2752,17 @@ describe("Portal", async () => {
               });
               it("totalActiveValidators increased", async () => {
                 expect(totalActiveValidators.add(3)).to.be.eq(
-                  await PORTAL.readUintForId(operatorId, getBytes32("totalActiveValidators"))
+                  await PORTAL.readUint(operatorId, getBytes32("totalActiveValidators"))
                 );
               });
               it("totalProposedValidators decreased", async () => {
                 expect(totalProposedValidators.sub(3)).to.be.eq(
-                  await PORTAL.readUintForId(operatorId, getBytes32("totalProposedValidators"))
+                  await PORTAL.readUint(operatorId, getBytes32("totalProposedValidators"))
                 );
               });
               it("refunded maintainer", async () => {
                 expect(wallet.add(String(3e18))).to.be.eq(
-                  await PORTAL.readUintForId(operatorId, getBytes32("wallet"))
+                  await PORTAL.readUint(operatorId, getBytes32("wallet"))
                 );
               });
 
@@ -2916,17 +2907,17 @@ describe("Portal", async () => {
           let surplus;
           let secured;
           beforeEach(async () => {
-            secured = await PORTAL.readUintForId(poolId, getBytes32("secured"));
-            surplus = await PORTAL.readUintForId(poolId, getBytes32("surplus"));
+            secured = await PORTAL.readUint(poolId, getBytes32("secured"));
+            surplus = await PORTAL.readUint(poolId, getBytes32("surplus"));
             await PORTAL.connect(ORACLE).updateVerificationIndex(2, [pubkey1]);
           });
           it("fixes secured", async () => {
-            expect(await PORTAL.readUintForId(poolId, getBytes32("secured"))).to.be.eq(
+            expect(await PORTAL.readUint(poolId, getBytes32("secured"))).to.be.eq(
               secured.sub(String(32e18))
             );
           });
           it("fixes surplus", async () => {
-            expect(await PORTAL.readUintForId(poolId, getBytes32("surplus"))).to.be.eq(
+            expect(await PORTAL.readUint(poolId, getBytes32("surplus"))).to.be.eq(
               surplus.add(String(32e18))
             );
           });

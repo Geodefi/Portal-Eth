@@ -120,10 +120,7 @@ library GeodeUtils {
   }
 
   modifier onlyController(DSU.IsolatedStorage storage DATASTORE, uint256 id) {
-    require(
-      msg.sender == DATASTORE.readAddressForId(id, "CONTROLLER"),
-      "GU: CONTROLLER role needed"
-    );
+    require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "GU: CONTROLLER role needed");
     _;
   }
 
@@ -207,7 +204,7 @@ library GeodeUtils {
   ) external onlyController(DATASTORE, id) {
     require(newCONTROLLER != address(0), "GU: CONTROLLER can not be zero");
 
-    DATASTORE.writeAddressForId(id, "CONTROLLER", newCONTROLLER);
+    DATASTORE.writeAddress(id, "CONTROLLER", newCONTROLLER);
 
     emit ControllerChanged(id, newCONTROLLER);
   }
@@ -251,7 +248,7 @@ library GeodeUtils {
     id = DSU.generateId(_NAME, _TYPE);
 
     require(self._proposals[id].deadline == 0, "GU: NAME already proposed");
-    require((DATASTORE.readBytesForId(id, "NAME")).length == 0, "GU: ID already exist");
+    require((DATASTORE.readBytes(id, "NAME")).length == 0, "GU: ID already exist");
     require(_CONTROLLER != address(0), "GU: CONTROLLER can NOT be ZERO");
     require(
       (_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.__GAP__) && (_TYPE != ID_TYPE.POOL),
@@ -292,9 +289,9 @@ library GeodeUtils {
     _type = self._proposals[id].TYPE;
     _controller = self._proposals[id].CONTROLLER;
 
-    DATASTORE.writeUintForId(id, "TYPE", _type);
-    DATASTORE.writeAddressForId(id, "CONTROLLER", _controller);
-    DATASTORE.writeBytesForId(id, "NAME", self._proposals[id].NAME);
+    DATASTORE.writeUint(id, "TYPE", _type);
+    DATASTORE.writeAddress(id, "CONTROLLER", _controller);
+    DATASTORE.writeBytes(id, "NAME", self._proposals[id].NAME);
     DATASTORE.allIdsByType[_type].push(id);
 
     if (_type == ID_TYPE.SENATE) {

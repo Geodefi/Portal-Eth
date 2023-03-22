@@ -186,7 +186,7 @@ contract WithdrawalContract is
       paused() ||
       getContractVersion() != getProposedVersion() ||
       GEM.approvedUpgrade != _getImplementation() ||
-      getPortal().readAddressForId(getPoolId(), "CONTROLLER") != GEM.getSenate() ||
+      getPortal().readAddress(getPoolId(), "CONTROLLER") != GEM.getSenate() ||
       block.timestamp >= GEM.getSenateExpiry();
   }
 

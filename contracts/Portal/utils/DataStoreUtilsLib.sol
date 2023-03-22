@@ -68,7 +68,7 @@ library DataStoreUtils {
    *                              ** DATA GETTERS **
    **/
 
-  function readUintForId(
+  function readUint(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key
@@ -76,7 +76,7 @@ library DataStoreUtils {
     data = self.uintData[getKey(_id, _key)];
   }
 
-  function readBytesForId(
+  function readBytes(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key
@@ -84,7 +84,7 @@ library DataStoreUtils {
     data = self.bytesData[getKey(_id, _key)];
   }
 
-  function readAddressForId(
+  function readAddress(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key
@@ -96,7 +96,7 @@ library DataStoreUtils {
    *                              ** ARRAY GETTERS **
    **/
 
-  function readUintArrayForId(
+  function readUintArray(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -105,7 +105,7 @@ library DataStoreUtils {
     data = self.uintData[getKey(_index, getKey(_id, _key))];
   }
 
-  function readBytesArrayForId(
+  function readBytesArray(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -114,7 +114,7 @@ library DataStoreUtils {
     data = self.bytesData[getKey(_index, getKey(_id, _key))];
   }
 
-  function readAddressArrayForId(
+  function readAddressArray(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -127,7 +127,7 @@ library DataStoreUtils {
    *                              ** DATA SETTERS **
    **/
 
-  function writeUintForId(
+  function writeUint(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -136,7 +136,7 @@ library DataStoreUtils {
     self.uintData[getKey(_id, _key)] = _data;
   }
 
-  function addUintForId(
+  function addUint(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -145,7 +145,7 @@ library DataStoreUtils {
     self.uintData[getKey(_id, _key)] += _addend;
   }
 
-  function subUintForId(
+  function subUint(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -154,7 +154,7 @@ library DataStoreUtils {
     self.uintData[getKey(_id, _key)] -= _minuend;
   }
 
-  function writeBytesForId(
+  function writeBytes(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -163,7 +163,7 @@ library DataStoreUtils {
     self.bytesData[getKey(_id, _key)] = _data;
   }
 
-  function writeAddressForId(
+  function writeAddress(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -176,7 +176,7 @@ library DataStoreUtils {
    *                              ** ARRAY SETTERS **
    **/
 
-  function appendUintArrayForId(
+  function appendUintArray(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -186,7 +186,7 @@ library DataStoreUtils {
     self.uintData[getKey(self.uintData[arrayKey]++, arrayKey)] = _data;
   }
 
-  function appendBytesArrayForId(
+  function appendBytesArray(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -196,7 +196,7 @@ library DataStoreUtils {
     self.bytesData[getKey(self.uintData[arrayKey]++, arrayKey)] = _data;
   }
 
-  function appendAddressArrayForId(
+  function appendAddressArray(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -210,7 +210,7 @@ library DataStoreUtils {
    *                              ** BATCH ARRAY SETTERS **
    **/
 
-  function appendUintArrayForIdBatch(
+  function appendUintArrayBatch(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -229,7 +229,7 @@ library DataStoreUtils {
     self.uintData[arrayKey] = arrayLen;
   }
 
-  function appendBytesArrayForIdBatch(
+  function appendBytesArrayBatch(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,
@@ -248,7 +248,7 @@ library DataStoreUtils {
     self.uintData[arrayKey] = arrayLen;
   }
 
-  function appendAddressArrayForIdBatch(
+  function appendAddressArrayBatch(
     IsolatedStorage storage self,
     uint256 _id,
     bytes32 _key,

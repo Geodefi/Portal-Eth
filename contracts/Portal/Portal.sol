@@ -331,7 +331,7 @@ contract Portal is
     uint256 id,
     uint256 index
   ) external view virtual override returns (address gETHInterface) {
-    gETHInterface = DATASTORE.readAddressArrayForId(id, "interfaces", index);
+    gETHInterface = DATASTORE.readAddressArray(id, "interfaces", index);
   }
 
   /**
@@ -387,49 +387,46 @@ contract Portal is
     return DataStoreUtils.getKey(_id, _param);
   }
 
-  function readUintForId(
-    uint256 id,
-    bytes32 key
-  ) external view virtual override returns (uint256 data) {
-    data = DATASTORE.readUintForId(id, key);
+  function readUint(uint256 id, bytes32 key) external view virtual override returns (uint256 data) {
+    data = DATASTORE.readUint(id, key);
   }
 
-  function readAddressForId(
+  function readAddress(
     uint256 id,
     bytes32 key
   ) external view virtual override returns (address data) {
-    data = DATASTORE.readAddressForId(id, key);
+    data = DATASTORE.readAddress(id, key);
   }
 
-  function readBytesForId(
+  function readBytes(
     uint256 id,
     bytes32 key
   ) external view virtual override returns (bytes memory data) {
-    data = DATASTORE.readBytesForId(id, key);
+    data = DATASTORE.readBytes(id, key);
   }
 
-  function readUintArrayForId(
+  function readUintArray(
     uint256 id,
     bytes32 key,
     uint256 index
   ) external view virtual override returns (uint256 data) {
-    data = DATASTORE.readUintArrayForId(id, key, index);
+    data = DATASTORE.readUintArray(id, key, index);
   }
 
-  function readBytesArrayForId(
+  function readBytesArray(
     uint256 id,
     bytes32 key,
     uint256 index
   ) external view virtual override returns (bytes memory data) {
-    data = DATASTORE.readBytesArrayForId(id, key, index);
+    data = DATASTORE.readBytesArray(id, key, index);
   }
 
-  function readAddressArrayForId(
+  function readAddressArray(
     uint256 id,
     bytes32 key,
     uint256 index
   ) external view virtual override returns (address data) {
-    data = DATASTORE.readAddressArrayForId(id, key, index);
+    data = DATASTORE.readAddressArray(id, key, index);
   }
 
   /**
@@ -594,7 +591,7 @@ contract Portal is
     uint256 poolId,
     uint256 index
   ) external view virtual override returns (bytes memory) {
-    return DATASTORE.readBytesArrayForId(poolId, "validators", index);
+    return DATASTORE.readBytesArray(poolId, "validators", index);
   }
 
   function getMaintenanceFee(uint256 id) external view virtual override returns (uint256 fee) {
@@ -647,9 +644,9 @@ contract Portal is
   ) external virtual override whenNotPaused nonReentrant returns (uint256 moduleVersion) {
     moduleVersion = STAKER._defaultModules[moduleType];
     (, bool success) = IGeodeModule(msg.sender).newProposal(
-      DATASTORE.readAddressForId(moduleVersion, "CONTROLLER"),
+      DATASTORE.readAddress(moduleVersion, "CONTROLLER"),
       ID_TYPE.CONTRACT_UPGRADE,
-      DATASTORE.readBytesForId(moduleVersion, "NAME"),
+      DATASTORE.readBytes(moduleVersion, "NAME"),
       4 weeks
     );
 
@@ -776,7 +773,7 @@ contract Portal is
    * @dev onlyGovernance SHOULD be checked in Portal
    */
   function releasePrisoned(uint256 operatorId) external virtual override onlyGovernance {
-    DATASTORE.writeUintForId(operatorId, "released", block.timestamp);
+    DATASTORE.writeUint(operatorId, "released", block.timestamp);
 
     emit Released(operatorId);
   }
