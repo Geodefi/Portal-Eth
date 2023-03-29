@@ -71,6 +71,7 @@ describe("Portal", async () => {
   let extraId1;
   let extraId2;
   let extraId3;
+  let extraId4;
 
   let attacker;
   let user;
@@ -159,9 +160,11 @@ describe("Portal", async () => {
     extraName1 = getBytes("extra1");
     extraName2 = getBytes("extra2");
     extraName3 = getBytes("extra3");
+    extraName4 = getBytes("extra4");
     extraId1 = await PORTAL.generateId("extra1", 5);
     extraId2 = await PORTAL.generateId("extra2", 5);
     extraId3 = await PORTAL.generateId("extra3", 5);
+    extraId4 = await PORTAL.generateId("extra4", 5);
 
     interfaceId = await PORTAL.generateId("ERC20Permit", 20031);
 
@@ -3009,6 +3012,7 @@ describe("Portal", async () => {
         String(92e16),
         String(29e16),
         String(107e16),
+        String(104e16),
         String(1),
       ];
       beforeEach(async () => {
@@ -3056,6 +3060,16 @@ describe("Portal", async () => {
           interfaceId,
           poolOwner.address,
           extraName3,
+          "0x",
+          [0, 0, 0],
+          { value: String(32e18) }
+        );
+
+        await PORTAL.connect(poolOwner).initiatePool(
+          poolFee,
+          interfaceId,
+          poolOwner.address,
+          extraName4,
           "0x",
           [0, 0, 0],
           { value: String(32e18) }
@@ -3121,6 +3135,18 @@ describe("Portal", async () => {
           }
         );
 
+        await PORTAL.connect(user).deposit(
+          extraId4,
+          0,
+          (await getCurrentBlockTimestamp()) + WEEK,
+          0,
+          [],
+          user.address,
+          {
+            value: String(69e19),
+          }
+        );
+
         const values = [
           [poolId.toString(), prices[0]],
           [wrongId.toString(), prices[1]],
@@ -3128,7 +3154,8 @@ describe("Portal", async () => {
           [extraId1.toString(), prices[3]],
           [extraId2.toString(), prices[4]],
           [extraId3.toString(), prices[5]],
-          [operatorId.toString(), prices[6]],
+          [extraId4.toString(), prices[6]],
+          [operatorId.toString(), prices[7]],
         ];
         tree = StandardMerkleTree.of(values, ["uint256", "uint256"]);
       });
@@ -3143,7 +3170,7 @@ describe("Portal", async () => {
       it("reverts if not POOL", async () => {
         await PORTAL.connect(ORACLE).reportOracle(tree.root, 50001);
         await expect(
-          PORTAL.priceSync(operatorId.toString(), prices[6], tree.getProof(6))
+          PORTAL.priceSync(operatorId.toString(), prices[7], tree.getProof(7))
         ).to.be.revertedWith("OU: not a pool?");
       });
 
@@ -3174,6 +3201,13 @@ describe("Portal", async () => {
           await setTimestamp((await getCurrentBlockTimestamp()) + 10 * DAY);
           await expect(
             PORTAL.priceSync(extraId2.toString(), prices[4], tree.getProof(4))
+          ).to.be.revertedWith("OU: price is insane");
+        });
+        it("reverts if price higher than allowed for 0.5 days", async () => {
+          await PORTAL.connect(ORACLE).reportOracle(tree.root, 50001);
+          await setTimestamp((await getCurrentBlockTimestamp()) + 0.5 * DAY);
+          await expect(
+            PORTAL.priceSync(extraId4.toString(), prices[6], tree.getProof(6))
           ).to.be.revertedWith("OU: price is insane");
         });
 
