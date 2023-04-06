@@ -72,6 +72,11 @@ contract WithdrawalContract is
     __Pausable_init();
     __UUPSUpgradeable_init();
 
+    require(_ID != 0, "WC: _ID can NOT be ZERO");
+    require(_gETH != address(0), "WC: _gETH can NOT be ZERO");
+    require(_PORTAL != address(0), "WC: _PORTAL can NOT be ZERO");
+    require(_OWNER != address(0), "WC: _OWNER can NOT be ZERO");
+
     gETH = _gETH;
     POOL_ID = _ID;
 
