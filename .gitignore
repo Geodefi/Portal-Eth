@@ -8,3 +8,5 @@ typechain
 cache
 artifacts
 .DS_STORE
+
+.openzeppelin/*
