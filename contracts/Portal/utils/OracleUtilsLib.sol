@@ -104,14 +104,13 @@ library OracleUtils {
       STAKER._validators[_pk].state == VALIDATOR_STATE.PROPOSED,
       "OU: NOT all pubkeys are pending"
     );
-
-    SU._imprison(DATASTORE, STAKER._validators[_pk].operatorId, _pk);
+    uint256 operatorId = STAKER._validators[_pk].operatorId;
+    SU._imprison(DATASTORE, operatorId, _pk);
 
     uint256 poolId = STAKER._validators[_pk].poolId;
     DATASTORE.subUint(poolId, "secured", DCU.DEPOSIT_AMOUNT);
     DATASTORE.addUint(poolId, "surplus", DCU.DEPOSIT_AMOUNT);
 
-    uint256 operatorId = STAKER._validators[_pk].operatorId;
     DATASTORE.subUint(operatorId, "totalProposedValidators", 1);
     DATASTORE.subUint(poolId, DSU.getKey(operatorId, "proposedValidators"), 1);
 

@@ -715,10 +715,9 @@ library StakeUtils {
     DSU.IsolatedStorage storage DATASTORE,
     uint256 _id,
     uint256 _value
-  ) internal returns (bool success) {
+  ) internal {
     require(DATASTORE.readUint(_id, "wallet") >= _value, "SU: NOT enough funds in wallet");
     DATASTORE.subUint(_id, "wallet", _value);
-    return true;
   }
 
   /**
@@ -749,13 +748,13 @@ library StakeUtils {
   ) external returns (bool success) {
     authenticate(DATASTORE, id, true, false, [true, true]);
 
-    require(address(this).balance >= value, "SU: not enough funds in Portal ?");
+    require(address(this).balance >= value, "SU: not enough funds in Portal");
 
-    bool decreased = _decreaseWalletBalance(DATASTORE, id, value);
+    _decreaseWalletBalance(DATASTORE, id, value);
     address controller = DATASTORE.readAddress(id, "CONTROLLER");
 
     (bool sent, ) = payable(controller).call{value: value}("");
-    require(decreased && sent, "SU: Failed to send ETH");
+    require(sent, "SU: Failed to send ETH");
     return sent;
   }
 
@@ -931,8 +930,13 @@ library StakeUtils {
     require(operatorIds.length == allowances.length, "SU: allowances should match");
 
     for (uint256 i = 0; i < operatorIds.length; ) {
-      authenticate(DATASTORE, operatorIds[i], false, false, [true, false]);
+      require(
+        DATASTORE.readUint(operatorIds[i], "TYPE") == ID_TYPE.OPERATOR,
+        "SU: TYPE NOT allowed"
+      );
+    }
 
+    for (uint256 i = 0; i < operatorIds.length; ) {
       DATASTORE.writeUint(poolId, DSU.getKey(operatorIds[i], "allowance"), allowances[i]);
 
       emit OperatorApproval(poolId, operatorIds[i], allowances[i]);
@@ -1283,7 +1287,9 @@ library StakeUtils {
         self._validators[pubkeys[i]].state == VALIDATOR_STATE.NONE,
         "SU: Pubkey already used or alienated"
       );
+    }
 
+    for (uint256 i = 0; i < pubkeys.length; ) {
       self._validators[pubkeys[i]] = Validator(
         VALIDATOR_STATE.PROPOSED,
         valData.index + i,
