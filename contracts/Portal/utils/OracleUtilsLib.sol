@@ -141,7 +141,7 @@ library OracleUtils {
 
     STAKER.VERIFICATION_INDEX = validatorVerificationIndex;
 
-    for (uint256 i; i < alienatedPubkeys.length; ++i) {
+    for (uint256 i = 0; i < alienatedPubkeys.length; ++i) {
       _alienateValidator(DATASTORE, STAKER, alienatedPubkeys[i]);
     }
 
@@ -170,7 +170,7 @@ library OracleUtils {
   ) external onlyOracle(STAKER) {
     require(feeThefts.length == proofs.length, "OU: invalid proofs");
 
-    for (uint256 i; i < feeThefts.length; ++i) {
+    for (uint256 i = 0; i < feeThefts.length; ++i) {
       SU._imprison(DATASTORE, feeThefts[i], proofs[i]);
 
       emit FeeTheft(feeThefts[i], proofs[i]);

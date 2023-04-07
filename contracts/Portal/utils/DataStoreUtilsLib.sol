@@ -219,7 +219,7 @@ library DataStoreUtils {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
 
-    for (uint256 i; i < _data.length; ) {
+    for (uint256 i = 0; i < _data.length; ) {
       self.uintData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
@@ -238,7 +238,7 @@ library DataStoreUtils {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
 
-    for (uint256 i; i < _data.length; ) {
+    for (uint256 i = 0; i < _data.length; ) {
       self.bytesData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
@@ -257,7 +257,7 @@ library DataStoreUtils {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
 
-    for (uint256 i; i < _data.length; ) {
+    for (uint256 i = 0; i < _data.length; ) {
       self.addressData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;

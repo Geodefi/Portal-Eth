@@ -115,6 +115,7 @@ library StakeUtils {
    * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
    * @param expectedExit the latest point in time the operator is allowed to maintain this validator (createdAt + validatorPeriod).
    * @param signature BLS12-381 signature for the validator, used when sending the remaining 31 ETH on validator activation.
+   * todo: index, createdAt and expectedExit can be narrowed down.
    **/
   struct Validator {
     uint8 state;
@@ -1274,7 +1275,7 @@ library StakeUtils {
       withdrawalCredential: DATASTORE.readBytes(poolId, "withdrawalCredential")
     });
 
-    for (uint256 i; i < pubkeys.length; ) {
+    for (uint256 i = 0; i < pubkeys.length; ) {
       require(pubkeys[i].length == DCU.PUBKEY_LENGTH, "SU: PUBKEY_LENGTH ERROR");
       require(signatures1[i].length == DCU.SIGNATURE_LENGTH, "SU: SIGNATURE_LENGTH ERROR");
       require(signatures31[i].length == DCU.SIGNATURE_LENGTH, "SU: SIGNATURE_LENGTH ERROR");
@@ -1344,7 +1345,7 @@ library StakeUtils {
 
     {
       uint256 verificationIndex = self.VERIFICATION_INDEX;
-      for (uint256 j; j < pubkeys.length; ) {
+      for (uint256 j = 0; j < pubkeys.length; ) {
         require(
           _canStake(self, DATASTORE, pubkeys[j], verificationIndex),
           "SU: NOT all pubkeys are stakeable"
@@ -1361,8 +1362,8 @@ library StakeUtils {
       uint256 poolId = self._validators[pubkeys[0]].poolId;
       bytes memory withdrawalCredential = DATASTORE.readBytes(poolId, "withdrawalCredential");
 
-      uint256 lastIdChange;
-      for (uint256 i; i < pubkeys.length; ) {
+      uint256 lastIdChange = 0;
+      for (uint256 i = 0; i < pubkeys.length; ) {
         if (poolId != self._validators[pubkeys[i]].poolId) {
           uint256 sinceLastIdChange;
 
