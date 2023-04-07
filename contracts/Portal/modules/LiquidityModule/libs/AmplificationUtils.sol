@@ -7,7 +7,7 @@ import "./SwapUtils.sol";
  * @notice A library to calculate and ramp the A parameter of a given `SwapUtils.Swap` struct.
  * This library assumes the struct is fully validated.
  */
-library AmplificationUtils {
+library Amplificationutils {
   event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
   event StopRampA(uint256 currentA, uint256 time);
 
