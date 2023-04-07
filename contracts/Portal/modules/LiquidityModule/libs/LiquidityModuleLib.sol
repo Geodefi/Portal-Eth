@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
+// globals
+import {PERCENTAGE_DENOMINATOR} from "../../../utils/globals.sol";
+// libraries
+import {AmplificationLib as AL} from "./AmplificationLib.sol";
+// interfaces
 import {ILPToken} from "../interfaces/ILPToken.sol";
 import {IgETH} from "../../../../interfaces/IgETH.sol";
-
-import {PERCENTAGE_DENOMINATOR} from "../../../utils/globals.sol";
-
-import {AmplificationLib as AL} from "./AmplificationLib.sol";
 
 /**
  * @title LiquidityModule library - LML
@@ -27,7 +28,7 @@ import {AmplificationLib as AL} from "./AmplificationLib.sol";
  */
 library LiquidityModuleLib {
   /**
-   * @dev                                     ** Events **
+   * @dev                                     ** EVENTS **
    */
 
   event TokenSwap(
@@ -63,7 +64,7 @@ library LiquidityModuleLib {
   event NewSwapFee(uint256 newSwapFee);
 
   /**
-   * @dev                                     ** Structs **
+   * @dev                                     ** STRUCTS **
    */
 
   /**
@@ -121,7 +122,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** Constants **
+   * @dev                                     ** CONSTANTS **
    */
 
   // Max swap fee is 1% or 100bps of each swap
@@ -137,7 +138,7 @@ library LiquidityModuleLib {
   uint256 private constant MAX_LOOP_LIMIT = 256;
 
   /**
-   * @dev                                     ** Helper Functions **
+   * @dev                                     ** HELPERS **
    */
   /**
    * @dev  ->  pure: all
@@ -316,7 +317,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** Rebasing Functions **
+   * @dev                                     ** REBASING FUNCTIONS **
    */
 
   /**
@@ -390,7 +391,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** Debt Functions **
+   * @dev                                     ** DEBT FUNCTIONS **
    *
    * * debt refers to the amount of ETH needed to stabilize the pool
    */
@@ -433,7 +434,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** Swap Helper Functions **
+   * @dev                                     ** SWAP HELPER FUNCTIONS **
    */
 
   /**
@@ -694,7 +695,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** Admin helper Functions **
+   * @dev                                     ** ADMIN HELPER FUNCTIONS **
    */
   /**
    * @dev  ->  external view
@@ -1055,7 +1056,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** Admin Functions **
+   * @dev                                     ** ADMIN FUNCTIONS **
    */
   /**
    * @dev  ->  external: all

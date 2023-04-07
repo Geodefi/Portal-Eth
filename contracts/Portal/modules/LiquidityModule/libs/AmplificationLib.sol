@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
+// libraries
 import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
 
 /**
  * @title Amplification library - AL
- * @notice A library to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
+ * @notice An extension library for LiquidityModuleLibrary(LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
  * @dev This library assumes the struct is fully validated.
  */
 library AmplificationLib {
