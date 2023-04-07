@@ -1,32 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "./MathUtils.sol";
-import "./AmplificationUtils.sol";
-import {PERCENTAGE_DENOMINATOR} from "../../utils/globals.sol";
-import "../../../interfaces/ILPToken.sol";
-import "../../../interfaces/IgETH.sol";
+import {ILPToken} from "../interfaces/ILPToken.sol";
+import {IgETH} from "../../../../interfaces/IgETH.sol";
+
+import {PERCENTAGE_DENOMINATOR} from "../../../utils/globals.sol";
+
+import {AmplificationLib as AL} from "./AmplificationLib.sol";
 
 /**
- * @title SwapUtils library
+ * @title LiquidityModule library - LML
  *
- * @dev Contracts relying on this library must initialize SwapUtils.Swap struct then use this library
- * for SwapUtils.Swap struct. Note that this library contains both functions called by users and admins.
+ * @notice A library to be used within LiquidityModule
+ * * Contains functions responsible for custody and AMM functionalities with some changes.
+ * * The main functionality of Liquidity Pools is allowing the depositors to have instant access to liquidity
+ * * relying on the Oracle Price, with the help of Liquidity Providers.
+ * * * It is important to change the focus point (1-1) of the pricing algorithm with PriceIn and PriceOut functions.
+ * * * Because the underlying price of the staked assets are expected to raise in time.
+ * * * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
+ *
+ * @dev Contracts relying on this library must initialize LiquidityModuleLib.Swap struct then use this library
+ * for LiquidityModuleLib.Swap struct. Note that this library contains both functions called by users and admins.
  * Admin functions should be protected within contracts using this library.
- *
- * @notice A library to be used within Swap.sol. Contains functions responsible for custody and AMM functionalities with some changes.
- * The main functionality of Withdrawal Pools is allowing the depositors to have instant withdrawals
- * relying on the Oracle Price, with the help of Liquidity Providers.
- * It is important to change the focus point (1-1) of the pricing algorithm with PriceIn and PriceOut functions.
- * Because the underlying price of the staked assets are expected to raise in time.
- * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
  *
  * @dev Whenever "Effective Balance" is mentioned it refers to the balance projected with the underlying price.
  */
-library SwapUtils {
-  using MathUtils for uint256;
-
-  /*** EVENTS ***/
+library LiquidityModuleLib {
+  /**
+   * @dev                                     ** Events **
+   */
 
   event TokenSwap(
     address indexed buyer,
@@ -61,6 +63,11 @@ library SwapUtils {
   event NewSwapFee(uint256 newSwapFee);
 
   /**
+   * @dev                                     ** Structs **
+   */
+
+  /**
+   * @notice Storage struct for the liquidity pool logic, should be correctly initialized.
    * @param gETH ERC1155 contract reference
    * @param lpToken address of the LP Token
    * @param pooledTokenId gETH ID of the pooled derivative
@@ -71,7 +78,7 @@ library SwapUtils {
    * @param swapFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from resulting tokens of a swap
    * @param adminFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from swapFee
    * @param balances the pool balance as [ETH, gETH]; the contract's actual token balance might differ
-   * @param __gap keep the contract size at 16
+   * @param __gap keep the contract size at 16, currently 11 slots(32 bytes)
    */
   struct Swap {
     IgETH gETH;
@@ -87,8 +94,10 @@ library SwapUtils {
     uint256[5] __gap;
   }
 
-  // Struct storing variables used in calculations in the
-  // calculateWithdrawOneTokenDY function to avoid stack too deep errors
+  /**
+   * @notice Struct storing variables used in calculations in the
+   * calculateWithdrawOneTokenDY function to avoid stack too deep errors
+   */
   struct CalculateWithdrawOneTokenDYInfo {
     uint256 d0;
     uint256 d1;
@@ -97,8 +106,10 @@ library SwapUtils {
     uint256 preciseA;
   }
 
-  // Struct storing variables used in calculations in the
-  // {add,remove} Liquidity functions to avoid stack too deep errors
+  /**
+   * @notice  Struct storing variables used in calculations in the
+   * {add,remove} Liquidity functions to avoid stack too deep errors
+   */
   struct ManageLiquidityInfo {
     ILPToken lpToken;
     uint256 d0;
@@ -108,6 +119,10 @@ library SwapUtils {
     uint256 totalSupply;
     uint256[2] balances;
   }
+
+  /**
+   * @dev                                     ** Constants **
+   */
 
   // Max swap fee is 1% or 100bps of each swap
   uint256 public constant MAX_SWAP_FEE = 10 ** 8;
@@ -121,11 +136,192 @@ library SwapUtils {
   // Constant value used as max loop limit
   uint256 private constant MAX_LOOP_LIMIT = 256;
 
-  /*** VIEW & PURE FUNCTIONS ***/
+  /**
+   * @dev                                     ** Helper Functions **
+   */
+  /**
+   * @dev  ->  pure: all
+   */
 
-  function _getAPrecise(Swap storage self) internal view returns (uint256) {
-    return AmplificationUtils._getAPrecise(self);
+  /**
+   * @dev - Math helpers
+   */
+
+  /**
+   * @notice Compares a and b and returns true if the difference between a and b
+   *         is less than 1 or equal to each other.
+   * @param a uint256 to compare with
+   * @param b uint256 to compare with
+   * @return True if the difference between a and b is less than 1 or equal,
+   *         otherwise return false
+   */
+  function within1(uint256 a, uint256 b) internal pure returns (bool) {
+    return (difference(a, b) <= 1);
   }
+
+  /**
+   * @notice Calculates absolute difference between a and b
+   * @param a uint256 to compare with
+   * @param b uint256 to compare with
+   * @return Difference between a and b
+   */
+  function difference(uint256 a, uint256 b) internal pure returns (uint256) {
+    if (a > b) {
+      return a - b;
+    }
+    return b - a;
+  }
+
+  /**
+   * @dev - StableSwap invariants: D,Y,YD
+   */
+
+  /**
+   * @notice Calculate the price of a token in the pool with given
+   *  balances and a particular D.
+   *
+   * @dev This is accomplished via solving the invariant iteratively.
+   * See the StableSwap paper and Curve.fi implementation for further details.
+   *
+   * x_1**2 + x1 * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
+   * x_1**2 + b*x_1 = c
+   * x_1 = (x_1**2 + c) / (2*x_1 + b)
+   *
+   * @param a the amplification coefficient * n * (n - 1). See the StableSwap paper for details.
+   * @param tokenIndex Index of token we are calculating for.
+   * @param xp a  set of pool balances. Array should be
+   * the same cardinality as the pool.
+   * @param d the stableswap invariant
+   * @return the price of the token, in the same precision as in xp
+   */
+  function getYD(
+    uint256 a,
+    uint8 tokenIndex,
+    uint256[2] memory xp,
+    uint256 d
+  ) internal pure returns (uint256) {
+    uint256 numTokens = 2;
+    require(tokenIndex < numTokens, "LML:Token not found");
+
+    uint256 c = d;
+    uint256 s;
+    uint256 nA = a * numTokens;
+
+    for (uint256 i = 0; i < numTokens; ++i) {
+      if (i != tokenIndex) {
+        s = s + xp[i];
+        c = (c * d) / (xp[i] * (numTokens));
+        // If we were to protect the division loss we would have to keep the denominator separate
+        // and divide at the end. However this leads to overflow with large numTokens or/and D.
+        // c = c * D * D * D * ... overflow!
+      }
+    }
+    c = (c * d * AL.A_PRECISION) / (nA * numTokens);
+
+    uint256 b = s + ((d * AL.A_PRECISION) / nA);
+    uint256 yPrev;
+    uint256 y = d;
+
+    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
+      yPrev = y;
+      y = ((y * y) + c) / (2 * y + b - d);
+      if (within1(y, yPrev)) {
+        return y;
+      }
+    }
+    revert("Approximation did not converge");
+  }
+
+  /**
+   * @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
+   * @param xp a  set of pool balances. Array should be the same cardinality
+   * as the pool.
+   * @param a the amplification coefficient * n * (n - 1) in A_PRECISION.
+   * See the StableSwap paper for details
+   * @return the invariant, at the precision of the pool
+   */
+  function getD(uint256[2] memory xp, uint256 a) internal pure returns (uint256) {
+    uint256 numTokens = 2;
+    uint256 s = xp[0] + xp[1];
+    if (s == 0) {
+      return 0;
+    }
+
+    uint256 prevD;
+    uint256 d = s;
+    uint256 nA = a * numTokens;
+
+    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
+      uint256 dP = (d ** (numTokens + 1)) / (numTokens ** numTokens * xp[0] * xp[1]);
+      prevD = d;
+      d =
+        ((((nA * s) / AL.A_PRECISION) + dP * numTokens) * (d)) /
+        (((nA - AL.A_PRECISION) * (d)) / (AL.A_PRECISION) + ((numTokens + 1) * dP));
+
+      if (within1(d, prevD)) {
+        return d;
+      }
+    }
+
+    // Convergence should occur in 4 loops or less. If this is reached, there may be something wrong
+    // with the pool. If this were to occur repeatedly, LPs should withdraw via `removeLiquidity()`
+    // function which does not rely on D.
+    revert("D does not converge");
+  }
+
+  /**
+   * @notice Calculate the new balances of the tokens given the indexes of the token
+   * that is swapped from (FROM) and the token that is swapped to (TO).
+   * This function is used as a helper function to calculate how much TO token
+   * the user should receive on swap.
+   *
+   * @param preciseA precise form of amplification coefficient
+   * @param tokenIndexFrom index of FROM token
+   * @param tokenIndexTo index of TO token
+   * @param x the new total amount of FROM token
+   * @param xp balances of the tokens in the pool
+   * @return the amount of TO token that should remain in the pool
+   */
+  function getY(
+    uint256 preciseA,
+    uint8 tokenIndexFrom,
+    uint8 tokenIndexTo,
+    uint256 x,
+    uint256[2] memory xp
+  ) internal pure returns (uint256) {
+    uint256 numTokens = 2;
+    require(tokenIndexFrom != tokenIndexTo, "LML:Cannot compare token to itself");
+    require(tokenIndexFrom < numTokens && tokenIndexTo < numTokens, "LML:Tokens must be in pool");
+
+    uint256 d = getD(xp, preciseA);
+    uint256 c = d;
+    uint256 s = x;
+    uint256 nA = numTokens * (preciseA);
+
+    c = (c * d) / (x * numTokens);
+    c = (c * d * (AL.A_PRECISION)) / (nA * numTokens);
+    uint256 b = s + ((d * AL.A_PRECISION) / nA);
+
+    uint256 yPrev;
+    uint256 y = d;
+
+    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
+      yPrev = y;
+      y = ((y * y) + c) / (2 * y + b - d);
+      if (within1(y, yPrev)) {
+        return y;
+      }
+    }
+    revert("Approximation did not converge");
+  }
+
+  /**
+   * @dev                                     ** Rebasing Functions **
+   */
+
+  /**
+   * @dev  ->  internal view: all
+   */
 
   /**
    * @notice This function MULTIPLIES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
@@ -194,6 +390,138 @@ library SwapUtils {
   }
 
   /**
+   * @dev                                     ** Debt Functions **
+   *
+   * * debt refers to the amount of ETH needed to stabilize the pool
+   */
+
+  /**
+   * @dev  ->  internal view
+   */
+  /**
+   * @notice Get Debt, The amount of buyback for stable pricing.
+   * @param xp a  set of pool balances. Array should be the same cardinality
+   * as the pool.
+   * @param a the amplification coefficient * n * (n - 1) in A_PRECISION.
+   * See the StableSwap paper for details
+   * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
+   */
+  function _getDebt(
+    Swap storage self,
+    uint256[2] memory xp,
+    uint256 a
+  ) internal view returns (uint256 debt) {
+    uint256 halfD = getD(xp, a) / 2;
+    if (xp[0] >= halfD) {
+      debt = 0;
+    } else {
+      uint256 dy = xp[1] - halfD;
+      uint256 feeHalf = (dy * self.swapFee) / PERCENTAGE_DENOMINATOR / 2;
+      debt = halfD - xp[0] + feeHalf;
+    }
+  }
+
+  /**
+   * @dev  ->  external view
+   */
+  /**
+   * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
+   * @dev might change when price is in.
+   */
+  function getDebt(Swap storage self) external view returns (uint256) {
+    return _getDebt(self, _pricedInBatch(self, self.balances), AL._getAPrecise(self));
+  }
+
+  /**
+   * @dev                                     ** Swap Helper Functions **
+   */
+
+  /**
+   * @dev  ->  pure
+   */
+  /**
+   * @notice A simple method to calculate amount of each underlying
+   * tokens that is returned upon burning given amount of
+   * LP tokens
+   *
+   * @param amount the amount of LP tokens that would to be burned on
+   * withdrawal
+   * @return amounts of tokens user will receive as an array [ETH, gETH]
+   */
+  function _calculateRemoveLiquidity(
+    uint256[2] memory balances,
+    uint256 amount,
+    uint256 totalSupply
+  ) internal pure returns (uint256[2] memory amounts) {
+    require(amount <= totalSupply, "LML:Cannot exceed total supply");
+
+    amounts[0] = (balances[0] * amount) / totalSupply;
+    amounts[1] = (balances[1] * amount) / totalSupply;
+
+    return amounts;
+  }
+
+  /**
+   * @dev  ->  internal view
+   */
+
+  function _calculateWithdrawOneToken(
+    Swap storage self,
+    uint256 tokenAmount,
+    uint8 tokenIndex,
+    uint256 totalSupply
+  ) internal view returns (uint256, uint256) {
+    uint256 dy;
+    uint256 newY;
+    uint256 currentY;
+
+    (dy, newY, currentY) = calculateWithdrawOneTokenDY(self, tokenIndex, tokenAmount, totalSupply);
+
+    uint256 dySwapFee = currentY - newY - dy;
+
+    return (dy, dySwapFee);
+  }
+
+  /**
+   * @notice Internally calculates a swap between two tokens.
+   *
+   * @dev The caller is expected to transfer the actual amounts (dx and dy)
+   * using the token contracts.
+   *
+   * @param self Swap struct to read from
+   * @param tokenIndexFrom the token to sell
+   * @param tokenIndexTo the token to buy
+   * @param dx the number of tokens to sell. If the token charges a fee on transfers,
+   * use the amount that gets transferred after the fee.
+   * @return dy the number of tokens the user will get
+   * @return dyFee the associated fee
+   */
+  function _calculateSwap(
+    Swap storage self,
+    uint8 tokenIndexFrom,
+    uint8 tokenIndexTo,
+    uint256 dx,
+    uint256[2] memory balances
+  ) internal view returns (uint256 dy, uint256 dyFee) {
+    require(tokenIndexFrom < 2 && tokenIndexTo < 2, "LML:Token index out of range");
+
+    uint256 x = _pricedIn(self, dx + balances[tokenIndexFrom], tokenIndexFrom);
+    uint256[2] memory pricedBalances = _pricedInBatch(self, balances);
+    uint256 y = _pricedOut(
+      self,
+      getY(AL._getAPrecise(self), tokenIndexFrom, tokenIndexTo, x, pricedBalances),
+      tokenIndexTo // => not id, index !!!
+    );
+    dy = balances[tokenIndexTo] - y - 1;
+    dyFee = (dy * self.swapFee) / (PERCENTAGE_DENOMINATOR);
+    dy = dy - dyFee;
+  }
+
+  /**
+   * @dev  ->  external view
+   */
+
+  /**
    * @notice Calculate the dy, the amount of selected token that user receives and
    * the fee of withdrawing in one token
    * @param tokenAmount the amount to withdraw in the pool's precision
@@ -215,23 +543,6 @@ library SwapUtils {
     return availableTokenAmount;
   }
 
-  function _calculateWithdrawOneToken(
-    Swap storage self,
-    uint256 tokenAmount,
-    uint8 tokenIndex,
-    uint256 totalSupply
-  ) internal view returns (uint256, uint256) {
-    uint256 dy;
-    uint256 newY;
-    uint256 currentY;
-
-    (dy, newY, currentY) = calculateWithdrawOneTokenDY(self, tokenIndex, tokenAmount, totalSupply);
-
-    uint256 dySwapFee = currentY - newY - dy;
-
-    return (dy, dySwapFee);
-  }
-
   /**
    * @notice Calculate the dy of withdrawing in one token
    * @param self Swap struct to read from
@@ -248,14 +559,14 @@ library SwapUtils {
     // Get the current D, then solve the stableswap invariant
     // y_i for D - tokenAmount
 
-    require(tokenIndex < 2, "Token index out of range");
+    require(tokenIndex < 2, "LML:Token index out of range");
 
     CalculateWithdrawOneTokenDYInfo memory v = CalculateWithdrawOneTokenDYInfo(0, 0, 0, 0, 0);
-    v.preciseA = _getAPrecise(self);
+    v.preciseA = AL._getAPrecise(self);
     v.d0 = getD(_pricedInBatch(self, self.balances), v.preciseA);
     v.d1 = v.d0 - ((tokenAmount * v.d0) / totalSupply);
 
-    require(tokenAmount <= self.balances[tokenIndex], "Withdraw exceeds available");
+    require(tokenAmount <= self.balances[tokenIndex], "LML:Withdraw exceeds available");
 
     v.newY = _pricedOut(
       self,
@@ -286,192 +597,18 @@ library SwapUtils {
   }
 
   /**
-   * @notice Get Debt, The amount of buyback for stable pricing.
-   * @param xp a  set of pool balances. Array should be the same cardinality
-   * as the pool.
-   * @param a the amplification coefficient * n * (n - 1) in A_PRECISION.
-   * See the StableSwap paper for details
-   * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
-   */
-  function _getDebt(
-    Swap storage self,
-    uint256[2] memory xp,
-    uint256 a
-  ) internal view returns (uint256) {
-    uint256 halfD = getD(xp, a) / 2;
-    if (xp[0] >= halfD) {
-      return 0;
-    } else {
-      uint256 dy = xp[1] - halfD;
-      uint256 feeHalf = (dy * self.swapFee) / PERCENTAGE_DENOMINATOR / 2;
-      uint256 debt = halfD - xp[0] + feeHalf;
-
-      return debt;
-    }
-  }
-
-  /**
-   * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
-   * @dev might change when price is in.
-   */
-  function getDebt(Swap storage self) external view returns (uint256) {
-    return _getDebt(self, _pricedInBatch(self, self.balances), _getAPrecise(self));
-  }
-
-  /**
-   * @notice Calculate the price of a token in the pool with given
-   *  balances and a particular D.
-   *
-   * @dev This is accomplished via solving the invariant iteratively.
-   * See the StableSwap paper and Curve.fi implementation for further details.
-   *
-   * x_1**2 + x1 * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
-   * x_1**2 + b*x_1 = c
-   * x_1 = (x_1**2 + c) / (2*x_1 + b)
-   *
-   * @param a the amplification coefficient * n * (n - 1). See the StableSwap paper for details.
-   * @param tokenIndex Index of token we are calculating for.
-   * @param xp a  set of pool balances. Array should be
-   * the same cardinality as the pool.
-   * @param d the stableswap invariant
-   * @return the price of the token, in the same precision as in xp
-   */
-  function getYD(
-    uint256 a,
-    uint8 tokenIndex,
-    uint256[2] memory xp,
-    uint256 d
-  ) internal pure returns (uint256) {
-    uint256 numTokens = 2;
-    require(tokenIndex < numTokens, "Token not found");
-
-    uint256 c = d;
-    uint256 s;
-    uint256 nA = a * numTokens;
-
-    for (uint256 i = 0; i < numTokens; ++i) {
-      if (i != tokenIndex) {
-        s = s + xp[i];
-        c = (c * d) / (xp[i] * (numTokens));
-        // If we were to protect the division loss we would have to keep the denominator separate
-        // and divide at the end. However this leads to overflow with large numTokens or/and D.
-        // c = c * D * D * D * ... overflow!
-      }
-    }
-    c = (c * d * AmplificationUtils.A_PRECISION) / (nA * numTokens);
-
-    uint256 b = s + ((d * AmplificationUtils.A_PRECISION) / nA);
-    uint256 yPrev;
-    uint256 y = d;
-
-    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
-      yPrev = y;
-      y = ((y * y) + c) / (2 * y + b - d);
-      if (y.within1(yPrev)) {
-        return y;
-      }
-    }
-    revert("Approximation did not converge");
-  }
-
-  /**
-   * @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
-   * @param xp a  set of pool balances. Array should be the same cardinality
-   * as the pool.
-   * @param a the amplification coefficient * n * (n - 1) in A_PRECISION.
-   * See the StableSwap paper for details
-   * @return the invariant, at the precision of the pool
-   */
-  function getD(uint256[2] memory xp, uint256 a) internal pure returns (uint256) {
-    uint256 numTokens = 2;
-    uint256 s = xp[0] + xp[1];
-    if (s == 0) {
-      return 0;
-    }
-
-    uint256 prevD;
-    uint256 d = s;
-    uint256 nA = a * numTokens;
-
-    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
-      uint256 dP = (d ** (numTokens + 1)) / (numTokens ** numTokens * xp[0] * xp[1]);
-      prevD = d;
-      d =
-        ((((nA * s) / AmplificationUtils.A_PRECISION) + dP * numTokens) * (d)) /
-        (((nA - AmplificationUtils.A_PRECISION) * (d)) /
-          (AmplificationUtils.A_PRECISION) +
-          ((numTokens + 1) * dP));
-
-      if (d.within1(prevD)) {
-        return d;
-      }
-    }
-
-    // Convergence should occur in 4 loops or less. If this is reached, there may be something wrong
-    // with the pool. If this were to occur repeatedly, LPs should withdraw via `removeLiquidity()`
-    // function which does not rely on D.
-    revert("D does not converge");
-  }
-
-  /**
    * @notice Get the virtual price, to help calculate profit
    * @param self Swap struct to read from
    * @return the virtual price
    */
   function getVirtualPrice(Swap storage self) external view returns (uint256) {
-    uint256 d = getD(_pricedInBatch(self, self.balances), _getAPrecise(self));
+    uint256 d = getD(_pricedInBatch(self, self.balances), AL._getAPrecise(self));
     ILPToken lpToken = self.lpToken;
     uint256 supply = lpToken.totalSupply();
     if (supply > 0) {
       return (d * 10 ** 18) / supply;
     }
     return 0;
-  }
-
-  /**
-   * @notice Calculate the new balances of the tokens given the indexes of the token
-   * that is swapped from (FROM) and the token that is swapped to (TO).
-   * This function is used as a helper function to calculate how much TO token
-   * the user should receive on swap.
-   *
-   * @param preciseA precise form of amplification coefficient
-   * @param tokenIndexFrom index of FROM token
-   * @param tokenIndexTo index of TO token
-   * @param x the new total amount of FROM token
-   * @param xp balances of the tokens in the pool
-   * @return the amount of TO token that should remain in the pool
-   */
-  function getY(
-    uint256 preciseA,
-    uint8 tokenIndexFrom,
-    uint8 tokenIndexTo,
-    uint256 x,
-    uint256[2] memory xp
-  ) internal pure returns (uint256) {
-    uint256 numTokens = 2;
-    require(tokenIndexFrom != tokenIndexTo, "Can't compare token to itself");
-    require(tokenIndexFrom < numTokens && tokenIndexTo < numTokens, "Tokens must be in pool");
-
-    uint256 d = getD(xp, preciseA);
-    uint256 c = d;
-    uint256 s = x;
-    uint256 nA = numTokens * (preciseA);
-
-    c = (c * d) / (x * numTokens);
-    c = (c * d * (AmplificationUtils.A_PRECISION)) / (nA * numTokens);
-    uint256 b = s + ((d * AmplificationUtils.A_PRECISION) / nA);
-
-    uint256 yPrev;
-    uint256 y = d;
-
-    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
-      yPrev = y;
-      y = ((y * y) + c) / (2 * y + b - d);
-      if (y.within1(yPrev)) {
-        return y;
-      }
-    }
-    revert("Approximation did not converge");
   }
 
   /**
@@ -493,44 +630,6 @@ library SwapUtils {
   }
 
   /**
-   * @notice Internally calculates a swap between two tokens.
-   *
-   * @dev The caller is expected to transfer the actual amounts (dx and dy)
-   * using the token contracts.
-   *
-   * @param self Swap struct to read from
-   * @param tokenIndexFrom the token to sell
-   * @param tokenIndexTo the token to buy
-   * @param dx the number of tokens to sell. If the token charges a fee on transfers,
-   * use the amount that gets transferred after the fee.
-   * @return dy the number of tokens the user will get
-   * @return dyFee the associated fee
-   */
-  function _calculateSwap(
-    Swap storage self,
-    uint8 tokenIndexFrom,
-    uint8 tokenIndexTo,
-    uint256 dx,
-    uint256[2] memory balances
-  ) internal view returns (uint256 dy, uint256 dyFee) {
-    require(
-      tokenIndexFrom < balances.length && tokenIndexTo < balances.length,
-      "Token index out of range"
-    );
-
-    uint256 x = _pricedIn(self, dx + balances[tokenIndexFrom], tokenIndexFrom);
-    uint256[2] memory pricedBalances = _pricedInBatch(self, balances);
-    uint256 y = _pricedOut(
-      self,
-      getY(_getAPrecise(self), tokenIndexFrom, tokenIndexTo, x, pricedBalances),
-      tokenIndexTo // => not id, index !!!
-    );
-    dy = balances[tokenIndexTo] - y - 1;
-    dyFee = (dy * self.swapFee) / (PERCENTAGE_DENOMINATOR);
-    dy = dy - dyFee;
-  }
-
-  /**
    * @notice Uses _calculateRemoveLiquidity with Effective Balances,
    * then projects the prices to the token amounts
    * to get Real Balances, before removing them from pool.
@@ -548,28 +647,6 @@ library SwapUtils {
           self.lpToken.totalSupply()
         )
       );
-  }
-
-  /**
-   * @notice A simple method to calculate amount of each underlying
-   * tokens that is returned upon burning given amount of
-   * LP tokens
-   *
-   * @param amount the amount of LP tokens that would to be burned on
-   * withdrawal
-   * @return amounts of tokens user will receive as an array [ETH, gETH]
-   */
-  function _calculateRemoveLiquidity(
-    uint256[2] memory balances,
-    uint256 amount,
-    uint256 totalSupply
-  ) internal pure returns (uint256[2] memory amounts) {
-    require(amount <= totalSupply, "Cannot exceed total supply");
-
-    amounts[0] = (balances[0] * amount) / totalSupply;
-    amounts[1] = (balances[1] * amount) / totalSupply;
-
-    return amounts;
   }
 
   /**
@@ -594,15 +671,15 @@ library SwapUtils {
     uint256[2] calldata amounts,
     bool deposit
   ) external view returns (uint256) {
-    uint256 a = _getAPrecise(self);
+    uint256 a = AL._getAPrecise(self);
     uint256[2] memory balances = self.balances;
 
     uint256 d0 = getD(_pricedInBatch(self, balances), a);
-    for (uint256 i = 0; i < balances.length; ++i) {
+    for (uint256 i = 0; i < 2; ++i) {
       if (deposit) {
         balances[i] = balances[i] + amounts[i];
       } else {
-        require(amounts[i] <= balances[i], "Cannot withdraw more than available");
+        require(amounts[i] <= balances[i], "LML:Cannot withdraw > available");
         balances[i] = balances[i] - amounts[i];
       }
     }
@@ -617,13 +694,19 @@ library SwapUtils {
   }
 
   /**
+   * @dev                                     ** Admin helper Functions **
+   */
+  /**
+   * @dev  ->  external view
+   */
+  /**
    * @notice return accumulated amount of admin fees of the token with given index
    * @param self Swap struct to read from
    * @param index Index of the pooled token
    * @return admin balance in the token's precision
    */
   function getAdminBalance(Swap storage self, uint256 index) external view returns (uint256) {
-    require(index < 2, "Token index out of range");
+    require(index < 2, "LML:Token index out of range");
     if (index == 0) {
       return address(this).balance - (self.balances[index]);
     }
@@ -633,7 +716,12 @@ library SwapUtils {
     return 0;
   }
 
-  /*** STATE MODIFYING FUNCTIONS ***/
+  /**
+   * @dev                                     ** STATE MODIFYING FUNCTIONS **
+   */
+  /**
+   * @dev  ->  external: all
+   */
 
   /**
    * @notice swap two tokens in the pool
@@ -655,14 +743,14 @@ library SwapUtils {
     if (tokenIndexFrom == 0) {
       // Means user is selling some ETH to the pool to get some gETH.
       // In which case, we need to send exactly that amount of ETH.
-      require(dx == msg.value, "Cannot swap more/less than you sent");
+      require(dx == msg.value, "LML:Cannot swap != eth sent");
     }
     if (tokenIndexFrom == 1) {
       // Means user is selling some gETH to the pool to get some ETH.
 
       require(
         dx <= gETHReference.balanceOf(msg.sender, self.pooledTokenId),
-        "Cannot swap more than you own"
+        "LML:Cannot swap > you own"
       );
 
       // Transfer tokens first
@@ -681,7 +769,7 @@ library SwapUtils {
     uint256[2] memory balances = self.balances;
     (dy, dyFee) = _calculateSwap(self, tokenIndexFrom, tokenIndexTo, dx, balances);
 
-    require(dy >= minDy, "Swap didn't result in min tokens");
+    require(dy >= minDy, "LML:Swap didnot result in min tokens");
     uint256 dyAdminFee = (dyFee * self.adminFee) / PERCENTAGE_DENOMINATOR;
 
     // To prevent any Reentrancy, balances are updated before transfering the tokens.
@@ -691,7 +779,7 @@ library SwapUtils {
     if (tokenIndexTo == 0) {
       // Means contract is going to send Idle Ether (ETH)
       (bool sent, ) = payable(msg.sender).call{value: dy}("");
-      require(sent, "SwapUtils: Failed to send Ether");
+      require(sent, "LML:Failed to send Ether");
     }
     if (tokenIndexTo == 1) {
       // Means contract is going to send staked ETH (gETH)
@@ -717,7 +805,7 @@ library SwapUtils {
     uint256[2] memory amounts,
     uint256 minToMint
   ) external returns (uint256) {
-    require(amounts[0] == msg.value, "SwapUtils: received less or more ETH than expected");
+    require(amounts[0] == msg.value, "LML:received less or more ETH than expected");
     IgETH gETHReference = self.gETH;
     // current state
     ManageLiquidityInfo memory v = ManageLiquidityInfo(
@@ -725,7 +813,7 @@ library SwapUtils {
       0,
       0,
       0,
-      _getAPrecise(self),
+      AL._getAPrecise(self),
       0,
       self.balances
     );
@@ -738,7 +826,7 @@ library SwapUtils {
     newBalances[0] = v.balances[0] + msg.value;
 
     for (uint256 i = 0; i < 2; ++i) {
-      require(v.totalSupply != 0 || amounts[i] > 0, "Must supply all tokens in pool");
+      require(v.totalSupply != 0 || amounts[i] > 0, "LML:Must supply all tokens in pool");
     }
 
     {
@@ -754,7 +842,7 @@ library SwapUtils {
 
     // invariant after change
     v.d1 = getD(_pricedInBatch(self, newBalances), v.preciseA);
-    require(v.d1 > v.d0, "D should increase");
+    require(v.d1 > v.d0, "LML:D should increase");
 
     // updated to reflect fees and calculate the user's LP tokens
     v.d2 = v.d1;
@@ -765,7 +853,7 @@ library SwapUtils {
       for (uint256 i = 0; i < 2; ++i) {
         uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
         fees[i] =
-          (feePerToken * (idealBalance.difference(newBalances[i]))) /
+          (feePerToken * (difference(idealBalance, newBalances[i]))) /
           (PERCENTAGE_DENOMINATOR);
         self.balances[i] =
           newBalances[i] -
@@ -785,7 +873,7 @@ library SwapUtils {
       toMint = ((v.d2 - v.d0) * v.totalSupply) / v.d0;
     }
 
-    require(toMint >= minToMint, "Couldn't mint min requested");
+    require(toMint >= minToMint, "LML:Could not mint min requested");
 
     // mint the user's LP tokens
     v.lpToken.mint(msg.sender, toMint);
@@ -810,7 +898,7 @@ library SwapUtils {
   ) external returns (uint256[2] memory) {
     ILPToken lpToken = self.lpToken;
     IgETH gETHReference = self.gETH;
-    require(amount <= lpToken.balanceOf(msg.sender), ">LP.balanceOf");
+    require(amount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
 
     uint256[2] memory balances = self.balances;
     uint256 totalSupply = lpToken.totalSupply();
@@ -821,7 +909,7 @@ library SwapUtils {
     );
 
     for (uint256 i = 0; i < amounts.length; ++i) {
-      require(amounts[i] >= minAmounts[i], "amounts[i] < minAmounts[i]");
+      require(amounts[i] >= minAmounts[i], "LML:amounts[i] < minAmounts[i]");
       self.balances[i] = balances[i] - amounts[i];
     }
 
@@ -829,7 +917,7 @@ library SwapUtils {
     lpToken.burnFrom(msg.sender, amount);
 
     (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
-    require(sent, "SwapUtils: Failed to send Ether");
+    require(sent, "LML:Failed to send Ether");
 
     gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
 
@@ -854,8 +942,8 @@ library SwapUtils {
     ILPToken lpToken = self.lpToken;
     IgETH gETHReference = self.gETH;
 
-    require(tokenAmount <= lpToken.balanceOf(msg.sender), ">LP.balanceOf");
-    require(tokenIndex < 2, "Token not found");
+    require(tokenAmount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
+    require(tokenIndex < 2, "LML:Token not found");
 
     uint256 totalSupply = lpToken.totalSupply();
 
@@ -866,7 +954,7 @@ library SwapUtils {
       totalSupply
     );
 
-    require(dy >= minAmount, "dy < minAmount");
+    require(dy >= minAmount, "LML:dy < minAmount");
 
     // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
     self.balances[tokenIndex] =
@@ -876,7 +964,7 @@ library SwapUtils {
 
     if (tokenIndex == 0) {
       (bool sent, ) = payable(msg.sender).call{value: dy}("");
-      require(sent, "SwapUtils: Failed to send Ether");
+      require(sent, "LML:Failed to send Ether");
     }
     if (tokenIndex == 1) {
       gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, dy, "");
@@ -909,7 +997,7 @@ library SwapUtils {
       0,
       0,
       0,
-      _getAPrecise(self),
+      AL._getAPrecise(self),
       0,
       self.balances
     );
@@ -917,7 +1005,7 @@ library SwapUtils {
 
     require(
       maxBurnAmount <= v.lpToken.balanceOf(msg.sender) && maxBurnAmount != 0,
-      ">LP.balanceOf"
+      "LML:>LP.balanceOf"
     );
 
     uint256 feePerToken = self.swapFee / 2;
@@ -928,15 +1016,15 @@ library SwapUtils {
 
       v.d0 = getD(_pricedInBatch(self, v.balances), v.preciseA);
       for (uint256 i = 0; i < 2; ++i) {
-        require(amounts[i] <= v.balances[i], "Cannot withdraw more than available");
+        require(amounts[i] <= v.balances[i], "LML:Cannot withdraw > available");
         balances1[i] = v.balances[i] - amounts[i];
       }
       v.d1 = getD(_pricedInBatch(self, balances1), v.preciseA);
 
       for (uint256 i = 0; i < 2; ++i) {
         uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
-        uint256 difference = idealBalance.difference(balances1[i]);
-        fees[i] = (feePerToken * difference) / PERCENTAGE_DENOMINATOR;
+        uint256 _diff = difference(idealBalance, balances1[i]);
+        fees[i] = (feePerToken * _diff) / PERCENTAGE_DENOMINATOR;
         uint256 adminFee = self.adminFee;
         {
           self.balances[i] = balances1[i] - ((fees[i] * adminFee) / PERCENTAGE_DENOMINATOR);
@@ -948,16 +1036,16 @@ library SwapUtils {
     }
 
     uint256 tokenAmount = ((v.d0 - v.d2) * (v.totalSupply)) / v.d0;
-    require(tokenAmount != 0, "Burnt amount cannot be zero");
+    require(tokenAmount != 0, "LML:Burnt amount cannot be zero");
     tokenAmount = tokenAmount + 1;
 
-    require(tokenAmount <= maxBurnAmount, "tokenAmount > maxBurnAmount");
+    require(tokenAmount <= maxBurnAmount, "LML:tokenAmount > maxBurnAmount");
 
     // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
     v.lpToken.burnFrom(msg.sender, tokenAmount);
 
     (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
-    require(sent, "SwapUtils: Failed to send Ether");
+    require(sent, "LML:Failed to send Ether");
 
     gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
 
@@ -965,6 +1053,13 @@ library SwapUtils {
 
     return tokenAmount;
   }
+
+  /**
+   * @dev                                     ** Admin Functions **
+   */
+  /**
+   * @dev  ->  external: all
+   */
 
   /**
    * @notice withdraw all admin fees to a given address
@@ -982,7 +1077,7 @@ library SwapUtils {
     uint256 etherBalance = address(this).balance - self.balances[0];
     if (etherBalance != 0) {
       (bool sent, ) = payable(msg.sender).call{value: etherBalance}("");
-      require(sent, "SwapUtils: Failed to send Ether");
+      require(sent, "LML:Failed to send Ether");
     }
   }
 
@@ -993,7 +1088,7 @@ library SwapUtils {
    * @param newAdminFee new admin fee to be applied on future transactions
    */
   function setAdminFee(Swap storage self, uint256 newAdminFee) external {
-    require(newAdminFee <= MAX_ADMIN_FEE, "Fee is too high");
+    require(newAdminFee <= MAX_ADMIN_FEE, "LML:Fee is too high");
     self.adminFee = newAdminFee;
 
     emit NewAdminFee(newAdminFee);
@@ -1006,7 +1101,7 @@ library SwapUtils {
    * @param newSwapFee new swap fee to be applied on future transactions
    */
   function setSwapFee(Swap storage self, uint256 newSwapFee) external {
-    require(newSwapFee <= MAX_SWAP_FEE, "Fee is too high");
+    require(newSwapFee <= MAX_SWAP_FEE, "LML:Fee is too high");
     self.swapFee = newSwapFee;
 
     emit NewSwapFee(newSwapFee);
