@@ -165,7 +165,7 @@ interface IPortal {
     uint256 poolId,
     uint256[] calldata operatorIds,
     uint256[] calldata allowances
-  ) external;
+  ) external returns (bool success);
 
   function setWhitelist(uint256 poolId, address whitelist) external;
 
