@@ -84,7 +84,7 @@ library SwapUtils {
     uint256 swapFee;
     uint256 adminFee;
     uint256[2] balances;
-    uint256[8] __gap;
+    uint256[5] __gap;
   }
 
   // Struct storing variables used in calculations in the

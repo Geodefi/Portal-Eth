@@ -164,6 +164,20 @@ library StakeUtils {
     mapping(bytes => Validator) _validators;
     uint256[3] __gap;
   }
+
+  /**
+   * @notice Helper Struct to pack constant data that does not change per validator.
+   * * needed for that famous Solidity feature.
+   */
+  struct constantValidatorData {
+    uint256 index;
+    uint256 poolFee;
+    uint256 operatorFee;
+    uint256 earlyExitFee;
+    uint256 expectedExit;
+    bytes withdrawalCredential;
+  }
+
   /**
    * @notice                                     ** Constants **
    */
@@ -1137,19 +1151,6 @@ library StakeUtils {
    * given pubKey that is proposed by an operator with proposeStake function.
    * Eligibility is defined by an optimistic alienation, check OracleUtils._alienateValidator() for info.
    */
-
-  /**
-   * @notice Helper Struct to pack constant data that does not change per validator.
-   * * needed for that famous Solidity feature.
-   */
-  struct constantValidatorData {
-    uint256 index;
-    uint256 poolFee;
-    uint256 operatorFee;
-    uint256 earlyExitFee;
-    uint256 expectedExit;
-    bytes withdrawalCredential;
-  }
 
   /**
    * @dev  ->  view

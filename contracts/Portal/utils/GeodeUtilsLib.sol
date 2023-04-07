@@ -79,16 +79,16 @@ library GeodeUtils {
    * @param approvedUpgrade only 1 implementation contract SHOULD be "approved" at any given time.
    * * @dev safe to set to address(0) after every upgrade as isUpgradeAllowed returns false for address(0)
    * @param _proposals till approved, proposals are kept separated from the Isolated Storage
-   * @param __gap keep the struct size at 16
+   * @param __gap keep the struct size at 16, 3*20+2*32+1*32 = 5 slots
    **/
   struct DualGovernance {
     address GOVERNANCE;
     address SENATE;
+    address approvedUpgrade;
     uint256 SENATE_EXPIRY;
     uint256 GOVERNANCE_FEE;
-    address approvedUpgrade;
     mapping(uint256 => Proposal) _proposals;
-    uint256[10] __gap;
+    uint256[11] __gap;
   }
 
   /**

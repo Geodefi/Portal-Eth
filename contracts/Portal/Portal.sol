@@ -72,6 +72,19 @@ contract Portal is
   using StakeUtils for StakeUtils.PooledStaking;
 
   /**
+   * @notice                                     ** VARIABLES **
+   */
+  DataStoreUtils.IsolatedStorage private DATASTORE;
+  GeodeUtils.DualGovernance private GEODE;
+  StakeUtils.PooledStaking private STAKER;
+
+  /**
+   * @notice CONTRACT_VERSION always refers to the upgrade proposal' (TYPE2) ID.
+   * @dev Does NOT increase uniformly like one might expect.
+   */
+  uint256 private CONTRACT_VERSION;
+
+  /**
    * @notice                                     ** EVENTS **
    *
    * @dev following events are added to help fellow devs with a better ABI
@@ -113,19 +126,6 @@ contract Portal is
    * @dev Portal Native events
    */
   event ContractVersionSet(uint256 version);
-
-  /**
-   * @notice                                     ** VARIABLES **
-   */
-  DataStoreUtils.IsolatedStorage private DATASTORE;
-  GeodeUtils.DualGovernance private GEODE;
-  StakeUtils.PooledStaking private STAKER;
-
-  /**
-   * @notice CONTRACT_VERSION always refers to the upgrade proposal' (TYPE2) ID.
-   * @dev Does NOT increase uniformly like one might expect.
-   */
-  uint256 private CONTRACT_VERSION;
 
   /**
    * @notice                                     ** PORTAL SPECIFIC **
@@ -480,7 +480,7 @@ contract Portal is
     isRecovering =
       paused() ||
       GEODE.approvedUpgrade != _getImplementation() ||
-      block.timestamp >= GEODE.getSenateExpiry();
+      block.timestamp > GEODE.getSenateExpiry();
   }
 
   /**

@@ -11,12 +11,9 @@ const func = async function (hre) {
 
   const gETH = (await get("gETH")).address;
   const Swap = (await get("Swap")).address;
-  const ERC20InterfaceUpgradable = (await get("ERC20InterfaceUpgradable"))
-    .address;
+  const ERC20InterfaceUpgradable = (await get("ERC20InterfaceUpgradable")).address;
 
-  const ERC20InterfacePermitUpgradable = (
-    await get("ERC20InterfacePermitUpgradable")
-  ).address;
+  const ERC20InterfacePermitUpgradable = (await get("ERC20InterfacePermitUpgradable")).address;
   const LPToken = (await get("LPToken")).address;
   const WithdrawalContract = (await get("WithdrawalContract")).address;
 

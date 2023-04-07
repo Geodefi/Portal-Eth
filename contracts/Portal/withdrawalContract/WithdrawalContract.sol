@@ -41,6 +41,13 @@ contract WithdrawalContract is
   using DataStoreUtils for DataStoreUtils.IsolatedStorage;
   using GeodeUtils for GeodeUtils.DualGovernance;
 
+  ///@notice Storage Variables
+  DataStoreUtils.IsolatedStorage private DATASTORE;
+  GeodeUtils.DualGovernance private GEM;
+  address internal gETH;
+  uint256 internal POOL_ID;
+  uint256 internal CONTRACT_VERSION;
+
   ///@notice Events
   event ControllerChanged(uint256 id, address newCONTROLLER);
   event Proposed(uint256 id, address CONTROLLER, uint256 TYPE, uint256 deadline);
@@ -48,13 +55,6 @@ contract WithdrawalContract is
   event NewSenate(address senate, uint256 senateExpiry);
 
   event ContractVersionSet(uint256 version);
-
-  ///@notice Variables
-  DataStoreUtils.IsolatedStorage private DATASTORE;
-  GeodeUtils.DualGovernance private GEM;
-  address internal gETH;
-  uint256 internal POOL_ID;
-  uint256 internal CONTRACT_VERSION;
 
   ///@custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -192,7 +192,7 @@ contract WithdrawalContract is
       getContractVersion() != getProposedVersion() ||
       GEM.approvedUpgrade != _getImplementation() ||
       getPortal().readAddress(getPoolId(), "CONTROLLER") != GEM.getSenate() ||
-      block.timestamp >= GEM.getSenateExpiry();
+      block.timestamp > GEM.getSenateExpiry();
   }
 
   function isUpgradeAllowed(

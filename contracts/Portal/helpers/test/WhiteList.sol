@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import {IWhitelist} from "../../../interfaces/IWhitelist.sol";
 
 contract Whitelist is IWhitelist, Ownable {
-  event Listed(address indexed account, bool isWhitelisted);
-
   mapping(address => bool) private whitelist;
+
+  event Listed(address indexed account, bool isWhitelisted);
 
   function isAllowed(address _address) external view virtual override returns (bool) {
     return whitelist[_address];
