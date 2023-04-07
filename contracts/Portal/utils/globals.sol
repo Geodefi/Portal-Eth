@@ -40,8 +40,8 @@ library ID_TYPE {
   /// @notice TYPE 10021: Module: A Liquidity Pool
   uint256 internal constant DEFAULT_MODULE_LIQUDITY_POOL = 10021;
 
-  /// @notice TYPE 10021: Module: A Liquidity Pool Token
-  uint256 internal constant DEFAULT_MODULE_LIQUDITY_POOL_TOKEN = 10022;
+  // /// @notice TYPE 10021: Module: A Liquidity Pool Token
+  // uint256 internal constant DEFAULT_MODULE_LIQUDITY_POOL_TOKEN = 10022;
 
   /// @notice TYPE 19999: LIMIT: exclusive, maximum TYPE that will be percieved as a default module
   uint256 internal constant LIMIT_DEFAULT_MODULE_MAX = 19999;
