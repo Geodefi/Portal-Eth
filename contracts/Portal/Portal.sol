@@ -786,8 +786,8 @@ contract Portal is
     uint256 poolId,
     uint256[] calldata operatorIds,
     uint256[] calldata allowances
-  ) external virtual override whenNotPaused {
-    StakeUtils.batchApproveOperators(DATASTORE, poolId, operatorIds, allowances);
+  ) external virtual override whenNotPaused returns (bool success) {
+    success = StakeUtils.batchApproveOperators(DATASTORE, poolId, operatorIds, allowances);
   }
 
   /**
