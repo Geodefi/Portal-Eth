@@ -3,9 +3,9 @@
 pragma solidity =0.8.7;
 
 /**
- * @author Icebear & Crash Bandicoot
- * @title Isolated Storage Layout
- * A Storage Management Library for Dynamic Structs
+ * @title DataStoreModule Library - DSML
+ * A Storage Management Library for Dynamic Structs providing an Isolated Storage Layout
+ * for the contracts and modules that inherits DataStoreModule (DSM)
  *
  * * DataStoreUtils is a storage management tool designed to create a safe and scalable
  * * storage layout with the help of data types, IDs and keys.
@@ -22,9 +22,11 @@ pragma solidity =0.8.7;
  * @dev While it is good practice to keep record,
  * * TYPE for ID is NOT mandatory, an ID might not have an explicit type.
  * * Thus there is no checks of types or keys.
+ *
+ * @author Icebear & Crash Bandicoot
  */
 
-library DataStoreUtils {
+library DataStoreModuleLib {
   /**
    * @notice Main Struct for reading and writing operations for given (id, key) pairs
    * @param allIdsByType type => id[], optional categorization for IDs, requires direct access
@@ -43,8 +45,11 @@ library DataStoreUtils {
   }
 
   /**
-   *                              ** HELPERS **
-   **/
+   * @dev                                     ** HELPERS **
+   */
+  /**
+   * @dev  ->  pure: all
+   */
 
   /**
    * @notice generaliazed method of generating an ID
@@ -65,8 +70,11 @@ library DataStoreUtils {
   }
 
   /**
-   *                              ** DATA GETTERS **
-   **/
+   * @dev                                     ** DATA GETTERS **
+   */
+  /**
+   * @dev  ->  internal view: all
+   */
 
   function readUint(
     IsolatedStorage storage self,
@@ -93,8 +101,11 @@ library DataStoreUtils {
   }
 
   /**
-   *                              ** ARRAY GETTERS **
-   **/
+   * @dev                                     ** ARRAY GETTERS **
+   */
+  /**
+   * @dev  ->  internal view: all
+   */
 
   function readUintArray(
     IsolatedStorage storage self,
@@ -124,8 +135,14 @@ library DataStoreUtils {
   }
 
   /**
-   *                              ** DATA SETTERS **
-   **/
+   * @dev                                     ** STATE MODIFYING FUNCTIONS **
+   */
+  /**
+   * @dev                                     ** DATA SETTERS **
+   */
+  /**
+   * @dev  ->  internal: all
+   */
 
   function writeUint(
     IsolatedStorage storage self,
@@ -173,8 +190,11 @@ library DataStoreUtils {
   }
 
   /**
-   *                              ** ARRAY SETTERS **
-   **/
+   * @dev                                     ** ARRAY SETTERS **
+   */
+  /**
+   * @dev  ->  internal: all
+   */
 
   function appendUintArray(
     IsolatedStorage storage self,
@@ -207,8 +227,11 @@ library DataStoreUtils {
   }
 
   /**
-   *                              ** BATCH ARRAY SETTERS **
-   **/
+   * @dev                                     ** BATCH ARRAY SETTERS **
+   */
+  /**
+   * @dev  ->  internal: all
+   */
 
   function appendUintArrayBatch(
     IsolatedStorage storage self,

@@ -10,7 +10,7 @@ import {ILPToken} from "../interfaces/ILPToken.sol";
 import {IgETH} from "../../../../interfaces/IgETH.sol";
 
 /**
- * @title LiquidityModule library - LML
+ * @title LiquidityModule Library - LML
  *
  * @notice A library to be used within LiquidityModule
  * * Contains functions responsible for custody and AMM functionalities with some changes.
@@ -25,6 +25,8 @@ import {IgETH} from "../../../../interfaces/IgETH.sol";
  * Admin functions should be protected within contracts using this library.
  *
  * @dev Whenever "Effective Balance" is mentioned it refers to the balance projected with the underlying price.
+ *
+ * @author Icebear & Crash Bandicoot
  */
 library LiquidityModuleLib {
   /**

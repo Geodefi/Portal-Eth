@@ -5,19 +5,22 @@ pragma solidity =0.8.7;
 import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
 
 /**
- * @title Amplification library - AL
+ * @title Amplification Library - AL
+ *
  * @notice An extension library for LiquidityModuleLibrary(LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
  * @dev This library assumes the struct is fully validated.
+ *
+ * @author Icebear & Crash Bandicoot
  */
 library AmplificationLib {
   /**
-   * @dev                                     ** Events **
+   * @dev                                     ** EVENTS **
    */
   event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
   event StopRampA(uint256 currentA, uint256 time);
 
   /**
-   * @dev                                     ** Constants **
+   * @dev                                     ** CONSTANTS **
    *
    * @dev Constant values used in ramping A calculations
    */
@@ -27,12 +30,11 @@ library AmplificationLib {
   uint256 private constant MIN_RAMP_TIME = 14 days;
 
   /**
-   * @dev                                     ** Functions **
+   * @dev                                     ** GETTER FUNCTIONS **
    *
    */
-
   /**
-   * @dev  ->  view
+   * @dev  ->  internal view: all
    */
 
   /**
@@ -81,7 +83,11 @@ library AmplificationLib {
   }
 
   /**
-   * @dev  ->  STATE MODIFYING FUNCTIONS
+   * @dev                                     ** STATE MODIFYING FUNCTIONS **
+   *
+   */
+  /**
+   * @dev  ->  internal: all
    */
 
   /**

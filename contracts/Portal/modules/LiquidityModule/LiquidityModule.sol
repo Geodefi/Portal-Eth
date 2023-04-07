@@ -12,7 +12,9 @@ import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
 import {ILiquidityModule} from "./interfaces/ILiquidityModule.sol";
 
 /**
- * @title LiquidityModule - LM
+ * @title Liquidity Module - LM
+ *
+ * @author Icebear & Crash Bandicoot
  *
  * @notice A StableSwap implementation in solidity.
  * NOTE this module lacks admin checks etc: should be overriden with super.
@@ -29,14 +31,14 @@ contract LiquidityModule is
   using AL for LML.Swap;
 
   /**
-   * @notice                                     ** VARIABLES **
+   * @dev                                     ** VARIABLES **
    */
   // Struct storing data responsible for automatic market maker functionalities.
   // In order to access this data, use LiquidityModuleLibrary.
   LML.Swap private LIQUIDITY;
 
   /**
-   * @notice                                     ** EVENTS **
+   * @dev                                     ** EVENTS **
    *
    * @dev following events are added from LML to help fellow devs with a better ABI
    */
@@ -76,7 +78,7 @@ contract LiquidityModule is
   event StopRampA(uint256 currentA, uint256 time);
 
   /**
-   * @notice                                     ** MODIFIERS **
+   * @dev                                     ** MODIFIERS **
    */
 
   /**
@@ -89,7 +91,7 @@ contract LiquidityModule is
   }
 
   /**
-   * @notice                                     ** GETTER FUNCTIONS **
+   * @dev                                     ** GETTER FUNCTIONS **
    */
   /**
    * @dev  ->  external view: all
@@ -171,7 +173,7 @@ contract LiquidityModule is
   }
 
   /**
-   * @notice                                     ** HELPER FUNCTIONS **
+   * @dev                                     ** HELPER FUNCTIONS **
    */
 
   /**
