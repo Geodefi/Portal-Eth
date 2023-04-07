@@ -1,21 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
-import "./SwapUtils.sol";
+import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
 
 /**
- * @title AmplificationUtils library
- * @notice A library to calculate and ramp the A parameter of a given `SwapUtils.Swap` struct.
- * This library assumes the struct is fully validated.
+ * @title Amplification library - AL
+ * @notice A library to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
+ * @dev This library assumes the struct is fully validated.
  */
-library Amplificationutils {
+library AmplificationLib {
+  /**
+   * @dev                                     ** Events **
+   */
   event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
   event StopRampA(uint256 currentA, uint256 time);
 
-  // Constant values used in ramping A calculations
+  /**
+   * @dev                                     ** Constants **
+   *
+   * @dev Constant values used in ramping A calculations
+   */
   uint256 public constant A_PRECISION = 100;
   uint256 public constant MAX_A = 10 ** 6;
   uint256 private constant MAX_A_CHANGE = 2;
   uint256 private constant MIN_RAMP_TIME = 14 days;
+
+  /**
+   * @dev                                     ** Functions **
+   *
+   */
+
+  /**
+   * @dev  ->  view
+   */
 
   /**
    * @notice Return A, the amplification coefficient * n * (n - 1)
@@ -23,7 +39,7 @@ library Amplificationutils {
    * @param self Swap struct to read from
    * @return A parameter
    */
-  function getA(SwapUtils.Swap storage self) internal view returns (uint256) {
+  function getA(LML.Swap storage self) internal view returns (uint256) {
     return _getAPrecise(self) / (A_PRECISION);
   }
 
@@ -33,7 +49,7 @@ library Amplificationutils {
    * @param self Swap struct to read from
    * @return A parameter in its raw precision form
    */
-  function getAPrecise(SwapUtils.Swap storage self) internal view returns (uint256) {
+  function getAPrecise(LML.Swap storage self) internal view returns (uint256) {
     return _getAPrecise(self);
   }
 
@@ -43,7 +59,7 @@ library Amplificationutils {
    * @param self Swap struct to read from
    * @return A parameter in its raw precision form
    */
-  function _getAPrecise(SwapUtils.Swap storage self) internal view returns (uint256) {
+  function _getAPrecise(LML.Swap storage self) internal view returns (uint256) {
     uint256 t1 = self.futureATime; // time when ramp is finished
     uint256 a1 = self.futureA; // final A value when ramp is finished
 
@@ -63,6 +79,10 @@ library Amplificationutils {
   }
 
   /**
+   * @dev  ->  STATE MODIFYING FUNCTIONS
+   */
+
+  /**
    * @notice Start ramping up or down A parameter towards given futureA_ and futureTime_
    * Checks if the change is too rapid, and commits the new A value only when it falls under
    * the limit range.
@@ -70,18 +90,18 @@ library Amplificationutils {
    * @param futureA_ the new A to ramp towards
    * @param futureTime_ timestamp when the new A should be reached
    */
-  function rampA(SwapUtils.Swap storage self, uint256 futureA_, uint256 futureTime_) internal {
-    require(block.timestamp >= self.initialATime + 1 days, "Wait 1 day before starting ramp");
-    require(futureTime_ >= block.timestamp + MIN_RAMP_TIME, "Insufficient ramp time");
-    require(futureA_ > 0 && futureA_ < MAX_A, "futureA_ must be > 0 and < MAX_A");
+  function rampA(LML.Swap storage self, uint256 futureA_, uint256 futureTime_) internal {
+    require(block.timestamp >= self.initialATime + 1 days, "AL: Wait 1 day before starting ramp");
+    require(futureTime_ >= block.timestamp + MIN_RAMP_TIME, "AL: Insufficient ramp time");
+    require(futureA_ > 0 && futureA_ < MAX_A, "AL: futureA_ must be > 0 and < MAX_A");
 
     uint256 initialAPrecise = _getAPrecise(self);
     uint256 futureAPrecise = futureA_ * A_PRECISION;
 
     if (futureAPrecise < initialAPrecise) {
-      require(futureAPrecise * MAX_A_CHANGE >= initialAPrecise, "futureA_ is too small");
+      require(futureAPrecise * MAX_A_CHANGE >= initialAPrecise, "AL: futureA_ is too small");
     } else {
-      require(futureAPrecise <= initialAPrecise * MAX_A_CHANGE, "futureA_ is too large");
+      require(futureAPrecise <= initialAPrecise * MAX_A_CHANGE, "AL: futureA_ is too large");
     }
 
     self.initialA = initialAPrecise;
@@ -97,8 +117,8 @@ library Amplificationutils {
    * cannot be called for another 24 hours
    * @param self Swap struct to update
    */
-  function stopRampA(SwapUtils.Swap storage self) internal {
-    require(self.futureATime > block.timestamp, "Ramp is already stopped");
+  function stopRampA(LML.Swap storage self) internal {
+    require(self.futureATime > block.timestamp, "AL: Ramp is already stopped");
 
     uint256 currentA = _getAPrecise(self);
     self.initialA = currentA;
