@@ -35,7 +35,7 @@ contract LiquidityModule is
    */
   // Struct storing data responsible for automatic market maker functionalities.
   // In order to access this data, use LiquidityModuleLibrary.
-  LML.Swap private LIQUIDITY;
+  LML.Swap internal LIQUIDITY;
 
   /**
    * @dev                                     ** EVENTS **
@@ -94,7 +94,7 @@ contract LiquidityModule is
    * @dev                                     ** GETTER FUNCTIONS **
    */
   /**
-   * @dev  ->  external view: all
+   * @dev -> external view: all
    */
 
   /**
@@ -177,7 +177,7 @@ contract LiquidityModule is
    */
 
   /**
-   * @dev  ->  external view: all
+   * @dev -> external view: all
    */
 
   /**
@@ -249,7 +249,7 @@ contract LiquidityModule is
    * @dev                                     ** STATE MODIFYING FUNCTIONS **
    */
   /**
-   * @dev  ->  external: all
+   * @dev -> external: all
    */
 
   /**
@@ -359,7 +359,7 @@ contract LiquidityModule is
    * @dev                                     ** ADMIN FUNCTIONS **
    */
   /**
-   * @dev  ->  external: all
+   * @dev -> external: all
    */
   /**
    * @notice Update the admin fee. Admin fee takes portion of the swap fee.

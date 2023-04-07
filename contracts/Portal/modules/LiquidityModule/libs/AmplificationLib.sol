@@ -26,15 +26,15 @@ library AmplificationLib {
    */
   uint256 public constant A_PRECISION = 100;
   uint256 public constant MAX_A = 10 ** 6;
-  uint256 private constant MAX_A_CHANGE = 2;
-  uint256 private constant MIN_RAMP_TIME = 14 days;
+  uint256 public constant MAX_A_CHANGE = 2;
+  uint256 public constant MIN_RAMP_TIME = 14 days;
 
   /**
    * @dev                                     ** GETTER FUNCTIONS **
    *
    */
   /**
-   * @dev  ->  internal view: all
+   * @dev -> internal view: all
    */
 
   /**
@@ -87,7 +87,7 @@ library AmplificationLib {
    *
    */
   /**
-   * @dev  ->  internal: all
+   * @dev -> internal: all
    */
 
   /**

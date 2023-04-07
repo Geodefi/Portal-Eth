@@ -41,7 +41,7 @@ contract gETH is ERC1155SupplyMinterPauser {
   bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
   string public constant name = "Geode Staked Ether";
   string public constant symbol = "gETH";
-  uint256 private constant _denominator = 1 ether;
+  uint256 internal constant _denominator = 1 ether;
 
   /**
    * @notice Mapping from pool IDs to gETHinterface implementation addresses

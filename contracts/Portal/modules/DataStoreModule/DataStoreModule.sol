@@ -17,13 +17,13 @@ contract DataStoreModule is IDataStoreModule {
   /**
    * @dev                                     ** VARIABLES **
    */
-  DSML.IsolatedStorage private DATASTORE;
+  DSML.IsolatedStorage internal DATASTORE;
 
   /**
    * @dev                                     ** HELPER FUNCTIONS **
    */
   /**
-   * @dev  -> external pure: all
+   * @dev -> external pure: all
    */
 
   /**
@@ -51,7 +51,7 @@ contract DataStoreModule is IDataStoreModule {
    * @dev                                     ** DATA GETTER FUNCTIONS **
    */
   /**
-   * @dev  ->  external view: all
+   * @dev -> external view: all
    */
 
   /**
@@ -92,7 +92,7 @@ contract DataStoreModule is IDataStoreModule {
    * @dev                                     ** ARRAY GETTER FUNCTIONS **
    */
   /**
-   * @dev  ->  external view: all
+   * @dev -> external view: all
    */
 
   function readUintArray(

@@ -48,7 +48,7 @@ library DataStoreModuleLib {
    * @dev                                     ** HELPERS **
    */
   /**
-   * @dev  ->  pure: all
+   * @dev -> pure: all
    */
 
   /**
@@ -73,7 +73,7 @@ library DataStoreModuleLib {
    * @dev                                     ** DATA GETTERS **
    */
   /**
-   * @dev  ->  internal view: all
+   * @dev -> internal view: all
    */
 
   function readUint(
@@ -104,7 +104,7 @@ library DataStoreModuleLib {
    * @dev                                     ** ARRAY GETTERS **
    */
   /**
-   * @dev  ->  internal view: all
+   * @dev -> internal view: all
    */
 
   function readUintArray(
@@ -141,7 +141,7 @@ library DataStoreModuleLib {
    * @dev                                     ** DATA SETTERS **
    */
   /**
-   * @dev  ->  internal: all
+   * @dev -> internal: all
    */
 
   function writeUint(
@@ -193,7 +193,7 @@ library DataStoreModuleLib {
    * @dev                                     ** ARRAY SETTERS **
    */
   /**
-   * @dev  ->  internal: all
+   * @dev -> internal: all
    */
 
   function appendUintArray(
@@ -230,7 +230,7 @@ library DataStoreModuleLib {
    * @dev                                     ** BATCH ARRAY SETTERS **
    */
   /**
-   * @dev  ->  internal: all
+   * @dev -> internal: all
    */
 
   function appendUintArrayBatch(

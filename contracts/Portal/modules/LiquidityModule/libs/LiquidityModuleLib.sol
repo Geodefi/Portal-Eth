@@ -143,7 +143,7 @@ library LiquidityModuleLib {
    * @dev                                     ** HELPERS **
    */
   /**
-   * @dev  ->  pure: all
+   * @dev -> pure: all
    */
 
   /**
@@ -323,7 +323,7 @@ library LiquidityModuleLib {
    */
 
   /**
-   * @dev  ->  internal view: all
+   * @dev -> internal view: all
    */
 
   /**
@@ -399,7 +399,7 @@ library LiquidityModuleLib {
    */
 
   /**
-   * @dev  ->  internal view
+   * @dev -> internal view
    */
   /**
    * @notice Get Debt, The amount of buyback for stable pricing.
@@ -425,7 +425,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev  ->  external view
+   * @dev -> external view
    */
   /**
    * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
@@ -440,7 +440,7 @@ library LiquidityModuleLib {
    */
 
   /**
-   * @dev  ->  pure
+   * @dev -> pure
    */
   /**
    * @notice A simple method to calculate amount of each underlying
@@ -465,7 +465,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev  ->  internal view
+   * @dev -> internal view
    */
 
   function _calculateWithdrawOneToken(
@@ -521,7 +521,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev  ->  external view
+   * @dev -> external view
    */
 
   /**
@@ -700,7 +700,7 @@ library LiquidityModuleLib {
    * @dev                                     ** ADMIN HELPER FUNCTIONS **
    */
   /**
-   * @dev  ->  external view
+   * @dev -> external view
    */
   /**
    * @notice return accumulated amount of admin fees of the token with given index
@@ -723,7 +723,7 @@ library LiquidityModuleLib {
    * @dev                                     ** STATE MODIFYING FUNCTIONS **
    */
   /**
-   * @dev  ->  external: all
+   * @dev -> external: all
    */
 
   /**
@@ -1061,7 +1061,7 @@ library LiquidityModuleLib {
    * @dev                                     ** ADMIN FUNCTIONS **
    */
   /**
-   * @dev  ->  external: all
+   * @dev -> external: all
    */
 
   /**

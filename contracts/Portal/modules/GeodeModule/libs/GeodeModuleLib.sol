@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "./globals.sol";
-import {DataStoreUtils as DSU} from "./DataStoreUtilsLib.sol";
+// globals
+import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "../../../utils/globals.sol";
+// libraries
+import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 
 /**
- * @author Icebear & Crash Bandicoot
- * @title Geode Dual Governance and Limited Upgradability Logic
- * @notice Exclusively contains functions for the administration of the Isolated Storage,
+ * @title GeodeModule Library - GML
+ * @notice Dual Governance and Limited Upgradability
+ * Exclusively contains functions for the administration of the Isolated Storage,
  * and Limited Upgradability with Dual Governance of Governance and Senate
- * Note This library contains both functions called by users(ID) like changeIdController, and admins(GOVERNANCE, SENATE)
  *
- * @dev Reserved ID_TYPEs:
+ * @dev This library contains both functions called by users(ID) like changeIdController, and admins(GOVERNANCE, SENATE)
  *
+ * @dev Reserved ID TYPEs:
  * * Type 0 : NULL
- *
  * * Type 1 : SENATE
  * * * Senate is a third party, expected to be an immutable contract that allows identified
  * * * TYPE's CONTROLLERs to vote on proposals on Portal.
@@ -25,34 +26,39 @@ import {DataStoreUtils as DSU} from "./DataStoreUtilsLib.sol";
  * * * 'instantly' by the pool Owner on Withdrawal Contracts.
  * * * @dev SENATE can have an expiration date, a new one should be set before it ends.
  * * * * otherwise governance can set a new senate without any proposals.
- *
  * * Type 2 : CONTRACT UPGRADES
  * * * Provides Limited Upgradability on Portal and Withdrawal Contract
  * * * Contract can be upgradable once Senate approves it.
- *
  * * Type 3 : __GAP__
- * * * Normally represented the admin contract, but we use UUPS. Reserved to be never used.
+ * * * Initially represented the admin contract, but we use UUPS. Reserved to be never used.
  *
- * @dev Contracts relying on this library must initialize GeodeUtils.DualGovernance
+ * @dev Contracts relying on this library must initialize GeodeModuleLib.DualGovernance
  * @dev Functions are already protected accordingly
  *
- * @dev review DataStoreUtils
+ * @dev review DataStoreModule
+ *
+ * @author Icebear & Crash Bandicoot
  */
-library GeodeUtils {
-  /// @notice Using DataStoreUtils for IsolatedStorage struct
-  using DSU for DSU.IsolatedStorage;
+library GeodeModuleLib {
+  /// @notice Using DataStoreModuleLib for IsolatedStorage struct
+  using DSML for DSML.IsolatedStorage;
 
-  /// @notice EVENTS
+  /**
+   * @dev                                     ** EVENTS **
+   */
   event GovernanceFeeUpdated(uint256 newFee);
-  event ControllerChanged(uint256 indexed id, address newCONTROLLER);
-  event Proposed(uint256 id, address CONTROLLER, uint256 indexed TYPE, uint256 deadline);
-  event ProposalApproved(uint256 id);
-  event NewSenate(address senate, uint256 senateExpiry);
+  event ControllerChanged(uint256 indexed ID, address CONTROLLER);
+  event Proposed(uint256 indexed TYPE, uint256 ID, address CONTROLLER, uint256 deadline);
+  event Approved(uint256 ID);
+  event NewSenate(address senate, uint256 expiry);
+
+  /**
+   * @dev                                     ** STRUCTS **
+   */
 
   /**
    * @notice Proposals give the control of a specific ID to a CONTROLLER
-   *
-   * @notice A Proposal has 4 specs:
+   * * An ID Proposal has 4 specs:
    * @param TYPE: refer to globals.sol
    * @param CONTROLLER: the address that refers to the change that is proposed by given proposal.
    * * This slot can refer to the controller of an id, a new implementation contract, a new Senate etc.
@@ -74,22 +80,25 @@ library GeodeUtils {
    * Suggests updates, such as new operators, contract upgrades, a new Senate -without any permission to force them-
    * @param SENATE An address that protects the users by controlling the state of governance, contract updates and other crucial changes
    * Note SENATE can be changed by a proposal TYPE 1 by Governance and approved by the current Senate.
-   * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Limited by MAX_SENATE_PERIOD
+   * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
    * @param GOVERNANCE_FEE operation fee on the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_FEE
-   * @param approvedUpgrade only 1 implementation contract SHOULD be "approved" at any given time.
-   * * @dev safe to set to address(0) after every upgrade as isUpgradeAllowed returns false for address(0)
-   * @param _proposals till approved, proposals are kept separated from the Isolated Storage
-   * @param __gap keep the struct size at 16, 3*20+2*32+1*32 = 5 slots
+   * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
+   * @param proposals till approved, proposals are kept separated from the Isolated Storage
+   * @param __gap keep the struct size at 16, currently 6 slots(32 bytes)
    **/
   struct DualGovernance {
     address GOVERNANCE;
     address SENATE;
-    address approvedUpgrade;
-    uint256 SENATE_EXPIRY;
+    address APPROVED_UPGRADE;
     uint256 GOVERNANCE_FEE;
-    mapping(uint256 => Proposal) _proposals;
-    uint256[11] __gap;
+    uint256 SENATE_EXPIRY;
+    mapping(uint256 => Proposal) proposals;
+    uint256[10] __gap;
   }
+
+  /**
+   * @dev                                     ** CONSTANTS **
+   */
 
   /**
    * @notice limiting the GOVERNANCE_FEE, 5%
@@ -98,16 +107,23 @@ library GeodeUtils {
 
   /**
    * @notice prevents Governance from collecting any fees till given timestamp:
-   * @notice April 2025
+   * @notice MAY 2024
    * @dev fee switch will be automatically switched on after given timestamp
    * @dev fee switch can be switched on with the approval of Senate (a contract upgrade)
    */
-  uint256 public constant FEE_COOLDOWN = 1743454800;
+  uint256 public constant FEE_COOLDOWN = 1714514461;
 
+  /// @notice a proposal can have a duration between 1 days to 4 weeks (inclusive)
   uint32 public constant MIN_PROPOSAL_DURATION = 1 days;
   uint32 public constant MAX_PROPOSAL_DURATION = 4 weeks;
+
+  /// @notice if expiry is utilized, a senate can be active for a year.
+  /// max means a new senate can be set without expecting an expiry
   uint32 public constant MAX_SENATE_PERIOD = 365 days;
 
+  /**
+   * @dev                                     ** MODIFIERS **
+   */
   modifier onlyGovernance(DualGovernance storage self) {
     require(msg.sender == self.GOVERNANCE, "GU: GOVERNANCE role needed");
     _;
@@ -119,17 +135,43 @@ library GeodeUtils {
     _;
   }
 
-  modifier onlyController(DSU.IsolatedStorage storage DATASTORE, uint256 id) {
+  modifier onlyController(DSML.IsolatedStorage storage DATASTORE, uint256 id) {
     require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "GU: CONTROLLER role needed");
     _;
   }
 
   /**
-   * @notice                                     ** DualGovernance **
+   * @dev                                       ** LIMITED UPGRADABILITY **
+   */
+
+  /**
+   * @dev -> external view
+   */
+
+  /**
+   * @notice Get if it is allowed to change a specific contract with the current version.
+   * @return True if it is allowed by senate and false if not.
+   * @dev address(0) should return false
+   * @dev currentImplementation should always be UUPS._getImplementation()
+   * @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022
+   **/
+  function isUpgradeAllowed(
+    DualGovernance storage self,
+    address proposedImplementation,
+    address currentImplementation
+  ) external view returns (bool) {
+    return
+      (self.APPROVED_UPGRADE != address(0)) &&
+      (proposedImplementation != currentImplementation) &&
+      (self.APPROVED_UPGRADE == proposedImplementation);
+  }
+
+  /**
+   * @dev                                     ** DUAL GOVERNANCE **
    **/
 
   /**
-   * @dev  ->  view
+   * @dev -> external view
    */
 
   /**
@@ -166,7 +208,7 @@ library GeodeUtils {
   }
 
   /**
-   * @dev  ->  external
+   * @dev -> external
    */
 
   /**
@@ -185,36 +227,11 @@ library GeodeUtils {
   }
 
   /**
-   * @notice                                     ** ID **
+   * @dev                                     ** PROPOSALS **
    */
 
   /**
-   * @dev  ->  external
-   */
-
-  /**
-   * @notice onlyController, change the CONTROLLER of an ID
-   * @dev this operation can not be reverted by the old CONTROLLER !
-   * @dev can not provide address(0), try 0x000000000000000000000000000000000000dEaD
-   */
-  function changeIdCONTROLLER(
-    DSU.IsolatedStorage storage DATASTORE,
-    uint256 id,
-    address newCONTROLLER
-  ) external onlyController(DATASTORE, id) {
-    require(newCONTROLLER != address(0), "GU: CONTROLLER can not be zero");
-
-    DATASTORE.writeAddress(id, "CONTROLLER", newCONTROLLER);
-
-    emit ControllerChanged(id, newCONTROLLER);
-  }
-
-  /**
-   * @notice                                     ** PROPOSALS **
-   */
-
-  /**
-   * @dev  ->  view
+   * @dev -> external view
    */
 
   /**
@@ -224,11 +241,11 @@ library GeodeUtils {
     DualGovernance storage self,
     uint256 id
   ) external view returns (Proposal memory) {
-    return self._proposals[id];
+    return self.proposals[id];
   }
 
   /**
-   * @dev  ->  external
+   * @dev -> external
    */
 
   /**
@@ -239,15 +256,15 @@ library GeodeUtils {
    */
   function newProposal(
     DualGovernance storage self,
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
   ) external onlyGovernance(self) returns (uint256 id) {
-    id = DSU.generateId(_NAME, _TYPE);
+    id = DSML.generateId(_NAME, _TYPE);
 
-    require(self._proposals[id].deadline == 0, "GU: NAME already proposed");
+    require(self.proposals[id].deadline == 0, "GU: NAME already proposed");
     require((DATASTORE.readBytes(id, "NAME")).length == 0, "GU: ID already exist");
     require(_CONTROLLER != address(0), "GU: CONTROLLER can NOT be ZERO");
     require(
@@ -261,14 +278,14 @@ library GeodeUtils {
 
     uint256 _deadline = block.timestamp + duration;
 
-    self._proposals[id] = Proposal({
+    self.proposals[id] = Proposal({
       CONTROLLER: _CONTROLLER,
       TYPE: _TYPE,
       NAME: _NAME,
       deadline: _deadline
     });
 
-    emit Proposed(id, _CONTROLLER, _TYPE, _deadline);
+    emit Proposed(_TYPE, id, _CONTROLLER, _deadline);
   }
 
   /**
@@ -281,37 +298,37 @@ library GeodeUtils {
    */
   function approveProposal(
     DualGovernance storage self,
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     uint256 id
   ) external onlySenate(self) returns (uint256 _type, address _controller) {
-    require(self._proposals[id].deadline > block.timestamp, "GU: NOT an active proposal");
+    require(self.proposals[id].deadline > block.timestamp, "GU: NOT an active proposal");
 
-    _type = self._proposals[id].TYPE;
-    _controller = self._proposals[id].CONTROLLER;
+    _type = self.proposals[id].TYPE;
+    _controller = self.proposals[id].CONTROLLER;
 
     DATASTORE.writeUint(id, "TYPE", _type);
     DATASTORE.writeAddress(id, "CONTROLLER", _controller);
-    DATASTORE.writeBytes(id, "NAME", self._proposals[id].NAME);
+    DATASTORE.writeBytes(id, "NAME", self.proposals[id].NAME);
     DATASTORE.allIdsByType[_type].push(id);
 
     if (_type == ID_TYPE.SENATE) {
       _setSenate(self, _controller, block.timestamp + MAX_SENATE_PERIOD);
     } else if (_type == ID_TYPE.CONTRACT_UPGRADE) {
-      self.approvedUpgrade = _controller;
+      self.APPROVED_UPGRADE = _controller;
     }
 
     // important
-    self._proposals[id].deadline = block.timestamp;
+    self.proposals[id].deadline = block.timestamp;
 
-    emit ProposalApproved(id);
+    emit Approved(id);
   }
 
   /**
-   * @notice                                       ** SENATE and GOVERNANCE **
+   * @dev                                     ** SENATE  **
    */
 
   /**
-   * @dev  ->  internal
+   * @dev -> internal
    */
 
   /**
@@ -325,7 +342,7 @@ library GeodeUtils {
   }
 
   /**
-   * @dev  ->  external
+   * @dev -> external
    */
 
   /**
@@ -356,28 +373,27 @@ library GeodeUtils {
   }
 
   /**
-   * @notice                                       ** LIMITED UPGRADABILITY **
+   * @dev                                     ** ID **
    */
 
   /**
-   * @dev  ->  view
+   * @dev -> external
    */
 
   /**
-   * @notice Get if it is allowed to change a specific contract with the current version.
-   * @return True if it is allowed by senate and false if not.
-   * @dev address(0) should return false
-   * @dev currentImplementation should always be UUPS._getImplementation()
-   * @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022
-   **/
-  function isUpgradeAllowed(
-    DualGovernance storage self,
-    address proposedImplementation,
-    address currentImplementation
-  ) external view returns (bool) {
-    return
-      (self.approvedUpgrade != address(0)) &&
-      (proposedImplementation != currentImplementation) &&
-      (self.approvedUpgrade == proposedImplementation);
+   * @notice onlyController, change the CONTROLLER of an ID
+   * @dev this operation can not be reverted by the old CONTROLLER !
+   * @dev can not provide address(0), try 0x000000000000000000000000000000000000dEaD
+   */
+  function changeIdCONTROLLER(
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 id,
+    address newCONTROLLER
+  ) external onlyController(DATASTORE, id) {
+    require(newCONTROLLER != address(0), "GU: CONTROLLER can not be zero");
+
+    DATASTORE.writeAddress(id, "CONTROLLER", newCONTROLLER);
+
+    emit ControllerChanged(id, newCONTROLLER);
   }
 }
