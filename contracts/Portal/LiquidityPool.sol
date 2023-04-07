@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "../../interfaces/IgETH.sol";
-import "./helpers/OwnerPausableUpgradeable.sol";
+// import "./helpers/OwnerPausableUpgradeable.sol";
 import "./utils/SwapUtils.sol";
 import "./utils/AmplificationUtils.sol";
 import "../../interfaces/ISwap.sol";
@@ -32,7 +32,7 @@ import "../../interfaces/ISwap.sol";
  * Because the underlying price of the staked assets are expected to raise in time.
  * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
  */
-contract Swap is
+contract LiquidityPool is
   ISwap,
   OwnerPausableUpgradeable,
   ReentrancyGuardUpgradeable,

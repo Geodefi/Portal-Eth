@@ -31,7 +31,7 @@ import {IWithdrawalContract} from "../../interfaces/IWithdrawalContract.sol";
  * @dev todo: Withdrawal Queue
  */
 
-contract WithdrawalContract is
+contract WithdrawalPool is
   IWithdrawalContract,
   IGeodeModule,
   ReentrancyGuardUpgradeable,

@@ -4,7 +4,7 @@ pragma solidity =0.8.7;
 
 import {IgETH} from "./IgETH.sol";
 
-interface ISwap {
+interface ILiquidityPool {
   // pool data view functions
   function getERC1155() external view returns (address);
 
