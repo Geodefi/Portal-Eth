@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 // globals
-import {PERCENTAGE_DENOMINATOR} from "../../../utils/globals.sol";
+import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 // libraries
 import {AmplificationLib as AL} from "./AmplificationLib.sol";
 // interfaces
@@ -1067,14 +1067,14 @@ library LiquidityModuleLib {
   /**
    * @notice withdraw all admin fees to a given address
    * @param self Swap struct to withdraw fees from
-   * @param to Address to send the fees to
+   * @param receiver Address to send the fees to
    */
-  function withdrawAdminFees(Swap storage self, address to) external {
+  function withdrawAdminFees(Swap storage self, address receiver) external {
     IgETH gETHReference = self.gETH;
     uint256 tokenBalance = gETHReference.balanceOf(address(this), self.pooledTokenId) -
       self.balances[1];
     if (tokenBalance != 0) {
-      gETHReference.safeTransferFrom(address(this), to, self.pooledTokenId, tokenBalance, "");
+      gETHReference.safeTransferFrom(address(this), receiver, self.pooledTokenId, tokenBalance, "");
     }
 
     uint256 etherBalance = address(this).balance - self.balances[0];

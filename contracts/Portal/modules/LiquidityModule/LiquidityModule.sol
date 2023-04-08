@@ -20,6 +20,7 @@ import {ILiquidityModule} from "./interfaces/ILiquidityModule.sol";
  * NOTE this module lacks admin checks etc: should be overriden with super.
  * NOTE all modules lack initialize: should be implemented when this module is iherited
  * NOTE all modules lack pausability state modifiers(pause/unpause): should be implemented when this module is iherited
+ * todo: unchained init
  */
 contract LiquidityModule is
   ILiquidityModule,
@@ -361,11 +362,12 @@ contract LiquidityModule is
   /**
    * @dev -> external: all
    */
+
   /**
    * @notice Update the admin fee. Admin fee takes portion of the swap fee.
    * @param newAdminFee new admin fee to be applied on future transactions
    */
-  function setAdminFee(uint256 newAdminFee) external virtual override {
+  function setAdminFee(uint256 newAdminFee) public virtual override {
     LIQUIDITY.setAdminFee(newAdminFee);
   }
 
@@ -373,8 +375,15 @@ contract LiquidityModule is
    * @notice Update the swap fee to be applied on swaps
    * @param newSwapFee new swap fee to be applied on future transactions
    */
-  function setSwapFee(uint256 newSwapFee) external virtual override {
+  function setSwapFee(uint256 newSwapFee) public virtual override {
     LIQUIDITY.setSwapFee(newSwapFee);
+  }
+
+  /**
+   * @notice Withdraw all admin fees to the contract owner
+   */
+  function withdrawAdminFees(address receiver) public virtual override nonReentrant {
+    LIQUIDITY.withdrawAdminFees(receiver);
   }
 
   /**
@@ -384,14 +393,14 @@ contract LiquidityModule is
    * @param futureA the new A to ramp towards
    * @param futureTime timestamp when the new A should be reached
    */
-  function rampA(uint256 futureA, uint256 futureTime) external virtual override {
+  function rampA(uint256 futureA, uint256 futureTime) public virtual override {
     LIQUIDITY.rampA(futureA, futureTime);
   }
 
   /**
    * @notice Stop ramping A immediately. Reverts if ramp A is already stopped.
    */
-  function stopRampA() external virtual override {
+  function stopRampA() public virtual override {
     LIQUIDITY.stopRampA();
   }
 }

@@ -71,6 +71,8 @@ interface ILiquidityModule {
     uint256 deadline
   ) external returns (uint256);
 
+  function withdrawAdminFees(address receiver) external;
+
   function setAdminFee(uint256 newAdminFee) external;
 
   function setSwapFee(uint256 newSwapFee) external;
