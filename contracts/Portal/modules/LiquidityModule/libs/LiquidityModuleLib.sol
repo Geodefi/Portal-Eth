@@ -30,42 +30,6 @@ import {IgETH} from "../../../../interfaces/IgETH.sol";
  */
 library LiquidityModuleLib {
   /**
-   * @dev                                     ** EVENTS **
-   */
-
-  event TokenSwap(
-    address indexed buyer,
-    uint256 tokensSold,
-    uint256 tokensBought,
-    uint128 soldId,
-    uint128 boughtId
-  );
-  event AddLiquidity(
-    address indexed provider,
-    uint256[2] tokenAmounts,
-    uint256[2] fees,
-    uint256 invariant,
-    uint256 lpTokenSupply
-  );
-  event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
-  event RemoveLiquidityOne(
-    address indexed provider,
-    uint256 lpTokenAmount,
-    uint256 lpTokenSupply,
-    uint256 boughtId,
-    uint256 tokensBought
-  );
-  event RemoveLiquidityImbalance(
-    address indexed provider,
-    uint256[2] tokenAmounts,
-    uint256[2] fees,
-    uint256 invariant,
-    uint256 lpTokenSupply
-  );
-  event NewAdminFee(uint256 newAdminFee);
-  event NewSwapFee(uint256 newSwapFee);
-
-  /**
    * @dev                                     ** STRUCTS **
    */
 
@@ -138,6 +102,42 @@ library LiquidityModuleLib {
 
   // Constant value used as max loop limit
   uint256 private constant MAX_LOOP_LIMIT = 256;
+
+  /**
+   * @dev                                     ** EVENTS **
+   */
+
+  event TokenSwap(
+    address indexed buyer,
+    uint256 tokensSold,
+    uint256 tokensBought,
+    uint128 soldId,
+    uint128 boughtId
+  );
+  event AddLiquidity(
+    address indexed provider,
+    uint256[2] tokenAmounts,
+    uint256[2] fees,
+    uint256 invariant,
+    uint256 lpTokenSupply
+  );
+  event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
+  event RemoveLiquidityOne(
+    address indexed provider,
+    uint256 lpTokenAmount,
+    uint256 lpTokenSupply,
+    uint256 boughtId,
+    uint256 tokensBought
+  );
+  event RemoveLiquidityImbalance(
+    address indexed provider,
+    uint256[2] tokenAmounts,
+    uint256[2] fees,
+    uint256 invariant,
+    uint256 lpTokenSupply
+  );
+  event NewAdminFee(uint256 newAdminFee);
+  event NewSwapFee(uint256 newSwapFee);
 
   /**
    * @dev                                     ** HELPERS **
@@ -327,7 +327,7 @@ library LiquidityModuleLib {
    */
 
   /**
-   * @notice This function MULTIPLIES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+   * @notice This function MULTIPLIES the Staking Derivative (gETH) balance with underlying relative price (pricePerShare),
    * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
    * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
    * @param balance balance that will be taken into calculation
@@ -345,7 +345,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @notice This function DIVIDES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+   * @notice This function DIVIDES the Staking Derivative (gETH) balance with underlying relative price (pricePerShare),
    * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
    * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
    * @param balance balance that will be taken into calculation
@@ -363,7 +363,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @notice This function MULTIPLIES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+   * @notice This function MULTIPLIES the Staking Derivative (gETH) balance with underlying relative price (pricePerShare),
    * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
    * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
    * @param balances ARRAY of balances that will be taken into calculation
@@ -378,7 +378,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @notice This function DIVIDES the Staked Ether token (gETH) balance with underlying relative price (pricePerShare),
+   * @notice This function DIVIDES the Staking Derivative (gETH) balance with underlying relative price (pricePerShare),
    * to keep pricing around 1-OraclePrice instead of 1-1 like stableSwap pool.
    * @dev this function assumes prices are sent with the indexes that [ETH, gETH]
    * @param balances ARRAY of balances that will be taken into calculation
@@ -742,7 +742,7 @@ library LiquidityModuleLib {
     uint256 dx,
     uint256 minDy
   ) external returns (uint256) {
-    IgETH gETHReference = self.gETH;
+    IgETH gETHRef = self.gETH;
     if (tokenIndexFrom == 0) {
       // Means user is selling some ETH to the pool to get some gETH.
       // In which case, we need to send exactly that amount of ETH.
@@ -751,17 +751,14 @@ library LiquidityModuleLib {
     if (tokenIndexFrom == 1) {
       // Means user is selling some gETH to the pool to get some ETH.
 
-      require(
-        dx <= gETHReference.balanceOf(msg.sender, self.pooledTokenId),
-        "LML:Cannot swap > you own"
-      );
+      require(dx <= gETHRef.balanceOf(msg.sender, self.pooledTokenId), "LML:Cannot swap > you own");
 
       // Transfer tokens first
-      uint256 beforeBalance = gETHReference.balanceOf(address(this), self.pooledTokenId);
-      gETHReference.safeTransferFrom(msg.sender, address(this), self.pooledTokenId, dx, "");
+      uint256 beforeBalance = gETHRef.balanceOf(address(this), self.pooledTokenId);
+      gETHRef.safeTransferFrom(msg.sender, address(this), self.pooledTokenId, dx, "");
 
       // Use the actual transferred amount for AMM math
-      dx = gETHReference.balanceOf(address(this), self.pooledTokenId) - beforeBalance;
+      dx = gETHRef.balanceOf(address(this), self.pooledTokenId) - beforeBalance;
     }
 
     uint256 dy;
@@ -786,7 +783,7 @@ library LiquidityModuleLib {
     }
     if (tokenIndexTo == 1) {
       // Means contract is going to send staked ETH (gETH)
-      gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, dy, "");
+      gETHRef.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, dy, "");
     }
 
     emit TokenSwap(msg.sender, dx, dy, tokenIndexFrom, tokenIndexTo);
@@ -809,7 +806,7 @@ library LiquidityModuleLib {
     uint256 minToMint
   ) external returns (uint256) {
     require(amounts[0] == msg.value, "LML:received less or more ETH than expected");
-    IgETH gETHReference = self.gETH;
+    IgETH gETHRef = self.gETH;
     // current state
     ManageLiquidityInfo memory v = ManageLiquidityInfo(
       self.lpToken,
@@ -834,11 +831,11 @@ library LiquidityModuleLib {
 
     {
       // Transfer tokens first
-      uint256 beforeBalance = gETHReference.balanceOf(address(this), self.pooledTokenId);
-      gETHReference.safeTransferFrom(msg.sender, address(this), self.pooledTokenId, amounts[1], "");
+      uint256 beforeBalance = gETHRef.balanceOf(address(this), self.pooledTokenId);
+      gETHRef.safeTransferFrom(msg.sender, address(this), self.pooledTokenId, amounts[1], "");
 
       // Update the amounts[] with actual transfer amount
-      amounts[1] = gETHReference.balanceOf(address(this), self.pooledTokenId) - beforeBalance;
+      amounts[1] = gETHRef.balanceOf(address(this), self.pooledTokenId) - beforeBalance;
 
       newBalances[1] = v.balances[1] + amounts[1];
     }
@@ -900,7 +897,7 @@ library LiquidityModuleLib {
     uint256[2] calldata minAmounts
   ) external returns (uint256[2] memory) {
     ILPToken lpToken = self.lpToken;
-    IgETH gETHReference = self.gETH;
+    IgETH gETHRef = self.gETH;
     require(amount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
 
     uint256[2] memory balances = self.balances;
@@ -922,7 +919,7 @@ library LiquidityModuleLib {
     (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
     require(sent, "LML:Failed to send Ether");
 
-    gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
+    gETHRef.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
 
     emit RemoveLiquidity(msg.sender, amounts, totalSupply - amount);
     return amounts;
@@ -943,7 +940,7 @@ library LiquidityModuleLib {
     uint256 minAmount
   ) external returns (uint256) {
     ILPToken lpToken = self.lpToken;
-    IgETH gETHReference = self.gETH;
+    IgETH gETHRef = self.gETH;
 
     require(tokenAmount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
     require(tokenIndex < 2, "LML:Token not found");
@@ -970,7 +967,7 @@ library LiquidityModuleLib {
       require(sent, "LML:Failed to send Ether");
     }
     if (tokenIndex == 1) {
-      gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, dy, "");
+      gETHRef.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, dy, "");
     }
 
     emit RemoveLiquidityOne(msg.sender, tokenAmount, totalSupply, tokenIndex, dy);
@@ -993,7 +990,7 @@ library LiquidityModuleLib {
     uint256[2] memory amounts,
     uint256 maxBurnAmount
   ) public returns (uint256) {
-    IgETH gETHReference = self.gETH;
+    IgETH gETHRef = self.gETH;
 
     ManageLiquidityInfo memory v = ManageLiquidityInfo(
       self.lpToken,
@@ -1050,7 +1047,7 @@ library LiquidityModuleLib {
     (bool sent, ) = payable(msg.sender).call{value: amounts[0]}("");
     require(sent, "LML:Failed to send Ether");
 
-    gETHReference.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
+    gETHRef.safeTransferFrom(address(this), msg.sender, self.pooledTokenId, amounts[1], "");
 
     emit RemoveLiquidityImbalance(msg.sender, amounts, fees, v.d1, v.totalSupply - tokenAmount);
 
@@ -1070,11 +1067,10 @@ library LiquidityModuleLib {
    * @param receiver Address to send the fees to
    */
   function withdrawAdminFees(Swap storage self, address receiver) external {
-    IgETH gETHReference = self.gETH;
-    uint256 tokenBalance = gETHReference.balanceOf(address(this), self.pooledTokenId) -
-      self.balances[1];
+    IgETH gETHRef = self.gETH;
+    uint256 tokenBalance = gETHRef.balanceOf(address(this), self.pooledTokenId) - self.balances[1];
     if (tokenBalance != 0) {
-      gETHReference.safeTransferFrom(address(this), receiver, self.pooledTokenId, tokenBalance, "");
+      gETHRef.safeTransferFrom(address(this), receiver, self.pooledTokenId, tokenBalance, "");
     }
 
     uint256 etherBalance = address(this).balance - self.balances[0];

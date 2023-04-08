@@ -8,13 +8,13 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20Metadat
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../interfaces/IgETH.sol";
-import "../../interfaces/IgETHInterface.sol";
+import "../../interfaces/IgETHMiddleware.sol";
 import "../helpers/BytesLib.sol";
 
 /**
- * @dev differences between ERC20InterfaceUpgradable and Openzeppelin's implementation of ERC20Upgradeable is:
+ * @dev differences between ERC20Middleware and Openzeppelin's implementation of ERC20Upgradeable is:
  * -> pragma set to =0.8.7;
- * -> ERC20InterfaceUpgradable uses gETH contract for balances and totalsupply info.
+ * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
  * -> unique id of ERC1155 is used
  * -> there is no mint or burn functionality implemented here.
  *
@@ -48,7 +48,7 @@ import "../helpers/BytesLib.sol";
  * allowances. See {IERC20-approve}.
  */
 
-contract ERC20InterfaceUpgradable is
+contract ERC20Middleware is
   Initializable,
   ContextUpgradeable,
   IERC20Upgradeable,
@@ -90,7 +90,7 @@ contract ERC20InterfaceUpgradable is
     bytes calldata data
   ) public virtual initializer returns (bool) {
     uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
-    __ERC20interface_init(
+    __ERC20Middleware_init(
       id_,
       gETH_,
       string(BytesLib.slice(data, 32, nameLen)),
@@ -109,16 +109,16 @@ contract ERC20InterfaceUpgradable is
    * construction.
    */
 
-  function __ERC20interface_init(
+  function __ERC20Middleware_init(
     uint256 id_,
     address gETH_,
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
-    __ERC20interface_init_unchained(id_, gETH_, name_, symbol_);
+    __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
   }
 
-  function __ERC20interface_init_unchained(
+  function __ERC20Middleware_init_unchained(
     uint256 id_,
     address gETH_,
     string memory name_,
@@ -176,9 +176,7 @@ contract ERC20InterfaceUpgradable is
    * @dev CHANGED for gETH.
    * @dev See {gETH-balanceOf}.
    */
-  function balanceOf(
-    address account
-  ) public view virtual override returns (uint256) {
+  function balanceOf(address account) public view virtual override returns (uint256) {
     return _ERC1155.balanceOf(account, _id);
   }
 
@@ -199,10 +197,7 @@ contract ERC20InterfaceUpgradable is
    * - `to` cannot be the zero address.
    * - the caller must have a balance of at least `amount`.
    */
-  function transfer(
-    address to,
-    uint256 amount
-  ) public virtual override returns (bool) {
+  function transfer(address to, uint256 amount) public virtual override returns (bool) {
     address owner = _msgSender();
     _transfer(owner, to, amount);
     return true;
@@ -228,10 +223,7 @@ contract ERC20InterfaceUpgradable is
    *
    * - `spender` cannot be the zero address.
    */
-  function approve(
-    address spender,
-    uint256 amount
-  ) public virtual override returns (bool) {
+  function approve(address spender, uint256 amount) public virtual override returns (bool) {
     address owner = _msgSender();
     _approve(owner, spender, amount);
     return true;
@@ -276,10 +268,7 @@ contract ERC20InterfaceUpgradable is
    *
    * - `spender` cannot be the zero address.
    */
-  function increaseAllowance(
-    address spender,
-    uint256 addedValue
-  ) public virtual returns (bool) {
+  function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
     address owner = _msgSender();
     _approve(owner, spender, allowance(owner, spender) + addedValue);
     return true;
@@ -305,10 +294,7 @@ contract ERC20InterfaceUpgradable is
   ) public virtual returns (bool) {
     address owner = _msgSender();
     uint256 currentAllowance = allowance(owner, spender);
-    require(
-      currentAllowance >= subtractedValue,
-      "ERC20: decreased allowance below zero"
-    );
+    require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
     unchecked {
       _approve(owner, spender, currentAllowance - subtractedValue);
     }
@@ -332,11 +318,7 @@ contract ERC20InterfaceUpgradable is
    * @dev CHANGED for gETH.
    * @dev See {gETH-safeTransferFrom}.
    */
-  function _transfer(
-    address from,
-    address to,
-    uint256 amount
-  ) internal virtual {
+  function _transfer(address from, address to, uint256 amount) internal virtual {
     require(from != address(0), "ERC20: transfer from the zero address");
     require(to != address(0), "ERC20: transfer to the zero address");
 
@@ -364,11 +346,7 @@ contract ERC20InterfaceUpgradable is
    * - `owner` cannot be the zero address.
    * - `spender` cannot be the zero address.
    */
-  function _approve(
-    address owner,
-    address spender,
-    uint256 amount
-  ) internal virtual {
+  function _approve(address owner, address spender, uint256 amount) internal virtual {
     require(owner != address(0), "ERC20: approve from the zero address");
     require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -384,11 +362,7 @@ contract ERC20InterfaceUpgradable is
    *
    * Might emit an {Approval} event.
    */
-  function _spendAllowance(
-    address owner,
-    address spender,
-    uint256 amount
-  ) internal virtual {
+  function _spendAllowance(address owner, address spender, uint256 amount) internal virtual {
     uint256 currentAllowance = allowance(owner, spender);
     if (currentAllowance != type(uint256).max) {
       require(currentAllowance >= amount, "ERC20: insufficient allowance");
@@ -412,11 +386,7 @@ contract ERC20InterfaceUpgradable is
    *
    * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
    */
-  function _beforeTokenTransfer(
-    address from,
-    address to,
-    uint256 amount
-  ) internal virtual {}
+  function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual {}
 
   /**
    * @dev Hook that is called after any transfer of tokens. This includes
@@ -432,11 +402,7 @@ contract ERC20InterfaceUpgradable is
    *
    * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
    */
-  function _afterTokenTransfer(
-    address from,
-    address to,
-    uint256 amount
-  ) internal virtual {}
+  function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual {}
 
   /**
    * @dev This empty reserved space is put in place to allow future versions to add new

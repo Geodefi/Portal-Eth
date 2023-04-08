@@ -9,9 +9,9 @@ contract nonERC1155Receiver is Context {
   uint256 private immutable _id;
   IgETH private immutable _ERC1155;
 
-  constructor(uint256 id_, address gETH_1155) {
+  constructor(uint256 id_, address gETH_) {
     _id = id_;
-    _ERC1155 = IgETH(gETH_1155);
+    _ERC1155 = IgETH(gETH_);
   }
 
   function transfer(address recipient, uint256 amount) public virtual {

@@ -45,7 +45,7 @@ interface ILiquidityPool {
 
   // state modifying functions
   function initialize(
-    IgETH _gEth,
+    IgETH _gETH,
     uint256 _pooledTokenId,
     string memory lpTokenName,
     string memory lpTokenSymbol,

@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
-import "./helpers/ERC1155SupplyMinterPauser.sol";
+
+// external
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ERC1155SupplyMinterPauser} from "./helpers/ERC1155SupplyMinterPauser.sol";
 
 /**
- * @author Icebear & Crash Bandicoot
  * @title gETH : Geode Finance Liquid Staking Derivatives
- * gETH is a special ERC1155 contract with additional functionalities:
+*
+ * @dev gETH is chain-agnostic, meaning it can be used on any evm chain 
+ * * if given the correct name and symbol.
+ *
+ * @dev gETH is immutable, it can not be upgraded
+ *
+ * @dev gETH is a special ERC1155 contract with additional functionalities:
  *
  * Denominator
  * * ERC1155 does not have decimals and it is not wise to use the name convention
@@ -15,7 +23,7 @@ import "./helpers/ERC1155SupplyMinterPauser.sol";
  * * Keeping track of the ratio between the derivative 
  * * and the underlaying staked asset, Ether.
  *
- * gETHInterfaces
+ * gETHMiddlewares
  * * Most important functionality gETH provides:
  * * Allowing any other contract to provide additional functionality 
  * * around the balance and price data, such as using an ID like ERC20.
@@ -25,33 +33,38 @@ import "./helpers/ERC1155SupplyMinterPauser.sol";
  * * functions, reasoning is in the comments.
  * 
  * Avoiders
- * * If one wants to remain unbound from gETHInterfaces, 
- * * it can be done so by calling "avoidInterfaces" function.
+ * * If one wants to remain unbound from gETHMiddlewares, 
+ * * it can be done so by calling "avoidMiddlewares" function.
  *
  * @dev review first helpers/ERC1155SupplyMinterPauser.sol 
+ *
+ * @author Icebear & Crash Bandicoot
  */
 
 contract gETH is ERC1155SupplyMinterPauser {
   using Address for address;
 
-  event PriceUpdated(uint256 id, uint256 pricePerShare, uint256 updateTimestamp);
-  event InterfaceChanged(address indexed newInterface, uint256 id, bool isSet);
-  event InterfacesAvoided(address indexed avoider, uint256 id, bool isAvoid);
-
+  /**
+   * @dev                                     ** CONSTANTS **
+   */
   bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
-  string public constant name = "Geode Staked Ether";
-  string public constant symbol = "gETH";
   uint256 internal constant _denominator = 1 ether;
 
   /**
-   * @notice Mapping from pool IDs to gETHinterface implementation addresses
-   * @dev There can be multiple Interfaces for 1 staking pool.
+   * @dev                                     ** VARIABLES **
+   */
+
+  string public name;
+  string public symbol;
+  /**
+   * @notice Mapping from pool IDs to gETHMiddleware implementation addresses
+   * @dev There can be multiple Middlewares for 1 staking pool.
    * @dev ADDED for gETH
    **/
-  mapping(uint256 => mapping(address => bool)) private _interfaces;
+  mapping(uint256 => mapping(address => bool)) private _middlewares;
 
   /**
-   * @notice Mapping of user addresses who chose to restrict the access of interfaces
+   * @notice Mapping of user addresses who chose to restrict the access of Middlewares
    * @dev ADDED for gETH
    **/
   mapping(address => mapping(uint256 => bool)) private _avoiders;
@@ -62,21 +75,46 @@ contract gETH is ERC1155SupplyMinterPauser {
    * @dev ADDED for gETH
    **/
   mapping(uint256 => uint256) private _pricePerShare;
-
   /**
    * @notice ID to timestamp, pointing the second that the latest price update happened
    * @dev ADDED for gETH
    **/
   mapping(uint256 => uint256) private _priceUpdateTimestamp;
 
-  constructor(string memory uri) ERC1155SupplyMinterPauser(uri) {
+  /**
+   * @dev                                     ** EVENTS **
+   */
+  event PriceUpdated(uint256 id, uint256 pricePerShare, uint256 updateTimestamp);
+  event MiddlewareChanged(address indexed newMiddleware, uint256 id, bool isSet);
+  event MiddlewaresAvoided(address indexed avoider, uint256 id, bool isAvoid);
+
+  /**
+   * @dev                                     ** CONSTRUCTOR **
+   */
+  /**
+   * @notice ID to timestamp, pointing the second that the latest price update happened
+   * @dev ADDED for gETH
+   * @param _name chain specific name: Geode Staked Ether, geode Staked Avax etc.
+   * @param _symbol chain specific symbol of the staking derivative: gETH, gGNO, gAVAX, etc.
+   * @param _uri ERC1155 uri
+   **/
+  constructor(
+    string memory _name,
+    string memory _symbol,
+    string memory _uri
+  ) ERC1155SupplyMinterPauser(_uri) {
+    name = _name;
+    symbol = _symbol;
+
     _setupRole(ORACLE_ROLE, _msgSender());
   }
 
   /**
-   *                                       ** DENOMINATOR **
+   * @dev                                     ** DENOMINATOR **
    */
-
+  /**
+   * @dev -> view: all
+   */
   /**
    * @notice a centralized denominator for all contract using gETH
    * @dev ERC1155 does not have a decimals, and it is not wise to use the same name
@@ -87,47 +125,61 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   *                                       ** INTERFACES **
+   * @dev                                     ** MIDDLEWARES **
    */
-
   /**
-   * @notice Check if an address is approved as an interface for an ID
+   * @dev -> view
+   */
+  /**
+   * @notice Check if an address is approved as an middleware for an ID
    * @dev ADDED for gETH
    */
-  function isInterface(address _interface, uint256 id) public view virtual returns (bool) {
-    require(_interface != address(0), "gETH: interface query for the zero address");
+  function isMiddleware(address middleware, uint256 id) public view virtual returns (bool) {
+    require(middleware != address(0), "gETH: middleware query for the zero address");
 
-    return _interfaces[id][_interface];
+    return _middlewares[id][middleware];
   }
 
   /**
-   * @dev Only authorized parties should set the interface
+   * @dev -> internal
+   */
+  /**
+   * @dev Only authorized parties should set the middleware
    * @dev ADDED for gETH
    */
-  function _setInterface(address _interface, uint256 _id, bool _isSet) internal virtual {
-    require(_interface != address(0), "gETH: interface query for the zero address");
+  function _setMiddleware(address _middleware, uint256 _id, bool _isSet) internal virtual {
+    require(_middleware != address(0), "gETH: middleware query for the zero address");
 
-    _interfaces[_id][_interface] = _isSet;
+    _middlewares[_id][_middleware] = _isSet;
   }
 
+  /**
+   * @dev -> external
+   */
   /**
    * @notice Set an address of a contract that will
-   * act as an interface on gETH contract for a spesific ID
-   * @param _interface Address of the contract that will act as an interface
-   * @param isSet true: sets as an interface, false: unsets
+   * act as an middleware on gETH contract for a spesific ID
+   * @param middleware Address of the contract that will act as an middleware
+   * @param isSet true: sets as an middleware, false: unsets
    * @dev ADDED for gETH
    */
-  function setInterface(address _interface, uint256 id, bool isSet) external virtual {
+  function setMiddleware(address middleware, uint256 id, bool isSet) external virtual {
     require(hasRole(MINTER_ROLE, _msgSender()), "gETH: must have MINTER_ROLE");
-    require(_interface.isContract(), "gETH: _interface must be a contract");
+    require(middleware.isContract(), "gETH: middleware must be a contract");
 
-    _setInterface(_interface, id, isSet);
+    _setMiddleware(middleware, id, isSet);
 
-    emit InterfaceChanged(_interface, id, isSet);
+    emit MiddlewareChanged(middleware, id, isSet);
   }
 
   /**
-   * @notice Checks if the given address restricts the affect of the interfaces on their gETH
+   * @dev                                     ** AVOIDERS **
+   */
+  /**
+   * @dev -> view
+   */
+  /**
+   * @notice Checks if the given address restricts the affect of the middlewares on their gETH
    * @param account the potential avoider
    * @dev ADDED for gETH
    **/
@@ -136,16 +188,25 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   * @notice Restrict any affect of interfaces on the tokens of caller
-   * @param isAvoid true: restrict interfaces, false: allow interfaces
+   * @dev -> external
+   */
+  /**
+   * @notice Restrict any affect of middlewares on the tokens of caller
+   * @param isAvoid true: restrict middlewares, false: allow middlewares
    * @dev ADDED for gETH
    **/
-  function avoidInterfaces(uint256 id, bool isAvoid) external virtual {
+  function avoidMiddlewares(uint256 id, bool isAvoid) external virtual {
     _avoiders[_msgSender()][id] = isAvoid;
 
-    emit InterfacesAvoided(_msgSender(), id, isAvoid);
+    emit MiddlewaresAvoided(_msgSender(), id, isAvoid);
   }
 
+  /**
+   * @dev                                     ** PRICE **
+   */
+  /**
+   * @dev -> view
+   */
   /**
    * @dev ADDED for gETH
    * @return price of the derivative in terms of underlying token, Ether
@@ -163,6 +224,9 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
+   * @dev -> internal
+   */
+  /**
    * @dev ADDED for gETH
    */
   function _setPricePerShare(uint256 _price, uint256 _id) internal virtual {
@@ -170,6 +234,9 @@ contract gETH is ERC1155SupplyMinterPauser {
     _priceUpdateTimestamp[_id] = block.timestamp;
   }
 
+  /**
+   * @dev -> external
+   */
   /**
    * @notice Only ORACLE can call this function and set price
    * @dev ADDED for gETH
@@ -183,6 +250,12 @@ contract gETH is ERC1155SupplyMinterPauser {
     emit PriceUpdated(id, price, block.timestamp);
   }
 
+  /**
+   * @dev                                     ** ROLES **
+   */
+  /**
+   * @dev -> external :all
+   */
   /**
    * @notice updates the authorized party for Minter operations related to minting
    * @dev Minter is basically a superUser, there can be only 1 at a given time,
@@ -220,10 +293,38 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
+   * @dev                                     ** OVERRIDES **
+   */
+  /**
+   * @dev -> internal
+   */
+  /**
+   * @notice middlewares should handle these checks internally
    * @dev See {IERC1155-safeTransferFrom}.
-   * @dev interfaces can move your tokens without asking you
    * @dev CHANGED for gETH
-   * @dev ADDED "|| (isInterface(_msgSender(), id) && !isAvoider(from))"
+   * @dev ADDED "&& !isMiddleware(operator,id)"
+   */
+  function _doSafeTransferAcceptanceCheck(
+    address operator,
+    address from,
+    address to,
+    uint256 id,
+    uint256 amount,
+    bytes memory data
+  ) internal virtual override {
+    if (!isMiddleware(operator, id)) {
+      super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
+    }
+  }
+
+  /**
+   * @dev -> external
+   */
+  /**
+   * @dev See {IERC1155-safeTransferFrom}.
+   * @dev middlewares can move your tokens without asking you
+   * @dev CHANGED for gETH
+   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(from))"
    */
   function safeTransferFrom(
     address from,
@@ -235,8 +336,8 @@ contract gETH is ERC1155SupplyMinterPauser {
     require(
       from == _msgSender() ||
         isApprovedForAll(from, _msgSender()) ||
-        (isInterface(_msgSender(), id) && !isAvoider(from, id)),
-      "ERC1155: caller is not owner nor approved nor an allowed interface"
+        (isMiddleware(_msgSender(), id) && !isAvoider(from, id)),
+      "ERC1155: caller is not owner nor approved nor an allowed middleware"
     );
 
     _safeTransferFrom(from, to, id, amount, data);
@@ -245,45 +346,16 @@ contract gETH is ERC1155SupplyMinterPauser {
   /**
    * @dev See {IERC1155-safeTransferFrom}.
    * @dev CHANGED for gETH
-   * @dev ADDED "|| (isInterface(_msgSender(), id) && !isAvoider(account))"
+   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(account))"
    */
   function burn(address account, uint256 id, uint256 value) public virtual override {
     require(
       account == _msgSender() ||
         isApprovedForAll(account, _msgSender()) ||
-        (isInterface(_msgSender(), id) && !isAvoider(account, id)),
-      "ERC1155: caller is not owner nor approved nor an allowed interface"
+        (isMiddleware(_msgSender(), id) && !isAvoider(account, id)),
+      "ERC1155: caller is not owner nor approved nor an allowed middleware"
     );
 
     _burn(account, id, value);
-  }
-
-  /**
-   * @notice interfaces should handle these checks internally
-   * @dev See {IERC1155-safeTransferFrom}.
-   * @dev CHANGED for gETH
-   * @dev ADDED "&& !isInterface(operator,id))"
-   */
-  function _doSafeTransferAcceptanceCheck(
-    address operator,
-    address from,
-    address to,
-    uint256 id,
-    uint256 amount,
-    bytes memory data
-  ) internal virtual override {
-    if (to.isContract() && !isInterface(operator, id)) {
-      try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (
-        bytes4 response
-      ) {
-        if (response != IERC1155Receiver.onERC1155Received.selector) {
-          revert("ERC1155: ERC1155Receiver rejected tokens");
-        }
-      } catch Error(string memory reason) {
-        revert(reason);
-      } catch {
-        revert("ERC1155: transfer to non ERC1155Receiver implementer");
-      }
-    }
   }
 }

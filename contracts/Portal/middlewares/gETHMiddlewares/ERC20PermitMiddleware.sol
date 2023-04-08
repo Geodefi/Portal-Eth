@@ -9,12 +9,12 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import "./ERC20InterfaceUpgradable.sol";
+import "./ERC20Middleware.sol";
 
 /**
- * @dev differences between ERC20InterfacePermitUpgradable and Openzeppelin's implementation of ERC20PermitUpgradable is:
+ * @dev differences between ERC20PermitMiddleware and Openzeppelin's implementation of ERC20PermitUpgradable is:
  * -> pragma set to =0.8.7;
- * -> using ERC20InterfaceUpgradable instead of ERC20Upgradeable
+ * -> using ERC20Middleware instead of ERC20Upgradeable
  * -> added initialize
  *
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/54803be62207c2412e27d09325243f2f1452f7b9/contracts/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol
@@ -33,9 +33,9 @@ import "./ERC20InterfaceUpgradable.sol";
  *
  * @custom:storage-size 51
  */
-contract ERC20InterfacePermitUpgradable is
+contract ERC20PermitMiddleware is
   Initializable,
-  ERC20InterfaceUpgradable,
+  ERC20Middleware,
   IERC20PermitUpgradeable,
   EIP712Upgradeable
 {
@@ -45,9 +45,7 @@ contract ERC20InterfacePermitUpgradable is
 
   // solhint-disable-next-line var-name-mixedcase
   bytes32 private constant _PERMIT_TYPEHASH =
-    keccak256(
-      "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-    );
+    keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
   /**
    * @dev In previous versions `_PERMIT_TYPEHASH` was declared as `immutable`.
    * However, to ensure consistency with the upgradeable transpiler, we will continue
@@ -75,7 +73,7 @@ contract ERC20InterfacePermitUpgradable is
     bytes calldata data
   ) public virtual override initializer returns (bool) {
     uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
-    __ERC20interfacePermit_init(
+    __ERC20MiddlewarePermit_init(
       id_,
       gETH_,
       string(BytesLib.slice(data, 32, nameLen)),
@@ -89,13 +87,13 @@ contract ERC20InterfacePermitUpgradable is
    *
    * It's a good idea to use the same `name` that is defined as the ERC20 token name.
    */
-  function __ERC20interfacePermit_init(
+  function __ERC20MiddlewarePermit_init(
     uint256 id_,
     address gETH_,
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
-    __ERC20interface_init_unchained(id_, gETH_, name_, symbol_);
+    __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
     __EIP712_init_unchained(name_, "1");
   }
 
@@ -114,14 +112,7 @@ contract ERC20InterfacePermitUpgradable is
     require(block.timestamp <= deadline, "ERC20Permit: expired deadline");
 
     bytes32 structHash = keccak256(
-      abi.encode(
-        _PERMIT_TYPEHASH,
-        owner,
-        spender,
-        value,
-        _useNonce(owner),
-        deadline
-      )
+      abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline)
     );
 
     bytes32 hash = _hashTypedDataV4(structHash);
@@ -135,9 +126,7 @@ contract ERC20InterfacePermitUpgradable is
   /**
    * @dev See {IERC20Permit-nonces}.
    */
-  function nonces(
-    address owner
-  ) public view virtual override returns (uint256) {
+  function nonces(address owner) public view virtual override returns (uint256) {
     return _nonces[owner].current();
   }
 

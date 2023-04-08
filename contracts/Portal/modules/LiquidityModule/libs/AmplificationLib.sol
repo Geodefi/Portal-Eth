@@ -14,20 +14,20 @@ import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
  */
 library AmplificationLib {
   /**
-   * @dev                                     ** EVENTS **
-   */
-  event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
-  event StopRampA(uint256 currentA, uint256 time);
-
-  /**
    * @dev                                     ** CONSTANTS **
    *
-   * @dev Constant values used in ramping A calculations
+   * @dev Constant values used in ramping A coefficient
    */
   uint256 public constant A_PRECISION = 100;
   uint256 public constant MAX_A = 10 ** 6;
   uint256 public constant MAX_A_CHANGE = 2;
   uint256 public constant MIN_RAMP_TIME = 14 days;
+
+  /**
+   * @dev                                     ** EVENTS **
+   */
+  event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
+  event StopRampA(uint256 currentA, uint256 time);
 
   /**
    * @dev                                     ** GETTER FUNCTIONS **

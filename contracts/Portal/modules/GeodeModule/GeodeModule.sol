@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-// external
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-//globals
+// globals
 import {ID_TYPE} from "../../globals/id_type.sol";
+// interfaces
+import {IGeodeModule} from "./interfaces/IGeodeModule.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
-// contracts
+// modules
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
-// interfaces
-import {IGeodeModule} from "./interfaces/IGeodeModule.sol";
+// external
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title Geode Module - GM
@@ -45,6 +46,20 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   event Proposed(uint256 indexed TYPE, uint256 ID, address CONTROLLER, uint256 deadline);
   event Approved(uint256 ID);
   event NewSenate(address senate, uint256 expiry);
+
+  /**
+   * @dev                                     ** INITIALIZING **
+   */
+
+  ///@custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
+  // todo: add this to all modules
+  function __GeodeModule_init() internal onlyInitializing {}
+
+  function __GeodeModule_init_unchained() internal onlyInitializing {}
 
   /**
    * @dev                                     ** UPGRADABALITY FUNCTIONS **

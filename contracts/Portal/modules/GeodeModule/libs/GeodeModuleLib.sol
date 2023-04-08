@@ -45,15 +45,6 @@ library GeodeModuleLib {
   using DSML for DSML.IsolatedStorage;
 
   /**
-   * @dev                                     ** EVENTS **
-   */
-  event GovernanceFeeUpdated(uint256 newFee);
-  event ControllerChanged(uint256 indexed ID, address CONTROLLER);
-  event Proposed(uint256 indexed TYPE, uint256 ID, address CONTROLLER, uint256 deadline);
-  event Approved(uint256 ID);
-  event NewSenate(address senate, uint256 expiry);
-
-  /**
    * @dev                                     ** STRUCTS **
    */
 
@@ -121,6 +112,15 @@ library GeodeModuleLib {
   /// @notice if expiry is utilized, a senate can be active for a year.
   /// max means a new senate can be set without expecting an expiry
   uint32 public constant MAX_SENATE_PERIOD = 365 days;
+
+  /**
+   * @dev                                     ** EVENTS **
+   */
+  event GovernanceFeeUpdated(uint256 newFee);
+  event ControllerChanged(uint256 indexed ID, address CONTROLLER);
+  event Proposed(uint256 indexed TYPE, uint256 ID, address CONTROLLER, uint256 deadline);
+  event Approved(uint256 ID);
+  event NewSenate(address senate, uint256 expiry);
 
   /**
    * @dev                                     ** MODIFIERS **

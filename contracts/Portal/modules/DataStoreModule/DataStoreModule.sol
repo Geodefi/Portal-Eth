@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-// libraries
-import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
 // interfaces
 import {IDataStoreModule} from "./interfaces/IDataStoreModule.sol";
+// libraries
+import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
+// external
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title DataStore Module - DSM
@@ -12,12 +14,21 @@ import {IDataStoreModule} from "./interfaces/IDataStoreModule.sol";
  * @author Icebear & Crash Bandicoot
  *
  */
-contract DataStoreModule is IDataStoreModule {
+contract DataStoreModule is IDataStoreModule, Initializable {
   using DSML for DSML.IsolatedStorage;
   /**
    * @dev                                     ** VARIABLES **
    */
   DSML.IsolatedStorage internal DATASTORE;
+
+  /**
+   * @dev                                     ** INITIALIZING **
+   */
+
+  // todo: add this to all modules
+  function __DataStoreModule_init() internal onlyInitializing {}
+
+  function __DataStoreModule_init_unchained() internal onlyInitializing {}
 
   /**
    * @dev                                     ** HELPER FUNCTIONS **

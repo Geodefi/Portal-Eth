@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
+// interfaces
+import {ILiquidityModule} from "./interfaces/ILiquidityModule.sol";
+// libraries
+import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";
+import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
 // external
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
-// libraries
-import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";
-import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
-// interfaces
-import {ILiquidityModule} from "./interfaces/ILiquidityModule.sol";
 
 /**
  * @title Liquidity Module - LM
@@ -92,6 +92,15 @@ contract LiquidityModule is
   }
 
   /**
+   * @dev                                     ** INITIALIZING **
+   */
+
+  // todo: add this to all modules
+  function __LiquidityModule_init() internal onlyInitializing {}
+
+  function __LiquidityModule_init_unchained() internal onlyInitializing {}
+
+  /**
    * @dev                                     ** GETTER FUNCTIONS **
    */
   /**
@@ -125,7 +134,7 @@ contract LiquidityModule is
 
   /**
    * @notice Return id of the pooled token
-   * @return id of the pooled gEther token
+   * @return id of the pooled gETH
    */
   function getSwapFee() external view virtual override returns (uint256) {
     return LIQUIDITY.swapFee;
