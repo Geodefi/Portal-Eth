@@ -2,7 +2,8 @@
 pragma solidity =0.8.7;
 
 // globals
-import {ID_TYPE, PERCENTAGE_DENOMINATOR} from "../../../utils/globals.sol";
+import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {ID_TYPE} from "../../../globals/id_type.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 

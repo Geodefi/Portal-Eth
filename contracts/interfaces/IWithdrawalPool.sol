@@ -27,7 +27,7 @@ interface IWithdrawalPool {
 
   function getProposedVersion() external view returns (uint256);
 
-  function recoveryMode() external view returns (bool);
+  function isolationMode() external view returns (bool);
 
   function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 

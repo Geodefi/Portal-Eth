@@ -3,8 +3,8 @@ pragma solidity =0.8.7;
 
 // external
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-//global
-import {ID_TYPE} from "../../utils/globals.sol";
+//globals
+import {ID_TYPE} from "../../globals/id_type.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
@@ -17,7 +17,7 @@ import {IGeodeModule} from "./interfaces/IGeodeModule.sol";
  * @title Geode Module - GM
  *
  * @author Icebear & Crash Bandicoot
- *
+ * todo: constructors(disable), initializers(unchained)
  */
 contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   using GML for GML.DualGovernance;
@@ -58,6 +58,14 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   }
 
   /**
+   * @notice get the latest version of the withdrawal contract module from Portal
+   */
+  function getProposedVersion() public view virtual override returns (uint256) {
+    revert("GM:This function needs to be overriden");
+    // return getPortal().getDefaultModule(ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT);
+  }
+
+  /**
    * @dev -> internal
    */
   /**
@@ -79,7 +87,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
    */
 
   /**
-   * @dev -> external view
+   * @dev -> external view: all
    */
 
   function GeodeParams()
@@ -111,7 +119,8 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   }
 
   function isolationMode() external view virtual override returns (bool isolated) {
-    revert("GM:This function needs to be overriden!");
+    isolated = true;
+    revert("GM:This function needs to be overriden");
   }
 
   /**
@@ -128,7 +137,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   /**
    * @notice only parameter of GeodeUtils that can be mutated is the fee
    */
-  function setGovernanceFee(uint256 newFee) external virtual {
+  function setGovernanceFee(uint256 newFee) external virtual override {
     GEODE.setGovernanceFee(newFee);
   }
 
@@ -156,7 +165,15 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
     (_type, _controller) = GEODE.approveProposal(DATASTORE, id);
   }
 
-  function rescueSenate(address _newSenate) external virtual {
+  /**
+   * @notice changes the Senate's address without extending the expiry
+   * @dev OnlySenate is checked inside the GeodeUtils
+   */
+  function changeSenate(address _newSenate) external virtual override {
+    GEODE.changeSenate(_newSenate);
+  }
+
+  function rescueSenate(address _newSenate) external virtual override {
     GEODE.rescueSenate(_newSenate);
   }
 
@@ -166,5 +183,12 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
 
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external virtual override {
     GML.changeIdCONTROLLER(DATASTORE, id, newCONTROLLER);
+  }
+
+  /**
+   * @dev Upgradability Functions
+   */
+  function pullUpgrade() external virtual override {
+    revert("GM:This function needs to be overriden");
   }
 }
