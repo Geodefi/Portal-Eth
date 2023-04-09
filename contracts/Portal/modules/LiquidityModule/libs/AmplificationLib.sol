@@ -10,11 +10,11 @@ import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
  * @notice An extension library for LiquidityModuleLibrary(LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
  * @dev This library assumes the struct is fully validated.
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  */
 library AmplificationLib {
   /**
-   * @dev                                     ** CONSTANTS **
+   * @custom:section                           ** CONSTANTS **
    *
    * @dev Constant values used in ramping A coefficient
    */
@@ -24,13 +24,13 @@ library AmplificationLib {
   uint256 public constant MIN_RAMP_TIME = 14 days;
 
   /**
-   * @dev                                     ** EVENTS **
+   * @custom:section                           ** EVENTS **
    */
   event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
   event StopRampA(uint256 currentA, uint256 time);
 
   /**
-   * @dev                                     ** GETTER FUNCTIONS **
+   * @custom:section                           ** GETTER FUNCTIONS **
    *
    */
   /**
@@ -83,7 +83,7 @@ library AmplificationLib {
   }
 
   /**
-   * @dev                                     ** STATE MODIFYING FUNCTIONS **
+   * @custom:section                           ** STATE MODIFYING FUNCTIONS **
    *
    */
   /**

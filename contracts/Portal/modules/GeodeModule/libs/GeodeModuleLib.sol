@@ -38,14 +38,14 @@ import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreMo
  *
  * @dev review DataStoreModule
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  */
 library GeodeModuleLib {
   /// @notice Using DataStoreModuleLib for IsolatedStorage struct
   using DSML for DSML.IsolatedStorage;
 
   /**
-   * @dev                                     ** STRUCTS **
+   * @custom:section                           ** STRUCTS **
    */
 
   /**
@@ -89,7 +89,7 @@ library GeodeModuleLib {
   }
 
   /**
-   * @dev                                     ** CONSTANTS **
+   * @custom:section                           ** CONSTANTS **
    */
 
   /**
@@ -114,7 +114,7 @@ library GeodeModuleLib {
   uint32 public constant MAX_SENATE_PERIOD = 365 days;
 
   /**
-   * @dev                                     ** EVENTS **
+   * @custom:section                           ** EVENTS **
    */
   event GovernanceFeeUpdated(uint256 newFee);
   event ControllerChanged(uint256 indexed ID, address CONTROLLER);
@@ -123,7 +123,7 @@ library GeodeModuleLib {
   event NewSenate(address senate, uint256 expiry);
 
   /**
-   * @dev                                     ** MODIFIERS **
+   * @custom:section                           ** MODIFIERS **
    */
   modifier onlyGovernance(DualGovernance storage self) {
     require(msg.sender == self.GOVERNANCE, "GU: GOVERNANCE role needed");
@@ -168,7 +168,7 @@ library GeodeModuleLib {
   }
 
   /**
-   * @dev                                     ** DUAL GOVERNANCE **
+   * @custom:section                           ** DUAL GOVERNANCE **
    **/
 
   /**
@@ -228,7 +228,7 @@ library GeodeModuleLib {
   }
 
   /**
-   * @dev                                     ** PROPOSALS **
+   * @custom:section                           ** PROPOSALS **
    */
 
   /**
@@ -325,7 +325,7 @@ library GeodeModuleLib {
   }
 
   /**
-   * @dev                                     ** SENATE  **
+   * @custom:section                           ** SENATE  **
    */
 
   /**
@@ -374,7 +374,7 @@ library GeodeModuleLib {
   }
 
   /**
-   * @dev                                     ** ID **
+   * @custom:section                           ** ID **
    */
 
   /**

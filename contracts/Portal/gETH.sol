@@ -38,20 +38,20 @@ import {ERC1155SupplyMinterPauser} from "./helpers/ERC1155SupplyMinterPauser.sol
  *
  * @dev review first helpers/ERC1155SupplyMinterPauser.sol 
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  */
 
 contract gETH is ERC1155SupplyMinterPauser {
   using Address for address;
 
   /**
-   * @dev                                     ** CONSTANTS **
+   * @custom:section                           ** CONSTANTS **
    */
   bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
   uint256 internal constant _denominator = 1 ether;
 
   /**
-   * @dev                                     ** VARIABLES **
+   * @custom:section                           ** VARIABLES **
    */
 
   string public name;
@@ -82,14 +82,14 @@ contract gETH is ERC1155SupplyMinterPauser {
   mapping(uint256 => uint256) private _priceUpdateTimestamp;
 
   /**
-   * @dev                                     ** EVENTS **
+   * @custom:section                           ** EVENTS **
    */
   event PriceUpdated(uint256 id, uint256 pricePerShare, uint256 updateTimestamp);
   event MiddlewareChanged(address indexed newMiddleware, uint256 id, bool isSet);
   event MiddlewaresAvoided(address indexed avoider, uint256 id, bool isAvoid);
 
   /**
-   * @dev                                     ** CONSTRUCTOR **
+   * @custom:section                           ** CONSTRUCTOR **
    */
   /**
    * @notice ID to timestamp, pointing the second that the latest price update happened
@@ -110,7 +110,7 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   * @dev                                     ** DENOMINATOR **
+   * @custom:section                           ** DENOMINATOR **
    */
   /**
    * @dev -> view: all
@@ -125,7 +125,7 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   * @dev                                     ** MIDDLEWARES **
+   * @custom:section                           ** MIDDLEWARES **
    */
   /**
    * @dev -> view
@@ -173,7 +173,7 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   * @dev                                     ** AVOIDERS **
+   * @custom:section                           ** AVOIDERS **
    */
   /**
    * @dev -> view
@@ -202,7 +202,7 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   * @dev                                     ** PRICE **
+   * @custom:section                           ** PRICE **
    */
   /**
    * @dev -> view
@@ -251,7 +251,7 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   * @dev                                     ** ROLES **
+   * @custom:section                           ** ROLES **
    */
   /**
    * @dev -> external :all
@@ -293,7 +293,7 @@ contract gETH is ERC1155SupplyMinterPauser {
   }
 
   /**
-   * @dev                                     ** OVERRIDES **
+   * @custom:section                           ** OVERRIDES **
    */
   /**
    * @dev -> internal

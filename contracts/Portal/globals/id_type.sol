@@ -15,16 +15,16 @@ pragma solidity =0.8.7;
  * * * OPERATOR: permissionned Node Operators (hosted on Portal).
  * * * POOL: permissionless staking pools (hosted on Portal).
  *
- * * Packages: (hosted on StakeModule)
- * * * An ID can only point to 1(one) Package implementation at a time.
+ * * Packages: (hosted on StakeModuleLib)
+ * * * An ID can only point to 1(one) Package version' implementation address at a given point.
  * * * Can be upgraded by a dual governance, via pullUpgrade.
  * * * * Portal's dual governance consists of a Governance Token(governance) and a Senate(senate).
  * * * * A Package's dual governance consists of Portal(governance) and the pool owner(senate).
  * * * Built by utilizing the Modules.
  * * * LiquidityPool and WithdrawalPool are some examples.
  *
- * * Middlewares: (hosted on StakeModule)
- * * * An ID can point to multiple Middleware implementations at the same time.
+ * * Middlewares: (hosted on StakeModuleLib)
+ * * * An ID can point to multiple Middleware version' implementation address at the same time.
  * * * Can not be upgraded.
  * * * Do not have any guides to build really.
  * * * Currently only gETHMiddlewares

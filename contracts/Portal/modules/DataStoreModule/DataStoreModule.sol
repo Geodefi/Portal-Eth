@@ -11,27 +11,26 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 /**
  * @title DataStore Module - DSM
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  *
  */
 contract DataStoreModule is IDataStoreModule, Initializable {
   using DSML for DSML.IsolatedStorage;
   /**
-   * @dev                                     ** VARIABLES **
+   * @custom:section                           ** VARIABLES **
    */
   DSML.IsolatedStorage internal DATASTORE;
 
   /**
-   * @dev                                     ** INITIALIZING **
+   * @custom:section                           ** INITIALIZING **
    */
 
-  // todo: add this to all modules
   function __DataStoreModule_init() internal onlyInitializing {}
 
   function __DataStoreModule_init_unchained() internal onlyInitializing {}
 
   /**
-   * @dev                                     ** HELPER FUNCTIONS **
+   * @custom:section                           ** HELPER FUNCTIONS **
    */
   /**
    * @dev -> external pure: all
@@ -59,7 +58,7 @@ contract DataStoreModule is IDataStoreModule, Initializable {
   }
 
   /**
-   * @dev                                     ** DATA GETTER FUNCTIONS **
+   * @custom:section                           ** DATA GETTER FUNCTIONS **
    */
   /**
    * @dev -> external view: all
@@ -100,7 +99,7 @@ contract DataStoreModule is IDataStoreModule, Initializable {
   }
 
   /**
-   * @dev                                     ** ARRAY GETTER FUNCTIONS **
+   * @custom:section                           ** ARRAY GETTER FUNCTIONS **
    */
   /**
    * @dev -> external view: all

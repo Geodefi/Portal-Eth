@@ -195,7 +195,7 @@ interface IPortal {
 
   function regulateOperators(uint256[] calldata feeThefts, bytes[] calldata stolenBlocks) external;
 
-  function reportOracle(bytes32 priceMerkleRoot, uint256 allValidatorsCount) external;
+  function reportBeacon(bytes32 priceMerkleRoot, uint256 allValidatorsCount) external;
 
   function priceSync(uint256 poolId, uint256 price, bytes32[] calldata priceProofs) external;
 

@@ -23,7 +23,7 @@ pragma solidity =0.8.7;
  * * TYPE for ID is NOT mandatory, an ID might not have an explicit type.
  * * Thus there is no checks of types or keys.
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  */
 
 library DataStoreModuleLib {
@@ -45,7 +45,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @dev                                     ** HELPERS **
+   * @custom:section                           ** HELPERS **
    */
   /**
    * @dev -> pure: all
@@ -70,7 +70,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @dev                                     ** DATA GETTERS **
+   * @custom:section                           ** DATA GETTERS **
    */
   /**
    * @dev -> internal view: all
@@ -101,7 +101,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @dev                                     ** ARRAY GETTERS **
+   * @custom:section                           ** ARRAY GETTERS **
    */
   /**
    * @dev -> internal view: all
@@ -135,10 +135,10 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @dev                                     ** STATE MODIFYING FUNCTIONS **
+   * @custom:section                           ** STATE MODIFYING FUNCTIONS **
    */
   /**
-   * @dev                                     ** DATA SETTERS **
+   * @custom:section                           ** DATA SETTERS **
    */
   /**
    * @dev -> internal: all
@@ -190,7 +190,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @dev                                     ** ARRAY SETTERS **
+   * @custom:section                           ** ARRAY SETTERS **
    */
   /**
    * @dev -> internal: all
@@ -227,7 +227,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @dev                                     ** BATCH ARRAY SETTERS **
+   * @custom:section                           ** BATCH ARRAY SETTERS **
    */
   /**
    * @dev -> internal: all

@@ -57,7 +57,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * @dev first review DataStoreModuleLib
  * @dev then review StakeModuleLib
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  */
 
 library OracleLib {
@@ -68,7 +68,7 @@ library OracleLib {
   using SU for SU.PooledStaking;
 
   /**
-   * @dev                                     ** CONSTANTS **
+   * @custom:section                           ** CONSTANTS **
    */
   /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators: Set to 1%
   uint256 public constant MONOPOLY_RATIO = (1 * PERCENTAGE_DENOMINATOR) / 100;
@@ -77,7 +77,7 @@ library OracleLib {
   uint256 public constant MIN_VALIDATOR_COUNT = 50000;
 
   /**
-   * @dev                                     ** EVENTS **
+   * @custom:section                           ** EVENTS **
    */
   event Alienated(bytes indexed pubkey);
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
@@ -85,7 +85,7 @@ library OracleLib {
   event OracleReported(bytes32 merkleRoot, uint256 monopolyThreshold);
 
   /**
-   * @dev                                     ** MODIFIERS **
+   * @custom:section                           ** MODIFIERS **
    */
   modifier onlyOracle(SU.PooledStaking storage STAKER) {
     require(msg.sender == STAKER.ORACLE_POSITION, "OL: sender NOT ORACLE");
@@ -187,7 +187,7 @@ library OracleLib {
   }
 
   /**
-   * @dev                                     ** CONTINUOUS UPDATES **
+   * @custom:section                           ** CONTINUOUS UPDATES **
    */
   /**
    * @dev -> external
@@ -215,7 +215,7 @@ library OracleLib {
   }
 
   /**
-   * @dev                                     **  PRICE UPDATE **
+   * @custom:section                           **  PRICE UPDATE **
    *
    * @dev Permissionless.
    */

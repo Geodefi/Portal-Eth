@@ -10,14 +10,14 @@ import {BytesLib} from "../../../helpers/BytesLib.sol";
  * @title DepositContract Library - DCL
  *
  * @notice Includes constants such as Deposit contract position
- * * & functions that helps with the deposit process
+ * * & functions that helps with the deposit process.
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  */
 
 library DepositContractLib {
   /**
-   * @dev                                     ** CONSTANTS **
+   * @custom:section                           ** CONSTANTS **
    */
 
   IDepositContract internal constant DEPOSIT_CONTRACT =
@@ -30,11 +30,11 @@ library DepositContractLib {
   uint256 internal constant MAX_DEPOSITS_PER_CALL = 50;
 
   /**
-   * @dev                                     ** CONSTANTS **
+   * @custom:section                           ** CONSTANTS **
    */
 
   /**
-   * @dev                                     ** FUNCTIONS **
+   * @custom:section                           ** FUNCTIONS **
    */
   /**
    * @dev -> pure
