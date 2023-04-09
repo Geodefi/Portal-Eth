@@ -90,7 +90,7 @@ contract LiquidityPool is
    * only this contract is allowed to mint/burn tokens.
    *
    * @param _gETH reference of the ERC1155 contract
-   * @param _pooledTokenId gEther ID that the Pool is operating with
+   * @param _pooledTokenId gETH ID that the Pool is operating with
    * @param lpTokenName the long-form name of the token to be deployed
    * @param lpTokenSymbol the short symbol for the token to be deployed
    * @param lpTokenTargetAddress the address of an existing LPToken contract to use as a target
@@ -170,7 +170,7 @@ contract LiquidityPool is
 
   /**
    * @notice Return id of the pooled token
-   * @return id of the pooled gEther token
+   * @return id of the pooled gETH token
    */
   function getSwapFee() external view virtual override returns (uint256) {
     return swapStorage.swapFee;

@@ -5,7 +5,7 @@ pragma solidity =0.8.7;
 import {IgETH} from "../../interfaces/IgETH.sol";
 // libraries
 import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
-// modules
+// contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
 // external

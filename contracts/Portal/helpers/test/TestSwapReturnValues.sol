@@ -41,10 +41,10 @@ contract TestSwapReturnValues is ERC1155Holder {
     uint256 minDy
   ) public payable {
     uint256 etherbalanceBefore = address(this).balance;
-    uint256 getherbalanceBefore = gETH.balanceOf(address(this), swap.getToken());
+    uint256 gETHbalanceBefore = gETH.balanceOf(address(this), swap.getToken());
 
     if (tokenIndexFrom == 0) {
-      // If ether to gether
+      // If ether to gETH
       uint256 returnValue = swap.swap{value: msg.value}(
         tokenIndexFrom,
         tokenIndexTo,
@@ -53,11 +53,11 @@ contract TestSwapReturnValues is ERC1155Holder {
         block.timestamp
       );
 
-      uint256 getherbalanceAfter = gETH.balanceOf(address(this), swap.getToken());
+      uint256 gETHbalanceAfter = gETH.balanceOf(address(this), swap.getToken());
 
       require(
-        returnValue == getherbalanceAfter - getherbalanceBefore,
-        "swap()'s return value does not match received gether amount"
+        returnValue == gETHbalanceAfter - gETHbalanceBefore,
+        "swap()'s return value does not match received gETH amount"
       );
     } else {
       uint256 returnValue = swap.swap(tokenIndexFrom, tokenIndexTo, dx, minDy, block.timestamp);

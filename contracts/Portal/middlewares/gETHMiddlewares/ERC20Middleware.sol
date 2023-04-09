@@ -3,13 +3,16 @@
 
 pragma solidity =0.8.7;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../../interfaces/IgETH.sol";
-import "../../interfaces/IgETHMiddleware.sol";
-import "../helpers/BytesLib.sol";
+// interfaces
+import {IgETH} from "../../../interfaces/IgETH.sol";
+import {IgETHMiddleware} from "../interfaces/IgETHMiddleware.sol";
+// libraries
+import {BytesLib} from "../../helpers/BytesLib.sol";
+// external
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @dev differences between ERC20Middleware and Openzeppelin's implementation of ERC20Upgradeable is:

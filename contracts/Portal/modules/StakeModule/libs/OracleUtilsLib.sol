@@ -83,7 +83,7 @@ library OracleUtils {
    **/
 
   /**
-   * @dev  ->  internal
+   * @dev -> internal
    */
 
   /**
@@ -120,7 +120,7 @@ library OracleUtils {
   }
 
   /**
-   * @dev  ->  external
+   * @dev -> external
    */
 
   /**
@@ -152,7 +152,7 @@ library OracleUtils {
    */
 
   /**
-   * @dev  ->  external
+   * @dev -> external
    */
 
   /**
@@ -181,7 +181,7 @@ library OracleUtils {
    */
 
   /**
-   * @dev  ->  external
+   * @dev -> external
    */
 
   /**
@@ -211,7 +211,7 @@ library OracleUtils {
    */
 
   /**
-   * @dev  ->  internal
+   * @dev -> internal
    */
 
   /**
@@ -278,7 +278,7 @@ library OracleUtils {
   }
 
   /**
-   * @dev  ->  external
+   * @dev -> external
    */
 
   /**

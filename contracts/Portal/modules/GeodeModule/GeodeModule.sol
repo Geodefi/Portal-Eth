@@ -8,7 +8,7 @@ import {IGeodeModule} from "./interfaces/IGeodeModule.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
-// modules
+// contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
 // external
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";

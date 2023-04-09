@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "../../utils/globals.sol";
+import {PERCENTAGE_DENOMINATOR} from "./utils/globals/macros.sol";
+import {ID_TYPE} from "./utils/globals/id_type.sol";
+import {VALIDATOR_STATE} from "./utils/globals/validator_state.sol";
 
 contract TestGlobals {
   function getPERCENTAGE_DENOMINATOR() public pure returns (uint256) {
