@@ -64,13 +64,13 @@ interface IgETH {
 
   function setPricePerShare(uint256 price, uint256 id) external;
 
-  function isInterface(address _interface, uint256 id) external view returns (bool);
+  function isMiddleware(address middleware, uint256 id) external view returns (bool);
 
   function isAvoider(address account, uint256 id) external view returns (bool);
 
-  function avoidInterfaces(uint256 id, bool isAvoid) external;
+  function avoidMiddlewares(uint256 id, bool isAvoid) external;
 
-  function setInterface(address _interface, uint256 id, bool isSet) external;
+  function setMiddleware(address middleware, uint256 id, bool isSet) external;
 
   function updateMinterRole(address Minter) external;
 
