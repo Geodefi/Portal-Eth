@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import {IDepositContract} from "../../interfaces/IDepositContract.sol";
-import {BytesLib} from "../helpers/BytesLib.sol";
+// interfaces
+import {IDepositContract} from "../interfaces/IDepositContract.sol";
+// libraries
+import {BytesLib} from "../../../helpers/BytesLib.sol";
 
-library DepositContractUtils {
+library DepositContractLib {
+  /**
+   * @dev                                     ** CONSTANTS **
+   */
+
   IDepositContract internal constant DEPOSIT_CONTRACT =
     IDepositContract(0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b);
   uint256 internal constant PUBKEY_LENGTH = 48;
@@ -14,6 +20,16 @@ library DepositContractUtils {
   uint256 internal constant DEPOSIT_AMOUNT_PRESTAKE = 1 ether;
   uint256 internal constant MAX_DEPOSITS_PER_CALL = 50;
 
+  /**
+   * @dev                                     ** CONSTANTS **
+   */
+
+  /**
+   * @dev                                     ** FUNCTIONS **
+   */
+  /**
+   * @dev -> pure
+   */
   /**
    * @dev Padding memory array with zeroes up to 64 bytes on the right
    * @param _b Memory array of size 32 .. 64
@@ -81,6 +97,9 @@ library DepositContractUtils {
     return abi.encodePacked(bytes32(w) | bytes32(uint256(uint160(address(wcAddress)))));
   }
 
+  /**
+   * @dev -> internal
+   */
   function depositValidator(
     bytes calldata pubkey,
     bytes memory withdrawalCredential,
