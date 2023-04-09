@@ -1,37 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-
-import {ID_TYPE, VALIDATOR_STATE, PERCENTAGE_DENOMINATOR} from "./globals.sol";
-
-import {DataStoreUtils as DSU} from "./DataStoreUtilsLib.sol";
+// globals
+import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {ID_TYPE} from "../../../globals/id_type.sol";
+import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
+// libraries
+import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {StakeUtils as SU} from "./StakeUtilsLib.sol";
-import {DepositContractUtils as DCU} from "./DepositContractUtilsLib.sol";
+import {DepositContractLib as DCL} from "./DepositContractLib.sol";
+// external
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
- * @author Icebear & Crash Bandicoot
- * @title OracleUtils Library: An extension to StakeUtils Library
- * @notice Oracle, named Telescope, handles some operations for The Staking Library,
- * * using the following logic, which is very simple.
+ * @title Oracle Library - OL
  *
- * @dev Telescope is responsible from 3 tasks:
+ * @notice An extension to StakeModuleLib
+ * @notice Oracle, named Telescope, handles some operations for The Staking Library,
+ * * using the following logic, explained below.
+ *
+ * @dev Telescope is currently responsible from 3 tasks:
  * * Updating the on-chain price of all pools with a MerkleRoot
  * * Confirming validator proposals
  * * Regulating the Node Operators
  *
- * 1. reportOracle: Continous Data Flow: Price Merkle Root and MONOPOLY_THRESHOLD
- * * 1. Oracle Nodes calculates the price of its derivative,
- * * * according to the validator data such as balance and fees.
- * * 2. If a pool doesn't have a validator, price is kept the same.
- * * 3. A merkle tree is constructed with the order of allIdsByType array.
- * * 4. A watcher collects all the signatures from Multiple Oracle Nodes, and submits the merkle root.
- * * 5. Anyone can update the price of the derivative
- * * * by calling priceSync() functions with correct merkle proofs
- * * 6. Minting is allowed within PRICE_EXPIRY (24H) after the last price update.
- * * 7. Updates the regulation around Monopolies
- *
- * 2. updateVerificationIndex :Confirming validator proposals
+ * 1. updateVerificationIndex :Confirming validator proposals
  * * Simply, all proposed validator has an index bound to them,
  * * n representing the latest proposal: (0,n]
  * * Telescope verifies the validator data provided in proposeStake:
@@ -41,51 +34,71 @@ import {DepositContractUtils as DCU} from "./DepositContractUtilsLib.sol";
  * * * 2 step process is essential to prevent the frontrunning
  * * * with a problematic withdrawalCredential, (https://bit.ly/3Tkc6UC)
  *
- * 3. regulateOperators: Regulating the Operators
+ * 2. regulateOperators: Regulating the Operators
  * * Operators can act faulty in many different ways. To prevent such actions,
  * * Telescope regulates them with well defined limitations.
  * * * Currently only issue is the fee theft, meaning operator have not
  * * * used the withdrawal contract for miner fees or MEV boost.
  * * * * There can be other restrictions in the future.
  *
- * @dev All 3 functions have OracleOnly modifier, priceSync functions do not.
+ * 2. reportBeacon: Continous Data Flow from Beacon chain: Price Merkle Root & MONOPOLY_THRESHOLD
+ * * 1. Oracle Nodes calculate the price of its derivative,
+ * * * according to the validator data such as balance and fees.
+ * * 2. If a pool doesn't have a validator, price is kept the same.
+ * * 3. A merkle tree is constructed with the order of allIdsByType array.
+ * * 4. A watcher collects all the signatures from Multiple Oracle Nodes, and submits the merkle root.
+ * * 5. Anyone can update the price of the derivative
+ * * * by calling priceSync() functions with correct merkle proofs
+ * * 6. Minting is allowed within PRICE_EXPIRY (24H) after the last price update.
+ * * 7. Updates the regulation around Monopolies
  *
- * @dev first review DataStoreUtils
- * @dev then review StakeUtils
+ * @dev All external functions have OracleOnly modifier, except priceSync functions.
+ *
+ * @dev first review DataStoreModuleLib
+ * @dev then review StakeModuleLib
+ *
+ * @author Icebear & Crash Bandicoot
  */
 
-library OracleUtils {
-  /// @notice Using DataStoreUtils for IsolatedStorage struct
-  using DSU for DSU.IsolatedStorage;
+library OracleLib {
+  /// @notice Using DataStoreModuleLib for IsolatedStorage struct
+  using DSML for DSML.IsolatedStorage;
 
   /// @notice Using StakeUtils for PooledStaking struct
   using SU for SU.PooledStaking;
 
-  /// @notice EVENTS
+  /**
+   * @dev                                     ** CONSTANTS **
+   */
+  /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators: Set to 1%
+  uint256 public constant MONOPOLY_RATIO = (1 * PERCENTAGE_DENOMINATOR) / 100;
+
+  /// @notice sensible value for the minimum beacon chain validators. No reasoning.
+  uint256 public constant MIN_VALIDATOR_COUNT = 50000;
+
+  /**
+   * @dev                                     ** EVENTS **
+   */
   event Alienated(bytes indexed pubkey);
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
   event FeeTheft(uint256 indexed id, bytes proofs);
   event OracleReported(bytes32 merkleRoot, uint256 monopolyThreshold);
 
-  /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators, set to 1% at start.
-  uint256 public constant MONOPOLY_RATIO = (1 * PERCENTAGE_DENOMINATOR) / 100;
-
-  /// @notice sensible value for the total beacon chain validators, no reasoning.
-  uint256 public constant MIN_VALIDATOR_COUNT = 50000;
-
+  /**
+   * @dev                                     ** MODIFIERS **
+   */
   modifier onlyOracle(SU.PooledStaking storage STAKER) {
-    require(msg.sender == STAKER.ORACLE_POSITION, "OU: sender NOT ORACLE");
+    require(msg.sender == STAKER.ORACLE_POSITION, "OL: sender NOT ORACLE");
     _;
   }
 
   /**
-   * @notice                                     ** VERIFICATION INDEX **
+   * @dev                                       ** VERIFICATION INDEX **
    **/
 
   /**
    * @dev -> internal
    */
-
   /**
    * @notice "Alien" is a validator that is created with a faulty withdrawal
    * credential or signatures, this is a malicious act.
@@ -95,14 +108,14 @@ library OracleUtils {
    * @dev We should adjust the 'totalProposedValidators', 'proposedValidators' to fix allowances.
    */
   function _alienateValidator(
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     SU.PooledStaking storage STAKER,
     bytes calldata _pk
   ) internal {
-    require(STAKER._validators[_pk].index <= STAKER.VERIFICATION_INDEX, "OU: unexpected index");
+    require(STAKER._validators[_pk].index <= STAKER.VERIFICATION_INDEX, "OL: unexpected index");
     require(
       STAKER._validators[_pk].state == VALIDATOR_STATE.PROPOSED,
-      "OU: NOT all pubkeys are pending"
+      "OL: NOT all pubkeys are pending"
     );
     uint256 operatorId = STAKER._validators[_pk].operatorId;
     SU._imprison(DATASTORE, operatorId, _pk);
@@ -112,7 +125,7 @@ library OracleUtils {
     DATASTORE.addUint(poolId, "surplus", DCU.DEPOSIT_AMOUNT);
 
     DATASTORE.subUint(operatorId, "totalProposedValidators", 1);
-    DATASTORE.subUint(poolId, DSU.getKey(operatorId, "proposedValidators"), 1);
+    DATASTORE.subUint(poolId, DSML.getKey(operatorId, "proposedValidators"), 1);
 
     STAKER._validators[_pk].state = VALIDATOR_STATE.ALIENATED;
 
@@ -122,7 +135,6 @@ library OracleUtils {
   /**
    * @dev -> external
    */
-
   /**
    * @notice Updating VERIFICATION_INDEX, signaling that it is safe to activate
    * the validator proposals with lower index than new VERIFICATION_INDEX
@@ -130,13 +142,13 @@ library OracleUtils {
    * @param alienatedPubkeys faulty proposals within the range of new and old verification indexes.
    */
   function updateVerificationIndex(
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     SU.PooledStaking storage STAKER,
     uint256 validatorVerificationIndex,
     bytes[] calldata alienatedPubkeys
   ) external onlyOracle(STAKER) {
-    require(STAKER.VALIDATORS_INDEX >= validatorVerificationIndex, "OU: high VERIFICATION_INDEX");
-    require(validatorVerificationIndex > STAKER.VERIFICATION_INDEX, "OU: low VERIFICATION_INDEX");
+    require(STAKER.VALIDATORS_INDEX >= validatorVerificationIndex, "OL: high VERIFICATION_INDEX");
+    require(validatorVerificationIndex > STAKER.VERIFICATION_INDEX, "OL: low VERIFICATION_INDEX");
 
     STAKER.VERIFICATION_INDEX = validatorVerificationIndex;
 
@@ -148,13 +160,11 @@ library OracleUtils {
   }
 
   /**
-   * @notice                                     ** REGULATING OPERATORS **
+   * @dev                                       ** REGULATING OPERATORS **
    */
-
   /**
    * @dev -> external
    */
-
   /**
    * @notice regulating operators, currently only regulation is towards fee theft, can add more stuff in the future.
    * @param feeThefts Operator ids who have stolen MEV or block rewards detected
@@ -162,12 +172,12 @@ library OracleUtils {
    * @dev Stuff here result in imprisonment
    */
   function regulateOperators(
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     SU.PooledStaking storage STAKER,
     uint256[] calldata feeThefts,
     bytes[] calldata proofs
   ) external onlyOracle(STAKER) {
-    require(feeThefts.length == proofs.length, "OU: invalid proofs");
+    require(feeThefts.length == proofs.length, "OL: invalid proofs");
 
     for (uint256 i = 0; i < feeThefts.length; ++i) {
       SU._imprison(DATASTORE, feeThefts[i], proofs[i]);
@@ -177,25 +187,23 @@ library OracleUtils {
   }
 
   /**
-   * @notice                                     ** CONTINUOUS UPDATES **
+   * @dev                                     ** CONTINUOUS UPDATES **
    */
-
   /**
    * @dev -> external
    */
-
   /**
    * @notice Telescope reports all of the g-derivate prices with a new PRICE_MERKLE_ROOT.
    * Then, updates the ORACLE_UPDATE_TIMESTAMP and MONOPOLY_THRESHOLD
    * @param allValidatorsCount Number of all validators within BeaconChain, all of them.
    * Prevents monopolies.
    */
-  function reportOracle(
+  function reportBeacon(
     SU.PooledStaking storage STAKER,
     bytes32 priceMerkleRoot,
     uint256 allValidatorsCount
   ) external onlyOracle(STAKER) {
-    require(allValidatorsCount > MIN_VALIDATOR_COUNT, "OU: low validator count");
+    require(allValidatorsCount > MIN_VALIDATOR_COUNT, "OL: low validator count");
 
     STAKER.PRICE_MERKLE_ROOT = priceMerkleRoot;
     STAKER.ORACLE_UPDATE_TIMESTAMP = block.timestamp;
@@ -207,27 +215,36 @@ library OracleUtils {
   }
 
   /**
-   * @notice                                     ** Updating PricePerShare **
+   * @dev                                     **  PRICE UPDATE **
+   *
+   * @dev Permissionless.
    */
 
   /**
-   * @dev -> internal
+   * @dev -> view
    */
-
   /**
    * @dev in order to prevent faulty updates to the derivative prices there are boundaries to price updates.
    * 1. Price should not be increased more than DAILY_PRICE_INCREASE_LIMIT
    *  with the factor of how many days since priceUpdateTimestamp has past.
    * 2. Price should not be decreased more than DAILY_PRICE_DECREASE_LIMIT
    *  with the factor of how many days since priceUpdateTimestamp has past.
+   *
+   * @dev Worth noting, if price drops more than x%, UP TO (slashing percentage/x) days deposits/withdrawals are halted.
+   * Example:
+   * * A pool can have only one validator, it can get slashed.
+   * * Lets say max decrease is 5%, and 50% is slashed.
+   * * Then deposits/withdrawals are halted for 10 days.
+   * This is not a bug, but a safe circuit-breaker.
+   * This logic have effects the withdrawal pool logic.
    */
   function _sanityCheck(
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     SU.PooledStaking storage STAKER,
     uint256 _id,
     uint256 _newPrice
   ) internal view {
-    require(DATASTORE.readUint(_id, "TYPE") == ID_TYPE.POOL, "OU: not a pool?");
+    require(DATASTORE.readUint(_id, "TYPE") == ID_TYPE.POOL, "OL: not a pool?");
 
     uint256 lastUpdate = STAKER.gETH.priceUpdateTimestamp(_id);
     uint256 dayPercentSinceUpdate = ((block.timestamp - lastUpdate) * PERCENTAGE_DENOMINATOR) /
@@ -245,17 +262,20 @@ library OracleUtils {
 
     require(
       (_newPrice + maxPriceDecrease >= curPrice) && (_newPrice <= curPrice + maxPriceIncrease),
-      "OU: price is insane"
+      "OL: price is insane, price update is halted"
     );
   }
 
+  /**
+   * @dev -> internal
+   */
   /**
    * @notice syncing the price of g-derivatives after checking the merkle proofs and the sanity of the price.
    * @param _price price of the derivative denominated in gETH.denominator()
    * @param _priceProof merkle proofs
    */
   function _priceSync(
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     SU.PooledStaking storage STAKER,
     uint256 _poolId,
     uint256 _price,
@@ -263,13 +283,13 @@ library OracleUtils {
   ) internal {
     require(
       STAKER.ORACLE_UPDATE_TIMESTAMP > STAKER.gETH.priceUpdateTimestamp(_poolId),
-      "OU: no price change"
+      "OL: no price change"
     );
 
     bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(_poolId, _price))));
     require(
       MerkleProof.verify(_priceProof, STAKER.PRICE_MERKLE_ROOT, leaf),
-      "OU: NOT all proofs are valid"
+      "OL: NOT all proofs are valid"
     );
 
     _sanityCheck(DATASTORE, STAKER, _poolId, _price);
@@ -287,7 +307,7 @@ library OracleUtils {
    * @param priceProof merkle proofs
    */
   function priceSync(
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     SU.PooledStaking storage STAKER,
     uint256 poolId,
     uint256 price,
@@ -300,9 +320,10 @@ library OracleUtils {
    * @notice external function to set a multiple derivatives price at once, saves gas.
    * @param prices price of the derivative denominated in gETH.denominator()
    * @param priceProofs merkle proofs
+   * @param todo make this work for MerkleProof.verifyMultiple
    */
   function priceSyncBatch(
-    DSU.IsolatedStorage storage DATASTORE,
+    DSML.IsolatedStorage storage DATASTORE,
     SU.PooledStaking storage STAKER,
     uint256[] calldata poolIds,
     uint256[] calldata prices,

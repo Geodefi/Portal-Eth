@@ -6,6 +6,15 @@ import {IDepositContract} from "../interfaces/IDepositContract.sol";
 // libraries
 import {BytesLib} from "../../../helpers/BytesLib.sol";
 
+/**
+ * @title DepositContract Library - DCL
+ *
+ * @notice Includes constants such as Deposit contract position
+ * * & functions that helps with the deposit process
+ *
+ * @author Icebear & Crash Bandicoot
+ */
+
 library DepositContractLib {
   /**
    * @dev                                     ** CONSTANTS **
