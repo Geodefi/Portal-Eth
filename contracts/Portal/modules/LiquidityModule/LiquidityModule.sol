@@ -3,6 +3,8 @@ pragma solidity =0.8.7;
 
 // interfaces
 import {ILiquidityModule} from "./interfaces/ILiquidityModule.sol";
+import {IgETH} from "../../../interfaces/IgETH.sol";
+import {ILPToken} from "../../modules/LiquidityModule/interfaces/ILPToken.sol";
 // libraries
 import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
@@ -10,17 +12,35 @@ import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
  * @title Liquidity Module - LM
  *
- * @author Icebear & Crash Bandicoot
- *
  * @notice A StableSwap implementation in solidity.
- * NOTE this module lacks admin checks etc: should be overriden with super.
- * NOTE all modules lack initialize: should be implemented when this module is iherited
- * NOTE all modules lack pausability state modifiers(pause/unpause): should be implemented when this module is iherited
- * todo: unchained init
+ * @notice This module implements the underlying logic for custody of closely pegged assets and Automatic market making system.
+ * * Users become an LP (Liquidity Provider) by depositing their tokens
+ * * in desired ratios for an exchange of the pool token that represents their share of the pool.
+ * * Users can burn pool tokens and withdraw their share of token(s).
+ * * Each time a swap between the pooled tokens happens, a set fee incurs which effectively gets
+ * * distributed to the LPs.
+ * * In case of emergencies, admin can pause additional deposits, swaps, or single-asset withdraws - which
+ * * stops the ratio of the tokens in the pool from changing.
+ * * Users can always withdraw their tokens via multi-asset withdraws.
+ *
+ * @dev Most of the logic is stored as a library `LiquidityModuleLib` for the sake of reducing contract's
+ * deployment size.
+ *
+ * @dev The main functionality of Liquidity Pools is allowing the depositors to have instant withdrawals
+ * relying on the Oracle Price, with the help of Liquidity Providers.
+ * It is important to change the focus point (1-1) of the pricing algorithm with PriceIn and PriceOut functions.
+ * Because the underlying price of the staked assets are expected to raise in time.
+ * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
+ *
+ * note This module utilizes modifiers but does not implement necessary admin checks; or pausability overrides.
+ * * If a package inherits LM, should implement it's own logic.
+ *
+ * @author Ice Bear & Crash Bandicoot
  */
 contract LiquidityModule is
   ILiquidityModule,
@@ -32,16 +52,18 @@ contract LiquidityModule is
   using AL for LML.Swap;
 
   /**
-   * @dev                                     ** VARIABLES **
+   * @custom:section                           ** VARIABLES **
    */
-  // Struct storing data responsible for automatic market maker functionalities.
-  // In order to access this data, use LiquidityModuleLibrary.
+
+  /**
+   * @dev Struct storing data responsible for automatic market maker functionalities.
+   * In order to access this data, use LiquidityModuleLib.
+   */
   LML.Swap internal LIQUIDITY;
 
   /**
-   * @dev                                     ** EVENTS **
-   *
-   * @dev following events are added from LML to help fellow devs with a better ABI
+   * @custom:section                           ** EVENTS **
+   * following events are added from LML to help fellow devs with a better ABI
    */
   event TokenSwap(
     address indexed buyer,
@@ -79,7 +101,7 @@ contract LiquidityModule is
   event StopRampA(uint256 currentA, uint256 time);
 
   /**
-   * @dev                                     ** MODIFIERS **
+   * @custom:section                           ** MODIFIERS **
    */
 
   /**
@@ -87,21 +109,78 @@ contract LiquidityModule is
    * @param deadline latest timestamp to accept this transaction
    */
   modifier deadlineCheck(uint256 deadline) {
-    require(block.timestamp <= deadline, "Swap: Deadline not met");
+    require(block.timestamp <= deadline, "LML: Deadline not met");
     _;
   }
 
   /**
-   * @dev                                     ** INITIALIZING **
+   * @custom:section                           ** INITIALIZING **
    */
 
-  // todo: add this to all modules
-  function __LiquidityModule_init() internal onlyInitializing {}
+  function __LiquidityModule_init(
+    address _gETH_position,
+    address _lpToken_referance,
+    uint256 _pooledTokenId,
+    uint256 _initialA,
+    uint256 _futureA,
+    uint256 _swapFee,
+    string memory _poolName
+  ) internal onlyInitializing {
+    __ERC1155Holder_init_unchained();
+    __ReentrancyGuard_init_unchained();
+    __Pausable_init_unchained();
+    __LiquidityModule_init_unchained(
+      _gETH_position,
+      _lpToken_referance,
+      _pooledTokenId,
+      _initialA,
+      _futureA,
+      _swapFee,
+      _poolName
+    );
+  }
 
-  function __LiquidityModule_init_unchained() internal onlyInitializing {}
+  function __LiquidityModule_init_unchained(
+    address _gETH_position,
+    address _lpToken_referance,
+    uint256 _pooledTokenId,
+    uint256 _initialA,
+    uint256 _futureA,
+    uint256 _swapFee,
+    string memory _poolName
+  ) internal onlyInitializing {
+    require(_gETH_position != address(0), "LML: _gETH_position can not be zero");
+    require(_lpToken_referance != address(0), "LML: _lpToken_referance can not be zero");
+    require(_pooledTokenId != 0, "LML: _pooledTokenId can not be zero");
+    require(_initialA != 0, "LML: _initialA can not be zero");
+    require(_futureA != 0, "LML: _futureA can not be zero");
+
+    // Clone and initialize a LPToken contract
+    ILPToken _lpToken = ILPToken(Clones.clone(_lpToken_referance));
+    string memory name_suffix = " Geode Liquidity Pool";
+    string memory symbol_suffix = "-LP";
+    require(
+      _lpToken.initialize(
+        string(abi.encodePacked(_poolName, name_suffix)),
+        string(abi.encodePacked(_poolName, symbol_suffix))
+      ),
+      "LML: could not init lpToken clone"
+    );
+
+    LIQUIDITY.gETH = IgETH(_gETH_position);
+    LIQUIDITY.lpToken = _lpToken;
+    LIQUIDITY.pooledTokenId = _pooledTokenId;
+    LIQUIDITY.initialA = _initialA;
+    LIQUIDITY.futureA = _futureA;
+    LIQUIDITY.swapFee = _swapFee;
+
+    // Do not trust middlewares. Protect LPs, gETH tokens from
+    // issues that can be surfaced with future middlewares.
+    LIQUIDITY.gETH.avoidMiddlewares(_pooledTokenId, true);
+  }
 
   /**
-   * @dev                                     ** GETTER FUNCTIONS **
+   * @custom:section                           ** GETTER FUNCTIONS **
    */
   /**
    * @dev -> external view: all
@@ -110,7 +189,7 @@ contract LiquidityModule is
   /**
    * @notice Returns the internal staking token, which is ERC1155
    */
-  function getERC1155() external view virtual override returns (address) {
+  function getgETH() external view virtual override returns (address) {
     return address(LIQUIDITY.gETH);
   }
 
@@ -183,7 +262,7 @@ contract LiquidityModule is
   }
 
   /**
-   * @dev                                     ** HELPER FUNCTIONS **
+   * @custom:section                           ** HELPER FUNCTIONS **
    */
 
   /**
@@ -256,7 +335,7 @@ contract LiquidityModule is
   }
 
   /**
-   * @dev                                     ** STATE MODIFYING FUNCTIONS **
+   * @custom:section                           ** STATE MODIFYING FUNCTIONS **
    */
   /**
    * @dev -> external: all
@@ -366,7 +445,7 @@ contract LiquidityModule is
   }
 
   /**
-   * @dev                                     ** ADMIN FUNCTIONS **
+   * @custom:section                           ** ADMIN FUNCTIONS **
    */
   /**
    * @dev -> external: all

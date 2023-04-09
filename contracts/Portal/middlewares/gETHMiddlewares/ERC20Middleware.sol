@@ -118,6 +118,7 @@ contract ERC20Middleware is
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
+    __Context_init_unchained();
     __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
   }
 

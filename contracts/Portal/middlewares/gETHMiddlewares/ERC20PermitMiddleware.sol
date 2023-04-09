@@ -96,9 +96,13 @@ contract ERC20PermitMiddleware is
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
+    __Context_init_unchained();
     __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
     __EIP712_init_unchained(name_, "1");
+    __ERC20MiddlewarePermit_init_unchained();
   }
+
+  function __ERC20MiddlewarePermit_init_unchained() internal onlyInitializing {}
 
   /**
    * @dev See {IERC20Permit-permit}.

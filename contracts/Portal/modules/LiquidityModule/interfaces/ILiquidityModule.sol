@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 interface ILiquidityModule {
-  function getERC1155() external view returns (address);
+  function getgETH() external view returns (address);
 
   function getA() external view returns (uint256);
 

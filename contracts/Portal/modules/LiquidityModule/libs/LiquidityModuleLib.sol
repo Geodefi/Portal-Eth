@@ -26,11 +26,11 @@ import {IgETH} from "../../../../interfaces/IgETH.sol";
  *
  * @dev Whenever "Effective Balance" is mentioned it refers to the balance projected with the underlying price.
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  */
 library LiquidityModuleLib {
   /**
-   * @dev                                     ** STRUCTS **
+   * @custom:section                           ** STRUCTS **
    */
 
   /**
@@ -88,23 +88,23 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** CONSTANTS **
+   * @custom:section                           ** CONSTANTS **
    */
 
   // Max swap fee is 1% or 100bps of each swap
   uint256 public constant MAX_SWAP_FEE = 10 ** 8;
 
-  // Max adminFee is 100% of the swapFee
+  // Max adminFee is 50% of the swapFee
   // adminFee does not add additional fee on top of swapFee
   // instead it takes a certain percentage of the swapFee.
   // Therefore it has no impact on users but only on the earnings of LPs
-  uint256 public constant MAX_ADMIN_FEE = 10 ** 10;
+  uint256 public constant MAX_ADMIN_FEE = 5 * 10 ** 9;
 
   // Constant value used as max loop limit
   uint256 private constant MAX_LOOP_LIMIT = 256;
 
   /**
-   * @dev                                     ** EVENTS **
+   * @custom:section                           ** EVENTS **
    */
 
   event TokenSwap(
@@ -140,7 +140,7 @@ library LiquidityModuleLib {
   event NewSwapFee(uint256 newSwapFee);
 
   /**
-   * @dev                                     ** HELPERS **
+   * @custom:section                           ** HELPERS **
    */
   /**
    * @dev -> pure: all
@@ -319,7 +319,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** REBASING FUNCTIONS **
+   * @custom:section                           ** REBASING FUNCTIONS **
    */
 
   /**
@@ -393,7 +393,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** DEBT FUNCTIONS **
+   * @custom:section                           ** DEBT FUNCTIONS **
    *
    * * debt refers to the amount of ETH needed to stabilize the pool
    */
@@ -436,7 +436,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** SWAP HELPER FUNCTIONS **
+   * @custom:section                           ** SWAP HELPER FUNCTIONS **
    */
 
   /**
@@ -697,7 +697,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** ADMIN HELPER FUNCTIONS **
+   * @custom:section                           ** ADMIN HELPER FUNCTIONS **
    */
   /**
    * @dev -> external view
@@ -720,7 +720,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** STATE MODIFYING FUNCTIONS **
+   * @custom:section                           ** STATE MODIFYING FUNCTIONS **
    */
   /**
    * @dev -> external: all
@@ -1055,7 +1055,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev                                     ** ADMIN FUNCTIONS **
+   * @custom:section                           ** ADMIN FUNCTIONS **
    */
   /**
    * @dev -> external: all

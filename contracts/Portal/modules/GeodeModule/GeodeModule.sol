@@ -12,19 +12,18 @@ import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
 // external
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title Geode Module - GM
  *
- * @author Icebear & Crash Bandicoot
+ * @author Ice Bear & Crash Bandicoot
  * todo: constructors(disable), initializers(unchained)
  */
 contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   using GML for GML.DualGovernance;
 
   /**
-   * @dev                                     ** VARIABLES **
+   * @custom:section                           ** VARIABLES **
    */
   GML.DualGovernance internal GEODE;
   /**
@@ -34,7 +33,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   uint256 internal CONTRACT_VERSION;
 
   /**
-   * @dev                                     ** EVENTS **
+   * @custom:section                           ** EVENTS **
    */
   event ContractVersionSet(uint256 version);
 
@@ -48,21 +47,41 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   event NewSenate(address senate, uint256 expiry);
 
   /**
-   * @dev                                     ** INITIALIZING **
+   * @custom:section                           ** INITIALIZING **
    */
 
-  ///@custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
-    _disableInitializers();
-  }
+  // note: modules should not have a constructor
+  // ///@custom:oz-upgrades-unsafe-allow constructor
+  // constructor() {
+  //   _disableInitializers();
+  // }
 
   // todo: add this to all modules
-  function __GeodeModule_init() internal onlyInitializing {}
+  function __GeodeModule_init(
+    address governance,
+    address senate,
+    uint256 governanceFee,
+    uint256 senateExpiry
+  ) internal onlyInitializing {
+    __UUPSUpgradeable_init_unchained();
+    __DataStoreModule_init_unchained();
+    __GeodeModule_init_unchained(governance, senate, governanceFee, senateExpiry);
+  }
 
-  function __GeodeModule_init_unchained() internal onlyInitializing {}
+  function __GeodeModule_init_unchained(
+    address governance,
+    address senate,
+    uint256 governanceFee,
+    uint256 senateExpiry
+  ) internal onlyInitializing {
+    GEODE.GOVERNANCE = governance;
+    GEODE.SENATE = senate;
+    GEODE.GOVERNANCE_FEE = governanceFee;
+    GEODE.SENATE_EXPIRY = senateExpiry;
+  }
 
   /**
-   * @dev                                     ** UPGRADABALITY FUNCTIONS **
+   * @custom:section                           ** UPGRADABALITY FUNCTIONS **
    */
   /**
    * @dev -> view
@@ -98,7 +117,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   }
 
   /**
-   * @dev                                     ** GETTER FUNCTIONS **
+   * @custom:section                           ** GETTER FUNCTIONS **
    */
 
   /**
@@ -139,7 +158,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   }
 
   /**
-   * @dev                                     ** SETTER FUNCTIONS **
+   * @custom:section                           ** SETTER FUNCTIONS **
    */
   /**
    * @dev -> external: all
