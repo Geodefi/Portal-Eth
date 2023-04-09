@@ -105,9 +105,9 @@ interface IPortal {
       address ORACLE_POSITION
     );
 
-  function getDefaultModule(uint256 _type) external view returns (uint256 _version);
+  function getPackageVersion(uint256 _type) external view returns (uint256 _version);
 
-  function isAllowedModule(uint256 _type, uint256 _version) external view returns (bool);
+  function isMiddleware(uint256 _type, uint256 _version) external view returns (bool);
 
   function getValidator(bytes calldata pubkey) external view returns (StakeUtils.Validator memory);
 

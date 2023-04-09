@@ -7,7 +7,7 @@ interface IGeodeModule {
 
   function getProposedVersion() external view returns (uint256);
 
-  function isolationMode() external view returns (bool isolated);
+  function isolationMode() external view returns (bool);
 
   function GeodeParams()
     external

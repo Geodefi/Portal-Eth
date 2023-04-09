@@ -96,7 +96,6 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
    */
   function getProposedVersion() public view virtual override returns (uint256) {
     revert("GM:This function needs to be overriden");
-    // return getPortal().getDefaultModule(ID_TYPE.DEFAULT_MODULE_WITHDRAWAL_CONTRACT);
   }
 
   /**
@@ -111,9 +110,9 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
     require(isUpgradeAllowed(proposed_implementation), "GM: not allowed to upgrade");
   }
 
-  function _setContractVersion(bytes memory versionName) internal virtual {
-    CONTRACT_VERSION = DSML.generateId(versionName, ID_TYPE.CONTRACT_UPGRADE);
-    emit ContractVersionSet(getContractVersion());
+  function _setContractVersion(uint256 newVersion) internal virtual {
+    CONTRACT_VERSION = newVersion;
+    emit ContractVersionSet(newVersion);
   }
 
   /**
@@ -152,8 +151,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
     return GEODE.isUpgradeAllowed(proposedImplementation, _getImplementation());
   }
 
-  function isolationMode() external view virtual override returns (bool isolated) {
-    isolated = true;
+  function isolationMode() external view virtual override returns (bool) {
     revert("GM:This function needs to be overriden");
   }
 

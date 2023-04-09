@@ -6,6 +6,7 @@ import {PERCENTAGE_DENOMINATOR} from "../globals/macros.sol";
 import {ID_TYPE} from "../globals/id_type.sol";
 // interfaces
 import {IgETH} from "../../interfaces/IgETH.sol";
+import {IPortal} from "../../interfaces/IPortal.sol";
 import {ILPToken} from "../modules/LiquidityModule/interfaces/ILPToken.sol";
 import {IGeodePackage} from "./interfaces/IGeodePackage.sol";
 // libraries
@@ -91,10 +92,14 @@ contract LiquidityPool is IGeodePackage, LiquidityModule, GeodeModule {
   function initialize(
     uint256 pooledTokenId,
     address poolOwner,
+    bytes memory versionName,
     bytes memory data
   ) public virtual override initializer returns (bool success) {
     __LiquidityPool_init(pooledTokenId, poolOwner, data);
     success = true;
+
+    uint256 initContractVersion = DSML.generateId(versionName, PACKAGE_TYPE);
+    _setContractVersion(initContractVersion);
   }
 
   function __LiquidityPool_init(
@@ -119,14 +124,42 @@ contract LiquidityPool is IGeodePackage, LiquidityModule, GeodeModule {
   function __LiquidityPool_init_unchained() internal onlyInitializing {}
 
   /**
-   * @custom:section                           ** Owner FUNCTIONS **
+   * @custom:section                           ** GETTER FUNCTIONS **
    */
   /**
-   * @dev -> external: all
+   * @dev -> public view: all
    */
 
   /**
-   * @dev Pausability Functions
+   * @notice get the gETH ID of the corresponding staking pool
+   */
+  function getPoolId() public view override returns (uint256) {
+    return LIQUIDITY.pooledTokenId;
+  }
+
+  /**
+   * @notice get Portal as a contract
+   */
+  function getPortal() public view override returns (IPortal) {
+    return IPortal(GEODE.getGovernance());
+  }
+
+  /**
+   * @dev GeodeModule override
+   */
+  function getProposedVersion() public view virtual override returns (uint256) {
+    return getPortal().getPackageVersion(PACKAGE_TYPE);
+  }
+
+  /**
+   * @custom:section                           ** ADMIN FUNCTIONS **
+   */
+  /**
+   * @dev -> external:all
+   */
+
+  /**
+   * @custom:section                           ** PAUSABILITY FUNCTIONS **
    */
 
   /**
@@ -144,15 +177,44 @@ contract LiquidityPool is IGeodePackage, LiquidityModule, GeodeModule {
   }
 
   /**
-   * @dev GeodeModule Functions overrides
+   * @custom:section                           ** UPGRADABILITY FUNCTIONS **
    */
 
-  // function getProposedVersion() public view virtual override returns (uint256) {}
-  // function pullUpgrade() external virtual override onlyOwner {}
-  // function isolationMode() external view virtual override returns (bool isolated) {}
+  /**
+   * @dev -> external
+   */
+  /**
+   * @dev GeodeModule override
+   */
+  function pullUpgrade() external virtual override onlyOwner {
+    require(!(getPortal().isolationMode()), "LPP: Portal is isolated");
+    require(getProposedVersion() != getContractVersion(), "LPP: no upgrades");
+
+    uint256 proposedVersionName = getPortal().fetchUpgrade(PACKAGE_TYPE);
+    require(proposedVersionName != bytes(0), "LPP: PROPOSED_VERSION ERROR");
+
+    uint256 upgradeProposal = DSML.generateId(proposedVersionName, ID_TYPE.CONTRACT_UPGRADE);
+    approveProposal(proposedVersion);
+    _authorizeUpgrade(GEODE.approvedUpgrade);
+    _upgradeToAndCallUUPS(GEODE.approvedUpgrade, new bytes(0), false);
+
+    uint256 newVersion = DSML.generateId(proposedVersionName, PACKAGE_TYPE);
+    _setContractVersion(newVersion);
+  }
 
   /**
-   * @dev LiquidityModule Function overrides
+   * @dev GeodeModule override
+   */
+  function isolationMode() external view virtual override returns (bool) {
+    if (paused()) return true;
+    if (getContractVersion() != getProposedVersion()) return true;
+    if (GEODE.approvedUpgrade != _getImplementation()) return true;
+    if (getPortal().readAddress(getPoolId(), "CONTROLLER") != GEODE.getSenate()) return true;
+    return false;
+  }
+
+  /**
+   * @custom:section                           ** LIQUIDITY POOL ADMIN **
    */
 
   function withdrawAdminFees(address receiver) public virtual override onlyOwner {
