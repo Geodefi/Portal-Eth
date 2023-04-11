@@ -3,7 +3,7 @@
 pragma solidity =0.8.7;
 
 import "@openzeppelin/contracts/utils/Context.sol";
-import "../../../interfaces/IgETH.sol";
+import "../../interfaces/IgETH.sol";
 
 contract nonERC1155Receiver is Context {
   uint256 private immutable _id;

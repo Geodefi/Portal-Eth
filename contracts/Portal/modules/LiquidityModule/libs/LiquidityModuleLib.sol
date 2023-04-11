@@ -7,7 +7,7 @@ import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 import {AmplificationLib as AL} from "./AmplificationLib.sol";
 // interfaces
 import {ILPToken} from "../interfaces/ILPToken.sol";
-import {IgETH} from "../../../../interfaces/IgETH.sol";
+import {IgETH} from "../../../interfaces/IgETH.sol";
 
 /**
  * @title LiquidityModule Library - LML

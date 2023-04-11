@@ -6,6 +6,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
+import {IERC1155Burnable, IERC1155Supply, IERC1155PausableBurnableSupply} from "./IERC1155PausableBurnableSupply.sol";
 // external
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
@@ -538,8 +539,8 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
  *
  * _Available since v3.1._
  */
-abstract contract ERC1155Burnable is ERC1155 {
-  function burn(address account, uint256 id, uint256 value) public virtual {
+abstract contract ERC1155Burnable is IERC1155Burnable, ERC1155 {
+  function burn(address account, uint256 id, uint256 value) public virtual override {
     require(
       account == _msgSender() || isApprovedForAll(account, _msgSender()),
       "ERC1155: caller is not token owner or approved"
@@ -552,7 +553,7 @@ abstract contract ERC1155Burnable is ERC1155 {
     address account,
     uint256[] memory ids,
     uint256[] memory values
-  ) public virtual {
+  ) public virtual override {
     require(
       account == _msgSender() || isApprovedForAll(account, _msgSender()),
       "ERC1155: caller is not token owner or approved"
@@ -570,20 +571,20 @@ abstract contract ERC1155Burnable is ERC1155 {
  * corresponding is an NFT, there is no guarantees that no other token with the
  * same id are not going to be minted.
  */
-abstract contract ERC1155Supply is ERC1155 {
+abstract contract ERC1155Supply is IERC1155Supply, ERC1155 {
   mapping(uint256 => uint256) private _totalSupply;
 
   /**
    * @dev Total amount of tokens in with a given id.
    */
-  function totalSupply(uint256 id) public view virtual returns (uint256) {
+  function totalSupply(uint256 id) public view virtual override returns (uint256) {
     return _totalSupply[id];
   }
 
   /**
    * @dev Indicates whether any token exist with a given id, or not.
    */
-  function exists(uint256 id) public view virtual returns (bool) {
+  function exists(uint256 id) public view virtual override returns (bool) {
     return ERC1155Supply.totalSupply(id) > 0;
   }
 
@@ -621,6 +622,7 @@ abstract contract ERC1155Supply is ERC1155 {
 }
 
 contract ERC1155PausableBurnableSupply is
+  IERC1155PausableBurnableSupply,
   ERC1155,
   AccessControl,
   Pausable,
@@ -640,15 +642,15 @@ contract ERC1155PausableBurnableSupply is
     _grantRole(MINTER_ROLE, msg.sender);
   }
 
-  function setURI(string memory newuri) public onlyRole(URI_SETTER_ROLE) {
+  function setURI(string memory newuri) public override onlyRole(URI_SETTER_ROLE) {
     _setURI(newuri);
   }
 
-  function pause() public onlyRole(PAUSER_ROLE) {
+  function pause() public override onlyRole(PAUSER_ROLE) {
     _pause();
   }
 
-  function unpause() public onlyRole(PAUSER_ROLE) {
+  function unpause() public override onlyRole(PAUSER_ROLE) {
     _unpause();
   }
 
@@ -657,7 +659,7 @@ contract ERC1155PausableBurnableSupply is
     uint256 id,
     uint256 amount,
     bytes memory data
-  ) public onlyRole(MINTER_ROLE) {
+  ) public override onlyRole(MINTER_ROLE) {
     _mint(account, id, amount, data);
   }
 
@@ -666,7 +668,7 @@ contract ERC1155PausableBurnableSupply is
     uint256[] memory ids,
     uint256[] memory amounts,
     bytes memory data
-  ) public onlyRole(MINTER_ROLE) {
+  ) public override onlyRole(MINTER_ROLE) {
     _mintBatch(to, ids, amounts, data);
   }
 
@@ -685,7 +687,7 @@ contract ERC1155PausableBurnableSupply is
 
   function supportsInterface(
     bytes4 interfaceId
-  ) public view override(ERC1155, AccessControl) returns (bool) {
+  ) public view override(IERC165, ERC1155, AccessControl) returns (bool) {
     return super.supportsInterface(interfaceId);
   }
 }

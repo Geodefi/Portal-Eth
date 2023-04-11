@@ -4,7 +4,7 @@
 pragma solidity =0.8.7;
 
 // interfaces
-import {IgETH} from "../../../interfaces/IgETH.sol";
+import {IgETH} from "../../interfaces/IgETH.sol";
 import {IgETHMiddleware} from "../interfaces/IgETHMiddleware.sol";
 // libraries
 import {BytesLib} from "../../helpers/BytesLib.sol";

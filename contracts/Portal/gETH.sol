@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-// external
+// interfaces
+import {IgETH} from "./interfaces/IgETH.sol";
+// libraries
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+// contracts
 import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
@@ -36,7 +39,7 @@ import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSu
  * @author Ice Bear & Crash Bandicoot
  */
 
-contract gETH is ERC1155PausableBurnableSupply {
+contract gETH is IgETH, ERC1155PausableBurnableSupply {
   using Address for address;
 
   /**
@@ -118,7 +121,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev ERC1155 does not have a decimals, and it is not wise to use the same name
    * @dev ADDED for gETH
    */
-  function denominator() external view virtual returns (uint256) {
+  function denominator() external view virtual override returns (uint256) {
     return DENOMINATOR;
   }
 
@@ -132,7 +135,10 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @notice Check if an address is approved as an middleware for an ID
    * @dev ADDED for gETH
    */
-  function isMiddleware(address middleware, uint256 id) public view virtual returns (bool) {
+  function isMiddleware(
+    address middleware,
+    uint256 id
+  ) public view virtual override returns (bool) {
     return _middlewares[id][middleware];
   }
 
@@ -162,7 +168,7 @@ contract gETH is ERC1155PausableBurnableSupply {
     address middleware,
     uint256 id,
     bool isSet
-  ) external virtual onlyRole(MIDDLEWARE_MANAGER_ROLE) {
+  ) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
     require(middleware.isContract(), "gETH: middleware must be a contract");
 
     _setMiddleware(middleware, id, isSet);
@@ -181,7 +187,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @param account the potential avoider
    * @dev ADDED for gETH
    **/
-  function isAvoider(address account, uint256 id) public view virtual returns (bool) {
+  function isAvoider(address account, uint256 id) public view virtual override returns (bool) {
     return _avoiders[account][id];
   }
 
@@ -193,7 +199,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @param isAvoid true: restrict middlewares, false: allow middlewares
    * @dev ADDED for gETH
    **/
-  function avoidMiddlewares(uint256 id, bool isAvoid) external virtual {
+  function avoidMiddlewares(uint256 id, bool isAvoid) external virtual override {
     address account = _msgSender();
 
     _avoiders[account][id] = isAvoid;
@@ -211,7 +217,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev ADDED for gETH
    * @return price of the derivative in terms of underlying token, Ether
    */
-  function pricePerShare(uint256 id) external view virtual returns (uint256) {
+  function pricePerShare(uint256 id) external view virtual override returns (uint256) {
     return _pricePerShare[id];
   }
 
@@ -219,7 +225,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev ADDED for gETH
    * @return timestamp of the latest price update for given ID
    */
-  function priceUpdateTimestamp(uint256 id) external view virtual returns (uint256) {
+  function priceUpdateTimestamp(uint256 id) external view virtual override returns (uint256) {
     return _priceUpdateTimestamp[id];
   }
 
@@ -241,7 +247,10 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @notice Only ORACLE can call this function and set price
    * @dev ADDED for gETH
    */
-  function setPricePerShare(uint256 price, uint256 id) external virtual onlyRole(ORACLE_ROLE) {
+  function setPricePerShare(
+    uint256 price,
+    uint256 id
+  ) external virtual override onlyRole(ORACLE_ROLE) {
     require(id != 0, "gETH: price query for the zero address");
 
     _setPricePerShare(price, id);
@@ -261,7 +270,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev URI_SETTER is basically a superuser, there can be only 1 at a given time,
    * @dev intended as "Governance/DAO"
    */
-  function transferUriSetterRole(address newUriSetter) external virtual {
+  function transferUriSetterRole(address newUriSetter) external virtual override {
     _grantRole(URI_SETTER_ROLE, newUriSetter);
     renounceRole(URI_SETTER_ROLE, _msgSender());
   }
@@ -271,7 +280,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev PAUSER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferPauserRole(address newPauser) external virtual {
+  function transferPauserRole(address newPauser) external virtual override {
     _grantRole(PAUSER_ROLE, newPauser);
     renounceRole(PAUSER_ROLE, _msgSender());
   }
@@ -281,7 +290,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev MINTER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMinterRole(address newMinter) external virtual {
+  function transferMinterRole(address newMinter) external virtual override {
     _grantRole(MINTER_ROLE, newMinter);
     renounceRole(MINTER_ROLE, _msgSender());
   }
@@ -291,7 +300,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev ORACLE is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferOracleRole(address newOracle) external virtual {
+  function transferOracleRole(address newOracle) external virtual override {
     _grantRole(ORACLE_ROLE, newOracle);
     renounceRole(ORACLE_ROLE, _msgSender());
   }
@@ -301,7 +310,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev MIDDLEWARE MANAGER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual {
+  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual override {
     _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
     renounceRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
   }

@@ -3,7 +3,7 @@ pragma solidity =0.8.7;
 
 // interfaces
 import {ILiquidityModule} from "./interfaces/ILiquidityModule.sol";
-import {IgETH} from "../../../interfaces/IgETH.sol";
+import {IgETH} from "../../interfaces/IgETH.sol";
 import {ILPToken} from "../../modules/LiquidityModule/interfaces/ILPToken.sol";
 // libraries
 import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";

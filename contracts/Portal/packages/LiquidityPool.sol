@@ -5,10 +5,12 @@ pragma solidity =0.8.7;
 import {PERCENTAGE_DENOMINATOR} from "../globals/macros.sol";
 import {ID_TYPE} from "../globals/id_type.sol";
 // interfaces
-import {IgETH} from "../../interfaces/IgETH.sol";
-import {IPortal} from "../../interfaces/IPortal.sol";
+import {IgETH} from "../interfaces/IgETH.sol";
+import {IPortal} from "../interfaces/IPortal.sol";
 import {ILPToken} from "../modules/LiquidityModule/interfaces/ILPToken.sol";
 import {IGeodePackage} from "./interfaces/IGeodePackage.sol";
+import {ILiquidityPool} from "../interfaces/ILiquidityPool.sol";
+
 // libraries
 import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
@@ -40,7 +42,7 @@ import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
  * @author Ice Bear & Crash Bandicoot
  *
  */
-contract LiquidityPool is IGeodePackage, LiquidityModule, GeodeModule {
+contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   using GML for GML.DualGovernance;
 
   /**
@@ -155,7 +157,7 @@ contract LiquidityPool is IGeodePackage, LiquidityModule, GeodeModule {
    * @custom:section                           ** ADMIN FUNCTIONS **
    */
   /**
-   * @dev -> external:all
+   * @dev -> external: all
    */
 
   /**
@@ -165,14 +167,14 @@ contract LiquidityPool is IGeodePackage, LiquidityModule, GeodeModule {
   /**
    * @notice pausing the contract activates the isolationMode
    */
-  function pause() external virtual onlyOwner {
+  function pause() external virtual override onlyOwner {
     _pause();
   }
 
   /**
    * @notice unpausing the contract deactivates the isolationMode
    */
-  function unpause() external virtual onlyOwner {
+  function unpause() external virtual override onlyOwner {
     _unpause();
   }
 
