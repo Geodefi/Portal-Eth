@@ -3,10 +3,10 @@
 pragma solidity =0.8.7;
 
 import {IPortal} from "./IPortal.sol";
-import {IGeodePackage} from "../packages/interfaces/IGeodePackage.sol";
 import {ILiquidityModule} from "../modules/LiquidityModule/interfaces/ILiquidityModule.sol";
+import {IGeodePackage} from "../packages/interfaces/IGeodePackage.sol";
 
-interface ILiquidityPool is IGeodePackage, ILiquidityModule {
+interface ILiquidityPool is ILiquidityModule, IGeodePackage {
   function initialize(
     uint256 pooledTokenId,
     address poolOwner,

@@ -5,12 +5,11 @@ pragma solidity =0.8.7;
 import {PERCENTAGE_DENOMINATOR} from "../globals/macros.sol";
 import {ID_TYPE} from "../globals/id_type.sol";
 // interfaces
+import {ILPToken} from "../modules/LiquidityModule/interfaces/ILPToken.sol";
 import {IgETH} from "../interfaces/IgETH.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
-import {ILPToken} from "../modules/LiquidityModule/interfaces/ILPToken.sol";
 import {IGeodePackage} from "./interfaces/IGeodePackage.sol";
 import {ILiquidityPool} from "../interfaces/ILiquidityPool.sol";
-
 // libraries
 import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
