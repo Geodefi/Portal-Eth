@@ -3,7 +3,7 @@ pragma solidity =0.8.7;
 
 // external
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155SupplyMinterPauser.sol";
+import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
  * @title gETH : Geode Finance Liquid Staking Derivatives
@@ -103,8 +103,8 @@ contract gETH is ERC1155PausableBurnableSupply {
     name = _name;
     symbol = _symbol;
 
-    _grantRole(MIDDLEWARE_MANAGER_ROLE, msg.sender);
-    _grantRole(ORACLE_ROLE, msg.sender);
+    _grantRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
+    _grantRole(ORACLE_ROLE, _msgSender());
   }
 
   /**
@@ -194,9 +194,11 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev ADDED for gETH
    **/
   function avoidMiddlewares(uint256 id, bool isAvoid) external virtual {
-    _avoiders[msg.sender][id] = isAvoid;
+    address account = _msgSender();
 
-    emit Avoided(msg.sender, id, isAvoid);
+    _avoiders[account][id] = isAvoid;
+
+    emit Avoided(account, id, isAvoid);
   }
 
   /**
@@ -261,7 +263,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    */
   function transferUriSetterRole(address newUriSetter) external virtual {
     _grantRole(URI_SETTER_ROLE, newUriSetter);
-    renounceRole(URI_SETTER_ROLE, msg.sender);
+    renounceRole(URI_SETTER_ROLE, _msgSender());
   }
 
   /**
@@ -271,7 +273,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    */
   function transferPauserRole(address newPauser) external virtual {
     _grantRole(PAUSER_ROLE, newPauser);
-    renounceRole(PAUSER_ROLE, msg.sender);
+    renounceRole(PAUSER_ROLE, _msgSender());
   }
 
   /**
@@ -281,7 +283,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    */
   function transferMinterRole(address newMinter) external virtual {
     _grantRole(MINTER_ROLE, newMinter);
-    renounceRole(MINTER_ROLE, msg.sender);
+    renounceRole(MINTER_ROLE, _msgSender());
   }
 
   /**
@@ -291,7 +293,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    */
   function transferOracleRole(address newOracle) external virtual {
     _grantRole(ORACLE_ROLE, newOracle);
-    renounceRole(ORACLE_ROLE, msg.sender);
+    renounceRole(ORACLE_ROLE, _msgSender());
   }
 
   /**
@@ -300,8 +302,8 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev intended as "Portal"
    */
   function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual {
-    renounceRole(MIDDLEWARE_MANAGER_ROLE, msg.sender);
     _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
+    renounceRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
   }
 
   /**
@@ -316,10 +318,8 @@ contract gETH is ERC1155PausableBurnableSupply {
    *
    * @dev middlewares should handle transfer checks internally.
    * Because of this we want to remove the SafeTransferAcceptanceCheck if the caller is a middleware.
-   * However, overriding _doSafeTransferAcceptanceCheck is not possible.
-   * So, we will override the two functions that these checks are done:
-   * * _safeTransferFrom
-   * * _mint
+   * However, overriding _doSafeTransferAcceptanceCheck was not possible, so we copy pasted OZ contracts and
+   * made it internal virtual.
    * note _doSafeBatchTransferAcceptanceCheck is not need to be overriden,
    * as a middleware should not do batch transfers.
    */
@@ -330,63 +330,20 @@ contract gETH is ERC1155PausableBurnableSupply {
 
   /**
    * @dev CHANGED for gETH
-   * @dev ADDED if (!isMiddleware) check at the end.
-   * @dev See ERC1155 _safeTransferFrom:
-   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L157
+   * @dev ADDED if (!isMiddleware) check
+   * @dev See ERC1155 _doSafeTransferAcceptanceCheck:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L447
    */
-  function _safeTransferFrom(
+  function _doSafeTransferAcceptanceCheck(
+    address operator,
     address from,
     address to,
     uint256 id,
     uint256 amount,
     bytes memory data
-  ) internal virtual {
-    require(to != address(0), "ERC1155: transfer to the zero address");
-
-    address operator = _msgSender();
-    uint256[] memory ids = _asSingletonArray(id);
-    uint256[] memory amounts = _asSingletonArray(amount);
-
-    _beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
-    uint256 fromBalance = _balances[id][from];
-    require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
-    unchecked {
-      _balances[id][from] = fromBalance - amount;
-    }
-    _balances[id][to] += amount;
-
-    emit TransferSingle(operator, from, to, id, amount);
-
-    _afterTokenTransfer(operator, from, to, ids, amounts, data);
-
-    if (!isMiddleware) {
-      _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
-    }
-  }
-
-  /**
-   * @dev CHANGED for gETH
-   * @dev ADDED if (!isMiddleware) check at the end.
-   * @dev See ERC1155 _mint:
-   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L263   * @dev CHANGED for gETH
-   */
-  function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
-    require(to != address(0), "ERC1155: mint to the zero address");
-
-    address operator = _msgSender();
-    uint256[] memory ids = _asSingletonArray(id);
-    uint256[] memory amounts = _asSingletonArray(amount);
-
-    _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
-
-    _balances[id][to] += amount;
-    emit TransferSingle(operator, address(0), to, id, amount);
-
-    _afterTokenTransfer(operator, address(0), to, ids, amounts, data);
-
-    if (!isMiddleware) {
-      _doSafeTransferAcceptanceCheck(operator, address(0), to, id, amount, data);
+  ) internal virtual override {
+    if (!isMiddleware(operator, id)) {
+      super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
   }
 
@@ -422,11 +379,11 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev See ERC1155Burnable burn:
    * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Burnable.sol#L15
    */
-  function burn(address account, uint256 id, uint256 value) public virtual {
+  function burn(address account, uint256 id, uint256 value) public virtual override {
     require(
-      (from == _msgSender()) ||
-        (isApprovedForAll(from, _msgSender())) ||
-        (isMiddleware(_msgSender(), id) && !isAvoider(from, id)),
+      (account == _msgSender()) ||
+        (isApprovedForAll(account, _msgSender())) ||
+        (isMiddleware(_msgSender(), id) && !isAvoider(account, id)),
       "ERC1155: caller is not token owner or approved or a middleware"
     );
 
