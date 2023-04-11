@@ -3,52 +3,51 @@ pragma solidity =0.8.7;
 
 // external
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {ERC1155SupplyMinterPauser} from "./helpers/ERC1155SupplyMinterPauser.sol";
+import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
  * @title gETH : Geode Finance Liquid Staking Derivatives
-*
- * @dev gETH is chain-agnostic, meaning it can be used on any evm chain 
+ *
+ * @dev gETH is chain-agnostic, meaning it can be used on any evm chain
  * * if given the correct name and symbol.
  *
- * @dev gETH is immutable, it can not be upgraded
+ * @dev gETH is immutable, it can not be upgraded.
  *
  * @dev gETH is a special ERC1155 contract with additional functionalities:
- *
- * Denominator
- * * ERC1155 does not have decimals and it is not wise to use the name convention
- * * but we need to provide some information on how to denominate the balances, price, etc.
-
- * PricePerShare
- * * Keeping track of the ratio between the derivative 
- * * and the underlaying staked asset, Ether.
- *
- * gETHMiddlewares
+ * gETHMiddlewares:
  * * Most important functionality gETH provides:
- * * Allowing any other contract to provide additional functionality 
+ * * Allowing any other contract to provide additional functionality
  * * around the balance and price data, such as using an ID like ERC20.
- * * 
- * * This addition effectively result in changes in 
+ * * This addition effectively result in changes in
  * * safeTransferFrom(), burn(), _doSafeTransferAcceptanceCheck()
  * * functions, reasoning is in the comments.
- * 
- * Avoiders
- * * If one wants to remain unbound from gETHMiddlewares, 
+ * Avoiders:
+ * * If one wants to remain unbound from gETHMiddlewares,
  * * it can be done so by calling "avoidMiddlewares" function.
+ * PricePerShare:
+ * * Keeping track of the ratio between the derivative
+ * * and the underlaying staked asset, Ether.
+ * Denominator:
+ * * ERC1155 does not have decimals and it is not wise to use the name convention
+ * * but we need to provide some information on how to denominate the balances, price, etc.
  *
- * @dev review first helpers/ERC1155SupplyMinterPauser.sol 
+ * @dev review ERC1155PausableBurnableSupply, which is generated with Openzeppelin wizard.
  *
  * @author Ice Bear & Crash Bandicoot
  */
 
-contract gETH is ERC1155SupplyMinterPauser {
+contract gETH is ERC1155PausableBurnableSupply {
   using Address for address;
 
   /**
    * @custom:section                           ** CONSTANTS **
    */
+  /**
+   * @dev both of these functions are
+   */
+  bytes32 public constant MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
   bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
-  uint256 internal constant _denominator = 1 ether;
+  uint256 internal constant DENOMINATOR = 1 ether;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -85,28 +84,27 @@ contract gETH is ERC1155SupplyMinterPauser {
    * @custom:section                           ** EVENTS **
    */
   event PriceUpdated(uint256 id, uint256 pricePerShare, uint256 updateTimestamp);
-  event MiddlewareChanged(address indexed newMiddleware, uint256 id, bool isSet);
-  event MiddlewaresAvoided(address indexed avoider, uint256 id, bool isAvoid);
+  event MiddlewareSet(address indexed newMiddleware, uint256 id, bool isSet);
+  event Avoided(address indexed avoider, uint256 id, bool isAvoid);
 
   /**
    * @custom:section                           ** CONSTRUCTOR **
    */
   /**
    * @notice ID to timestamp, pointing the second that the latest price update happened
-   * @dev ADDED for gETH
    * @param _name chain specific name: Geode Staked Ether, geode Staked Avax etc.
    * @param _symbol chain specific symbol of the staking derivative: gETH, gGNO, gAVAX, etc.
-   * @param _uri ERC1155 uri
    **/
   constructor(
     string memory _name,
     string memory _symbol,
     string memory _uri
-  ) ERC1155SupplyMinterPauser(_uri) {
+  ) ERC1155PausableBurnableSupply(_uri) {
     name = _name;
     symbol = _symbol;
 
-    _setupRole(ORACLE_ROLE, _msgSender());
+    _grantRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
+    _grantRole(ORACLE_ROLE, _msgSender());
   }
 
   /**
@@ -121,7 +119,7 @@ contract gETH is ERC1155SupplyMinterPauser {
    * @dev ADDED for gETH
    */
   function denominator() external view virtual returns (uint256) {
-    return _denominator;
+    return DENOMINATOR;
   }
 
   /**
@@ -135,8 +133,6 @@ contract gETH is ERC1155SupplyMinterPauser {
    * @dev ADDED for gETH
    */
   function isMiddleware(address middleware, uint256 id) public view virtual returns (bool) {
-    require(middleware != address(0), "gETH: middleware query for the zero address");
-
     return _middlewares[id][middleware];
   }
 
@@ -149,7 +145,6 @@ contract gETH is ERC1155SupplyMinterPauser {
    */
   function _setMiddleware(address _middleware, uint256 _id, bool _isSet) internal virtual {
     require(_middleware != address(0), "gETH: middleware query for the zero address");
-
     _middlewares[_id][_middleware] = _isSet;
   }
 
@@ -163,13 +158,16 @@ contract gETH is ERC1155SupplyMinterPauser {
    * @param isSet true: sets as an middleware, false: unsets
    * @dev ADDED for gETH
    */
-  function setMiddleware(address middleware, uint256 id, bool isSet) external virtual {
-    require(hasRole(MINTER_ROLE, _msgSender()), "gETH: must have MINTER_ROLE");
+  function setMiddleware(
+    address middleware,
+    uint256 id,
+    bool isSet
+  ) external virtual onlyRole(MIDDLEWARE_MANAGER_ROLE) {
     require(middleware.isContract(), "gETH: middleware must be a contract");
 
     _setMiddleware(middleware, id, isSet);
 
-    emit MiddlewareChanged(middleware, id, isSet);
+    emit MiddlewareSet(middleware, id, isSet);
   }
 
   /**
@@ -196,9 +194,11 @@ contract gETH is ERC1155SupplyMinterPauser {
    * @dev ADDED for gETH
    **/
   function avoidMiddlewares(uint256 id, bool isAvoid) external virtual {
-    _avoiders[_msgSender()][id] = isAvoid;
+    address account = _msgSender();
 
-    emit MiddlewaresAvoided(_msgSender(), id, isAvoid);
+    _avoiders[account][id] = isAvoid;
+
+    emit Avoided(account, id, isAvoid);
   }
 
   /**
@@ -241,8 +241,7 @@ contract gETH is ERC1155SupplyMinterPauser {
    * @notice Only ORACLE can call this function and set price
    * @dev ADDED for gETH
    */
-  function setPricePerShare(uint256 price, uint256 id) external virtual {
-    require(hasRole(ORACLE_ROLE, _msgSender()), "gETH: must have ORACLE to set");
+  function setPricePerShare(uint256 price, uint256 id) external virtual onlyRole(ORACLE_ROLE) {
     require(id != 0, "gETH: price query for the zero address");
 
     _setPricePerShare(price, id);
@@ -256,53 +255,84 @@ contract gETH is ERC1155SupplyMinterPauser {
   /**
    * @dev -> external :all
    */
-  /**
-   * @notice updates the authorized party for Minter operations related to minting
-   * @dev Minter is basically a superUser, there can be only 1 at a given time,
-   * @dev intended as "Portal"
-   */
-  function updateMinterRole(address Minter) external virtual {
-    require(hasRole(MINTER_ROLE, _msgSender()), "gETH: must have MINTER_ROLE");
 
-    renounceRole(MINTER_ROLE, _msgSender());
-    _setupRole(MINTER_ROLE, Minter);
+  /**
+   * @notice transfers the authorized party for setting a new uri.
+   * @dev URI_SETTER is basically a superuser, there can be only 1 at a given time,
+   * @dev intended as "Governance/DAO"
+   */
+  function transferUriSetterRole(address newUriSetter) external virtual {
+    _grantRole(URI_SETTER_ROLE, newUriSetter);
+    renounceRole(URI_SETTER_ROLE, _msgSender());
   }
 
   /**
-   * @notice updates the authorized party for Pausing operations.
-   * @dev Pauser is basically a superUser, there can be only 1 at a given time,
+   * @notice transfers the authorized party for Pausing operations.
+   * @dev PAUSER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function updatePauserRole(address Pauser) external virtual {
-    require(hasRole(PAUSER_ROLE, _msgSender()), "gETH: must have PAUSER_ROLE");
-
+  function transferPauserRole(address newPauser) external virtual {
+    _grantRole(PAUSER_ROLE, newPauser);
     renounceRole(PAUSER_ROLE, _msgSender());
-    _setupRole(PAUSER_ROLE, Pauser);
   }
 
   /**
-   * @notice updates the authorized party for Oracle operations related to pricing.
-   * @dev Oracle is basically a superUser, there can be only 1 at a given time,
+   * @notice transfers the authorized party for Minting operations related to minting
+   * @dev MINTER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function updateOracleRole(address Oracle) external virtual {
-    require(hasRole(ORACLE_ROLE, _msgSender()), "gETH: must have ORACLE_ROLE");
+  function transferMinterRole(address newMinter) external virtual {
+    _grantRole(MINTER_ROLE, newMinter);
+    renounceRole(MINTER_ROLE, _msgSender());
+  }
 
+  /**
+   * @notice transfers the authorized party for Oracle operations related to pricing
+   * @dev ORACLE is basically a superUser, there can be only 1 at a given time,
+   * @dev intended as "Portal"
+   */
+  function transferOracleRole(address newOracle) external virtual {
+    _grantRole(ORACLE_ROLE, newOracle);
     renounceRole(ORACLE_ROLE, _msgSender());
-    _setupRole(ORACLE_ROLE, Oracle);
+  }
+
+  /**
+   * @notice transfers the authorized party for middleware management
+   * @dev MIDDLEWARE MANAGER is basically a superUser, there can be only 1 at a given time,
+   * @dev intended as "Portal"
+   */
+  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual {
+    _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
+    renounceRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
   }
 
   /**
    * @custom:section                           ** OVERRIDES **
+   *
+   * @dev middleware of a specific ID can move funds between accounts without approval.
+   * So, we will be overriding 2 functions:
+   * * safeTransferFrom
+   * * burn
+   * note safeBatchTransferFrom is not need to be overriden,
+   * as a middleware should not do batch transfers.
+   *
+   * @dev middlewares should handle transfer checks internally.
+   * Because of this we want to remove the SafeTransferAcceptanceCheck if the caller is a middleware.
+   * However, overriding _doSafeTransferAcceptanceCheck was not possible, so we copy pasted OZ contracts and
+   * made it internal virtual.
+   * note _doSafeBatchTransferAcceptanceCheck is not need to be overriden,
+   * as a middleware should not do batch transfers.
    */
+
   /**
    * @dev -> internal
    */
+
   /**
-   * @notice middlewares should handle these checks internally
-   * @dev See {IERC1155-safeTransferFrom}.
    * @dev CHANGED for gETH
-   * @dev ADDED "&& !isMiddleware(operator,id)"
+   * @dev ADDED if (!isMiddleware) check
+   * @dev See ERC1155 _doSafeTransferAcceptanceCheck:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L447
    */
   function _doSafeTransferAcceptanceCheck(
     address operator,
@@ -320,11 +350,12 @@ contract gETH is ERC1155SupplyMinterPauser {
   /**
    * @dev -> external
    */
+
   /**
-   * @dev See {IERC1155-safeTransferFrom}.
-   * @dev middlewares can move your tokens without asking you
    * @dev CHANGED for gETH
-   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(from))"
+   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(from, id))"
+   * @dev See ERC1155 safeTransferFrom:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L114
    */
   function safeTransferFrom(
     address from,
@@ -334,26 +365,26 @@ contract gETH is ERC1155SupplyMinterPauser {
     bytes memory data
   ) public virtual override {
     require(
-      from == _msgSender() ||
-        isApprovedForAll(from, _msgSender()) ||
+      (from == _msgSender()) ||
+        (isApprovedForAll(from, _msgSender())) ||
         (isMiddleware(_msgSender(), id) && !isAvoider(from, id)),
-      "ERC1155: caller is not owner nor approved nor an allowed middleware"
+      "ERC1155: caller is not token owner or approved or a middleware"
     );
-
     _safeTransferFrom(from, to, id, amount, data);
   }
 
   /**
-   * @dev See {IERC1155-safeTransferFrom}.
    * @dev CHANGED for gETH
-   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(account))"
+   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(from, id))"
+   * @dev See ERC1155Burnable burn:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Burnable.sol#L15
    */
   function burn(address account, uint256 id, uint256 value) public virtual override {
     require(
-      account == _msgSender() ||
-        isApprovedForAll(account, _msgSender()) ||
+      (account == _msgSender()) ||
+        (isApprovedForAll(account, _msgSender())) ||
         (isMiddleware(_msgSender(), id) && !isAvoider(account, id)),
-      "ERC1155: caller is not owner nor approved nor an allowed middleware"
+      "ERC1155: caller is not token owner or approved or a middleware"
     );
 
     _burn(account, id, value);
