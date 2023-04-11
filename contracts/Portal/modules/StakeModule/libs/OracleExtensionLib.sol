@@ -13,7 +13,7 @@ import {DepositContractLib as DCL} from "./DepositContractLib.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
- * @title Oracle Library - OL
+ * @title Oracle Extension Library - OL
  *
  * @notice An extension to StakeModuleLib
  * @notice Oracle, named Telescope, handles some operations for The Staking Library,
@@ -60,7 +60,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * @author Ice Bear & Crash Bandicoot
  */
 
-library OracleLib {
+library OracleExtensionLib {
   /// @notice Using DataStoreModuleLib for IsolatedStorage struct
   using DSML for DSML.IsolatedStorage;
 
@@ -320,7 +320,6 @@ library OracleLib {
    * @notice external function to set a multiple derivatives price at once, saves gas.
    * @param prices price of the derivative denominated in gETH.denominator()
    * @param priceProofs merkle proofs
-   * @param todo make this work for MerkleProof.verifyMultiple
    */
   function priceSyncBatch(
     DSML.IsolatedStorage storage DATASTORE,
