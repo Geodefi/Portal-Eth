@@ -18,6 +18,10 @@ contract DataStoreModule is IDataStoreModule, Initializable {
   using DSML for DSML.IsolatedStorage;
   /**
    * @custom:section                           ** VARIABLES **
+   *
+   * @dev note do not add any other vairables, Modules do not have a gap.
+   * Instead library main struct has a gap, providing up to 16 storage slot.
+   * todo add this to internal docs
    */
   DSML.IsolatedStorage internal DATASTORE;
 

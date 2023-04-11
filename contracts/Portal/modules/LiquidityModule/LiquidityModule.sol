@@ -58,6 +58,10 @@ contract LiquidityModule is
   /**
    * @dev Struct storing data responsible for automatic market maker functionalities.
    * In order to access this data, use LiquidityModuleLib.
+   *
+   * @dev note do not add any other vairables, Modules do not have a gap.
+   * Instead library main struct has a gap, providing up to 16 storage slot.
+   * todo add this to internal docs
    */
   LML.Swap internal LIQUIDITY;
 

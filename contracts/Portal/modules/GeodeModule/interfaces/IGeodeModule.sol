@@ -7,16 +7,25 @@ interface IGeodeModule {
 
   function getProposedVersion() external view returns (uint256);
 
+  function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
+
   function isolationMode() external view returns (bool);
+
+  function pullUpgrade() external;
 
   function GeodeParams()
     external
     view
-    returns (address senate, address governance, uint256 senate_expiry, uint256 governance_fee);
+    returns (
+      address governance,
+      address senate,
+      address approvedUpgrade,
+      uint256 governanceFee,
+      uint256 senateExpiry,
+      uint256 contractVersion
+    );
 
   function getProposal(uint256 id) external view returns (GML.Proposal memory proposal);
-
-  function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 
   function setGovernanceFee(uint256 newFee) external;
 
@@ -34,6 +43,4 @@ interface IGeodeModule {
   function rescueSenate(address _newSenate) external;
 
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external;
-
-  function pullUpgrade() external;
 }

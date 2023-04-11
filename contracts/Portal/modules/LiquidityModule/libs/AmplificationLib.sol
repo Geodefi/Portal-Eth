@@ -7,7 +7,7 @@ import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
 /**
  * @title Amplification Library - AL
  *
- * @notice An extension library for LiquidityModuleLibrary(LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
+ * @notice An helper library for LiquidityModuleLibrary(LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
  * @dev This library assumes the struct is fully validated.
  *
  * @author Ice Bear & Crash Bandicoot

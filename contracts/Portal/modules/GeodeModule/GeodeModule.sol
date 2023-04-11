@@ -17,26 +17,23 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * @title Geode Module - GM
  *
  * @author Ice Bear & Crash Bandicoot
- * todo: constructors(disable), initializers(unchained)
  */
 contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   using GML for GML.DualGovernance;
 
   /**
    * @custom:section                           ** VARIABLES **
+   *
+   * @dev note do not add any other vairables, Modules do not have a gap.
+   * Instead library main struct has a gap, providing up to 16 storage slot.
+   * todo add this to internal docs
    */
   GML.DualGovernance internal GEODE;
-  /**
-   * @notice CONTRACT_VERSION always refers to the upgrade proposal' (TYPE2) ID.
-   * @dev Does NOT increase uniformly like one might expect.
-   */
-  uint256 internal CONTRACT_VERSION;
 
   /**
    * @custom:section                           ** EVENTS **
    */
   event ContractVersionSet(uint256 version);
-
   /**
    * @dev following events are added from GML to help fellow devs with a better ABI
    */
@@ -50,13 +47,6 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
    * @custom:section                           ** INITIALIZING **
    */
 
-  // note: modules should not have a constructor
-  // ///@custom:oz-upgrades-unsafe-allow constructor
-  // constructor() {
-  //   _disableInitializers();
-  // }
-
-  // todo: add this to all modules
   function __GeodeModule_init(
     address governance,
     address senate,
@@ -81,22 +71,8 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   }
 
   /**
-   * @custom:section                           ** UPGRADABALITY FUNCTIONS **
+   * @custom:section                           ** VERSION CONTROL FUNCTIONS **
    */
-  /**
-   * @dev -> view
-   */
-
-  function getContractVersion() public view virtual override returns (uint256) {
-    return CONTRACT_VERSION;
-  }
-
-  /**
-   * @notice get the latest version of the withdrawal contract module from Portal
-   */
-  function getProposedVersion() public view virtual override returns (uint256) {
-    revert("GM:This function needs to be overriden");
-  }
 
   /**
    * @dev -> internal
@@ -111,40 +87,25 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   }
 
   function _setContractVersion(uint256 newVersion) internal virtual {
-    CONTRACT_VERSION = newVersion;
+    GEODE.CONTRACT_VERSION = newVersion;
     emit ContractVersionSet(newVersion);
   }
 
   /**
-   * @custom:section                           ** GETTER FUNCTIONS **
+   * @dev -> external view
    */
 
-  /**
-   * @dev -> external view: all
-   */
-
-  function GeodeParams()
-    external
-    view
-    virtual
-    override
-    returns (address senate, address governance, uint256 senate_expiry, uint256 governance_fee)
-  {
-    senate = GEODE.getSenate();
-    governance = GEODE.getGovernance();
-    senate_expiry = GEODE.getSenateExpiry();
-    governance_fee = GEODE.getGovernanceFee();
-  }
-
-  function getProposal(
-    uint256 id
-  ) external view virtual override returns (GML.Proposal memory proposal) {
-    proposal = GEODE.getProposal(id);
+  function getContractVersion() public view virtual override returns (uint256) {
+    return GEODE.CONTRACT_VERSION;
   }
 
   /**
-   * @dev -> public view
+   * @notice get the latest version of the withdrawal contract module from Portal
    */
+  function getProposedVersion() public view virtual override returns (uint256) {
+    revert("GM:This function needs to be overriden");
+  }
+
   function isUpgradeAllowed(
     address proposedImplementation
   ) public view virtual override returns (bool) {
@@ -153,6 +114,50 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
 
   function isolationMode() external view virtual override returns (bool) {
     revert("GM:This function needs to be overriden");
+  }
+
+  /**
+   * @dev -> external
+   */
+
+  function pullUpgrade() external virtual override {
+    revert("GM:This function needs to be overriden");
+  }
+
+  /**
+   * @custom:section                           ** GETTER FUNCTIONS **
+   */
+
+  /**
+   * @dev -> external view
+   */
+
+  function GeodeParams()
+    external
+    view
+    virtual
+    override
+    returns (
+      address governance,
+      address senate,
+      address approvedUpgrade,
+      uint256 governanceFee,
+      uint256 senateExpiry,
+      uint256 contractVersion
+    )
+  {
+    governance = GEODE.GOVERNANCE;
+    senate = GEODE.SENATE;
+    approvedUpgrade = GEODE.APPROVED_UPGRADE;
+    governanceFee = GEODE.GOVERNANCE_FEE;
+    senateExpiry = GEODE.SENATE_EXPIRY;
+    contractVersion = GEODE.CONTRACT_VERSION;
+  }
+
+  function getProposal(
+    uint256 id
+  ) external view virtual override returns (GML.Proposal memory proposal) {
+    proposal = GEODE.getProposal(id);
   }
 
   /**
@@ -166,13 +171,6 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
    * @dev Governance Functions
    */
 
-  /**
-   * @notice only parameter of GeodeUtils that can be mutated is the fee
-   */
-  function setGovernanceFee(uint256 newFee) external virtual override {
-    GEODE.setGovernanceFee(newFee);
-  }
-
   function newProposal(
     address _CONTROLLER,
     uint256 _TYPE,
@@ -181,6 +179,13 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   ) external virtual override returns (uint256 id, bool success) {
     id = GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
     success = true;
+  }
+
+  /**
+   * @notice only parameter of GeodeUtils that can be mutated is the fee
+   */
+  function setGovernanceFee(uint256 newFee) external virtual override {
+    GEODE.setGovernanceFee(newFee);
   }
 
   /**
@@ -212,15 +217,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   /**
    * @dev CONTROLLER Functions
    */
-
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external virtual override {
     GML.changeIdCONTROLLER(DATASTORE, id, newCONTROLLER);
-  }
-
-  /**
-   * @dev Upgradability Functions
-   */
-  function pullUpgrade() external virtual override {
-    revert("GM:This function needs to be overriden");
   }
 }

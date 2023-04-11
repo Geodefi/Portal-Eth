@@ -16,22 +16,22 @@ import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreMo
  * @dev This library contains both functions called by users(ID) like changeIdController, and admins(GOVERNANCE, SENATE)
  *
  * @dev Reserved ID TYPEs:
- * * Type 0 : NULL
- * * Type 1 : SENATE
- * * * Senate is a third party, expected to be an immutable contract that allows identified
- * * * TYPE's CONTROLLERs to vote on proposals on Portal.
- * * * Senate is the pool owner on Withdrawal Contracts.
- * * * Senate can represent other entities within the Dual Governance if this library is
- * * * used by other Geode Modules in the future.
- * * * Senate can be changed by the Dual Governance with TYPE 1 proposals on Portal OR
- * * * 'instantly' by the pool Owner on Withdrawal Contracts.
- * * * @dev SENATE can have an expiration date, a new one should be set before it ends.
- * * * * otherwise governance can set a new senate without any proposals.
- * * Type 2 : CONTRACT UPGRADES
- * * * Provides Limited Upgradability on Portal and Withdrawal Contract
- * * * Contract can be upgradable once Senate approves it.
- * * Type 3 : __GAP__
- * * * Initially represented the admin contract, but we use UUPS. Reserved to be never used.
+ * Type 0 : NULL
+ * Type 1 : SENATE
+ * * Senate is a third party, expected to be an immutable contract that allows identified
+ * * TYPE's CONTROLLERs to vote on proposals on Portal.
+ * * Senate is the pool owner on Withdrawal Contracts.
+ * * Senate can represent other entities within the Dual Governance if this library is
+ * * used by other Geode Modules in the future.
+ * * Senate can be changed by the Dual Governance with TYPE 1 proposals on Portal OR
+ * * 'instantly' by the pool Owner on Withdrawal Contracts.
+ * * @dev SENATE can have an expiration date, a new one should be set before it ends.
+ * * * otherwise governance can set a new senate without any proposals.
+ * Type 2 : CONTRACT UPGRADES
+ * * Provides Limited Upgradability on Portal and Withdrawal Contract
+ * * Contract can be upgradable once Senate approves it.
+ * Type 3 : __GAP__
+ * * Initially represented the admin contract, but we use UUPS. Reserved to be never used.
  *
  * @dev Contracts relying on this library must initialize GeodeModuleLib.DualGovernance
  * @dev Functions are already protected accordingly
@@ -74,6 +74,7 @@ library GeodeModuleLib {
    * Note SENATE can be changed by a proposal TYPE 1 by Governance and approved by the current Senate.
    * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
    * @param GOVERNANCE_FEE operation fee on the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_FEE
+   * @param CONTRACT_VERSION should always refer to the upgrade proposal ID. Does NOT increase uniformly like one might expect.
    * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
    * @param proposals till approved, proposals are kept separated from the Isolated Storage
    * @param __gap keep the struct size at 16, currently 6 slots(32 bytes)
@@ -84,6 +85,7 @@ library GeodeModuleLib {
     address APPROVED_UPGRADE;
     uint256 GOVERNANCE_FEE;
     uint256 SENATE_EXPIRY;
+    uint256 CONTRACT_VERSION;
     mapping(uint256 => Proposal) proposals;
     uint256[10] __gap;
   }
@@ -98,8 +100,7 @@ library GeodeModuleLib {
   uint256 public constant MAX_GOVERNANCE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
 
   /**
-   * @notice prevents Governance from collecting any fees till given timestamp:
-   * @notice MAY 2024
+   * @notice prevents Governance from collecting any fees till given timestamp: MAY 2024
    * @dev fee switch will be automatically switched on after given timestamp
    * @dev fee switch can be switched on with the approval of Senate (a contract upgrade)
    */
@@ -142,93 +143,7 @@ library GeodeModuleLib {
   }
 
   /**
-   * @dev                                       ** LIMITED UPGRADABILITY **
-   */
-
-  /**
-   * @dev -> external view
-   */
-
-  /**
-   * @notice Get if it is allowed to change a specific contract with the current version.
-   * @return True if it is allowed by senate and false if not.
-   * @dev address(0) should return false
-   * @dev currentImplementation should always be UUPS._getImplementation()
-   * @dev DO NOT TOUCH, EVER! WHATEVER YOU DEVELOP IN FUCKING 3022
-   **/
-  function isUpgradeAllowed(
-    DualGovernance storage self,
-    address proposedImplementation,
-    address currentImplementation
-  ) external view returns (bool) {
-    return
-      (self.APPROVED_UPGRADE != address(0)) &&
-      (proposedImplementation != currentImplementation) &&
-      (self.APPROVED_UPGRADE == proposedImplementation);
-  }
-
-  /**
    * @custom:section                           ** DUAL GOVERNANCE **
-   **/
-
-  /**
-   * @dev -> external view
-   */
-
-  /**
-   * @return address of SENATE
-   **/
-  function getSenate(DualGovernance storage self) external view returns (address) {
-    return self.SENATE;
-  }
-
-  /**
-   * @return address of GOVERNANCE
-   **/
-  function getGovernance(DualGovernance storage self) external view returns (address) {
-    return self.GOVERNANCE;
-  }
-
-  /**
-   * @return the expiration date of current SENATE as a timestamp
-   */
-  function getSenateExpiry(DualGovernance storage self) external view returns (uint256) {
-    return self.SENATE_EXPIRY;
-  }
-
-  /**
-   * @notice active GOVERNANCE_FEE limited by FEE_COOLDOWN and MAX_GOVERNANCE_FEE
-   * @dev MAX_GOVERNANCE_FEE MUST limit GOVERNANCE_FEE even if MAX is changed later
-   * @dev MUST return 0 until cooldown period is active
-   */
-  function getGovernanceFee(DualGovernance storage self) external view returns (uint256) {
-    return
-      block.timestamp < FEE_COOLDOWN ? 0 : MAX_GOVERNANCE_FEE > self.GOVERNANCE_FEE
-        ? self.GOVERNANCE_FEE
-        : MAX_GOVERNANCE_FEE;
-  }
-
-  /**
-   * @dev -> external
-   */
-
-  /**
-   * @notice onlyGovernance, sets the governance fee
-   * @dev Can not set the fee more than MAX_GOVERNANCE_FEE
-   */
-  function setGovernanceFee(
-    DualGovernance storage self,
-    uint256 newFee
-  ) external onlyGovernance(self) {
-    require(newFee <= MAX_GOVERNANCE_FEE, "GU: > MAX_GOVERNANCE_FEE");
-
-    self.GOVERNANCE_FEE = newFee;
-
-    emit GovernanceFeeUpdated(newFee);
-  }
-
-  /**
-   * @custom:section                           ** PROPOSALS **
    */
 
   /**
@@ -325,7 +240,30 @@ library GeodeModuleLib {
   }
 
   /**
-   * @custom:section                           ** SENATE  **
+   * @custom:section                           ** GOVERNANCE FEE **
+   **/
+  /**
+   * @dev -> external: all
+   */
+
+  /**
+   * @notice onlyGovernance, sets the governance fee
+   * @dev Can not set the fee more than MAX_GOVERNANCE_FEE
+   */
+  function setGovernanceFee(
+    DualGovernance storage self,
+    uint256 newFee
+  ) external onlyGovernance(self) {
+    require(newFee <= MAX_GOVERNANCE_FEE, "GU: > MAX_GOVERNANCE_FEE");
+    require(block.timestamp < FEE_COOLDOWN, "GU: can not set a fee yet");
+
+    self.GOVERNANCE_FEE = newFee;
+
+    emit GovernanceFeeUpdated(newFee);
+  }
+
+  /**
+   * @custom:section                           ** SENATE **
    */
 
   /**
@@ -374,7 +312,7 @@ library GeodeModuleLib {
   }
 
   /**
-   * @custom:section                           ** ID **
+   * @custom:section                           ** CONTROLLER **
    */
 
   /**
@@ -396,5 +334,28 @@ library GeodeModuleLib {
     DATASTORE.writeAddress(id, "CONTROLLER", newCONTROLLER);
 
     emit ControllerChanged(id, newCONTROLLER);
+  }
+
+  /**
+   * @dev                                       ** LIMITED UPGRADABILITY **
+   */
+  /**
+   * @dev -> external view
+   */
+  /**
+   * @notice Get if it is allowed to change a specific contract with the current version.
+   * @return True if it is allowed by senate and false if not.
+   * @dev address(0) should return false
+   * @dev currentImplementation should always be UUPS._getImplementation()
+   **/
+  function isUpgradeAllowed(
+    DualGovernance storage self,
+    address proposedImplementation,
+    address currentImplementation
+  ) external view returns (bool) {
+    return
+      (self.APPROVED_UPGRADE != address(0)) &&
+      (proposedImplementation != currentImplementation) &&
+      (self.APPROVED_UPGRADE == proposedImplementation);
   }
 }

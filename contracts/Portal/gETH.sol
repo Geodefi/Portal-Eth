@@ -253,7 +253,7 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @custom:section                           ** ROLES **
    */
   /**
-   * @dev -> external :all
+   * @dev -> external: all
    */
 
   /**
