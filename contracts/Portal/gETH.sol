@@ -133,8 +133,6 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev ADDED for gETH
    */
   function isMiddleware(address middleware, uint256 id) public view virtual returns (bool) {
-    require(middleware != address(0), "gETH: middleware query for the zero address");
-
     return _middlewares[id][middleware];
   }
 
@@ -147,7 +145,6 @@ contract gETH is ERC1155PausableBurnableSupply {
    */
   function _setMiddleware(address _middleware, uint256 _id, bool _isSet) internal virtual {
     require(_middleware != address(0), "gETH: middleware query for the zero address");
-
     _middlewares[_id][_middleware] = _isSet;
   }
 
@@ -302,46 +299,106 @@ contract gETH is ERC1155PausableBurnableSupply {
    * @dev MIDDLEWARE MANAGER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMiddlewareManagerRole(
-    address newMiddlewareManager
-  ) external virtual onlyRole(MIDDLEWARE_MANAGER_ROLE) {
-    renounceRole(MINTER_ROLE, msg.sender);
-    _grantRole(MINTER_ROLE, newMiddlewareManager);
+  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual {
+    renounceRole(MIDDLEWARE_MANAGER_ROLE, msg.sender);
+    _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
   }
 
   /**
    * @custom:section                           ** OVERRIDES **
+   *
+   * @dev middleware of a specific ID can move funds between accounts without approval.
+   * So, we will be overriding 2 functions:
+   * * safeTransferFrom
+   * * burn
+   * note safeBatchTransferFrom is not need to be overriden,
+   * as a middleware should not do batch transfers.
+   *
+   * @dev middlewares should handle transfer checks internally.
+   * Because of this we want to remove the SafeTransferAcceptanceCheck if the caller is a middleware.
+   * However, overriding _doSafeTransferAcceptanceCheck is not possible.
+   * So, we will override the two functions that these checks are done:
+   * * _safeTransferFrom
+   * * _mint
+   * note _doSafeBatchTransferAcceptanceCheck is not need to be overriden,
+   * as a middleware should not do batch transfers.
    */
+
   /**
    * @dev -> internal
    */
+
   /**
-   * @notice middlewares should handle these checks internally
-   * @dev See {IERC1155-safeTransferFrom}.
    * @dev CHANGED for gETH
-   * @dev ADDED "&& !isMiddleware(operator,id)"
+   * @dev ADDED if (!isMiddleware) check at the end.
+   * @dev See ERC1155 _safeTransferFrom:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L157
    */
-  function _doSafeTransferAcceptanceCheck(
-    address operator,
+  function _safeTransferFrom(
     address from,
     address to,
     uint256 id,
     uint256 amount,
     bytes memory data
-  ) internal virtual override {
-    if (!isMiddleware(operator, id)) {
-      super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
+  ) internal virtual {
+    require(to != address(0), "ERC1155: transfer to the zero address");
+
+    address operator = _msgSender();
+    uint256[] memory ids = _asSingletonArray(id);
+    uint256[] memory amounts = _asSingletonArray(amount);
+
+    _beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+    uint256 fromBalance = _balances[id][from];
+    require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
+    unchecked {
+      _balances[id][from] = fromBalance - amount;
+    }
+    _balances[id][to] += amount;
+
+    emit TransferSingle(operator, from, to, id, amount);
+
+    _afterTokenTransfer(operator, from, to, ids, amounts, data);
+
+    if (!isMiddleware) {
+      _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
+    }
+  }
+
+  /**
+   * @dev CHANGED for gETH
+   * @dev ADDED if (!isMiddleware) check at the end.
+   * @dev See ERC1155 _mint:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L263   * @dev CHANGED for gETH
+   */
+  function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
+    require(to != address(0), "ERC1155: mint to the zero address");
+
+    address operator = _msgSender();
+    uint256[] memory ids = _asSingletonArray(id);
+    uint256[] memory amounts = _asSingletonArray(amount);
+
+    _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
+
+    _balances[id][to] += amount;
+    emit TransferSingle(operator, address(0), to, id, amount);
+
+    _afterTokenTransfer(operator, address(0), to, ids, amounts, data);
+
+    if (!isMiddleware) {
+      _doSafeTransferAcceptanceCheck(operator, address(0), to, id, amount, data);
     }
   }
 
   /**
    * @dev -> external
    */
+
   /**
-   * @dev See {IERC1155-safeTransferFrom}.
-   * @dev middlewares can move your tokens without asking you
    * @dev CHANGED for gETH
-   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(from))"
+   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(from, id))"
+   * @dev See ERC1155 safeTransferFrom:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol#L114
    */
   function safeTransferFrom(
     address from,
@@ -351,26 +408,26 @@ contract gETH is ERC1155PausableBurnableSupply {
     bytes memory data
   ) public virtual override {
     require(
-      from == _msgSender() ||
-        isApprovedForAll(from, _msgSender()) ||
+      (from == _msgSender()) ||
+        (isApprovedForAll(from, _msgSender())) ||
         (isMiddleware(_msgSender(), id) && !isAvoider(from, id)),
-      "ERC1155: caller is not owner nor approved nor an allowed middleware"
+      "ERC1155: caller is not token owner or approved or a middleware"
     );
-
     _safeTransferFrom(from, to, id, amount, data);
   }
 
   /**
-   * @dev See {IERC1155-safeTransferFrom}.
    * @dev CHANGED for gETH
-   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(account))"
+   * @dev ADDED "|| (isMiddleware(_msgSender(), id) && !isAvoider(from, id))"
+   * @dev See ERC1155Burnable burn:
+   * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Burnable.sol#L15
    */
-  function burn(address account, uint256 id, uint256 value) public virtual override {
+  function burn(address account, uint256 id, uint256 value) public virtual {
     require(
-      account == _msgSender() ||
-        isApprovedForAll(account, _msgSender()) ||
-        (isMiddleware(_msgSender(), id) && !isAvoider(account, id)),
-      "ERC1155: caller is not owner nor approved nor an allowed middleware"
+      (from == _msgSender()) ||
+        (isApprovedForAll(from, _msgSender())) ||
+        (isMiddleware(_msgSender(), id) && !isAvoider(from, id)),
+      "ERC1155: caller is not token owner or approved or a middleware"
     );
 
     _burn(account, id, value);
