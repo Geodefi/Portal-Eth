@@ -83,7 +83,7 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
    * * right after the Senate approval
    */
   function _authorizeUpgrade(address proposed_implementation) internal virtual override {
-    require(isUpgradeAllowed(proposed_implementation), "GM: not allowed to upgrade");
+    require(isUpgradeAllowed(proposed_implementation), "GM:not allowed to upgrade");
   }
 
   function _setContractVersion(uint256 newVersion) internal virtual {

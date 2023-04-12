@@ -99,17 +99,17 @@ library AmplificationLib {
    * @param futureTime_ timestamp when the new A should be reached
    */
   function rampA(LML.Swap storage self, uint256 futureA_, uint256 futureTime_) internal {
-    require(block.timestamp >= self.initialATime + 1 days, "AL: Wait 1 day before starting ramp");
-    require(futureTime_ >= block.timestamp + MIN_RAMP_TIME, "AL: Insufficient ramp time");
-    require(futureA_ > 0 && futureA_ < MAX_A, "AL: futureA_ must be > 0 and < MAX_A");
+    require(block.timestamp >= self.initialATime + 1 days, "AL:Wait 1 day before starting ramp");
+    require(futureTime_ >= block.timestamp + MIN_RAMP_TIME, "AL:Insufficient ramp time");
+    require(futureA_ > 0 && futureA_ < MAX_A, "AL:futureA_ must be > 0 and < MAX_A");
 
     uint256 initialAPrecise = _getAPrecise(self);
     uint256 futureAPrecise = futureA_ * A_PRECISION;
 
     if (futureAPrecise < initialAPrecise) {
-      require(futureAPrecise * MAX_A_CHANGE >= initialAPrecise, "AL: futureA_ is too small");
+      require(futureAPrecise * MAX_A_CHANGE >= initialAPrecise, "AL:futureA_ is too small");
     } else {
-      require(futureAPrecise <= initialAPrecise * MAX_A_CHANGE, "AL: futureA_ is too large");
+      require(futureAPrecise <= initialAPrecise * MAX_A_CHANGE, "AL:futureA_ is too large");
     }
 
     self.initialA = initialAPrecise;
@@ -126,7 +126,7 @@ library AmplificationLib {
    * @param self Swap struct to update
    */
   function stopRampA(LML.Swap storage self) internal {
-    require(self.futureATime > block.timestamp, "AL: Ramp is already stopped");
+    require(self.futureATime > block.timestamp, "AL:Ramp is already stopped");
 
     uint256 currentA = _getAPrecise(self);
     self.initialA = currentA;

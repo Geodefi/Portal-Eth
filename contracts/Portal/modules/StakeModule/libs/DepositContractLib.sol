@@ -30,10 +30,6 @@ library DepositContractLib {
   uint256 internal constant MAX_DEPOSITS_PER_CALL = 50;
 
   /**
-   * @custom:section                           ** CONSTANTS **
-   */
-
-  /**
    * @custom:section                           ** FUNCTIONS **
    */
   /**

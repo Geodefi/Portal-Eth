@@ -63,7 +63,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    */
 
   modifier onlyOwner() {
-    require(msg.sender == GEODE.getSenate(), "LPP: sender NOT SENATE");
+    require(msg.sender == GEODE.getSenate(), "LPP:sender NOT SENATE");
     _;
   }
 
@@ -77,14 +77,14 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    * and fetch if needed.
    */
   constructor(address _gETHPos, address _portalPos, address _LPTokenRef) {
-    require(_gETHPos != address(0), "LPP: _gETHPos can not be zero");
-    require(_portalPos != address(0), "LPP: _portalPos can not be zero");
-    require(_LPTokenRef != address(0), "LPP: _LPTokenRef can not be zero");
+    require(_gETHPos != address(0), "LPP:_gETHPos can not be zero");
+    require(_portalPos != address(0), "LPP:_portalPos can not be zero");
+    require(_LPTokenRef != address(0), "LPP:_LPTokenRef can not be zero");
 
     gETHPos = _gETHPos;
     portalPos = _portalPos;
     LPTokenRef = _LPTokenRef;
-    PACKAGE_TYPE = ID_TYPE.PACKAGE_LIQUDITY_POOL;
+    PACKAGE_TYPE = ID_TYPE.PACKAGE_LIQUIDITY_POOL;
 
     _disableInitializers();
   }
@@ -92,15 +92,13 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /// @param data only poolName is required from Portal
   function initialize(
     uint256 pooledTokenId,
+    uint256 versionId,
     address poolOwner,
-    bytes memory versionName,
     bytes memory data
   ) public virtual override initializer returns (bool success) {
     __LiquidityPool_init(pooledTokenId, poolOwner, data);
+    _setContractVersion(versionId);
     success = true;
-
-    uint256 initContractVersion = DSML.generateId(versionName, PACKAGE_TYPE);
-    _setContractVersion(initContractVersion);
   }
 
   function __LiquidityPool_init(
@@ -188,11 +186,11 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    * @dev GeodeModule override
    */
   function pullUpgrade() external virtual override onlyOwner {
-    require(!(getPortal().isolationMode()), "LPP: Portal is isolated");
-    require(getProposedVersion() != getContractVersion(), "LPP: no upgrades");
+    require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
+    require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
 
     uint256 proposedVersionName = getPortal().fetchUpgrade(PACKAGE_TYPE);
-    require(proposedVersionName != bytes(0), "LPP: PROPOSED_VERSION ERROR");
+    require(proposedVersionName != bytes(0), "LPP:PROPOSED_VERSION ERROR");
 
     uint256 upgradeProposal = DSML.generateId(proposedVersionName, ID_TYPE.CONTRACT_UPGRADE);
     approveProposal(proposedVersion);

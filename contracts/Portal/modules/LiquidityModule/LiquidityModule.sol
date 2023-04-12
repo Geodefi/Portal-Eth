@@ -113,7 +113,7 @@ contract LiquidityModule is
    * @param deadline latest timestamp to accept this transaction
    */
   modifier deadlineCheck(uint256 deadline) {
-    require(block.timestamp <= deadline, "LML: Deadline not met");
+    require(block.timestamp <= deadline, "LML:Deadline not met");
     _;
   }
 
@@ -153,11 +153,11 @@ contract LiquidityModule is
     uint256 _swapFee,
     string memory _poolName
   ) internal onlyInitializing {
-    require(_gETH_position != address(0), "LML: _gETH_position can not be zero");
-    require(_lpToken_referance != address(0), "LML: _lpToken_referance can not be zero");
-    require(_pooledTokenId != 0, "LML: _pooledTokenId can not be zero");
-    require(_initialA != 0, "LML: _initialA can not be zero");
-    require(_futureA != 0, "LML: _futureA can not be zero");
+    require(_gETH_position != address(0), "LML:_gETH_position can not be zero");
+    require(_lpToken_referance != address(0), "LML:_lpToken_referance can not be zero");
+    require(_pooledTokenId != 0, "LML:_pooledTokenId can not be zero");
+    require(_initialA != 0, "LML:_initialA can not be zero");
+    require(_futureA != 0, "LML:_futureA can not be zero");
 
     // Clone and initialize a LPToken contract
     ILPToken _lpToken = ILPToken(Clones.clone(_lpToken_referance));
@@ -168,7 +168,7 @@ contract LiquidityModule is
         string(abi.encodePacked(_poolName, name_suffix)),
         string(abi.encodePacked(_poolName, symbol_suffix))
       ),
-      "LML: could not init lpToken clone"
+      "LML:could not init lpToken clone"
     );
 
     LIQUIDITY.gETH = IgETH(_gETH_position);

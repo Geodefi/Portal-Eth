@@ -7,13 +7,13 @@ import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
-import {StakeUtils as SU} from "./StakeUtilsLib.sol";
+import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
 // external
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
- * @title Oracle Extension Library - OL
+ * @title Oracle Extension Library - OEL
  *
  * @notice An extension to StakeModuleLib
  * @notice Oracle, named Telescope, handles some operations for The Staking Library,
@@ -65,7 +65,7 @@ library OracleExtensionLib {
   using DSML for DSML.IsolatedStorage;
 
   /// @notice Using StakeUtils for PooledStaking struct
-  using SU for SU.PooledStaking;
+  using SML for SML.PooledStaking;
 
   /**
    * @custom:section                           ** CONSTANTS **
@@ -87,8 +87,8 @@ library OracleExtensionLib {
   /**
    * @custom:section                           ** MODIFIERS **
    */
-  modifier onlyOracle(SU.PooledStaking storage STAKER) {
-    require(msg.sender == STAKER.ORACLE_POSITION, "OL: sender NOT ORACLE");
+  modifier onlyOracle(SML.PooledStaking storage STAKER) {
+    require(msg.sender == STAKER.ORACLE_POSITION, "OEL:sender NOT ORACLE");
     _;
   }
 
@@ -109,16 +109,16 @@ library OracleExtensionLib {
    */
   function _alienateValidator(
     DSML.IsolatedStorage storage DATASTORE,
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     bytes calldata _pk
   ) internal {
-    require(STAKER._validators[_pk].index <= STAKER.VERIFICATION_INDEX, "OL: unexpected index");
+    require(STAKER._validators[_pk].index <= STAKER.VERIFICATION_INDEX, "OEL:unexpected index");
     require(
       STAKER._validators[_pk].state == VALIDATOR_STATE.PROPOSED,
-      "OL: NOT all pubkeys are pending"
+      "OEL:NOT all pubkeys are pending"
     );
     uint256 operatorId = STAKER._validators[_pk].operatorId;
-    SU._imprison(DATASTORE, operatorId, _pk);
+    SML._imprison(DATASTORE, operatorId, _pk);
 
     uint256 poolId = STAKER._validators[_pk].poolId;
     DATASTORE.subUint(poolId, "secured", DCU.DEPOSIT_AMOUNT);
@@ -143,12 +143,12 @@ library OracleExtensionLib {
    */
   function updateVerificationIndex(
     DSML.IsolatedStorage storage DATASTORE,
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     uint256 validatorVerificationIndex,
     bytes[] calldata alienatedPubkeys
   ) external onlyOracle(STAKER) {
-    require(STAKER.VALIDATORS_INDEX >= validatorVerificationIndex, "OL: high VERIFICATION_INDEX");
-    require(validatorVerificationIndex > STAKER.VERIFICATION_INDEX, "OL: low VERIFICATION_INDEX");
+    require(STAKER.VALIDATORS_INDEX >= validatorVerificationIndex, "OEL:high VERIFICATION_INDEX");
+    require(validatorVerificationIndex > STAKER.VERIFICATION_INDEX, "OEL:low VERIFICATION_INDEX");
 
     STAKER.VERIFICATION_INDEX = validatorVerificationIndex;
 
@@ -173,14 +173,14 @@ library OracleExtensionLib {
    */
   function regulateOperators(
     DSML.IsolatedStorage storage DATASTORE,
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     uint256[] calldata feeThefts,
     bytes[] calldata proofs
   ) external onlyOracle(STAKER) {
-    require(feeThefts.length == proofs.length, "OL: invalid proofs");
+    require(feeThefts.length == proofs.length, "OEL:invalid proofs");
 
     for (uint256 i = 0; i < feeThefts.length; ++i) {
-      SU._imprison(DATASTORE, feeThefts[i], proofs[i]);
+      SML._imprison(DATASTORE, feeThefts[i], proofs[i]);
 
       emit FeeTheft(feeThefts[i], proofs[i]);
     }
@@ -199,11 +199,11 @@ library OracleExtensionLib {
    * Prevents monopolies.
    */
   function reportBeacon(
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     bytes32 priceMerkleRoot,
     uint256 allValidatorsCount
   ) external onlyOracle(STAKER) {
-    require(allValidatorsCount > MIN_VALIDATOR_COUNT, "OL: low validator count");
+    require(allValidatorsCount > MIN_VALIDATOR_COUNT, "OEL:low validator count");
 
     STAKER.PRICE_MERKLE_ROOT = priceMerkleRoot;
     STAKER.ORACLE_UPDATE_TIMESTAMP = block.timestamp;
@@ -240,11 +240,11 @@ library OracleExtensionLib {
    */
   function _sanityCheck(
     DSML.IsolatedStorage storage DATASTORE,
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     uint256 _id,
     uint256 _newPrice
   ) internal view {
-    require(DATASTORE.readUint(_id, "TYPE") == ID_TYPE.POOL, "OL: not a pool?");
+    require(DATASTORE.readUint(_id, "TYPE") == ID_TYPE.POOL, "OEL:not a pool?");
 
     uint256 lastUpdate = STAKER.gETH.priceUpdateTimestamp(_id);
     uint256 dayPercentSinceUpdate = ((block.timestamp - lastUpdate) * PERCENTAGE_DENOMINATOR) /
@@ -262,7 +262,7 @@ library OracleExtensionLib {
 
     require(
       (_newPrice + maxPriceDecrease >= curPrice) && (_newPrice <= curPrice + maxPriceIncrease),
-      "OL: price is insane, price update is halted"
+      "OEL:price is insane, price update is halted"
     );
   }
 
@@ -276,20 +276,20 @@ library OracleExtensionLib {
    */
   function _priceSync(
     DSML.IsolatedStorage storage DATASTORE,
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     uint256 _poolId,
     uint256 _price,
     bytes32[] calldata _priceProof
   ) internal {
     require(
       STAKER.ORACLE_UPDATE_TIMESTAMP > STAKER.gETH.priceUpdateTimestamp(_poolId),
-      "OL: no price change"
+      "OEL:no price change"
     );
 
     bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(_poolId, _price))));
     require(
       MerkleProof.verify(_priceProof, STAKER.PRICE_MERKLE_ROOT, leaf),
-      "OL: NOT all proofs are valid"
+      "OEL:NOT all proofs are valid"
     );
 
     _sanityCheck(DATASTORE, STAKER, _poolId, _price);
@@ -308,7 +308,7 @@ library OracleExtensionLib {
    */
   function priceSync(
     DSML.IsolatedStorage storage DATASTORE,
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     uint256 poolId,
     uint256 price,
     bytes32[] calldata priceProof
@@ -323,7 +323,7 @@ library OracleExtensionLib {
    */
   function priceSyncBatch(
     DSML.IsolatedStorage storage DATASTORE,
-    SU.PooledStaking storage STAKER,
+    SML.PooledStaking storage STAKER,
     uint256[] calldata poolIds,
     uint256[] calldata prices,
     bytes32[][] calldata priceProofs

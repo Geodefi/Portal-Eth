@@ -150,7 +150,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev ADDED for gETH
    */
   function _setMiddleware(address _middleware, uint256 _id, bool _isSet) internal virtual {
-    require(_middleware != address(0), "gETH: middleware query for the zero address");
+    require(_middleware != address(0), "gETH:middleware query for the zero address");
     _middlewares[_id][_middleware] = _isSet;
   }
 
@@ -169,7 +169,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 id,
     bool isSet
   ) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
-    require(middleware.isContract(), "gETH: middleware must be a contract");
+    require(middleware.isContract(), "gETH:middleware must be a contract");
 
     _setMiddleware(middleware, id, isSet);
 
@@ -251,7 +251,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 price,
     uint256 id
   ) external virtual override onlyRole(ORACLE_ROLE) {
-    require(id != 0, "gETH: price query for the zero address");
+    require(id != 0, "gETH:price query for the zero address");
 
     _setPricePerShare(price, id);
 

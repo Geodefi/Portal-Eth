@@ -127,18 +127,18 @@ library GeodeModuleLib {
    * @custom:section                           ** MODIFIERS **
    */
   modifier onlyGovernance(DualGovernance storage self) {
-    require(msg.sender == self.GOVERNANCE, "GU: GOVERNANCE role needed");
+    require(msg.sender == self.GOVERNANCE, "GML:GOVERNANCE role needed");
     _;
   }
 
   modifier onlySenate(DualGovernance storage self) {
-    require(msg.sender == self.SENATE, "GU: SENATE role needed");
-    require(block.timestamp < self.SENATE_EXPIRY, "GU: SENATE expired");
+    require(msg.sender == self.SENATE, "GML:SENATE role needed");
+    require(block.timestamp < self.SENATE_EXPIRY, "GML:SENATE expired");
     _;
   }
 
   modifier onlyController(DSML.IsolatedStorage storage DATASTORE, uint256 id) {
-    require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "GU: CONTROLLER role needed");
+    require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "GML:CONTROLLER role needed");
     _;
   }
 
@@ -180,16 +180,16 @@ library GeodeModuleLib {
   ) external onlyGovernance(self) returns (uint256 id) {
     id = DSML.generateId(_NAME, _TYPE);
 
-    require(self.proposals[id].deadline == 0, "GU: NAME already proposed");
-    require((DATASTORE.readBytes(id, "NAME")).length == 0, "GU: ID already exist");
-    require(_CONTROLLER != address(0), "GU: CONTROLLER can NOT be ZERO");
+    require(self.proposals[id].deadline == 0, "GML:NAME already proposed");
+    require((DATASTORE.readBytes(id, "NAME")).length == 0, "GML:ID already exist");
+    require(_CONTROLLER != address(0), "GML:CONTROLLER can NOT be ZERO");
     require(
       (_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.__GAP__) && (_TYPE != ID_TYPE.POOL),
-      "GU: TYPE is NONE, GAP or POOL"
+      "GML:TYPE is NONE, GAP or POOL"
     );
     require(
       (duration >= MIN_PROPOSAL_DURATION) && (duration <= MAX_PROPOSAL_DURATION),
-      "GU: invalid proposal duration"
+      "GML:invalid proposal duration"
     );
 
     uint256 _deadline = block.timestamp + duration;
@@ -217,7 +217,7 @@ library GeodeModuleLib {
     DSML.IsolatedStorage storage DATASTORE,
     uint256 id
   ) external onlySenate(self) returns (uint256 _type, address _controller) {
-    require(self.proposals[id].deadline > block.timestamp, "GU: NOT an active proposal");
+    require(self.proposals[id].deadline > block.timestamp, "GML:NOT an active proposal");
 
     _type = self.proposals[id].TYPE;
     _controller = self.proposals[id].CONTROLLER;
@@ -254,8 +254,8 @@ library GeodeModuleLib {
     DualGovernance storage self,
     uint256 newFee
   ) external onlyGovernance(self) {
-    require(newFee <= MAX_GOVERNANCE_FEE, "GU: > MAX_GOVERNANCE_FEE");
-    require(block.timestamp < FEE_COOLDOWN, "GU: can not set a fee yet");
+    require(newFee <= MAX_GOVERNANCE_FEE, "GML:> MAX_GOVERNANCE_FEE");
+    require(block.timestamp < FEE_COOLDOWN, "GML:can not set a fee yet");
 
     self.GOVERNANCE_FEE = newFee;
 
@@ -306,7 +306,7 @@ library GeodeModuleLib {
     DualGovernance storage self,
     address _newSenate
   ) external onlyGovernance(self) {
-    require(block.timestamp > self.SENATE_EXPIRY, "GU: cannot rescue yet");
+    require(block.timestamp > self.SENATE_EXPIRY, "GML:cannot rescue yet");
 
     _setSenate(self, _newSenate, block.timestamp + MAX_SENATE_PERIOD);
   }
@@ -329,7 +329,7 @@ library GeodeModuleLib {
     uint256 id,
     address newCONTROLLER
   ) external onlyController(DATASTORE, id) {
-    require(newCONTROLLER != address(0), "GU: CONTROLLER can not be zero");
+    require(newCONTROLLER != address(0), "GML:CONTROLLER can not be zero");
 
     DATASTORE.writeAddress(id, "CONTROLLER", newCONTROLLER);
 

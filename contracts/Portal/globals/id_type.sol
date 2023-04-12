@@ -62,7 +62,7 @@ library ID_TYPE {
   uint256 internal constant PACKAGE_WITHDRAWAL_POOL = 10011;
 
   /// @notice TYPE 10021: Package: A Liquidity Pool
-  uint256 internal constant PACKAGE_LIQUDITY_POOL = 10021;
+  uint256 internal constant PACKAGE_LIQUIDITY_POOL = 10021;
 
   /// @notice TYPE 19999: Limit: exclusive, maximum TYPE that will be percieved as a package
   uint256 internal constant LIMIT_MAX_PACKAGE = 19999;
@@ -73,7 +73,7 @@ library ID_TYPE {
   uint256 internal constant LIMIT_MIN_MIDDLEWARE = 20000;
 
   /// @notice TYPE 20031: Middleware: A new gETH interface
-  uint256 internal constant MIDDLEWARE_GETHMIDDLEWARE = 20011;
+  uint256 internal constant MIDDLEWARE_GETH = 20011;
 
   /// @notice TYPE 29999: Limit: exclusive, maximum TYPE that will be percieved as a middleware
   uint256 internal constant LIMIT_MAX_MIDDLEWARE = 29999;
