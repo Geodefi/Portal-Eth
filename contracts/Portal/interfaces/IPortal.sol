@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import {GeodeUtils} from "../Portal/utils/GeodeUtilsLib.sol";
-import {StakeUtils} from "../Portal/utils/StakeUtilsLib.sol";
+// import {GeodeUtils} from "../Portal/utils/GeodeUtilsLib.sol";
+// import {StakeUtils} from "../Portal/utils/StakeUtilsLib.sol";
 
 interface IPortal {
   function initialize(
@@ -28,7 +28,7 @@ interface IPortal {
 
   function unpausegETH() external;
 
-  function fetchModuleUpgradeProposal(uint256 moduleType) external returns (uint256 moduleVersion);
+  function fetchUpgrade(uint256 moduleType) external returns (uint256 moduleVersion);
 
   function gETH() external view returns (address);
 
@@ -69,7 +69,7 @@ interface IPortal {
     view
     returns (address SENATE, address GOVERNANCE, uint256 SENATE_EXPIRY, uint256 GOVERNANCE_FEE);
 
-  function getProposal(uint256 id) external view returns (GeodeUtils.Proposal memory proposal);
+  // function getProposal(uint256 id) external view returns (GeodeUtils.Proposal memory proposal);
 
   function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 
@@ -109,7 +109,7 @@ interface IPortal {
 
   function isMiddleware(uint256 _type, uint256 _version) external view returns (bool);
 
-  function getValidator(bytes calldata pubkey) external view returns (StakeUtils.Validator memory);
+  // function getValidator(bytes calldata pubkey) external view returns (StakeUtils.Validator memory);
 
   function getValidatorByPool(uint256 poolId, uint256 index) external view returns (bytes memory);
 

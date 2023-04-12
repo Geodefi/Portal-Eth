@@ -4,10 +4,10 @@
 pragma solidity =0.8.7;
 
 // interfaces
-import {IgETH} from "../../interfaces/IgETH.sol";
-import {IgETHMiddleware} from "../interfaces/IgETHMiddleware.sol";
+import {IgETH} from "../interfaces/IgETH.sol";
+import {IgETHMiddleware} from "../interfaces/middlewares/IgETHMiddleware.sol";
 // libraries
-import {BytesLib} from "../../helpers/BytesLib.sol";
+import {BytesLib} from "../helpers/BytesLib.sol";
 // external
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";

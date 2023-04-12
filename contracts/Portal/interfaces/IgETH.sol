@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
-import {IERC1155PausableBurnableSupply} from "../helpers/IERC1155PausableBurnableSupply.sol";
+import {IERC1155PausableBurnableSupply} from "./helpers/IERC1155PausableBurnableSupply.sol";
 
 interface IgETH is IERC1155PausableBurnableSupply {
   function denominator() external view returns (uint256);

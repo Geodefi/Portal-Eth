@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import {IDataStoreModule} from "../../DataStoreModule/interfaces/IDataStoreModule.sol";
-import {GeodeModuleLib as GML} from "../libs/GeodeModuleLib.sol";
+import {IDataStoreModule} from "./IDataStoreModule.sol";
+import {GeodeModuleLib as GML} from "../../modules/GeodeModule/libs/GeodeModuleLib.sol";
 
 interface IGeodeModule is IDataStoreModule {
   function getContractVersion() external view returns (uint256);

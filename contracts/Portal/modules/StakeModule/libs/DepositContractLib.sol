@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 // interfaces
-import {IDepositContract} from "../interfaces/IDepositContract.sol";
+import {IDepositContract} from "../../../interfaces/helpers/IDepositContract.sol";
 // libraries
 import {BytesLib} from "../../../helpers/BytesLib.sol";
 

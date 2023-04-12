@@ -4,7 +4,7 @@
 pragma solidity =0.8.7;
 
 // libraries
-import {BytesLib} from "../../helpers/BytesLib.sol";
+import {BytesLib} from "../helpers/BytesLib.sol";
 // contracts
 import {ERC20Middleware} from "./ERC20Middleware.sol";
 // external

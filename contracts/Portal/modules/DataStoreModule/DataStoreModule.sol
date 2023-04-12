@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 // interfaces
-import {IDataStoreModule} from "./interfaces/IDataStoreModule.sol";
+import {IDataStoreModule} from "../../interfaces/modules/IDataStoreModule.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
 // external

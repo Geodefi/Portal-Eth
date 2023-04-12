@@ -5,12 +5,15 @@ pragma solidity =0.8.7;
 import {PERCENTAGE_DENOMINATOR} from "../globals/macros.sol";
 import {ID_TYPE} from "../globals/id_type.sol";
 // interfaces
-import {ILPToken} from "../modules/LiquidityModule/interfaces/ILPToken.sol";
 import {IgETH} from "../interfaces/IgETH.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
-import {IGeodePackage} from "./interfaces/IGeodePackage.sol";
-import {ILiquidityPool} from "../interfaces/ILiquidityPool.sol";
+import {IGeodePackage} from "../interfaces/packages/IGeodePackage.sol";
+import {ILiquidityPool} from "../interfaces/packages/ILiquidityPool.sol";
+import {ILPToken} from "../interfaces/helpers/ILPToken.sol";
+import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
+import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
 // libraries
+import {DataStoreModuleLib as DSML} from "../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
 // contracts
@@ -63,7 +66,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    */
 
   modifier onlyOwner() {
-    require(msg.sender == GEODE.getSenate(), "LPP:sender NOT SENATE");
+    require(msg.sender == GEODE.SENATE, "LPP:sender NOT owner");
     _;
   }
 
@@ -91,8 +94,8 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
 
   /// @param data only poolName is required from Portal
   function initialize(
-    uint256 pooledTokenId,
     uint256 versionId,
+    uint256 pooledTokenId,
     address poolOwner,
     bytes memory data
   ) public virtual override initializer returns (bool success) {
@@ -140,13 +143,19 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    * @notice get Portal as a contract
    */
   function getPortal() public view override returns (IPortal) {
-    return IPortal(GEODE.getGovernance());
+    return IPortal(GEODE.GOVERNANCE);
   }
 
   /**
    * @dev GeodeModule override
    */
-  function getProposedVersion() public view virtual override returns (uint256) {
+  function getProposedVersion()
+    public
+    view
+    virtual
+    override(GeodeModule, IGeodeModule)
+    returns (uint256)
+  {
     return getPortal().getPackageVersion(PACKAGE_TYPE);
   }
 
@@ -185,30 +194,33 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /**
    * @dev GeodeModule override
    */
-  function pullUpgrade() external virtual override onlyOwner {
+  function pullUpgrade() external virtual override(GeodeModule, IGeodeModule) onlyOwner {
     require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
     require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
 
-    uint256 proposedVersionName = getPortal().fetchUpgrade(PACKAGE_TYPE);
-    require(proposedVersionName != bytes(0), "LPP:PROPOSED_VERSION ERROR");
+    uint256 proposedVersion = getPortal().fetchUpgrade(PACKAGE_TYPE);
+    require(proposedVersion != 0, "LPP:PROPOSED_VERSION ERROR");
 
-    uint256 upgradeProposal = DSML.generateId(proposedVersionName, ID_TYPE.CONTRACT_UPGRADE);
     approveProposal(proposedVersion);
-    _authorizeUpgrade(GEODE.approvedUpgrade);
-    _upgradeToAndCallUUPS(GEODE.approvedUpgrade, new bytes(0), false);
-
-    uint256 newVersion = DSML.generateId(proposedVersionName, PACKAGE_TYPE);
-    _setContractVersion(newVersion);
+    _authorizeUpgrade(GEODE.APPROVED_UPGRADE);
+    _upgradeToAndCallUUPS(GEODE.APPROVED_UPGRADE, new bytes(0), false);
+    _setContractVersion(proposedVersion);
   }
 
   /**
    * @dev GeodeModule override
    */
-  function isolationMode() external view virtual override returns (bool) {
+  function isolationMode()
+    external
+    view
+    virtual
+    override(GeodeModule, IGeodeModule)
+    returns (bool)
+  {
     if (paused()) return true;
     if (getContractVersion() != getProposedVersion()) return true;
-    if (GEODE.approvedUpgrade != _getImplementation()) return true;
-    if (getPortal().readAddress(getPoolId(), "CONTROLLER") != GEODE.getSenate()) return true;
+    if (GEODE.APPROVED_UPGRADE != _getImplementation()) return true;
+    if (getPortal().readAddress(getPoolId(), "CONTROLLER") != GEODE.SENATE) return true;
     return false;
   }
 
@@ -216,23 +228,32 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    * @custom:section                           ** LIQUIDITY POOL ADMIN **
    */
 
-  function withdrawAdminFees(address receiver) public virtual override onlyOwner {
+  function withdrawAdminFees(
+    address receiver
+  ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     super.withdrawAdminFees(receiver);
   }
 
-  function setAdminFee(uint256 newAdminFee) public virtual override onlyOwner {
+  function setAdminFee(
+    uint256 newAdminFee
+  ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     super.setAdminFee(newAdminFee);
   }
 
-  function setSwapFee(uint256 newSwapFee) public virtual override onlyOwner {
+  function setSwapFee(
+    uint256 newSwapFee
+  ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     super.setSwapFee(newSwapFee);
   }
 
-  function rampA(uint256 futureA, uint256 futureTime) public virtual override onlyOwner {
+  function rampA(
+    uint256 futureA,
+    uint256 futureTime
+  ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     super.rampA(futureA, futureTime);
   }
 
-  function stopRampA() public virtual override onlyOwner {
+  function stopRampA() public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     super.stopRampA();
   }
 
