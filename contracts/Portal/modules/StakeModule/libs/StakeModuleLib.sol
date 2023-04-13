@@ -5,6 +5,7 @@ pragma solidity =0.8.7;
 import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
+import {RESERVED_KEY_SPACE as rks} from "../../../globals/RESERVED_KEY_SPACE.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
@@ -243,7 +244,7 @@ library StakeModuleLib {
     bool _expectMaintainer,
     bool[2] memory _restrictionMap
   ) internal view {
-    require(DATASTORE.readUint(_id, "initiated") != 0, "SML:ID is not initiated");
+    require(DATASTORE.readUint(_id, rks.initiated) != 0, "SML:ID is not initiated");
 
     uint256 typeOfId = DATASTORE.readUint(_id, "TYPE");
 
@@ -260,7 +261,10 @@ library StakeModuleLib {
     } else revert("SML:invalid TYPE");
 
     if (_expectMaintainer) {
-      require(msg.sender == DATASTORE.readAddress(_id, "maintainer"), "SML:sender NOT maintainer");
+      require(
+        msg.sender == DATASTORE.readAddress(_id, rks.maintainer),
+        "SML:sender NOT maintainer"
+      );
       return;
     }
 
@@ -294,11 +298,11 @@ library StakeModuleLib {
     uint256 validatorPeriod,
     address maintainer
   ) external {
-    require(DATASTORE.readUint(id, "initiated") == 0, "SML:already initiated");
+    require(DATASTORE.readUint(id, rks.initiated) == 0, "SML:already initiated");
     require(DATASTORE.readUint(id, "TYPE") == ID_TYPE.OPERATOR, "SML:TYPE NOT allowed");
     require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "SML:sender NOT CONTROLLER");
 
-    DATASTORE.writeUint(id, "initiated", block.timestamp);
+    DATASTORE.writeUint(id, rks.initiated, block.timestamp);
 
     _setMaintenanceFee(DATASTORE, id, fee);
     _setValidatorPeriod(DATASTORE, id, validatorPeriod);
@@ -321,7 +325,7 @@ library StakeModuleLib {
   /**
    * @notice internal function to set a gETHMiddleware
    * @param _middleware address of the new gETHMiddleware for given ID
-   * @dev every middleware has a unique index within the "middlewares" dynamic array.
+   * @dev every middleware has a unique index within the middlewares dynamic array.
    * @dev if ever unset, SHOULD replace the implementation with address(0) for obvious security reasons.
    */
   function _setgETHMiddleware(
@@ -332,7 +336,7 @@ library StakeModuleLib {
   ) internal {
     require(!self.gETH.isMiddleware(_middleware, id), "SML:already middleware");
 
-    DATASTORE.appendAddressArray(id, "middlewares", _middleware);
+    DATASTORE.appendAddressArray(id, rks.middlewares, _middleware);
 
     self.gETH.setMiddleware(_middleware, id, true);
   }
@@ -406,7 +410,7 @@ library StakeModuleLib {
     uint256 _poolId
   ) internal {
     require(
-      DATASTORE.readAddress(_poolId, "withdrawalContract") == address(0),
+      DATASTORE.readAddress(_poolId, rks.withdrawalContract) == address(0),
       "SML:already deployed"
     );
 
@@ -418,8 +422,8 @@ library StakeModuleLib {
       bytes("")
     );
 
-    DATASTORE.writeAddress(_poolId, "withdrawalContract", wp);
-    DATASTORE.writeBytes(_poolId, "withdrawalCredential", DCL.addressToWC(wp));
+    DATASTORE.writeAddress(_poolId, rks.withdrawalContract, wp);
+    DATASTORE.writeBytes(_poolId, rks.withdrawalCredential, DCL.addressToWC(wp));
   }
 
   /**
@@ -438,7 +442,7 @@ library StakeModuleLib {
     uint256 poolId
   ) public {
     _authenticate(DATASTORE, poolId, true, false, [false, true]);
-    require(DATASTORE.readAddress(poolId, "liquidityPool") == address(0), "SML:already deployed");
+    require(DATASTORE.readAddress(poolId, rks.liquidityPool) == address(0), "SML:already deployed");
 
     address lp = _deployGeodePackage(
       self,
@@ -451,7 +455,7 @@ library StakeModuleLib {
     // approve gETH so we can use it in buybacks
     self.gETH.setApprovalForAll(lp, true);
 
-    DATASTORE.writeAddress(poolId, "liquidityPool", lp);
+    DATASTORE.writeAddress(poolId, rks.liquidityPool, lp);
   }
 
   /**
@@ -478,10 +482,10 @@ library StakeModuleLib {
     require(msg.value == DCL.DEPOSIT_AMOUNT, "SML:need 1 validator worth of funds");
 
     poolId = DSML.generateId(NAME, ID_TYPE.POOL);
-    require(DATASTORE.readUint(poolId, "initiated") == 0, "SML:already initiated");
+    require(DATASTORE.readUint(poolId, rks.initiated) == 0, "SML:already initiated");
     require(poolId > 10 ** 9, "SML:Wow! low pool id");
 
-    DATASTORE.writeUint(poolId, "initiated", block.timestamp);
+    DATASTORE.writeUint(poolId, rks.initiated, block.timestamp);
 
     DATASTORE.writeUint(poolId, "TYPE", ID_TYPE.POOL);
     DATASTORE.writeAddress(poolId, "CONTROLLER", msg.sender);
@@ -539,10 +543,10 @@ library StakeModuleLib {
     _authenticate(DATASTORE, poolId, true, false, [false, true]);
     require(isPrivate != isPrivatePool(DATASTORE, poolId), "SML:already set");
 
-    DATASTORE.writeUint(poolId, "private", isPrivate ? 1 : 0);
+    DATASTORE.writeUint(poolId, rks.privatePool, isPrivate ? 1 : 0);
 
     if (!isPrivate) {
-      DATASTORE.writeAddress(poolId, "whitelist", address(0));
+      DATASTORE.writeAddress(poolId, rks.whitelist, address(0));
     }
 
     emit VisibilitySet(poolId, isPrivate);
@@ -560,7 +564,7 @@ library StakeModuleLib {
     _authenticate(DATASTORE, poolId, true, false, [false, true]);
     require(isPrivatePool(DATASTORE, poolId), "SML:must be private pool");
 
-    DATASTORE.writeAddress(poolId, "whitelist", whitelist);
+    DATASTORE.writeAddress(poolId, rks.whitelist, whitelist);
   }
 
   /**
@@ -582,7 +586,7 @@ library StakeModuleLib {
   ) internal {
     require(_newMaintainer != address(0), "SML:maintainer can NOT be zero");
 
-    DATASTORE.writeAddress(_id, "maintainer", _newMaintainer);
+    DATASTORE.writeAddress(_id, rks.maintainer, _newMaintainer);
     emit MaintainerChanged(_id, _newMaintainer);
   }
 
@@ -601,7 +605,7 @@ library StakeModuleLib {
     uint256 id,
     address newMaintainer
   ) external {
-    require(DATASTORE.readUint(id, "initiated") != 0, "SML:ID is not initiated");
+    require(DATASTORE.readUint(id, rks.initiated) != 0, "SML:ID is not initiated");
     require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "SML:sender NOT CONTROLLER");
     uint256 typeOfId = DATASTORE.readUint(id, "TYPE");
     require(typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL, "SML:invalid TYPE");
@@ -625,10 +629,10 @@ library StakeModuleLib {
     DSML.IsolatedStorage storage DATASTORE,
     uint256 id
   ) public view returns (uint256 fee) {
-    if (DATASTORE.readUint(id, "feeSwitch") > block.timestamp) {
-      return DATASTORE.readUint(id, "priorFee");
+    if (DATASTORE.readUint(id, rks.feeSwitch) > block.timestamp) {
+      return DATASTORE.readUint(id, rks.priorFee);
     }
-    return DATASTORE.readUint(id, "fee");
+    return DATASTORE.readUint(id, rks.fee);
   }
 
   /**
@@ -644,7 +648,7 @@ library StakeModuleLib {
     uint256 _newFee
   ) internal {
     require(_newFee <= MAX_MAINTENANCE_FEE, "SML:> MAX_MAINTENANCE_FEE ");
-    DATASTORE.writeUint(_id, "fee", _newFee);
+    DATASTORE.writeUint(_id, rks.fee, _newFee);
   }
 
   /**
@@ -664,12 +668,12 @@ library StakeModuleLib {
     _authenticate(DATASTORE, id, true, false, [true, true]);
 
     require(
-      block.timestamp > DATASTORE.readUint(id, "feeSwitch"),
+      block.timestamp > DATASTORE.readUint(id, rks.feeSwitch),
       "SML:fee is currently switching"
     );
 
-    DATASTORE.writeUint(id, "priorFee", DATASTORE.readUint(id, "fee"));
-    DATASTORE.writeUint(id, "feeSwitch", block.timestamp + SWITCH_LATENCY);
+    DATASTORE.writeUint(id, rks.priorFee, DATASTORE.readUint(id, rks.fee));
+    DATASTORE.writeUint(id, rks.feeSwitch, block.timestamp + SWITCH_LATENCY);
 
     _setMaintenanceFee(DATASTORE, id, newFee);
 
@@ -697,7 +701,7 @@ library StakeModuleLib {
     uint256 _id,
     uint256 _value
   ) internal returns (bool success) {
-    DATASTORE.addUint(_id, "wallet", _value);
+    DATASTORE.addUint(_id, rks.wallet, _value);
     return true;
   }
 
@@ -710,8 +714,8 @@ library StakeModuleLib {
     uint256 _id,
     uint256 _value
   ) internal {
-    require(DATASTORE.readUint(_id, "wallet") >= _value, "SML:NOT enough funds in wallet");
-    DATASTORE.subUint(_id, "wallet", _value);
+    require(DATASTORE.readUint(_id, rks.wallet) >= _value, "SML:NOT enough funds in wallet");
+    DATASTORE.subUint(_id, rks.wallet, _value);
   }
 
   /**
@@ -769,13 +773,13 @@ library StakeModuleLib {
 
   /**
    * @notice Checks if the given operator is Prisoned
-   * @dev "released" key refers to the end of the last imprisonment, when the limitations of operator is lifted
+   * @dev rks.released key refers to the end of the last imprisonment, when the limitations of operator is lifted
    */
   function isPrisoned(
     DSML.IsolatedStorage storage DATASTORE,
     uint256 operatorId
   ) public view returns (bool) {
-    return (block.timestamp < DATASTORE.readUint(operatorId, "released"));
+    return (block.timestamp < DATASTORE.readUint(operatorId, rks.released));
   }
 
   /**
@@ -784,7 +788,7 @@ library StakeModuleLib {
 
   /**
    * @notice Put an operator in prison
-   * @dev "released" key refers to the end of the last imprisonment, when the limitations of operator is lifted
+   * @dev rks.released key refers to the end of the last imprisonment, when the limitations of operator is lifted
    */
   function _imprison(
     DSML.IsolatedStorage storage DATASTORE,
@@ -793,7 +797,7 @@ library StakeModuleLib {
   ) internal {
     _authenticate(DATASTORE, _operatorId, false, false, [true, false]);
 
-    DATASTORE.writeUint(_operatorId, "released", block.timestamp + PRISON_SENTENCE);
+    DATASTORE.writeUint(_operatorId, rks.released, block.timestamp + PRISON_SENTENCE);
 
     emit Prisoned(_operatorId, _proof, block.timestamp + PRISON_SENTENCE);
   }
@@ -843,7 +847,7 @@ library StakeModuleLib {
     require(_newPeriod >= MIN_VALIDATOR_PERIOD, "SML:< MIN_VALIDATOR_PERIOD");
     require(_newPeriod <= MAX_VALIDATOR_PERIOD, "SML:> MAX_VALIDATOR_PERIOD");
 
-    DATASTORE.writeUint(_operatorId, "validatorPeriod", _newPeriod);
+    DATASTORE.writeUint(_operatorId, rks.validatorPeriod, _newPeriod);
   }
 
   /**
@@ -862,16 +866,16 @@ library StakeModuleLib {
     _authenticate(DATASTORE, operatorId, false, true, [true, false]);
 
     require(
-      block.timestamp > DATASTORE.readUint(operatorId, "periodSwitch"),
+      block.timestamp > DATASTORE.readUint(operatorId, rks.periodSwitch),
       "SML:period is currently switching"
     );
 
     DATASTORE.writeUint(
       operatorId,
-      "priorPeriod",
-      DATASTORE.readUint(operatorId, "validatorPeriod")
+      rks.priorPeriod,
+      DATASTORE.readUint(operatorId, rks.validatorPeriod)
     );
-    DATASTORE.writeUint(operatorId, "periodSwitch", block.timestamp + SWITCH_LATENCY);
+    DATASTORE.writeUint(operatorId, rks.periodSwitch, block.timestamp + SWITCH_LATENCY);
 
     _setValidatorPeriod(DATASTORE, operatorId, newPeriod);
 
@@ -905,7 +909,7 @@ library StakeModuleLib {
     // monopoly check
     {
       // readUint for an array gives us length
-      uint256 numOperatorValidators = DATASTORE.readUint(operatorId, "validators");
+      uint256 numOperatorValidators = DATASTORE.readUint(operatorId, rks.validators);
       uint256 monopoly_threshold = self.MONOPOLY_THRESHOLD;
       if (numOperatorValidators >= monopoly_threshold) {
         return 0;
@@ -916,10 +920,10 @@ library StakeModuleLib {
 
     // fallback check
     {
-      if (operatorId == DATASTORE.readUint(poolId, "fallback")) {
+      if (operatorId == DATASTORE.readUint(poolId, rks.fallbackOperator)) {
         // readUint for an array gives us length
-        uint256 numPoolValidators = DATASTORE.readUint(poolId, "validators");
-        uint256 totalAllowance = DATASTORE.readUint(poolId, "totalAllowance");
+        uint256 numPoolValidators = DATASTORE.readUint(poolId, rks.validators);
+        uint256 totalAllowance = DATASTORE.readUint(poolId, rks.totalAllowance);
         if (
           totalAllowance == 0 ||
           (((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) > FALLBACK_THRESHOLD)
@@ -931,11 +935,11 @@ library StakeModuleLib {
 
     // approval check
     {
-      uint256 allowance = DATASTORE.readUint(poolId, DSML.getKey(operatorId, "allowance"));
+      uint256 allowance = DATASTORE.readUint(poolId, DSML.getKey(operatorId, rks.allowance));
       uint256 pooledValidators = DATASTORE.readUint(
         poolId,
-        DSML.getKey(operatorId, "proposedValidators")
-      ) + DATASTORE.readUint(poolId, DSML.getKey(operatorId, "activeValidators"));
+        DSML.getKey(operatorId, rks.proposedValidators)
+      ) + DATASTORE.readUint(poolId, DSML.getKey(operatorId, rks.activeValidators));
       if (pooledValidators >= allowance) {
         return 0;
       } else {
@@ -956,7 +960,7 @@ library StakeModuleLib {
     uint256 poolId,
     uint256 operatorId
   ) internal {
-    DATASTORE.writeUint(poolId, "fallback", operatorId);
+    DATASTORE.writeUint(poolId, rks.fallbackOperator, operatorId);
     emit FallbackOperator(poolId, operatorId);
   }
 
@@ -966,7 +970,7 @@ library StakeModuleLib {
     uint256 operatorId,
     uint256 allowance
   ) internal returns (uint256 oldAllowance) {
-    bytes32 allowanceKey = DSML.getKey(operatorId, "allowance");
+    bytes32 allowanceKey = DSML.getKey(operatorId, rks.allowance);
 
     oldAllowance = DATASTORE.readUint(poolId, allowanceKey);
     DATASTORE.writeUint(poolId, allowanceKey, allowance);
@@ -1015,9 +1019,9 @@ library StakeModuleLib {
     }
 
     if (newCumulativeSubset > oldCumulativeSubset) {
-      DATASTORE.addUint(poolId, "totalAllowance", newCumulativeSubset - oldCumulativeSubset);
+      DATASTORE.addUint(poolId, rks.totalAllowance, newCumulativeSubset - oldCumulativeSubset);
     } else if (newCumulativeSubset < oldCumulativeSubset) {
-      DATASTORE.subUint(poolId, "totalAllowance", oldCumulativeSubset - newCumulativeSubset);
+      DATASTORE.subUint(poolId, rks.totalAllowance, oldCumulativeSubset - newCumulativeSubset);
     }
 
     _setFallbackOperator(DATASTORE, poolId, fallbackOperator);
@@ -1043,7 +1047,7 @@ library StakeModuleLib {
     DSML.IsolatedStorage storage DATASTORE,
     uint256 _poolId
   ) internal view returns (ILiquidityPool) {
-    address liqPool = DATASTORE.readAddress(_poolId, "liquidityPool");
+    address liqPool = DATASTORE.readAddress(_poolId, rks.liquidityPool);
     if (liqPool == address(0)) {
       return ILiquidityPool(address(0));
     } else if (_isGeodePackageIsolated(liqPool)) {
@@ -1071,7 +1075,7 @@ library StakeModuleLib {
       return true;
     }
 
-    address whitelist = DATASTORE.readAddress(poolId, "whitelist");
+    address whitelist = DATASTORE.readAddress(poolId, rks.whitelist);
     require(whitelist != address(0), "SML:no whitelist");
 
     return IWhitelist(whitelist).isAllowed(staker);
@@ -1084,7 +1088,7 @@ library StakeModuleLib {
     DSML.IsolatedStorage storage DATASTORE,
     uint256 poolId
   ) public view returns (bool) {
-    return (DATASTORE.readUint(poolId, "private") == 1);
+    return (DATASTORE.readUint(poolId, rks.privatePool) == 1);
   }
 
   /**
@@ -1124,7 +1128,7 @@ library StakeModuleLib {
   ) public view returns (bool) {
     return
       (isPriceValid(self, poolId)) &&
-      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, "withdrawalContract")));
+      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalContract)));
   }
 
   /**
@@ -1149,7 +1153,7 @@ library StakeModuleLib {
 
     mintedgETH = (((_ethAmount * self.gETH.denominator()) / self.gETH.pricePerShare(_poolId)));
     self.gETH.mint(address(this), _poolId, mintedgETH, "");
-    DATASTORE.addUint(_poolId, "surplus", _ethAmount);
+    DATASTORE.addUint(_poolId, rks.surplus, _ethAmount);
   }
 
   /**
@@ -1319,7 +1323,7 @@ library StakeModuleLib {
     _authenticate(DATASTORE, operatorId, false, true, [true, false]);
     _authenticate(DATASTORE, poolId, false, false, [false, true]);
     require(
-      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, "withdrawalContract"))),
+      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalContract))),
       "SML:withdrawalContract is isolated"
     );
 
@@ -1333,7 +1337,7 @@ library StakeModuleLib {
 
     unchecked {
       require(
-        DATASTORE.readUint(poolId, "surplus") >= DCL.DEPOSIT_AMOUNT * pkLen,
+        DATASTORE.readUint(poolId, rks.surplus) >= DCL.DEPOSIT_AMOUNT * pkLen,
         "SML:NOT enough surplus"
       );
     }
@@ -1350,10 +1354,10 @@ library StakeModuleLib {
 
     ConstantValidatorData memory valData = ConstantValidatorData({
       index: uint64(self.VALIDATORS_INDEX + 1),
-      expectedExit: uint64(block.timestamp + DATASTORE.readUint(operatorId, "validatorPeriod")),
+      expectedExit: uint64(block.timestamp + DATASTORE.readUint(operatorId, rks.validatorPeriod)),
       poolFee: getMaintenanceFee(DATASTORE, poolId),
       operatorFee: getMaintenanceFee(DATASTORE, operatorId),
-      withdrawalCredential: DATASTORE.readBytes(poolId, "withdrawalCredential")
+      withdrawalCredential: DATASTORE.readBytes(poolId, rks.withdrawalCredential)
     });
 
     for (uint256 i = 0; i < pkLen; ) {
@@ -1383,12 +1387,12 @@ library StakeModuleLib {
 
     _decreaseWalletBalance(DATASTORE, operatorId, (pkLen * DCL.DEPOSIT_AMOUNT_PRESTAKE));
 
-    DATASTORE.subUint(poolId, "surplus", (pkLen * DCL.DEPOSIT_AMOUNT));
-    DATASTORE.addUint(poolId, "secured", (pkLen * DCL.DEPOSIT_AMOUNT));
+    DATASTORE.subUint(poolId, rks.surplus, (pkLen * DCL.DEPOSIT_AMOUNT));
+    DATASTORE.addUint(poolId, rks.secured, (pkLen * DCL.DEPOSIT_AMOUNT));
 
-    DATASTORE.addUint(poolId, DSML.getKey(operatorId, "proposedValidators"), pkLen);
-    DATASTORE.appendBytesArrayBatch(poolId, "validators", pubkeys);
-    DATASTORE.appendBytesArrayBatch(operatorId, "validators", pubkeys);
+    DATASTORE.addUint(poolId, DSML.getKey(operatorId, rks.proposedValidators), pkLen);
+    DATASTORE.appendBytesArrayBatch(poolId, rks.validators, pubkeys);
+    DATASTORE.appendBytesArrayBatch(operatorId, rks.validators, pubkeys);
 
     self.VALIDATORS_INDEX += pubkeys.length;
 
@@ -1445,10 +1449,10 @@ library StakeModuleLib {
     }
 
     {
-      bytes32 activeValKey = DSML.getKey(operatorId, "activeValidators");
-      bytes32 proposedValKey = DSML.getKey(operatorId, "proposedValidators");
+      bytes32 activeValKey = DSML.getKey(operatorId, rks.activeValidators);
+      bytes32 proposedValKey = DSML.getKey(operatorId, rks.proposedValidators);
       uint256 poolId = self.validators[pubkeys[0]].poolId;
-      bytes memory withdrawalCredential = DATASTORE.readBytes(poolId, "withdrawalCredential");
+      bytes memory withdrawalCredential = DATASTORE.readBytes(poolId, rks.withdrawalCredential);
 
       uint256 lastIdChange = 0;
       for (uint256 i = 0; i < pubkeys.length; ) {
@@ -1460,13 +1464,13 @@ library StakeModuleLib {
             sinceLastIdChange = i - lastIdChange;
           }
 
-          DATASTORE.subUint(poolId, "secured", (DCL.DEPOSIT_AMOUNT * (sinceLastIdChange)));
+          DATASTORE.subUint(poolId, rks.secured, (DCL.DEPOSIT_AMOUNT * (sinceLastIdChange)));
           DATASTORE.subUint(poolId, proposedValKey, (sinceLastIdChange));
           DATASTORE.addUint(poolId, activeValKey, (sinceLastIdChange));
 
           lastIdChange = i;
           poolId = newPoolId;
-          withdrawalCredential = DATASTORE.readBytes(poolId, "withdrawalCredential");
+          withdrawalCredential = DATASTORE.readBytes(poolId, rks.withdrawalCredential);
         }
 
         DCL.depositValidator(
@@ -1488,7 +1492,7 @@ library StakeModuleLib {
           sinceLastIdChange = pubkeys.length - lastIdChange;
         }
 
-        DATASTORE.subUint(poolId, "secured", DCL.DEPOSIT_AMOUNT * (sinceLastIdChange));
+        DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT * (sinceLastIdChange));
         DATASTORE.subUint(poolId, proposedValKey, (sinceLastIdChange));
         DATASTORE.addUint(poolId, activeValKey, (sinceLastIdChange));
       }

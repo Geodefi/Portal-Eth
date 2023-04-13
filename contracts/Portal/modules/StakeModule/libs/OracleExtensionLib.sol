@@ -5,6 +5,7 @@ pragma solidity =0.8.7;
 import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
+import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
@@ -125,11 +126,11 @@ library OracleExtensionLib {
     SML._imprison(DATASTORE, operatorId, _pk);
 
     uint256 poolId = STAKE.validators[_pk].poolId;
-    DATASTORE.subUint(poolId, "secured", DCL.DEPOSIT_AMOUNT);
-    DATASTORE.addUint(poolId, "surplus", DCL.DEPOSIT_AMOUNT);
+    DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT);
+    DATASTORE.addUint(poolId, rks.surplus, DCL.DEPOSIT_AMOUNT);
 
-    DATASTORE.subUint(poolId, DSML.getKey(operatorId, "proposedValidators"), 1);
-    DATASTORE.addUint(poolId, DSML.getKey(operatorId, "alienValidators"), 1);
+    DATASTORE.subUint(poolId, DSML.getKey(operatorId, rks.proposedValidators), 1);
+    DATASTORE.addUint(poolId, DSML.getKey(operatorId, rks.alienValidators), 1);
 
     STAKE.validators[_pk].state = VALIDATOR_STATE.ALIENATED;
 

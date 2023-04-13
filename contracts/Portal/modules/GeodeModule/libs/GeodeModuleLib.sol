@@ -4,6 +4,7 @@ pragma solidity =0.8.7;
 // globals
 import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 import {ID_TYPE} from "../../../globals/id_type.sol";
+import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 
@@ -138,7 +139,7 @@ library GeodeModuleLib {
   }
 
   modifier onlyController(DSML.IsolatedStorage storage DATASTORE, uint256 id) {
-    require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "GML:CONTROLLER role needed");
+    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "GML:CONTROLLER role needed");
     _;
   }
 
@@ -181,7 +182,7 @@ library GeodeModuleLib {
     id = DSML.generateId(_NAME, _TYPE);
 
     require(self.proposals[id].deadline == 0, "GML:NAME already proposed");
-    require((DATASTORE.readBytes(id, "NAME")).length == 0, "GML:ID already exist");
+    require((DATASTORE.readBytes(id, rks.NAME)).length == 0, "GML:ID already exist");
     require(_CONTROLLER != address(0), "GML:CONTROLLER can NOT be ZERO");
     require(
       (_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.__GAP__) && (_TYPE != ID_TYPE.POOL),
@@ -222,9 +223,9 @@ library GeodeModuleLib {
     _type = self.proposals[id].TYPE;
     _controller = self.proposals[id].CONTROLLER;
 
-    DATASTORE.writeUint(id, "TYPE", _type);
-    DATASTORE.writeAddress(id, "CONTROLLER", _controller);
-    DATASTORE.writeBytes(id, "NAME", self.proposals[id].NAME);
+    DATASTORE.writeUint(id, rks.TYPE, _type);
+    DATASTORE.writeAddress(id, rks.CONTROLLER, _controller);
+    DATASTORE.writeBytes(id, rks.NAME, self.proposals[id].NAME);
     DATASTORE.allIdsByType[_type].push(id);
 
     if (_type == ID_TYPE.SENATE) {
@@ -331,7 +332,7 @@ library GeodeModuleLib {
   ) external onlyController(DATASTORE, id) {
     require(newCONTROLLER != address(0), "GML:CONTROLLER can not be zero");
 
-    DATASTORE.writeAddress(id, "CONTROLLER", newCONTROLLER);
+    DATASTORE.writeAddress(id, rks.CONTROLLER, newCONTROLLER);
 
     emit ControllerChanged(id, newCONTROLLER);
   }
