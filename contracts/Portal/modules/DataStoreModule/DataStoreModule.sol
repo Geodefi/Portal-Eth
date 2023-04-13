@@ -14,7 +14,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @author Ice Bear & Crash Bandicoot
  *
  */
-contract DataStoreModule is IDataStoreModule, Initializable {
+abstract contract DataStoreModule is IDataStoreModule, Initializable {
   using DSML for DSML.IsolatedStorage;
   /**
    * @custom:section                           ** VARIABLES **

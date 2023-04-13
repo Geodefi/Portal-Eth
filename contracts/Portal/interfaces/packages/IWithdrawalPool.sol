@@ -13,10 +13,6 @@ interface IWithdrawalContract {
     bytes memory _versionName
   ) external returns (bool);
 
-  function pause() external;
-
-  function unpause() external;
-
   function getgETH() external view returns (IgETH);
 
   function getPortal() external view returns (IPortal);

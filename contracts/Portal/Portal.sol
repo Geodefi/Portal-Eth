@@ -15,6 +15,7 @@ import {ID_TYPE} from "./globals/id_type.sol";
 // interfaces
 import {IGeodeModule} from "./interfaces/modules/IGeodeModule.sol";
 import {IPortal} from "./interfaces/IPortal.sol";
+import {IStakeModule} from "./interfaces/modules/IStakeModule.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
@@ -105,11 +106,11 @@ contract Portal is IPortal, StakeModule, GeodeModule {
     _setContractVersion(portalVersion);
   }
 
-  function pause() external virtual override onlyGovernance {
+  function pause() external virtual override(StakeModule, IStakeModule) onlyGovernance {
     _pause();
   }
 
-  function unpause() external virtual override onlyGovernance {
+  function unpause() external virtual override(StakeModule, IStakeModule) onlyGovernance {
     _unpause();
   }
 

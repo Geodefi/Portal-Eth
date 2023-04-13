@@ -42,7 +42,7 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract LiquidityModule is
+abstract contract LiquidityModule is
   ILiquidityModule,
   ERC1155HolderUpgradeable,
   ReentrancyGuardUpgradeable,
@@ -182,6 +182,13 @@ contract LiquidityModule is
     // issues that can be surfaced with future middlewares.
     LIQUIDITY.gETH.avoidMiddlewares(_pooledTokenId, true);
   }
+
+  /**
+   * @custom:section                           ** FUNCTIONS TO OVERRIDE **
+   */
+  function pause() external virtual override;
+
+  function unpause() external virtual override;
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **

@@ -21,7 +21,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract StakeModule is
+abstract contract StakeModule is
   IStakeModule,
   DataStoreModule,
   ERC1155HolderUpgradeable,
@@ -85,6 +85,13 @@ contract StakeModule is
     STAKE.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
     STAKE.DAILY_PRICE_DECREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
   }
+
+  /**
+   * @custom:section                           ** FUNCTIONS TO OVERRIDE **
+   */
+  function pause() external virtual override;
+
+  function unpause() external virtual override;
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **

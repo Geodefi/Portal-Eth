@@ -68,6 +68,18 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
   }
 
   /**
+   * @custom:section                           ** FUNCTIONS TO OVERRIDE **
+   */
+  /**
+   * @notice get the latest version of the package using this module, from Portal
+   */
+  function getProposedVersion() public view virtual override returns (uint256);
+
+  function pullUpgrade() external virtual override;
+
+  function isolationMode() external view virtual override returns (bool);
+
+  /**
    * @custom:section                           ** VERSION CONTROL FUNCTIONS **
    */
 
@@ -101,19 +113,6 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
   ) public view virtual override returns (bool) {
     return GEODE.isUpgradeAllowed(proposedImplementation, _getImplementation());
   }
-
-  /**
-   * @notice get the latest version of the package using this module, from Portal
-   */
-  function getProposedVersion() public view virtual override returns (uint256);
-
-  /**
-   * @dev -> external
-   */
-
-  function pullUpgrade() external virtual override;
-
-  function isolationMode() external view virtual override returns (bool);
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **

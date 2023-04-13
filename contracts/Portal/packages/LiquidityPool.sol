@@ -177,14 +177,14 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /**
    * @notice pausing the contract activates the isolationMode
    */
-  function pause() external virtual override onlyOwner {
+  function pause() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     _pause();
   }
 
   /**
    * @notice unpausing the contract deactivates the isolationMode
    */
-  function unpause() external virtual override onlyOwner {
+  function unpause() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     _unpause();
   }
 

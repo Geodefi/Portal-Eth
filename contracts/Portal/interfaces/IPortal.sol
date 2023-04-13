@@ -4,10 +4,6 @@ import {IGeodeModule} from "./packages/IGeodePackage.sol";
 import {IStakeModule} from "./modules/IStakeModule.sol";
 
 interface IPortal is IStakeModule, IGeodeModule {
-  function pause() external;
-
-  function unpause() external;
-
   function pausegETH() external;
 
   function unpausegETH() external;

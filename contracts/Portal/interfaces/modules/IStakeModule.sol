@@ -3,6 +3,10 @@ pragma solidity =0.8.7;
 import {StakeModuleLib as SML} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
 
 interface IStakeModule {
+  function pause() external;
+
+  function unpause() external;
+
   function StakeParams()
     external
     view

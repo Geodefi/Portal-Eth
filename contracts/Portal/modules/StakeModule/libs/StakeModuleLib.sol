@@ -5,7 +5,7 @@ pragma solidity =0.8.7;
 import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
-import {RESERVED_KEY_SPACE as rks} from "../../../globals/RESERVED_KEY_SPACE.sol";
+import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
