@@ -18,7 +18,6 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 
 /**
  * @title Stake Module - SM
- * todo whennotpaused, reenter
  *
  * @author Ice Bear & Crash Bandicoot
  */
@@ -153,9 +152,7 @@ contract StakeModule is
   /**
    * @dev -> external
    */
-  function deployLiquidityPool(
-    uint256 poolId
-  ) external virtual override whenNotPaused nonReentrant {
+  function deployLiquidityPool(uint256 poolId) external virtual override whenNotPaused {
     STAKE.deployLiquidityPool(DATASTORE, poolId);
   }
 
@@ -166,7 +163,7 @@ contract StakeModule is
     bytes calldata NAME,
     bytes calldata middleware_data,
     bool[3] calldata config
-  ) external payable virtual override whenNotPaused nonReentrant returns (uint256 poolId) {
+  ) external payable virtual override whenNotPaused returns (uint256 poolId) {
     poolId = STAKE.initiatePool(
       DATASTORE,
       fee,
@@ -185,17 +182,11 @@ contract StakeModule is
    * @dev -> external -> all
    */
 
-  function setPoolVisibility(
-    uint256 poolId,
-    bool isPrivate
-  ) external virtual override whenNotPaused nonReentrant {
+  function setPoolVisibility(uint256 poolId, bool isPrivate) external virtual override {
     SML.setPoolVisibility(DATASTORE, poolId, isPrivate);
   }
 
-  function setWhitelist(
-    uint256 poolId,
-    address whitelist
-  ) external virtual override whenNotPaused nonReentrant {
+  function setWhitelist(uint256 poolId, address whitelist) external virtual override {
     SML.setWhitelist(DATASTORE, poolId, whitelist);
   }
 
@@ -208,7 +199,7 @@ contract StakeModule is
   function changeMaintainer(
     uint256 poolId,
     address newMaintainer
-  ) external virtual override whenNotPaused nonReentrant {
+  ) external virtual override whenNotPaused {
     SML.changeMaintainer(DATASTORE, poolId, newMaintainer);
   }
 
@@ -229,7 +220,7 @@ contract StakeModule is
   function switchMaintenanceFee(
     uint256 id,
     address newMaintainer
-  ) external virtual override whenNotPaused nonReentrant {
+  ) external virtual override whenNotPaused {
     SML.changeMaintainer(DATASTORE, id, newMaintainer);
   }
 
@@ -242,15 +233,15 @@ contract StakeModule is
 
   function increaseWalletBalance(
     uint256 id
-  ) external payable virtual override whenNotPaused nonReentrant {
-    SML.increaseWalletBalance(DATASTORE, id);
+  ) external payable virtual override whenNotPaused nonReentrant returns (bool) {
+    return SML.increaseWalletBalance(DATASTORE, id);
   }
 
   function decreaseWalletBalance(
     uint256 id,
     uint256 value
-  ) external virtual override whenNotPaused nonReentrant {
-    SML.decreaseWalletBalance(DATASTORE, id, value);
+  ) external virtual override whenNotPaused nonReentrant returns (bool) {
+    return SML.decreaseWalletBalance(DATASTORE, id, value);
   }
 
   /**
@@ -268,7 +259,7 @@ contract StakeModule is
   /**
    * @dev -> external
    */
-  function blameOperator(bytes calldata pk) external virtual override whenNotPaused nonReentrant {
+  function blameOperator(bytes calldata pk) external virtual override whenNotPaused {
     STAKE.blameOperator(DATASTORE, pk);
   }
 
@@ -281,7 +272,7 @@ contract StakeModule is
   function switchValidatorPeriod(
     uint256 operatorId,
     uint256 newPeriod
-  ) external virtual override whenNotPaused nonReentrant {
+  ) external virtual override whenNotPaused {
     SML.switchValidatorPeriod(DATASTORE, operatorId, newPeriod);
   }
 
@@ -309,7 +300,7 @@ contract StakeModule is
     uint256[] calldata operatorIds,
     uint256[] calldata allowances,
     uint256 fallbackOperator
-  ) external virtual override whenNotPaused nonReentrant {
+  ) external virtual override whenNotPaused {
     SML.delegate(DATASTORE, poolId, operatorIds, allowances, fallbackOperator);
   }
 
@@ -350,7 +341,15 @@ contract StakeModule is
     uint256 mingETH,
     uint256 deadline,
     address receiver
-  ) external payable virtual override returns (uint256 boughtgETH, uint256 mintedgETH) {
+  )
+    external
+    payable
+    virtual
+    override
+    whenNotPaused
+    nonReentrant
+    returns (uint256 boughtgETH, uint256 mintedgETH)
+  {
     (boughtgETH, mintedgETH) = STAKE.deposit(DATASTORE, poolId, mingETH, deadline, receiver);
   }
 
@@ -376,11 +375,14 @@ contract StakeModule is
     bytes[] calldata pubkeys,
     bytes[] calldata signatures1,
     bytes[] calldata signatures31
-  ) external virtual override {
+  ) external virtual override whenNotPaused {
     STAKE.proposeStake(DATASTORE, poolId, operatorId, pubkeys, signatures1, signatures31);
   }
 
-  function beaconStake(uint256 operatorId, bytes[] calldata pubkeys) external virtual override {
+  function beaconStake(
+    uint256 operatorId,
+    bytes[] calldata pubkeys
+  ) external virtual override whenNotPaused {
     STAKE.beaconStake(DATASTORE, operatorId, pubkeys);
   }
 }

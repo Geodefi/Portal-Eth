@@ -52,9 +52,9 @@ interface IStakeModule {
 
   function switchMaintenanceFee(uint256 id, address newMaintainer) external;
 
-  function increaseWalletBalance(uint256 id) external payable;
+  function increaseWalletBalance(uint256 id) external payable returns (bool);
 
-  function decreaseWalletBalance(uint256 id, uint256 value) external;
+  function decreaseWalletBalance(uint256 id, uint256 value) external returns (bool);
 
   function isPrisoned(uint256 operatorId) external view returns (bool);
 
