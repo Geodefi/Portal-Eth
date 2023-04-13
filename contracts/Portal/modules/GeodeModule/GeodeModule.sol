@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-// globals
-import {ID_TYPE} from "../../globals/id_type.sol";
 // interfaces
 import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";

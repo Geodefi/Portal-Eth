@@ -4,7 +4,7 @@ pragma solidity =0.8.7;
 import {IgETH} from "../IgETH.sol";
 import {IPortal} from "../IPortal.sol";
 
-interface IWithdrawalPool {
+interface IWithdrawalContract {
   function initialize(
     uint256 _ID,
     address _gETH,
