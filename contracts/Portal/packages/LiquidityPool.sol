@@ -74,10 +74,12 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    * @custom:section                           ** INITIALIZING **
    */
   /**
-   * @dev we don't want to provide these package-specific not changing parameters
+   * @custom:oz-upgrades-unsafe-allow constructor
+   *
+   * @dev we don't want to provide these package-specific not-changing parameters
    * accross all instances of the packages.
    * So we will store them in the ref implementation contract of the package,
-   * and fetch if needed.
+   * and fetch when needed on initialization.
    */
   constructor(address _gETHPos, address _portalPos, address _LPTokenRef) {
     require(_gETHPos != address(0), "LPP:_gETHPos can not be zero");
@@ -99,12 +101,12 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     address poolOwner,
     bytes memory data
   ) public virtual override initializer returns (bool success) {
-    __LiquidityPool_init(pooledTokenId, poolOwner, data);
-    _setContractVersion(versionId);
+    __LiquidityPool_init(versionId, pooledTokenId, poolOwner, data);
     success = true;
   }
 
   function __LiquidityPool_init(
+    uint256 versionId,
     uint256 pooledTokenId,
     address poolOwner,
     bytes memory data
@@ -120,10 +122,12 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
       (4 * PERCENTAGE_DENOMINATOR) / 10000,
       poolName
     );
-    __LiquidityPool_init_unchained();
+    __LiquidityPool_init_unchained(versionId);
   }
 
-  function __LiquidityPool_init_unchained() internal onlyInitializing {}
+  function __LiquidityPool_init_unchained(uint256 versionId) internal onlyInitializing {
+    _setContractVersion(versionId);
+  }
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **
@@ -198,7 +202,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
     require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
 
-    uint256 proposedVersion = getPortal().fetchUpgrade(PACKAGE_TYPE);
+    uint256 proposedVersion = getPortal().pushUpgrade(PACKAGE_TYPE);
     require(proposedVersion != 0, "LPP:PROPOSED_VERSION ERROR");
 
     approveProposal(proposedVersion);
@@ -257,5 +261,19 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     super.stopRampA();
   }
 
+  /**
+   * @notice fallback functions
+   */
+  function Do_we_care() external pure virtual override returns (bool) {
+    return true;
+  }
+
+  fallback() external payable {}
+
+  receive() external payable {}
+
+  /**
+   * @notice keep the contract size at 50
+   */
   uint256[46] private __gap;
 }

@@ -15,7 +15,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
+abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
   using GML for GML.DualGovernance;
 
   /**
@@ -96,30 +96,24 @@ contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
     return GEODE.CONTRACT_VERSION;
   }
 
-  /**
-   * @notice get the latest version of the withdrawal contract module from Portal
-   */
-  function getProposedVersion() public view virtual override returns (uint256) {
-    revert("GM:This function needs to be overriden");
-  }
-
   function isUpgradeAllowed(
     address proposedImplementation
   ) public view virtual override returns (bool) {
     return GEODE.isUpgradeAllowed(proposedImplementation, _getImplementation());
   }
 
-  function isolationMode() external view virtual override returns (bool) {
-    revert("GM:This function needs to be overriden");
-  }
+  /**
+   * @notice get the latest version of the package using this module, from Portal
+   */
+  function getProposedVersion() public view virtual override returns (uint256);
 
   /**
    * @dev -> external
    */
 
-  function pullUpgrade() external virtual override {
-    revert("GM:This function needs to be overriden");
-  }
+  function pullUpgrade() external virtual override;
+
+  function isolationMode() external view virtual override returns (bool);
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **

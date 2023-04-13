@@ -42,7 +42,7 @@ contract StakeModule is
 
   /**
    * @custom:section                           ** EVENTS **
-   * following events are added from SML to help fellow devs with a better ABI
+   * following events are added from SML and OEL to help fellow devs with a better ABI
    */
   event IdInitiated(uint256 id, uint256 indexed TYPE);
   event VisibilitySet(uint256 id, bool isPrivate);
@@ -55,6 +55,15 @@ contract StakeModule is
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
   event ProposalStaked(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
   event BeaconStaked(bytes[] pubkeys);
+
+  event Alienated(bytes indexed pubkey);
+  event VerificationIndexUpdated(uint256 validatorVerificationIndex);
+  event FeeTheft(uint256 indexed id, bytes proofs);
+  event OracleReported(
+    bytes32 priceMerkleRoot,
+    bytes32 balanceMerkleRoot,
+    uint256 monopolyThreshold
+  );
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -362,7 +371,7 @@ contract StakeModule is
    */
 
   function canStake(bytes calldata pubkey) external view virtual override returns (bool) {
-    STAKE.canStake(pubkey);
+    return STAKE.canStake(pubkey);
   }
 
   /**
@@ -384,5 +393,50 @@ contract StakeModule is
     bytes[] calldata pubkeys
   ) external virtual override whenNotPaused {
     STAKE.beaconStake(DATASTORE, operatorId, pubkeys);
+  }
+
+  /**
+   * @custom:section                           ** ORACLE OPERATIONS **
+   */
+  /**
+   * @dev -> external -> all
+   */
+
+  function updateVerificationIndex(
+    uint256 validatorVerificationIndex,
+    bytes[] calldata alienatedPubkeys
+  ) external virtual override whenNotPaused {
+    STAKE.updateVerificationIndex(DATASTORE, validatorVerificationIndex, alienatedPubkeys);
+  }
+
+  function regulateOperators(
+    uint256[] calldata feeThefts,
+    bytes[] calldata proofs
+  ) external virtual override whenNotPaused {
+    STAKE.regulateOperators(DATASTORE, feeThefts, proofs);
+  }
+
+  function reportBeacon(
+    bytes32 priceMerkleRoot,
+    bytes32 balanceMerkleRoot,
+    uint256 allValidatorsCount
+  ) external virtual override whenNotPaused {
+    STAKE.reportBeacon(priceMerkleRoot, balanceMerkleRoot, allValidatorsCount);
+  }
+
+  function priceSync(
+    uint256 poolId,
+    uint256 price,
+    bytes32[] calldata priceProof
+  ) external virtual override whenNotPaused {
+    STAKE.priceSync(DATASTORE, poolId, price, priceProof);
+  }
+
+  function priceSyncBatch(
+    uint256[] calldata poolIds,
+    uint256[] calldata prices,
+    bytes32[][] calldata priceProofs
+  ) external virtual override whenNotPaused {
+    STAKE.priceSyncBatch(DATASTORE, poolIds, prices, priceProofs);
   }
 }

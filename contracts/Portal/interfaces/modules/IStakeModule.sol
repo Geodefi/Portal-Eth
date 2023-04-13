@@ -97,4 +97,25 @@ interface IStakeModule {
   ) external;
 
   function beaconStake(uint256 operatorId, bytes[] calldata pubkeys) external;
+
+  function updateVerificationIndex(
+    uint256 validatorVerificationIndex,
+    bytes[] calldata alienatedPubkeys
+  ) external;
+
+  function regulateOperators(uint256[] calldata feeThefts, bytes[] calldata proofs) external;
+
+  function reportBeacon(
+    bytes32 priceMerkleRoot,
+    bytes32 balanceMerkleRoot,
+    uint256 allValidatorsCount
+  ) external;
+
+  function priceSync(uint256 poolId, uint256 price, bytes32[] calldata priceProof) external;
+
+  function priceSyncBatch(
+    uint256[] calldata poolIds,
+    uint256[] calldata prices,
+    bytes32[][] calldata priceProofs
+  ) external;
 }

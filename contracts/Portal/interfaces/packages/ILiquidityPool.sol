@@ -14,4 +14,6 @@ interface ILiquidityPool is ILiquidityModule, IGeodePackage {
   function pause() external;
 
   function unpause() external;
+
+  function Do_we_care() external pure virtual override returns (bool);
 }
