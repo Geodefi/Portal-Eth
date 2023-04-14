@@ -2,6 +2,7 @@
 pragma solidity =0.8.7;
 
 // globals
+import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
 import {PERCENTAGE_DENOMINATOR} from "../globals/macros.sol";
 import {ID_TYPE} from "../globals/id_type.sol";
 // interfaces
@@ -225,7 +226,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     if (paused()) return true;
     if (getContractVersion() != getProposedVersion()) return true;
     if (GEODE.APPROVED_UPGRADE != _getImplementation()) return true;
-    if (getPortal().readAddress(getPoolId(), "CONTROLLER") != GEODE.SENATE) return true;
+    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) return true;
     return false;
   }
 

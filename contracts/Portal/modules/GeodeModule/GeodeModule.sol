@@ -161,13 +161,13 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    * @dev Governance Functions
    */
 
-  function newProposal(
+  function propose(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
   ) external virtual override returns (uint256 id, bool success) {
-    id = GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
+    id = GEODE.propose(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
     success = true;
   }
 

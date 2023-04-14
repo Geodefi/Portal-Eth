@@ -100,7 +100,7 @@ interface IStakeModule {
     bytes[] calldata signatures31
   ) external;
 
-  function beaconStake(uint256 operatorId, bytes[] calldata pubkeys) external;
+  function stake(uint256 operatorId, bytes[] calldata pubkeys) external;
 
   function updateVerificationIndex(
     uint256 validatorVerificationIndex,

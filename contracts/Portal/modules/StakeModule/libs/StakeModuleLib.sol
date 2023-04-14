@@ -215,12 +215,12 @@ library StakeModuleLib {
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
-  event OperatorApproval(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
+  event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
   event FallbackOperator(uint256 poolId, uint256 indexed operatorId);
   event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
-  event ProposalStaked(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
-  event BeaconStaked(bytes[] pubkeys);
+  event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
+  event Stake(bytes[] pubkeys);
 
   /**
    * @custom:section                           ** AUTHENTICATION **
@@ -246,7 +246,7 @@ library StakeModuleLib {
   ) internal view {
     require(DATASTORE.readUint(_id, rks.initiated) != 0, "SML:ID is not initiated");
 
-    uint256 typeOfId = DATASTORE.readUint(_id, "TYPE");
+    uint256 typeOfId = DATASTORE.readUint(_id, rks.TYPE);
 
     if (typeOfId == ID_TYPE.OPERATOR) {
       require(_restrictionMap[0], "SML:TYPE NOT allowed");
@@ -269,7 +269,10 @@ library StakeModuleLib {
     }
 
     if (_expectCONTROLLER) {
-      require(msg.sender == DATASTORE.readAddress(_id, "CONTROLLER"), "SML:sender NOT CONTROLLER");
+      require(
+        msg.sender == DATASTORE.readAddress(_id, rks.CONTROLLER),
+        "SML:sender NOT CONTROLLER"
+      );
       return;
     }
   }
@@ -299,8 +302,8 @@ library StakeModuleLib {
     address maintainer
   ) external {
     require(DATASTORE.readUint(id, rks.initiated) == 0, "SML:already initiated");
-    require(DATASTORE.readUint(id, "TYPE") == ID_TYPE.OPERATOR, "SML:TYPE NOT allowed");
-    require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "SML:sender NOT CONTROLLER");
+    require(DATASTORE.readUint(id, rks.TYPE) == ID_TYPE.OPERATOR, "SML:TYPE NOT allowed");
+    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender NOT CONTROLLER");
 
     DATASTORE.writeUint(id, rks.initiated, block.timestamp);
 
@@ -358,7 +361,7 @@ library StakeModuleLib {
   ) internal {
     require(self.middlewares[ID_TYPE.MIDDLEWARE_GETH][_versionId], "SML:not a middleware");
 
-    address newgETHMiddleware = Clones.clone(DATASTORE.readAddress(_versionId, "CONTROLLER"));
+    address newgETHMiddleware = Clones.clone(DATASTORE.readAddress(_versionId, rks.CONTROLLER));
     require(
       IgETHMiddleware(newgETHMiddleware).initialize(_id, address(self.gETH), _middleware_data),
       "SML:could not init IgETHMiddleware"
@@ -388,12 +391,12 @@ library StakeModuleLib {
 
     packageInstance = address(
       new ERC1967Proxy(
-        DATASTORE.readAddress(versionId, "CONTROLLER"),
+        DATASTORE.readAddress(versionId, rks.CONTROLLER),
         abi.encodeWithSelector(
           IGeodePackage(address(0)).initialize.selector,
           versionId,
           _poolId,
-          DATASTORE.readAddress(_poolId, "CONTROLLER"),
+          DATASTORE.readAddress(_poolId, rks.CONTROLLER),
           _package_data
         )
       )
@@ -449,7 +452,7 @@ library StakeModuleLib {
       DATASTORE,
       ID_TYPE.PACKAGE_LIQUIDITY_POOL,
       poolId,
-      DATASTORE.readBytes(poolId, "NAME")
+      DATASTORE.readBytes(poolId, rks.NAME)
     );
 
     // approve gETH so we can use it in buybacks
@@ -463,7 +466,7 @@ library StakeModuleLib {
    * @param fee as a percentage limited by MAX_MAINTENANCE_FEE, PERCENTAGE_DENOMINATOR is 100%
    * @param middlewareVersion Pool creators can choose any allowed version as their gETHMiddleware
    * @param maintainer an address that automates daily operations, a script, a contract... not so critical.
-   * @param NAME is utilized while generating an ID for the Pool, similar to any other ID generation.
+   * @param name is utilized while generating an ID for the Pool, similar to any other ID generation.
    * @param middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
    * @param config array(3)= [private(true) or public(false), deploy a middleware(if true), deploy liquidity pool(if true)]
    * @dev checking only initiated is enough to validate that ID is not used. no need to check TYPE, CONTROLLER etc.
@@ -475,21 +478,21 @@ library StakeModuleLib {
     uint256 fee,
     uint256 middlewareVersion,
     address maintainer,
-    bytes calldata NAME,
+    bytes calldata name,
     bytes calldata middleware_data,
     bool[3] calldata config
   ) external returns (uint256 poolId) {
     require(msg.value == DCL.DEPOSIT_AMOUNT, "SML:need 1 validator worth of funds");
 
-    poolId = DSML.generateId(NAME, ID_TYPE.POOL);
+    poolId = DSML.generateId(name, ID_TYPE.POOL);
     require(DATASTORE.readUint(poolId, rks.initiated) == 0, "SML:already initiated");
     require(poolId > 10 ** 9, "SML:Wow! low pool id");
 
     DATASTORE.writeUint(poolId, rks.initiated, block.timestamp);
 
-    DATASTORE.writeUint(poolId, "TYPE", ID_TYPE.POOL);
-    DATASTORE.writeAddress(poolId, "CONTROLLER", msg.sender);
-    DATASTORE.writeBytes(poolId, "NAME", NAME);
+    DATASTORE.writeUint(poolId, rks.TYPE, ID_TYPE.POOL);
+    DATASTORE.writeAddress(poolId, rks.CONTROLLER, msg.sender);
+    DATASTORE.writeBytes(poolId, rks.NAME, name);
     DATASTORE.allIdsByType[ID_TYPE.POOL].push(poolId);
 
     _setMaintainer(DATASTORE, poolId, maintainer);
@@ -606,8 +609,8 @@ library StakeModuleLib {
     address newMaintainer
   ) external {
     require(DATASTORE.readUint(id, rks.initiated) != 0, "SML:ID is not initiated");
-    require(msg.sender == DATASTORE.readAddress(id, "CONTROLLER"), "SML:sender NOT CONTROLLER");
-    uint256 typeOfId = DATASTORE.readUint(id, "TYPE");
+    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender NOT CONTROLLER");
+    uint256 typeOfId = DATASTORE.readUint(id, rks.TYPE);
     require(typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL, "SML:invalid TYPE");
 
     _setMaintainer(DATASTORE, id, newMaintainer);
@@ -749,7 +752,7 @@ library StakeModuleLib {
     require(address(this).balance >= value, "SML:not enough funds in Contract");
 
     _decreaseWalletBalance(DATASTORE, id, value);
-    address controller = DATASTORE.readAddress(id, "CONTROLLER");
+    address controller = DATASTORE.readAddress(id, rks.CONTROLLER);
 
     (bool sent, ) = payable(controller).call{value: value}("");
     require(sent, "SML:Failed to send ETH");
@@ -975,7 +978,7 @@ library StakeModuleLib {
     oldAllowance = DATASTORE.readUint(poolId, allowanceKey);
     DATASTORE.writeUint(poolId, allowanceKey, allowance);
 
-    emit OperatorApproval(poolId, operatorId, allowance);
+    emit Delegation(poolId, operatorId, allowance);
   }
 
   /**
@@ -1002,7 +1005,7 @@ library StakeModuleLib {
     require(operatorIds.length == allowances.length, "SML:allowances should match");
     for (uint256 i = 0; i < operatorIds.length; ) {
       require(
-        DATASTORE.readUint(operatorIds[i], "TYPE") == ID_TYPE.OPERATOR,
+        DATASTORE.readUint(operatorIds[i], rks.TYPE) == ID_TYPE.OPERATOR,
         "SML:id not operator"
       );
       require(allowances[i] < MAX_ALLOWANCE, "SML: > MAX_ALLOWANCE, set fallback");
@@ -1071,7 +1074,7 @@ library StakeModuleLib {
     uint256 poolId,
     address staker
   ) public view returns (bool) {
-    if (DATASTORE.readAddress(poolId, "CONTROLLER") == msg.sender) {
+    if (DATASTORE.readAddress(poolId, rks.CONTROLLER) == msg.sender) {
       return true;
     }
 
@@ -1248,7 +1251,7 @@ library StakeModuleLib {
    * @custom:section                           ** VALIDATOR CREATION **
    *
    * Creation of a Validator takes 2 steps: propose and beacon stake.
-   * Before entering beaconStake function, _canStake verifies the eligibility of
+   * Before entering stake() function, _canStake verifies the eligibility of
    * given pubKey that is proposed by an operator with proposeStake function.
    * Eligibility is defined by an optimistic alienation, check OracleUtils._alienateValidator() for info.
    */
@@ -1301,7 +1304,7 @@ library StakeModuleLib {
    * @param pubkeys  Array of BLS12-381 public keys of the validators that will be proposed
    * @param signatures1 Array of BLS12-381 signatures that will be used to send 1 ETH from the Operator's
    * maintainer balance
-   * @param signatures31 Array of BLS12-381 signatures that will be used to send 31 ETH from pool on beaconStake
+   * @param signatures31 Array of BLS12-381 signatures that will be used to send 31 ETH from pool on stake() function call
    *
    * @dev DCL.DEPOSIT_AMOUNT_PRESTAKE = 1 ether, DCL.DEPOSIT_AMOUNT = 32 ether which is the minimum amount to create a validator.
    * 31 Ether will be staked after verification of oracles. 32 in total.
@@ -1396,7 +1399,7 @@ library StakeModuleLib {
 
     self.VALIDATORS_INDEX += pubkeys.length;
 
-    emit ProposalStaked(poolId, operatorId, pubkeys);
+    emit StakeProposal(poolId, operatorId, pubkeys);
   }
 
   /**
@@ -1415,7 +1418,7 @@ library StakeModuleLib {
    *  @dev Max number of validators to boostrap is MAX_DEPOSITS_PER_CALL (currently 50)
    *  @dev A pubkey that is alienated will not get through. Do not frontrun during ProposeStake.
    */
-  function beaconStake(
+  function stake(
     PooledStaking storage self,
     DSML.IsolatedStorage storage DATASTORE,
     uint256 operatorId,
@@ -1499,7 +1502,7 @@ library StakeModuleLib {
 
       _increaseWalletBalance(DATASTORE, operatorId, DCL.DEPOSIT_AMOUNT_PRESTAKE * pubkeys.length);
 
-      emit BeaconStaked(pubkeys);
+      emit Stake(pubkeys);
     }
   }
 }

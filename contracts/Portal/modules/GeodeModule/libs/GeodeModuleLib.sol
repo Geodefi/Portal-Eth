@@ -171,7 +171,7 @@ library GeodeModuleLib {
    * @dev Proposals can NEVER be overriden
    * @dev refer to Proposal struct
    */
-  function newProposal(
+  function propose(
     DualGovernance storage self,
     DSML.IsolatedStorage storage DATASTORE,
     address _CONTROLLER,

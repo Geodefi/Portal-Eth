@@ -91,7 +91,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
     GEODE.GOVERNANCE = msg.sender;
     GEODE.SENATE = msg.sender;
 
-    uint256 portalVersion = GEODE.newProposal(
+    uint256 portalVersion = GEODE.propose(
       DATASTORE,
       address(this),
       ID_TYPE.CONTRACT_UPGRADE,
@@ -138,7 +138,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
     uint256 moduleType
   ) external virtual override whenNotPaused nonReentrant returns (uint256 moduleVersion) {
     moduleVersion = STAKE.packages[moduleType];
-    (, bool success) = IGeodeModule(msg.sender).newProposal(
+    (, bool success) = IGeodeModule(msg.sender).propose(
       DATASTORE.readAddress(moduleVersion, "CONTROLLER"),
       ID_TYPE.CONTRACT_UPGRADE,
       DATASTORE.readBytes(moduleVersion, "NAME"),

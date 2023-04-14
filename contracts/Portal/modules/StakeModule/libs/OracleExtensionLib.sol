@@ -251,7 +251,7 @@ library OracleExtensionLib {
     uint256 _id,
     uint256 _newPrice
   ) internal view {
-    require(DATASTORE.readUint(_id, "TYPE") == ID_TYPE.POOL, "OEL:not a pool?");
+    require(DATASTORE.readUint(_id, rks.TYPE) == ID_TYPE.POOL, "OEL:not a pool?");
 
     uint256 lastUpdate = STAKE.gETH.priceUpdateTimestamp(_id);
     uint256 dayPercentSinceUpdate = ((block.timestamp - lastUpdate) * PERCENTAGE_DENOMINATOR) /

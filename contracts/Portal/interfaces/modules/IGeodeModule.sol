@@ -31,7 +31,7 @@ interface IGeodeModule is IDataStoreModule {
 
   function setGovernanceFee(uint256 newFee) external;
 
-  function newProposal(
+  function propose(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,

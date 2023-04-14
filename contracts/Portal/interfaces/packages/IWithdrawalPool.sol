@@ -27,7 +27,7 @@ interface IWithdrawalContract {
 
   function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 
-  function newProposal(
+  function propose(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
