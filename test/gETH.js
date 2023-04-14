@@ -1,9 +1,5 @@
 const { BigNumber, utils } = require("ethers");
-const {
-  ZERO_ADDRESS,
-  getCurrentBlockTimestamp,
-  setNextTimestamp,
-} = require("../testUtils");
+const { ZERO_ADDRESS, getCurrentBlockTimestamp, setNextTimestamp } = require("./utils");
 const { solidity } = require("ethereum-waffle");
 const { deployments } = require("hardhat");
 const web3 = require("web3");
@@ -34,17 +30,13 @@ const unknownTokenId = BigNumber.from(6969696);
 const firstAmount = BigNumber.from(1000);
 const secondAmount = BigNumber.from(2000);
 
-const DEFAULT_ADMIN_ROLE =
-  "0x0000000000000000000000000000000000000000000000000000000000000000";
+const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const MINTER_ROLE = web3.utils.soliditySha3("MINTER_ROLE");
 const PAUSER_ROLE = web3.utils.soliditySha3("PAUSER_ROLE");
 const ORACLE_ROLE = web3.utils.soliditySha3("ORACLE_ROLE");
 
 describe("gETH", async function () {
-  const setupTest = deployments.createFixture(async function ({
-    deployments,
-    ethers,
-  }) {
+  const setupTest = deployments.createFixture(async function ({ deployments, ethers }) {
     await deployments.fixture(); // ensure you start from fresh deployments
     signers = await ethers.getSigners();
     deployer = minter = signers[0].address;
@@ -55,9 +47,7 @@ describe("gETH", async function () {
     recipient = signers[5].address;
     proxy = signers[6].address;
     const gETH = await ethers.getContractFactory("gETH");
-    ERC1155ReceiverMock = await ethers.getContractFactory(
-      "ERC1155ReceiverMock"
-    );
+    ERC1155ReceiverMock = await ethers.getContractFactory("ERC1155ReceiverMock");
     tokenContract = await gETH.deploy(initialURI);
     await tokenContract.updateMinterRole(deployer);
     await tokenContract.updateOracleRole(deployer);
@@ -74,24 +64,24 @@ describe("gETH", async function () {
 
     describe("balanceOf", function () {
       it("reverts when queried about the zero address", async function () {
-        await expect(
-          tokenContract.balanceOf(ZERO_ADDRESS, firstTokenId)
-        ).to.be.revertedWith("ERC1155: address zero is not a valid owner");
+        await expect(tokenContract.balanceOf(ZERO_ADDRESS, firstTokenId)).to.be.revertedWith(
+          "ERC1155: address zero is not a valid owner"
+        );
       });
 
       context("when accounts don't own tokens", function () {
         it("returns zero for given addresses", async function () {
-          expect(
-            await tokenContract.balanceOf(firstTokenHolder, firstTokenId)
-          ).to.be.eq(BigNumber.from("0"));
+          expect(await tokenContract.balanceOf(firstTokenHolder, firstTokenId)).to.be.eq(
+            BigNumber.from("0")
+          );
 
-          expect(
-            await tokenContract.balanceOf(secondTokenHolder, secondTokenId)
-          ).to.be.eq(BigNumber.from("0"));
+          expect(await tokenContract.balanceOf(secondTokenHolder, secondTokenId)).to.be.eq(
+            BigNumber.from("0")
+          );
 
-          expect(
-            await tokenContract.balanceOf(firstTokenHolder, unknownTokenId)
-          ).to.be.eq(BigNumber.from("0"));
+          expect(await tokenContract.balanceOf(firstTokenHolder, unknownTokenId)).to.be.eq(
+            BigNumber.from("0")
+          );
         });
       });
 
@@ -106,17 +96,17 @@ describe("gETH", async function () {
         });
 
         it("returns the amount of tokens owned by the given addresses", async function () {
-          expect(
-            await tokenContract.balanceOf(firstTokenHolder, firstTokenId)
-          ).to.be.eq(BigNumber.from(firstAmount));
+          expect(await tokenContract.balanceOf(firstTokenHolder, firstTokenId)).to.be.eq(
+            BigNumber.from(firstAmount)
+          );
 
-          expect(
-            await tokenContract.balanceOf(secondTokenHolder, secondTokenId)
-          ).to.be.eq(BigNumber.from(secondAmount));
+          expect(await tokenContract.balanceOf(secondTokenHolder, secondTokenId)).to.be.eq(
+            BigNumber.from(secondAmount)
+          );
 
-          expect(
-            await tokenContract.balanceOf(firstTokenHolder, unknownTokenId)
-          ).to.be.eq(BigNumber.from("0"));
+          expect(await tokenContract.balanceOf(firstTokenHolder, unknownTokenId)).to.be.eq(
+            BigNumber.from("0")
+          );
         });
       });
     });
@@ -125,12 +115,7 @@ describe("gETH", async function () {
       it("reverts when input arrays don't match up", async function () {
         await expect(
           tokenContract.balanceOfBatch(
-            [
-              firstTokenHolder,
-              secondTokenHolder,
-              firstTokenHolder,
-              secondTokenHolder,
-            ],
+            [firstTokenHolder, secondTokenHolder, firstTokenHolder, secondTokenHolder],
             [firstTokenId, secondTokenId, unknownTokenId]
           )
         ).to.be.revertedWith("ERC1155: accounts and ids length mismatch");
@@ -206,23 +191,17 @@ describe("gETH", async function () {
       });
 
       it("sets approval status which can be queried via isApprovedForAll", async function () {
-        expect(
-          await tokenContract.isApprovedForAll(multiTokenHolder, proxy)
-        ).to.be.equal(true);
+        expect(await tokenContract.isApprovedForAll(multiTokenHolder, proxy)).to.be.equal(true);
       });
 
       it("can unset approval for an operator", async function () {
         await tokenContract.connect(signers[4]).setApprovalForAll(proxy, false);
-        expect(
-          await tokenContract.isApprovedForAll(multiTokenHolder, proxy)
-        ).to.be.equal(false);
+        expect(await tokenContract.isApprovedForAll(multiTokenHolder, proxy)).to.be.equal(false);
       });
 
       it("reverts if attempting to approve self as an operator", async function () {
         await expect(
-          tokenContract
-            .connect(signers[4])
-            .setApprovalForAll(multiTokenHolder, true)
+          tokenContract.connect(signers[4]).setApprovalForAll(multiTokenHolder, true)
         ).to.be.revertedWith("ERC1155: setting approval status for self");
       });
     });
@@ -232,25 +211,14 @@ describe("gETH", async function () {
         await tokenContract
           .connect(signers[0])
           .mint(multiTokenHolder, firstTokenId, firstAmount, "0x");
-        await tokenContract.mint(
-          multiTokenHolder,
-          secondTokenId,
-          secondAmount,
-          "0x"
-        );
+        await tokenContract.mint(multiTokenHolder, secondTokenId, secondAmount, "0x");
       });
 
       it("reverts when transferring more than balance", async function () {
         await expect(
           tokenContract
             .connect(signers[4])
-            .safeTransferFrom(
-              multiTokenHolder,
-              recipient,
-              firstTokenId,
-              firstAmount.add(1),
-              "0x"
-            )
+            .safeTransferFrom(multiTokenHolder, recipient, firstTokenId, firstAmount.add(1), "0x")
         ).to.be.revertedWith("ERC1155: insufficient balance for transfer");
       });
 
@@ -258,13 +226,7 @@ describe("gETH", async function () {
         await expect(
           tokenContract
             .connect(signers[4])
-            .safeTransferFrom(
-              multiTokenHolder,
-              ZERO_ADDRESS,
-              firstTokenId,
-              firstAmount,
-              "0x"
-            )
+            .safeTransferFrom(multiTokenHolder, ZERO_ADDRESS, firstTokenId, firstAmount, "0x")
         ).to.be.revertedWith("ERC1155: transfer to the zero address");
       });
 
@@ -285,111 +247,61 @@ describe("gETH", async function () {
           this.toWhom = recipient;
           ({ logs: this.transferLogs } = await tokenContract
             .connect(signers[4])
-            .safeTransferFrom(
-              multiTokenHolder,
-              recipient,
-              firstTokenId,
-              firstAmount,
-              "0x"
-            ));
+            .safeTransferFrom(multiTokenHolder, recipient, firstTokenId, firstAmount, "0x"));
         });
 
         it("transferWasSuccessful", async function () {
-          transferWasSuccessful(
-            multiTokenHolder,
-            multiTokenHolder,
-            firstTokenId,
-            firstAmount
-          );
+          transferWasSuccessful(multiTokenHolder, multiTokenHolder, firstTokenId, firstAmount);
         });
 
         it("preserves existing balances which are not transferred by multiTokenHolder", async function () {
-          const balance1 = await tokenContract.balanceOf(
-            multiTokenHolder,
-            secondTokenId
-          );
+          const balance1 = await tokenContract.balanceOf(multiTokenHolder, secondTokenId);
           expect(balance1).to.be.eq(BigNumber.from(secondAmount));
 
-          const balance2 = await tokenContract.balanceOf(
-            recipient,
-            secondTokenId
-          );
+          const balance2 = await tokenContract.balanceOf(recipient, secondTokenId);
           expect(balance2).to.be.eq(BigNumber.from("0"));
         });
       });
 
-      context(
-        "when called by an operator on behalf of the multiTokenHolder",
-        function () {
-          context(
-            "when operator is not approved by multiTokenHolder",
-            function () {
-              beforeEach(async function () {
-                await tokenContract
-                  .connect(signers[4])
-                  .setApprovalForAll(proxy, false);
-              });
-
-              it("reverts", async function () {
-                await expect(
-                  tokenContract
-                    .connect(signers[6])
-                    .safeTransferFrom(
-                      multiTokenHolder,
-                      recipient,
-                      firstTokenId,
-                      firstAmount,
-                      "0x"
-                    )
-                ).to.be.revertedWith(
-                  "ERC1155: caller is not owner nor approved nor an allowed interface"
-                );
-              });
-            }
-          );
-
-          context("when operator is approved by multiTokenHolder", function () {
-            beforeEach(async function () {
-              this.toWhom = recipient;
-              await tokenContract
-                .connect(signers[4])
-                .setApprovalForAll(proxy, true);
-              ({ logs: this.transferLogs } = await tokenContract
-                .connect(signers[6])
-                .safeTransferFrom(
-                  multiTokenHolder,
-                  recipient,
-                  firstTokenId,
-                  firstAmount,
-                  "0x"
-                ));
-            });
-
-            it("transferWasSuccessful", async function () {
-              transferWasSuccessful(
-                proxy,
-                multiTokenHolder,
-                firstTokenId,
-                firstAmount
-              );
-            });
-
-            it("preserves operator's balances not involved in the transfer", async function () {
-              const balance1 = await tokenContract.balanceOf(
-                proxy,
-                firstTokenId
-              );
-              expect(balance1).to.be.eq(BigNumber.from("0"));
-
-              const balance2 = await tokenContract.balanceOf(
-                proxy,
-                secondTokenId
-              );
-              expect(balance2).to.be.eq(BigNumber.from("0"));
-            });
+      context("when called by an operator on behalf of the multiTokenHolder", function () {
+        context("when operator is not approved by multiTokenHolder", function () {
+          beforeEach(async function () {
+            await tokenContract.connect(signers[4]).setApprovalForAll(proxy, false);
           });
-        }
-      );
+
+          it("reverts", async function () {
+            await expect(
+              tokenContract
+                .connect(signers[6])
+                .safeTransferFrom(multiTokenHolder, recipient, firstTokenId, firstAmount, "0x")
+            ).to.be.revertedWith(
+              "ERC1155: caller is not owner nor approved nor an allowed interface"
+            );
+          });
+        });
+
+        context("when operator is approved by multiTokenHolder", function () {
+          beforeEach(async function () {
+            this.toWhom = recipient;
+            await tokenContract.connect(signers[4]).setApprovalForAll(proxy, true);
+            ({ logs: this.transferLogs } = await tokenContract
+              .connect(signers[6])
+              .safeTransferFrom(multiTokenHolder, recipient, firstTokenId, firstAmount, "0x"));
+          });
+
+          it("transferWasSuccessful", async function () {
+            transferWasSuccessful(proxy, multiTokenHolder, firstTokenId, firstAmount);
+          });
+
+          it("preserves operator's balances not involved in the transfer", async function () {
+            const balance1 = await tokenContract.balanceOf(proxy, firstTokenId);
+            expect(balance1).to.be.eq(BigNumber.from("0"));
+
+            const balance2 = await tokenContract.balanceOf(proxy, secondTokenId);
+            expect(balance2).to.be.eq(BigNumber.from("0"));
+          });
+        });
+      });
 
       context("when sending to a valid receiver", function () {
         beforeEach(async function () {
@@ -417,12 +329,7 @@ describe("gETH", async function () {
           });
 
           it("transferWasSuccessful", async function () {
-            transferWasSuccessful(
-              multiTokenHolder,
-              multiTokenHolder,
-              firstTokenId,
-              firstAmount
-            );
+            transferWasSuccessful(multiTokenHolder, multiTokenHolder, firstTokenId, firstAmount);
           });
         });
 
@@ -443,12 +350,7 @@ describe("gETH", async function () {
           });
 
           it("transferWasSuccessful", async function () {
-            transferWasSuccessful(
-              multiTokenHolder,
-              multiTokenHolder,
-              firstTokenId,
-              firstAmount
-            );
+            transferWasSuccessful(multiTokenHolder, multiTokenHolder, firstTokenId, firstAmount);
           });
         });
       });
@@ -503,25 +405,22 @@ describe("gETH", async function () {
         });
       });
 
-      context(
-        "to a contract that does not implement the required function",
-        function () {
-          it("reverts", async function () {
-            const invalidReceiver = tokenContract;
-            await expect(
-              tokenContract
-                .connect(signers[4])
-                .safeTransferFrom(
-                  multiTokenHolder,
-                  invalidReceiver.address,
-                  firstTokenId,
-                  firstAmount,
-                  "0x"
-                )
-            ).to.be.reverted;
-          });
-        }
-      );
+      context("to a contract that does not implement the required function", function () {
+        it("reverts", async function () {
+          const invalidReceiver = tokenContract;
+          await expect(
+            tokenContract
+              .connect(signers[4])
+              .safeTransferFrom(
+                multiTokenHolder,
+                invalidReceiver.address,
+                firstTokenId,
+                firstAmount,
+                "0x"
+              )
+          ).to.be.reverted;
+        });
+      });
     });
 
     describe("safeBatchTransferFrom", function () {
@@ -633,43 +532,15 @@ describe("gETH", async function () {
         });
       });
 
-      context(
-        "when called by an operator on behalf of the multiTokenHolder",
-        function () {
-          context(
-            "when operator is not approved by multiTokenHolder",
-            function () {
-              beforeEach(async function () {
-                await tokenContract
-                  .connect(signers[4])
-                  .setApprovalForAll(proxy, false);
-              });
+      context("when called by an operator on behalf of the multiTokenHolder", function () {
+        context("when operator is not approved by multiTokenHolder", function () {
+          beforeEach(async function () {
+            await tokenContract.connect(signers[4]).setApprovalForAll(proxy, false);
+          });
 
-              it("reverts", async function () {
-                await expect(
-                  tokenContract
-                    .connect(signers[6])
-                    .safeBatchTransferFrom(
-                      multiTokenHolder,
-                      recipient,
-                      [firstTokenId, secondTokenId],
-                      [firstAmount, secondAmount],
-                      "0x"
-                    )
-                ).to.be.revertedWith(
-                  "ERC1155: caller is not token owner nor approved"
-                );
-              });
-            }
-          );
-
-          context("when operator is approved by multiTokenHolder", function () {
-            beforeEach(async function () {
-              this.toWhom = recipient;
-              await tokenContract
-                .connect(signers[4])
-                .setApprovalForAll(proxy, true);
-              ({ logs: this.transferLogs } = await tokenContract
+          it("reverts", async function () {
+            await expect(
+              tokenContract
                 .connect(signers[6])
                 .safeBatchTransferFrom(
                   multiTokenHolder,
@@ -677,33 +548,43 @@ describe("gETH", async function () {
                   [firstTokenId, secondTokenId],
                   [firstAmount, secondAmount],
                   "0x"
-                ));
-            });
+                )
+            ).to.be.revertedWith("ERC1155: caller is not token owner nor approved");
+          });
+        });
 
-            it("batchTransferWasSuccessful", async function () {
-              batchTransferWasSuccessful({
-                operator: proxy,
-                from: multiTokenHolder,
-                ids: [firstTokenId, secondTokenId],
-                values: [firstAmount, secondAmount],
-              });
-            });
+        context("when operator is approved by multiTokenHolder", function () {
+          beforeEach(async function () {
+            this.toWhom = recipient;
+            await tokenContract.connect(signers[4]).setApprovalForAll(proxy, true);
+            ({ logs: this.transferLogs } = await tokenContract
+              .connect(signers[6])
+              .safeBatchTransferFrom(
+                multiTokenHolder,
+                recipient,
+                [firstTokenId, secondTokenId],
+                [firstAmount, secondAmount],
+                "0x"
+              ));
+          });
 
-            it("preserves operator's balances not involved in the transfer", async function () {
-              const balance1 = await tokenContract.balanceOf(
-                proxy,
-                firstTokenId
-              );
-              expect(balance1).to.be.eq(BigNumber.from("0"));
-              const balance2 = await tokenContract.balanceOf(
-                proxy,
-                secondTokenId
-              );
-              expect(balance2).to.be.eq(BigNumber.from("0"));
+          it("batchTransferWasSuccessful", async function () {
+            batchTransferWasSuccessful({
+              operator: proxy,
+              from: multiTokenHolder,
+              ids: [firstTokenId, secondTokenId],
+              values: [firstAmount, secondAmount],
             });
           });
-        }
-      );
+
+          it("preserves operator's balances not involved in the transfer", async function () {
+            const balance1 = await tokenContract.balanceOf(proxy, firstTokenId);
+            expect(balance1).to.be.eq(BigNumber.from("0"));
+            const balance2 = await tokenContract.balanceOf(proxy, secondTokenId);
+            expect(balance2).to.be.eq(BigNumber.from("0"));
+          });
+        });
+      });
 
       context("when sending to a valid receiver", function () {
         beforeEach(async function () {
@@ -813,66 +694,58 @@ describe("gETH", async function () {
                 [firstAmount, secondAmount],
                 "0x"
               )
-          ).to.be.revertedWith(
-            "ERC1155ReceiverMock: reverting on batch receive"
-          );
+          ).to.be.revertedWith("ERC1155ReceiverMock: reverting on batch receive");
         });
       });
 
-      context(
-        "to a receiver contract that reverts only on single transfers",
-        function () {
-          beforeEach(async function () {
-            this.receiver = await ERC1155ReceiverMock.deploy(
-              RECEIVER_SINGLE_MAGIC_VALUE,
-              true,
-              RECEIVER_BATCH_MAGIC_VALUE,
-              false
-            );
+      context("to a receiver contract that reverts only on single transfers", function () {
+        beforeEach(async function () {
+          this.receiver = await ERC1155ReceiverMock.deploy(
+            RECEIVER_SINGLE_MAGIC_VALUE,
+            true,
+            RECEIVER_BATCH_MAGIC_VALUE,
+            false
+          );
 
-            this.toWhom = this.receiver.address;
-            this.transferReceipt = await tokenContract
+          this.toWhom = this.receiver.address;
+          this.transferReceipt = await tokenContract
+            .connect(signers[4])
+            .safeBatchTransferFrom(
+              multiTokenHolder,
+              this.receiver.address,
+              [firstTokenId, secondTokenId],
+              [firstAmount, secondAmount],
+              "0x"
+            );
+          ({ logs: this.transferLogs } = this.transferReceipt);
+        });
+
+        it("batchTransferWasSuccessful", async function () {
+          batchTransferWasSuccessful({
+            operator: multiTokenHolder,
+            from: multiTokenHolder,
+            ids: [firstTokenId, secondTokenId],
+            values: [firstAmount, secondAmount],
+          });
+        });
+      });
+
+      context("to a contract that does not implement the required function", function () {
+        it("reverts", async function () {
+          const invalidReceiver = tokenContract;
+          await expect(
+            tokenContract
               .connect(signers[4])
               .safeBatchTransferFrom(
                 multiTokenHolder,
-                this.receiver.address,
+                invalidReceiver.address,
                 [firstTokenId, secondTokenId],
                 [firstAmount, secondAmount],
                 "0x"
-              );
-            ({ logs: this.transferLogs } = this.transferReceipt);
-          });
-
-          it("batchTransferWasSuccessful", async function () {
-            batchTransferWasSuccessful({
-              operator: multiTokenHolder,
-              from: multiTokenHolder,
-              ids: [firstTokenId, secondTokenId],
-              values: [firstAmount, secondAmount],
-            });
-          });
-        }
-      );
-
-      context(
-        "to a contract that does not implement the required function",
-        function () {
-          it("reverts", async function () {
-            const invalidReceiver = tokenContract;
-            await expect(
-              tokenContract
-                .connect(signers[4])
-                .safeBatchTransferFrom(
-                  multiTokenHolder,
-                  invalidReceiver.address,
-                  [firstTokenId, secondTokenId],
-                  [firstAmount, secondAmount],
-                  "0x"
-                )
-            ).to.be.reverted;
-          });
-        }
-      );
+              )
+          ).to.be.reverted;
+        });
+      });
     });
   });
 
@@ -882,21 +755,9 @@ describe("gETH", async function () {
       const mintAmount = BigNumber.from(9001);
       const burnAmount = BigNumber.from(3000);
 
-      const tokenBatchIds = [
-        BigNumber.from(2000),
-        BigNumber.from(2010),
-        BigNumber.from(2020),
-      ];
-      const mintAmounts = [
-        BigNumber.from(5000),
-        BigNumber.from(10000),
-        BigNumber.from(42195),
-      ];
-      const burnAmounts = [
-        BigNumber.from(5000),
-        BigNumber.from(9001),
-        BigNumber.from(195),
-      ];
+      const tokenBatchIds = [BigNumber.from(2000), BigNumber.from(2010), BigNumber.from(2020)];
+      const mintAmounts = [BigNumber.from(5000), BigNumber.from(10000), BigNumber.from(42195)];
+      const burnAmounts = [BigNumber.from(5000), BigNumber.from(9001), BigNumber.from(195)];
 
       const data = "0x12345678";
 
@@ -915,9 +776,9 @@ describe("gETH", async function () {
           });
 
           it("credits the minted amount of tokens", async function () {
-            expect(
-              await tokenContract.balanceOf(tokenHolder, tokenId)
-            ).to.be.eq(BigNumber.from(mintAmount));
+            expect(await tokenContract.balanceOf(tokenHolder, tokenId)).to.be.eq(
+              BigNumber.from(mintAmount)
+            );
           });
         });
       });
@@ -925,32 +786,17 @@ describe("gETH", async function () {
       describe("_mintBatch", function () {
         it("reverts with a zero destination address", async function () {
           await expect(
-            tokenContract.mintBatch(
-              ZERO_ADDRESS,
-              tokenBatchIds,
-              mintAmounts,
-              data
-            )
+            tokenContract.mintBatch(ZERO_ADDRESS, tokenBatchIds, mintAmounts, data)
           ).to.be.revertedWith("ERC1155: mint to the zero address");
         });
 
         it("reverts if length of inputs do not match", async function () {
           await expect(
-            tokenContract.mintBatch(
-              multiTokenHolder,
-              tokenBatchIds,
-              mintAmounts.slice(1),
-              data
-            )
+            tokenContract.mintBatch(multiTokenHolder, tokenBatchIds, mintAmounts.slice(1), data)
           ).to.be.revertedWith("ERC1155: ids and amounts length mismatch");
 
           await expect(
-            tokenContract.mintBatch(
-              multiTokenHolder,
-              tokenBatchIds.slice(1),
-              mintAmounts,
-              data
-            )
+            tokenContract.mintBatch(multiTokenHolder, tokenBatchIds.slice(1), mintAmounts, data)
           ).to.be.revertedWith("ERC1155: ids and amounts length mismatch");
         });
 
@@ -968,9 +814,7 @@ describe("gETH", async function () {
             );
 
             for (let i = 0; i < holderBatchBalances.length; i++) {
-              expect(holderBatchBalances[i]).to.be.eq(
-                BigNumber.from(mintAmounts[i])
-              );
+              expect(holderBatchBalances[i]).to.be.eq(BigNumber.from(mintAmounts[i]));
             }
           });
         });
@@ -979,9 +823,7 @@ describe("gETH", async function () {
       describe("_burn", function () {
         it("reverts when burning a non-existent token id", async function () {
           await expect(
-            tokenContract
-              .connect(signers[1])
-              .burn(tokenHolder, tokenId, mintAmount)
+            tokenContract.connect(signers[1]).burn(tokenHolder, tokenId, mintAmount)
           ).to.be.revertedWith("ERC1155: burn amount exceeds totalSupply");
         });
 
@@ -990,30 +832,24 @@ describe("gETH", async function () {
             .connect(signers[0])
             .mint(signers[0].address, tokenId, mintAmount, data);
 
-          await tokenContract
-            .connect(signers[0])
-            .mint(tokenHolder, tokenId, mintAmount, data);
+          await tokenContract.connect(signers[0]).mint(tokenHolder, tokenId, mintAmount, data);
 
           await expect(
-            tokenContract
-              .connect(signers[1])
-              .burn(tokenHolder, tokenId, mintAmount.add(1))
+            tokenContract.connect(signers[1]).burn(tokenHolder, tokenId, mintAmount.add(1))
           ).to.be.revertedWith("ERC1155: burn amount exceeds balance");
         });
 
         context("with minted-then-burnt tokens", function () {
           beforeEach(async function () {
-            await tokenContract
-              .connect(signers[0])
-              .mint(tokenHolder, tokenId, mintAmount, data);
+            await tokenContract.connect(signers[0]).mint(tokenHolder, tokenId, mintAmount, data);
             ({ logs: this.logs } = await tokenContract
               .connect(signers[1])
               .burn(tokenHolder, tokenId, burnAmount));
           });
           it("accounts for both minting and burning", async function () {
-            expect(
-              await tokenContract.balanceOf(tokenHolder, tokenId)
-            ).to.be.eq(BigNumber.from(mintAmount.sub(burnAmount)));
+            expect(await tokenContract.balanceOf(tokenHolder, tokenId)).to.be.eq(
+              BigNumber.from(mintAmount.sub(burnAmount))
+            );
           });
         });
       });
@@ -1043,12 +879,7 @@ describe("gETH", async function () {
 
         context("with minted-then-burnt tokens", function () {
           beforeEach(async function () {
-            await tokenContract.mintBatch(
-              multiTokenHolder,
-              tokenBatchIds,
-              mintAmounts,
-              data
-            );
+            await tokenContract.mintBatch(multiTokenHolder, tokenBatchIds, mintAmounts, data);
             ({ logs: this.logs } = await tokenContract
               .connect(signers[4])
               .burnBatch(multiTokenHolder, tokenBatchIds, burnAmounts));
@@ -1088,21 +919,14 @@ describe("gETH", async function () {
       });
 
       it("totalSupply", async function () {
-        expect(await tokenContract.totalSupply(firstTokenId)).to.be.eq(
-          BigNumber.from("0")
-        );
+        expect(await tokenContract.totalSupply(firstTokenId)).to.be.eq(BigNumber.from("0"));
       });
     });
 
     context("after mint", function () {
       context("single", function () {
         beforeEach(async function () {
-          await tokenContract.mint(
-            tokenHolder,
-            firstTokenId,
-            firstAmount,
-            "0x"
-          );
+          await tokenContract.mint(tokenHolder, firstTokenId, firstAmount, "0x");
         });
 
         it("exist", async function () {
@@ -1110,9 +934,7 @@ describe("gETH", async function () {
         });
 
         it("totalSupply", async function () {
-          expect(await tokenContract.totalSupply(firstTokenId)).to.be.eq(
-            firstAmount
-          );
+          expect(await tokenContract.totalSupply(firstTokenId)).to.be.eq(firstAmount);
         });
       });
 
@@ -1132,12 +954,8 @@ describe("gETH", async function () {
         });
 
         it("totalSupply", async function () {
-          expect(await tokenContract.totalSupply(firstTokenId)).to.be.eq(
-            firstAmount
-          );
-          expect(await tokenContract.totalSupply(secondTokenId)).to.be.eq(
-            secondAmount
-          );
+          expect(await tokenContract.totalSupply(firstTokenId)).to.be.eq(firstAmount);
+          expect(await tokenContract.totalSupply(secondTokenId)).to.be.eq(secondAmount);
         });
       });
     });
@@ -1145,15 +963,8 @@ describe("gETH", async function () {
     context("after burn", function () {
       context("single", function () {
         beforeEach(async function () {
-          await tokenContract.mint(
-            tokenHolder,
-            firstTokenId,
-            firstAmount,
-            "0x"
-          );
-          await tokenContract
-            .connect(signers[1])
-            .burn(tokenHolder, firstTokenId, firstAmount);
+          await tokenContract.mint(tokenHolder, firstTokenId, firstAmount, "0x");
+          await tokenContract.connect(signers[1]).burn(tokenHolder, firstTokenId, firstAmount);
         });
 
         it("exist", async function () {
@@ -1175,11 +986,7 @@ describe("gETH", async function () {
           );
           await tokenContract
             .connect(signers[1])
-            .burnBatch(
-              tokenHolder,
-              [firstTokenId, secondTokenId],
-              [firstAmount, secondAmount]
-            );
+            .burnBatch(tokenHolder, [firstTokenId, secondTokenId], [firstAmount, secondAmount]);
         });
 
         it("exist", async function () {
@@ -1197,35 +1004,23 @@ describe("gETH", async function () {
 
   describe("ERC1155PresetMinterPauser specific", function () {
     it("deployer has the default admin role", async function () {
-      expect(
-        await tokenContract.getRoleMemberCount(DEFAULT_ADMIN_ROLE)
-      ).to.be.eq("1");
-      expect(await tokenContract.getRoleMember(DEFAULT_ADMIN_ROLE, 0)).to.equal(
-        deployer
-      );
+      expect(await tokenContract.getRoleMemberCount(DEFAULT_ADMIN_ROLE)).to.be.eq("1");
+      expect(await tokenContract.getRoleMember(DEFAULT_ADMIN_ROLE, 0)).to.equal(deployer);
     });
 
     it("deployer has the minter role", async function () {
       expect(await tokenContract.getRoleMemberCount(MINTER_ROLE)).to.be.eq("1");
-      expect(await tokenContract.getRoleMember(MINTER_ROLE, 0)).to.equal(
-        deployer
-      );
+      expect(await tokenContract.getRoleMember(MINTER_ROLE, 0)).to.equal(deployer);
     });
 
     it("deployer has the pauser role", async function () {
       expect(await tokenContract.getRoleMemberCount(PAUSER_ROLE)).to.be.eq("1");
-      expect(await tokenContract.getRoleMember(PAUSER_ROLE, 0)).to.equal(
-        deployer
-      );
+      expect(await tokenContract.getRoleMember(PAUSER_ROLE, 0)).to.equal(deployer);
     });
 
     it("minter and pauser role admin is the default admin", async function () {
-      expect(await tokenContract.getRoleAdmin(MINTER_ROLE)).to.equal(
-        DEFAULT_ADMIN_ROLE
-      );
-      expect(await tokenContract.getRoleAdmin(PAUSER_ROLE)).to.equal(
-        DEFAULT_ADMIN_ROLE
-      );
+      expect(await tokenContract.getRoleAdmin(MINTER_ROLE)).to.equal(DEFAULT_ADMIN_ROLE);
+      expect(await tokenContract.getRoleAdmin(PAUSER_ROLE)).to.equal(DEFAULT_ADMIN_ROLE);
     });
 
     describe("minting", function () {
@@ -1234,21 +1029,15 @@ describe("gETH", async function () {
           from: deployer,
         });
 
-        expect(
-          await tokenContract.balanceOf(tokenHolder, firstTokenId)
-        ).to.be.eq(firstAmount);
+        expect(await tokenContract.balanceOf(tokenHolder, firstTokenId)).to.be.eq(firstAmount);
       });
 
       it("tokenHolder accounts cannot mint tokens", async function () {
         await expect(
-          tokenContract
-            .connect(signers[1])
-            .mint(tokenHolder, firstTokenId, firstAmount, "0x", {
-              from: tokenHolder,
-            })
-        ).to.be.revertedWith(
-          "ERC1155PresetMinterPauser: must have minter role to mint"
-        );
+          tokenContract.connect(signers[1]).mint(tokenHolder, firstTokenId, firstAmount, "0x", {
+            from: tokenHolder,
+          })
+        ).to.be.revertedWith("ERC1155PresetMinterPauser: must have minter role to mint");
       });
     });
 
@@ -1262,9 +1051,7 @@ describe("gETH", async function () {
           { from: deployer }
         );
 
-        expect(
-          await tokenContract.balanceOf(tokenHolder, firstTokenId)
-        ).to.be.eq(firstAmount);
+        expect(await tokenContract.balanceOf(tokenHolder, firstTokenId)).to.be.eq(firstAmount);
       });
 
       it("tokenHolder accounts cannot batch mint tokens", async function () {
@@ -1277,9 +1064,7 @@ describe("gETH", async function () {
               [firstAmount, secondAmount],
               "0x"
             )
-        ).to.be.revertedWith(
-          "ERC1155PresetMinterPauser: must have minter role to mint"
-        );
+        ).to.be.revertedWith("ERC1155PresetMinterPauser: must have minter role to mint");
       });
     });
 
@@ -1311,9 +1096,7 @@ describe("gETH", async function () {
       it("tokenHolder accounts cannot pause", async function () {
         await expect(
           tokenContract.connect(signers[1]).pause({ from: tokenHolder })
-        ).to.be.revertedWith(
-          "ERC1155PresetMinterPauser: must have pauser role to pause"
-        );
+        ).to.be.revertedWith("ERC1155PresetMinterPauser: must have pauser role to pause");
       });
 
       it("tokenHolder accounts cannot unpause", async function () {
@@ -1321,25 +1104,17 @@ describe("gETH", async function () {
 
         await expect(
           tokenContract.connect(signers[1]).unpause({ from: tokenHolder })
-        ).to.be.revertedWith(
-          "ERC1155PresetMinterPauser: must have pauser role to unpause"
-        );
+        ).to.be.revertedWith("ERC1155PresetMinterPauser: must have pauser role to unpause");
       });
     });
 
     describe("burning", function () {
       it("holders can burn their tokens", async function () {
-        await tokenContract
-          .connect(signers[0])
-          .mint(tokenHolder, firstTokenId, firstAmount, "0x");
+        await tokenContract.connect(signers[0]).mint(tokenHolder, firstTokenId, firstAmount, "0x");
 
-        await tokenContract
-          .connect(signers[1])
-          .burn(tokenHolder, firstTokenId, firstAmount.sub(1));
+        await tokenContract.connect(signers[1]).burn(tokenHolder, firstTokenId, firstAmount.sub(1));
 
-        expect(
-          await tokenContract.balanceOf(tokenHolder, firstTokenId)
-        ).to.be.eq("1");
+        expect(await tokenContract.balanceOf(tokenHolder, firstTokenId)).to.be.eq("1");
       });
     });
   });
@@ -1351,17 +1126,11 @@ describe("gETH", async function () {
     describe("setMinterPauserOracle", function () {
       describe("on creation", function () {
         it("deployer has the oracle role", async function () {
-          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq(
-            "1"
-          );
-          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(
-            deployer
-          );
+          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq("1");
+          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(deployer);
         });
         it("oracle role admin is the default admin", async function () {
-          expect(await tokenContract.getRoleAdmin(ORACLE_ROLE)).to.equal(
-            DEFAULT_ADMIN_ROLE
-          );
+          expect(await tokenContract.getRoleAdmin(ORACLE_ROLE)).to.equal(DEFAULT_ADMIN_ROLE);
         });
       });
       describe("after new MinterPauserOracle set", function () {
@@ -1372,28 +1141,16 @@ describe("gETH", async function () {
           await tokenContract.updatePauserRole(minter);
         });
         it("new minter has the minter role", async function () {
-          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq(
-            "1"
-          );
-          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(
-            minter
-          );
+          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq("1");
+          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(minter);
         });
         it("new minter has the pauser role", async function () {
-          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq(
-            "1"
-          );
-          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(
-            minter
-          );
+          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq("1");
+          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(minter);
         });
         it("new minter has the oracle role", async function () {
-          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq(
-            "1"
-          );
-          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(
-            minter
-          );
+          expect(await tokenContract.getRoleMemberCount(ORACLE_ROLE)).to.be.eq("1");
+          expect(await tokenContract.getRoleMember(ORACLE_ROLE, 0)).to.equal(minter);
         });
       });
     });
@@ -1425,25 +1182,19 @@ describe("gETH", async function () {
 
         await setNextTimestamp(now + 60 * 10);
 
-        await tokenContract
-          .connect(signers[7])
-          .setPricePerShare(firstAmount, firstTokenId);
+        await tokenContract.connect(signers[7]).setPricePerShare(firstAmount, firstTokenId);
         const updateTS = await tokenContract.priceUpdateTimestamp(firstTokenId);
         expect(updateTS).to.be.eq(now + 60 * 10);
       });
 
       describe("ORACLE_ROLE can set", async function () {
         it("id = 1", async function () {
-          await tokenContract
-            .connect(signers[7])
-            .setPricePerShare(firstAmount, firstTokenId);
+          await tokenContract.connect(signers[7]).setPricePerShare(firstAmount, firstTokenId);
           const price = await tokenContract.pricePerShare(firstTokenId);
           expect(price).to.be.eq(firstAmount);
         });
         it("any id", async function () {
-          await tokenContract
-            .connect(signers[7])
-            .setPricePerShare(firstAmount, unknownTokenId);
+          await tokenContract.connect(signers[7]).setPricePerShare(firstAmount, unknownTokenId);
           const price = await tokenContract.pricePerShare(unknownTokenId);
           expect(price).to.be.eq(firstAmount);
         });
@@ -1462,16 +1213,12 @@ describe("gETH", async function () {
         });
         it("id = 1", async function () {
           await expect(
-            tokenContract
-              .connect(signers[0])
-              .setPricePerShare(firstAmount, firstTokenId)
+            tokenContract.connect(signers[0]).setPricePerShare(firstAmount, firstTokenId)
           ).to.be.revertedWith("gETH: must have ORACLE to set");
         });
         it("any id", async function () {
           await expect(
-            tokenContract
-              .connect(signers[0])
-              .setPricePerShare(firstAmount, unknownTokenId)
+            tokenContract.connect(signers[0]).setPricePerShare(firstAmount, unknownTokenId)
           ).to.be.revertedWith("gETH: must have ORACLE to set");
         });
       });
@@ -1484,16 +1231,12 @@ describe("gETH", async function () {
         });
         it("id = 1", async function () {
           await expect(
-            tokenContract
-              .connect(signers[4])
-              .setPricePerShare(firstAmount, firstTokenId)
+            tokenContract.connect(signers[4]).setPricePerShare(firstAmount, firstTokenId)
           ).to.be.revertedWith("gETH: must have ORACLE to set");
         });
         it("any id", async function () {
           await expect(
-            tokenContract
-              .connect(signers[4])
-              .setPricePerShare(firstAmount, unknownTokenId)
+            tokenContract.connect(signers[4]).setPricePerShare(firstAmount, unknownTokenId)
           ).to.be.revertedWith("gETH: must have ORACLE to set");
         });
       });
@@ -1514,12 +1257,9 @@ describe("gETH", async function () {
         };
         const nameBytes = getBytes("* 420 name 420- ? ").substr(2);
         const symbolBytes = getBytes("* 69symbol- ? ").substr(2);
-        const interfaceData =
-          getBytes32(nameBytes.length / 2) + nameBytes + symbolBytes;
+        const interfaceData = getBytes32(nameBytes.length / 2) + nameBytes + symbolBytes;
 
-        ERC20InterfaceFac = await ethers.getContractFactory(
-          "ERC20InterfacePermitUpgradable"
-        );
+        ERC20InterfaceFac = await ethers.getContractFactory("ERC20InterfacePermitUpgradable");
 
         ERC20Interface = await upgrades.deployProxy(ERC20InterfaceFac, [
           poolTokenId,
@@ -1547,43 +1287,26 @@ describe("gETH", async function () {
           expect(await ERC20Interface.totalSupply()).to.be.eq(firstAmount);
         });
         it("returns the correct balance", async function () {
-          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq(
-            firstAmount
-          );
+          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq(firstAmount);
         });
       });
 
       describe("interfaces can transfer without asking", async function () {
         it("succeeds as a token holder", async function () {
-          await ERC20Interface.connect(signers[2]).transfer(
-            secondTokenHolder,
-            firstAmount
-          );
-          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq(
-            "0"
-          );
-          expect(await ERC20Interface.balanceOf(secondTokenHolder)).to.be.eq(
-            firstAmount
-          );
+          await ERC20Interface.connect(signers[2]).transfer(secondTokenHolder, firstAmount);
+          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq("0");
+          expect(await ERC20Interface.balanceOf(secondTokenHolder)).to.be.eq(firstAmount);
         });
         it("succeeds as approved", async function () {
-          await tokenContract
-            .connect(signers[2])
-            .avoidInterfaces(firstTokenId, true);
-          await tokenContract
-            .connect(signers[2])
-            .avoidInterfaces(firstTokenId, false);
+          await tokenContract.connect(signers[2]).avoidInterfaces(firstTokenId, true);
+          await tokenContract.connect(signers[2]).avoidInterfaces(firstTokenId, false);
           await ERC20Interface.connect(signers[6]).transferFrom(
             firstTokenHolder,
             secondTokenHolder,
             firstAmount
           );
-          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq(
-            "0"
-          );
-          expect(await ERC20Interface.balanceOf(secondTokenHolder)).to.be.eq(
-            firstAmount
-          );
+          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq("0");
+          expect(await ERC20Interface.balanceOf(secondTokenHolder)).to.be.eq(firstAmount);
         });
         it("reverts if not approved", async function () {
           await expect(
@@ -1595,9 +1318,7 @@ describe("gETH", async function () {
           ).to.be.revertedWith("ERC20: insufficient allowance");
         });
         it("reverts: approved, but user avoided", async function () {
-          await tokenContract
-            .connect(signers[2])
-            .avoidInterfaces(poolTokenId, true);
+          await tokenContract.connect(signers[2]).avoidInterfaces(poolTokenId, true);
           await expect(
             ERC20Interface.connect(signers[6]).transferFrom(
               firstTokenHolder,
@@ -1607,21 +1328,15 @@ describe("gETH", async function () {
           ).to.be.revertedWith(
             "ERC1155: caller is not owner nor approved nor an allowed interface"
           );
-          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq(
-            firstAmount
-          );
-          expect(await ERC20Interface.balanceOf(secondTokenHolder)).to.be.eq(
-            "0"
-          );
+          expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq(firstAmount);
+          expect(await ERC20Interface.balanceOf(secondTokenHolder)).to.be.eq("0");
         });
       });
 
       describe("can burn underlying tokens ", async function () {
         let nonERC1155Receiver;
         beforeEach(async () => {
-          const nonERC1155ReceiverFac = await ethers.getContractFactory(
-            "nonERC1155Receiver"
-          );
+          const nonERC1155ReceiverFac = await ethers.getContractFactory("nonERC1155Receiver");
           nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
             firstTokenId,
             tokenContract.address
@@ -1636,45 +1351,35 @@ describe("gETH", async function () {
         });
 
         it("succeeds", async function () {
-          await tokenContract
-            .connect(signers[1])
-            .avoidInterfaces(firstTokenId, true);
-          await tokenContract
-            .connect(signers[1])
-            .avoidInterfaces(firstTokenId, false);
+          await tokenContract.connect(signers[1]).avoidInterfaces(firstTokenId, true);
+          await tokenContract.connect(signers[1]).avoidInterfaces(firstTokenId, false);
 
-          expect(
-            await tokenContract.balanceOf(tokenHolder, firstTokenId)
-          ).to.be.eq(firstAmount.toString());
+          expect(await tokenContract.balanceOf(tokenHolder, firstTokenId)).to.be.eq(
+            firstAmount.toString()
+          );
           await nonERC1155Receiver.connect(signers[1]).burn(firstAmount);
-          expect(
-            await tokenContract.balanceOf(tokenHolder, firstTokenId)
-          ).to.be.eq(BigNumber.from(0));
+          expect(await tokenContract.balanceOf(tokenHolder, firstTokenId)).to.be.eq(
+            BigNumber.from(0)
+          );
         });
         it("reverts if avoided", async function () {
-          await tokenContract
-            .connect(signers[1])
-            .avoidInterfaces(firstTokenId, true);
-          expect(
-            await tokenContract.balanceOf(tokenHolder, firstTokenId)
-          ).to.be.eq(firstAmount.toString());
-          await expect(
-            nonERC1155Receiver.connect(signers[1]).burn(firstAmount)
-          ).to.be.revertedWith(
+          await tokenContract.connect(signers[1]).avoidInterfaces(firstTokenId, true);
+          expect(await tokenContract.balanceOf(tokenHolder, firstTokenId)).to.be.eq(
+            firstAmount.toString()
+          );
+          await expect(nonERC1155Receiver.connect(signers[1]).burn(firstAmount)).to.be.revertedWith(
             "ERC1155: caller is not owner nor approved nor an allowed interface"
           );
-          expect(
-            await tokenContract.balanceOf(tokenHolder, firstTokenId)
-          ).to.be.eq(firstAmount.toString());
+          expect(await tokenContract.balanceOf(tokenHolder, firstTokenId)).to.be.eq(
+            firstAmount.toString()
+          );
         });
       });
 
       describe("can not burn OTHER underlying tokens", async function () {
         let nonERC1155Receiver;
         beforeEach(async () => {
-          const nonERC1155ReceiverFac = await ethers.getContractFactory(
-            "nonERC1155Receiver"
-          );
+          const nonERC1155ReceiverFac = await ethers.getContractFactory("nonERC1155Receiver");
           nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
             poolTokenId,
             tokenContract.address
@@ -1689,9 +1394,7 @@ describe("gETH", async function () {
         });
 
         it("fails", async function () {
-          await expect(
-            nonERC1155Receiver.connect(signers[1]).burn(firstAmount)
-          ).to.be.revertedWith(
+          await expect(nonERC1155Receiver.connect(signers[1]).burn(firstAmount)).to.be.revertedWith(
             "ERC1155: caller is not owner nor approved nor an allowed interface"
           );
         });
@@ -1699,34 +1402,23 @@ describe("gETH", async function () {
 
       it("interfaces must be a contract", async function () {
         await expect(
-          tokenContract
-            .connect(signers[0])
-            .setInterface(ZERO_ADDRESS, poolTokenId, true)
+          tokenContract.connect(signers[0]).setInterface(ZERO_ADDRESS, poolTokenId, true)
         ).to.be.revertedWith("gETH: _interface must be a contract");
       });
 
       it("interfaces can conduct transfers between non-erc1155Receiver contracts", async function () {
-        const nonERC1155ReceiverFac = await ethers.getContractFactory(
-          "nonERC1155Receiver"
-        );
+        const nonERC1155ReceiverFac = await ethers.getContractFactory("nonERC1155Receiver");
         const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
           poolTokenId,
           tokenContract.address
         );
-        await ERC20Interface.connect(signers[2]).transfer(
-          nonERC1155Receiver.address,
-          firstAmount
-        );
+        await ERC20Interface.connect(signers[2]).transfer(nonERC1155Receiver.address, firstAmount);
         expect(await ERC20Interface.balanceOf(firstTokenHolder)).to.be.eq("0");
-        expect(
-          await ERC20Interface.balanceOf(nonERC1155Receiver.address)
-        ).to.be.eq(firstAmount);
+        expect(await ERC20Interface.balanceOf(nonERC1155Receiver.address)).to.be.eq(firstAmount);
       });
 
       it("interfaces can NOT transfer other ids", async function () {
-        const nonERC1155ReceiverFac = await ethers.getContractFactory(
-          "nonERC1155Receiver"
-        );
+        const nonERC1155ReceiverFac = await ethers.getContractFactory("nonERC1155Receiver");
         const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
           poolTokenId,
           tokenContract.address
@@ -1736,29 +1428,19 @@ describe("gETH", async function () {
           .setInterface(nonERC1155Receiver.address, 69696, true);
 
         await expect(
-          nonERC1155Receiver
-            .connect(signers[5])
-            .transfer(secondTokenHolder, firstAmount)
-        ).to.be.revertedWith(
-          "ERC1155: caller is not owner nor approved nor an allowed interface"
-        );
+          nonERC1155Receiver.connect(signers[5]).transfer(secondTokenHolder, firstAmount)
+        ).to.be.revertedWith("ERC1155: caller is not owner nor approved nor an allowed interface");
       });
 
       it("can not transfer if not interface ", async function () {
-        const nonERC1155ReceiverFac = await ethers.getContractFactory(
-          "nonERC1155Receiver"
-        );
+        const nonERC1155ReceiverFac = await ethers.getContractFactory("nonERC1155Receiver");
         const nonERC1155Receiver = await nonERC1155ReceiverFac.deploy(
           poolTokenId,
           tokenContract.address
         );
         await expect(
-          nonERC1155Receiver
-            .connect(signers[5])
-            .transfer(secondTokenHolder, firstAmount)
-        ).to.be.revertedWith(
-          "ERC1155: caller is not owner nor approved nor an allowed interface"
-        );
+          nonERC1155Receiver.connect(signers[5]).transfer(secondTokenHolder, firstAmount)
+        ).to.be.revertedWith("ERC1155: caller is not owner nor approved nor an allowed interface");
       });
 
       it("unset(old) interfaces can NOT act", async function () {
@@ -1771,18 +1453,8 @@ describe("gETH", async function () {
             secondTokenHolder,
             firstAmount
           )
-        ).to.be.revertedWith(
-          "ERC1155: caller is not owner nor approved nor an allowed interface"
-        );
+        ).to.be.revertedWith("ERC1155: caller is not owner nor approved nor an allowed interface");
       });
     });
   });
-
-  // openzeppelin checks, so we don't need.
-  //   shouldSupportInterfaces([
-  //     "ERC165",
-  //     "ERC1155",
-  //     "AccessControl",
-  //     "AccessControlEnumerable",
-  //   ]);
 });

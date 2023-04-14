@@ -6,7 +6,7 @@ const chai = require("chai");
 chai.use(solidity);
 const { expect } = chai;
 
-const { MAX_UINT256, ZERO_ADDRESS } = require("../testUtils");
+const { MAX_UINT256, ZERO_ADDRESS } = require("../utils");
 
 describe("DataStoreUtils", async () => {
   const emptyKey = ethers.utils.formatBytes32String("");

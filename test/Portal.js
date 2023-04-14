@@ -1,9 +1,4 @@
-const {
-  MAX_UINT256,
-  ZERO_ADDRESS,
-  getCurrentBlockTimestamp,
-  setTimestamp,
-} = require("./testUtils");
+const { MAX_UINT256, ZERO_ADDRESS, getCurrentBlockTimestamp, setTimestamp } = require("./utils");
 const { StandardMerkleTree } = require("@openzeppelin/merkle-tree");
 const { BigNumber } = require("ethers");
 const { solidity } = require("ethereum-waffle");

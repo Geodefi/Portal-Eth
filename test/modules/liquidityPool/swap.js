@@ -43,102 +43,66 @@ describe("Swap", async () => {
 
   const randId = 69;
 
-  const setupTest = deployments.createFixture(
-    async ({ deployments, ethers }) => {
-      const { get } = deployments;
-      await deployments.fixture(); // ensure you start from a fresh deployments
+  const setupTest = deployments.createFixture(async ({ deployments, ethers }) => {
+    const { get } = deployments;
+    await deployments.fixture(); // ensure you start from a fresh deployments
 
-      const signers = await ethers.getSigners();
-      owner = signers[0];
-      user1 = signers[1];
-      user2 = signers[2];
-      ownerAddress = await owner.getAddress();
-      user1Address = await user1.getAddress();
-      user2Address = await user2.getAddress();
+    const signers = await ethers.getSigners();
+    owner = signers[0];
+    user1 = signers[1];
+    user2 = signers[2];
+    ownerAddress = await owner.getAddress();
+    user1Address = await user1.getAddress();
+    user2Address = await user2.getAddress();
 
-      gETHReference = await ethers.getContractAt(
-        "gETH",
-        (
-          await get("gETH")
-        ).address
-      );
-      await asyncForEach(
-        [ownerAddress, user1Address, user2Address],
-        async (signerAddress) => {
-          await gETHReference.mint(
-            signerAddress,
-            randId,
-            String(1e20),
-            utils.formatBytes32String("")
-          );
-          new_balance_1 = await gETHReference.balanceOf(signerAddress, randId);
-          expect(new_balance_1).to.be.eq(String(1e20));
-        }
-      );
-      await gETHReference.setPricePerShare(String(1e18), randId);
-      swap = await ethers.getContractAt(
-        "Swap",
-        (
-          await deployments.get("Swap")
-        ).address
-      );
-      await swap.initialize(
-        gETHReference.address,
-        randId,
-        LP_TOKEN_NAME,
-        LP_TOKEN_SYMBOL,
-        (
-          await get("LPToken")
-        ).address,
-        ownerAddress
-      );
-      test_pool = swap;
+    gETHReference = await ethers.getContractAt("gETH", (await get("gETH")).address);
+    await asyncForEach([ownerAddress, user1Address, user2Address], async (signerAddress) => {
+      await gETHReference.mint(signerAddress, randId, String(1e20), utils.formatBytes32String(""));
+      new_balance_1 = await gETHReference.balanceOf(signerAddress, randId);
+      expect(new_balance_1).to.be.eq(String(1e20));
+    });
+    await gETHReference.setPricePerShare(String(1e18), randId);
+    swap = await ethers.getContractAt("Swap", (await deployments.get("Swap")).address);
+    await swap.initialize(
+      gETHReference.address,
+      randId,
+      LP_TOKEN_NAME,
+      LP_TOKEN_SYMBOL,
+      (
+        await get("LPToken")
+      ).address,
+      ownerAddress
+    );
+    test_pool = swap;
 
-      expect(await test_pool.getVirtualPrice()).to.be.eq(0);
-      swapStorage = await swap.swapStorage();
+    expect(await test_pool.getVirtualPrice()).to.be.eq(0);
+    swapStorage = await swap.swapStorage();
 
-      test_pool_swapStorage = await swap.swapStorage();
+    test_pool_swapStorage = await swap.swapStorage();
 
-      test_pool_swapToken = await ethers.getContractAt(
-        "LPToken",
-        test_pool_swapStorage.lpToken
-      );
+    test_pool_swapToken = await ethers.getContractAt("LPToken", test_pool_swapStorage.lpToken);
 
-      const testSwapReturnValuesFactory = await ethers.getContractFactory(
-        "TestSwapReturnValues"
-      );
+    const testSwapReturnValuesFactory = await ethers.getContractFactory("TestSwapReturnValues");
 
-      testSwapReturnValues = await testSwapReturnValuesFactory.deploy(
-        test_pool.address,
-        gETHReference.address,
-        test_pool_swapToken.address,
-        2
-      );
+    testSwapReturnValues = await testSwapReturnValuesFactory.deploy(
+      test_pool.address,
+      gETHReference.address,
+      test_pool_swapToken.address,
+      2
+    );
 
-      await asyncForEach([owner, user1, user2], async (signer) => {
-        await gETHReference
-          .connect(signer)
-          .setApprovalForAll(test_pool.address, true);
-        await test_pool_swapToken
-          .connect(signer)
-          .approve(test_pool.address, MAX_UINT256);
-      });
+    await asyncForEach([owner, user1, user2], async (signer) => {
+      await gETHReference.connect(signer).setApprovalForAll(test_pool.address, true);
+      await test_pool_swapToken.connect(signer).approve(test_pool.address, MAX_UINT256);
+    });
 
-      await test_pool.addLiquidity(
-        [String(1e18), String(1e18)],
-        0,
-        MAX_UINT256,
-        {
-          value: String(1e18),
-        }
-      );
+    await test_pool.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
+      value: String(1e18),
+    });
 
-      expect(await provider.getBalance(test_pool.address)).to.eq(String(1e18));
-      expect(await gETHReference.balanceOf(test_pool.address, randId)).to.eq(
-        String(1e18)
-      );
-    }
-  );
+    expect(await provider.getBalance(test_pool.address)).to.eq(String(1e18));
+    expect(await gETHReference.balanceOf(test_pool.address, randId)).to.eq(String(1e18));
+  });
 
   beforeEach(async () => {
     await setupTest();
@@ -156,19 +120,15 @@ describe("Swap", async () => {
 
       it("Returns true after successfully calling transferFrom", async () => {
         // User 1 adds liquidity
-        await test_pool
-          .connect(user1)
-          .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("2"),
-          });
+        await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("2"),
+        });
 
         // User 1 approves User 2 for MAX_UINT256
         test_pool_swapToken.connect(user1).approve(user2Address, MAX_UINT256);
 
         // User 2 transfers 1337 from User 1 to themselves using transferFrom
-        await test_pool_swapToken
-          .connect(user2)
-          .transferFrom(user1Address, user2Address, 1337);
+        await test_pool_swapToken.connect(user2).transferFrom(user1Address, user2Address, 1337);
 
         expect(await test_pool_swapToken.balanceOf(user2Address)).to.eq(1337);
       });
@@ -207,12 +167,8 @@ describe("Swap", async () => {
 
   describe("getTokenBalance", () => {
     it("Returns correct balances of pooled tokens", async () => {
-      expect(await test_pool.getTokenBalance(0)).to.eq(
-        BigNumber.from(String(1e18))
-      );
-      expect(await test_pool.getTokenBalance(1)).to.eq(
-        BigNumber.from(String(1e18))
-      );
+      expect(await test_pool.getTokenBalance(0)).to.eq(BigNumber.from(String(1e18)));
+      expect(await test_pool.getTokenBalance(1)).to.eq(BigNumber.from(String(1e18)));
     });
 
     it("Reverts when index is out of range", async () => {
@@ -228,9 +184,7 @@ describe("Swap", async () => {
 
   describe("getVirtualPrice", () => {
     it("Returns expected value after initial deposit", async () => {
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from(String(1e18))
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from(String(1e18)));
     });
 
     it("Returns expected values after swaps", async () => {
@@ -238,170 +192,114 @@ describe("Swap", async () => {
       await test_pool.connect(user1).swap(0, 1, String(1e17), 0, MAX_UINT256, {
         value: ethers.utils.parseEther("0.1"),
       });
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from("1000020001975421763")
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from("1000020001975421763"));
 
       await test_pool.connect(user1).swap(1, 0, String(1e17), 0, MAX_UINT256);
 
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from("1000040035070723434")
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from("1000040035070723434"));
     });
 
     it("Returns expected values after imbalanced withdrawal", async () => {
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
-        });
-      await test_pool
-        .connect(user2)
-        .addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
-        });
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from(String(1e18))
-      );
+      await test_pool.connect(user1).addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("1"),
+      });
+      await test_pool.connect(user2).addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("1"),
+      });
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from(String(1e18)));
 
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, String(2e18));
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, String(2e18));
       await test_pool
         .connect(user1)
         .removeLiquidityImbalance([String(1e18), 0], String(2e18), MAX_UINT256);
 
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from("1000040029773424026")
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from("1000040029773424026"));
 
-      await test_pool_swapToken
-        .connect(user2)
-        .approve(test_pool.address, String(2e18));
+      await test_pool_swapToken.connect(user2).approve(test_pool.address, String(2e18));
       await test_pool
         .connect(user2)
         .removeLiquidityImbalance([0, String(1e18)], String(2e18), MAX_UINT256);
 
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from("1000080046628378343")
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from("1000080046628378343"));
     });
 
     it("Value is unchanged after balanced deposits", async () => {
       // pool is 1:1:1 ratio
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from(String(1e18))
-      );
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
-        });
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from(String(1e18))
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from(String(1e18)));
+      await test_pool.connect(user1).addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("1"),
+      });
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from(String(1e18)));
 
       // pool changes to 1:2:1 ratio, thus changing the virtual price
-      await test_pool
-        .connect(user2)
-        .addLiquidity([String(2e18), String(0)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
+      await test_pool.connect(user2).addLiquidity([String(2e18), String(0)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
 
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from("1000066822646615457")
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from("1000066822646615457"));
       // User 2 makes balanced deposit, keeping the ratio 2:1
-      await test_pool
-        .connect(user2)
-        .addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
+      await test_pool.connect(user2).addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
 
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from("1000066822646615457")
-      );
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from("1000066822646615457"));
     });
 
     it("Value is unchanged after balanced withdrawals", async () => {
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
-        });
+      await test_pool.connect(user1).addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("1"),
+      });
 
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, String(1e18));
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, String(1e18));
 
-      await test_pool
-        .connect(user1)
-        .removeLiquidity(String(1e18), [0, 0], MAX_UINT256);
-      expect(await test_pool.getVirtualPrice()).to.eq(
-        BigNumber.from(String(1e18))
-      );
+      await test_pool.connect(user1).removeLiquidity(String(1e18), [0, 0], MAX_UINT256);
+      expect(await test_pool.getVirtualPrice()).to.eq(BigNumber.from(String(1e18)));
     });
   });
 
   describe("setSwapFee", () => {
     it("Emits NewSwapFee event", async () => {
-      await expect(test_pool.setSwapFee(BigNumber.from(1e8))).to.emit(
-        test_pool,
-        "NewSwapFee"
-      );
+      await expect(test_pool.setSwapFee(BigNumber.from(1e8))).to.emit(test_pool, "NewSwapFee");
     });
 
     it("Reverts when called by non-owners", async () => {
       await expect(test_pool.connect(user1).setSwapFee(0)).to.be.reverted;
-      await expect(test_pool.connect(user2).setSwapFee(BigNumber.from(1e8))).to
-        .be.reverted;
+      await expect(test_pool.connect(user2).setSwapFee(BigNumber.from(1e8))).to.be.reverted;
     });
 
     it("Reverts when fee is higher than the limit", async () => {
-      await expect(test_pool.setSwapFee(BigNumber.from(1e8).add(1))).to.be
-        .reverted;
+      await expect(test_pool.setSwapFee(BigNumber.from(1e8).add(1))).to.be.reverted;
     });
 
     it("Succeeds when fee is within the limit", async () => {
       await test_pool.setSwapFee(BigNumber.from(1e8));
-      expect((await test_pool.swapStorage()).swapFee).to.eq(
-        BigNumber.from(1e8)
-      );
+      expect((await test_pool.swapStorage()).swapFee).to.eq(BigNumber.from(1e8));
     });
   });
 
   describe("setAdminFee", () => {
     it("Emits NewAdminFee event", async () => {
-      await expect(test_pool.setAdminFee(BigNumber.from(1e10))).to.emit(
-        test_pool,
-        "NewAdminFee"
-      );
+      await expect(test_pool.setAdminFee(BigNumber.from(1e10))).to.emit(test_pool, "NewAdminFee");
     });
 
     it("Reverts when called by non-owners", async () => {
       await expect(test_pool.connect(user1).setSwapFee(0)).to.be.reverted;
-      await expect(test_pool.connect(user2).setSwapFee(BigNumber.from(1e10))).to
-        .be.reverted;
+      await expect(test_pool.connect(user2).setSwapFee(BigNumber.from(1e10))).to.be.reverted;
     });
 
     it("Reverts when adminFee is higher than the limit", async () => {
-      await expect(test_pool.setAdminFee(BigNumber.from(1e10).add(1))).to.be
-        .reverted;
+      await expect(test_pool.setAdminFee(BigNumber.from(1e10).add(1))).to.be.reverted;
     });
 
     it("Succeeds when adminFee is within the limit", async () => {
       await test_pool.setAdminFee(BigNumber.from(1e10));
-      expect((await test_pool.swapStorage()).adminFee).to.eq(
-        BigNumber.from(1e10)
-      );
+      expect((await test_pool.swapStorage()).adminFee).to.eq(BigNumber.from(1e10));
     });
   });
 
   describe("getAdminBalance", () => {
     it("Reverts with 'Token index out of range'", async () => {
-      await expect(test_pool.getAdminBalance(3)).to.be.revertedWith(
-        "Token index out of range"
-      );
+      await expect(test_pool.getAdminBalance(3)).to.be.revertedWith("Token index out of range");
     });
 
     it("Is always 0 when adminFee is set to 0", async () => {
@@ -448,22 +346,14 @@ describe("Swap", async () => {
       await test_pool.setAdminFee(BigNumber.from(10 ** 8));
 
       const EtherBefore = await provider.getBalance(owner.address);
-      const firstTokenBefore = await getUserTokenBalance(
-        owner,
-        randId,
-        gETHReference
-      );
+      const firstTokenBefore = await getUserTokenBalance(owner, randId, gETHReference);
 
       const tx = await test_pool.withdrawAdminFees();
       const receipt = await tx.wait();
       const gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
 
       const EtherAfter = await provider.getBalance(owner.address);
-      const firstTokenAfter = await getUserTokenBalance(
-        owner,
-        randId,
-        gETHReference
-      );
+      const firstTokenAfter = await getUserTokenBalance(owner, randId, gETHReference);
       expect(EtherBefore.sub(gasUsed)).to.eq(EtherAfter);
       expect(firstTokenBefore).to.eq(firstTokenAfter);
     });
@@ -480,11 +370,7 @@ describe("Swap", async () => {
       expect(await test_pool.getAdminBalance(1)).to.eq(String(399338962149));
 
       const EtherBefore = await provider.getBalance(owner.address);
-      const firstTokenBefore = await getUserTokenBalance(
-        owner,
-        randId,
-        gETHReference
-      );
+      const firstTokenBefore = await getUserTokenBalance(owner, randId, gETHReference);
 
       const tx = await test_pool.withdrawAdminFees();
       const receipt = await tx.wait();
@@ -492,51 +378,33 @@ describe("Swap", async () => {
 
       const EtherAfter = await provider.getBalance(owner.address);
 
-      const firstTokenAfter = await getUserTokenBalance(
-        owner,
-        randId,
-        gETHReference
-      );
+      const firstTokenAfter = await getUserTokenBalance(owner, randId, gETHReference);
 
-      expect(EtherAfter.add(gasUsed).sub(EtherBefore)).to.eq(
-        String(400660758190)
-      );
+      expect(EtherAfter.add(gasUsed).sub(EtherBefore)).to.eq(String(400660758190));
       expect(firstTokenAfter.sub(firstTokenBefore)).to.eq(String(399338962149));
     });
 
     it("Withdrawing admin fees has no impact on users' withdrawal", async () => {
       // Sets adminFee to 1% of the swap fees
       await test_pool.setAdminFee(BigNumber.from(10 ** 8));
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
-        });
+      await test_pool.connect(user1).addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("1"),
+      });
 
       for (let i = 0; i < 10; i++) {
-        await test_pool
-          .connect(user2)
-          .swap(0, 1, String(1e17), 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.1"),
-          });
+        await test_pool.connect(user2).swap(0, 1, String(1e17), 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("0.1"),
+        });
         await test_pool.connect(user2).swap(1, 0, String(1e17), 0, MAX_UINT256);
       }
 
       await test_pool.withdrawAdminFees();
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, MAX_UINT256);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, MAX_UINT256);
 
       const EtherBefore = await provider.getBalance(user1.address);
-      const firstTokenBefore = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const firstTokenBefore = await getUserTokenBalance(user1, randId, gETHReference);
 
-      const user1LPTokenBalance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      const user1LPTokenBalance = await test_pool_swapToken.balanceOf(user1Address);
 
       const tx = await test_pool
         .connect(user1)
@@ -546,52 +414,34 @@ describe("Swap", async () => {
 
       const EtherAfter = await provider.getBalance(user1.address);
 
-      const firstTokenAfter = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const firstTokenAfter = await getUserTokenBalance(user1, randId, gETHReference);
 
-      expect(EtherAfter.add(gasUsed).sub(EtherBefore)).to.eq(
-        BigNumber.from("999790899571521545")
-      );
+      expect(EtherAfter.add(gasUsed).sub(EtherBefore)).to.eq(BigNumber.from("999790899571521545"));
 
-      expect(firstTokenAfter.sub(firstTokenBefore)).to.eq(
-        BigNumber.from("1000605270122712963")
-      );
+      expect(firstTokenAfter.sub(firstTokenBefore)).to.eq(BigNumber.from("1000605270122712963"));
     });
   });
 
   describe("addLiquidity", () => {
     it("Reverts when contract is paused", async () => {
-      const beforePoolTokenAmount = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      const beforePoolTokenAmount = await test_pool_swapToken.balanceOf(user1Address);
       await test_pool.pause();
       await expect(
-        test_pool
-          .connect(user1)
-          .addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
-          })
+        test_pool.connect(user1).addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("1"),
+        })
       ).to.be.reverted;
-      const afterPoolTokenAmount = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      const afterPoolTokenAmount = await test_pool_swapToken.balanceOf(user1Address);
 
       expect(afterPoolTokenAmount).to.eq(beforePoolTokenAmount);
       // unpause
       await test_pool.unpause();
 
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
-        });
+      await test_pool.connect(user1).addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("1"),
+      });
 
-      const finalPoolTokenAmount = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      const finalPoolTokenAmount = await test_pool_swapToken.balanceOf(user1Address);
 
       expect(finalPoolTokenAmount).to.gt(beforePoolTokenAmount);
       expect(finalPoolTokenAmount).to.eq(BigNumber.from("3993470625071427531"));
@@ -599,36 +449,23 @@ describe("Swap", async () => {
 
     it("Reverts with 'Cannot withdraw more than available'", async () => {
       await expect(
-        test_pool
-          .connect(user1)
-          .calculateTokenAmount([MAX_UINT256, String(4e18)], false)
+        test_pool.connect(user1).calculateTokenAmount([MAX_UINT256, String(4e18)], false)
       ).to.be.revertedWith("Cannot withdraw more than available");
     });
 
     it("Reverts with 'Must supply all tokens in pool'", async () => {
       const PoolTokenAmount = await test_pool_swapToken.balanceOf(ownerAddress);
-      test_pool_swapToken.approve(
-        test_pool.address,
-        PoolTokenAmount.toString()
-      );
-      await test_pool.removeLiquidity(
-        PoolTokenAmount.toString(),
-        [0, 0],
-        MAX_UINT256
-      );
+      test_pool_swapToken.approve(test_pool.address, PoolTokenAmount.toString());
+      await test_pool.removeLiquidity(PoolTokenAmount.toString(), [0, 0], MAX_UINT256);
       await test_pool_swapToken.balanceOf(ownerAddress);
       await expect(
-        test_pool
-          .connect(user1)
-          .addLiquidity([String(0), String(3e18)], 0, MAX_UINT256)
+        test_pool.connect(user1).addLiquidity([String(0), String(3e18)], 0, MAX_UINT256)
       ).to.be.revertedWith("Must supply all tokens in pool");
 
       await expect(
-        test_pool
-          .connect(user1)
-          .addLiquidity([String(2e18), String(0)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("2"),
-          })
+        test_pool.connect(user1).addLiquidity([String(2e18), String(0)], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("2"),
+        })
       ).to.be.revertedWith("Must supply all tokens in pool");
     });
 
@@ -637,9 +474,7 @@ describe("Swap", async () => {
         .connect(user1)
         .calculateTokenAmount([String(1e18), String(3e18)], true);
 
-      const calculatedPoolTokenAmountWithSlippage = calculatedPoolTokenAmount
-        .mul(999)
-        .div(1000);
+      const calculatedPoolTokenAmountWithSlippage = calculatedPoolTokenAmount.mul(999).div(1000);
 
       await test_pool
         .connect(user1)
@@ -650,14 +485,10 @@ describe("Swap", async () => {
           { value: ethers.utils.parseEther("1") }
         );
 
-      const actualPoolTokenAmount = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      const actualPoolTokenAmount = await test_pool_swapToken.balanceOf(user1Address);
 
       // The actual pool token amount is less than 5e18 due to the imbalance of the underlying tokens
-      expect(actualPoolTokenAmount).to.eq(
-        BigNumber.from("3993470625071427531")
-      );
+      expect(actualPoolTokenAmount).to.eq(BigNumber.from("3993470625071427531"));
     });
 
     it("Succeeds with actual pool token amount being within ±0.1% range of calculated pool token", async () => {
@@ -665,11 +496,13 @@ describe("Swap", async () => {
         .connect(user1)
         .calculateTokenAmount([String(1e18), String(3e18)], true);
 
-      const calculatedPoolTokenAmountWithNegativeSlippage =
-        calculatedPoolTokenAmount.mul(999).div(1000);
+      const calculatedPoolTokenAmountWithNegativeSlippage = calculatedPoolTokenAmount
+        .mul(999)
+        .div(1000);
 
-      const calculatedPoolTokenAmountWithPositiveSlippage =
-        calculatedPoolTokenAmount.mul(1001).div(1000);
+      const calculatedPoolTokenAmountWithPositiveSlippage = calculatedPoolTokenAmount
+        .mul(1001)
+        .div(1000);
 
       await test_pool
         .connect(user1)
@@ -680,25 +513,17 @@ describe("Swap", async () => {
           { value: ethers.utils.parseEther("1") }
         );
 
-      const actualPoolTokenAmount = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      const actualPoolTokenAmount = await test_pool_swapToken.balanceOf(user1Address);
 
-      expect(actualPoolTokenAmount).to.gte(
-        calculatedPoolTokenAmountWithNegativeSlippage
-      );
+      expect(actualPoolTokenAmount).to.gte(calculatedPoolTokenAmountWithNegativeSlippage);
 
-      expect(actualPoolTokenAmount).to.lte(
-        calculatedPoolTokenAmountWithPositiveSlippage
-      );
+      expect(actualPoolTokenAmount).to.lte(calculatedPoolTokenAmountWithPositiveSlippage);
     });
 
     it("Succeeds with correctly updated tokenBalance after imbalanced deposit", async () => {
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
-        });
+      await test_pool.connect(user1).addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("1"),
+      });
 
       // Check updated token balance
       const tokenBalance1 = await test_pool.getTokenBalance(0);
@@ -716,11 +541,9 @@ describe("Swap", async () => {
         utils.formatBytes32String("")
       );
 
-      await testSwapReturnValues.test_addLiquidity(
-        [String(1e18), String(1e18)],
-        0,
-        { value: ethers.utils.parseEther("1") }
-      );
+      await testSwapReturnValues.test_addLiquidity([String(1e18), String(1e18)], 0, {
+        value: ethers.utils.parseEther("1"),
+      });
     });
 
     it("Reverts when minToMint is not reached due to front running", async () => {
@@ -728,17 +551,12 @@ describe("Swap", async () => {
         .connect(user1)
         .calculateTokenAmount([String(1e18), String(3e18)], true);
 
-      const calculatedLPTokenAmountWithSlippage = calculatedLPTokenAmount
-        .mul(999)
-        .div(1000);
+      const calculatedLPTokenAmountWithSlippage = calculatedLPTokenAmount.mul(999).div(1000);
 
       // Someone else deposits thus front running user 1's deposit
-      await test_pool.addLiquidity(
-        [String(1e19), String(3e19)],
-        0,
-        MAX_UINT256,
-        { value: ethers.utils.parseEther("10") }
-      );
+      await test_pool.addLiquidity([String(1e19), String(3e19)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("10"),
+      });
 
       await expect(
         test_pool
@@ -759,12 +577,9 @@ describe("Swap", async () => {
       await expect(
         test_pool
           .connect(user1)
-          .addLiquidity(
-            [String(1e16), String(1e16)],
-            0,
-            currentTimestamp + 60 * 5,
-            { value: ethers.utils.parseEther("0.01") }
-          )
+          .addLiquidity([String(1e16), String(1e16)], 0, currentTimestamp + 60 * 5, {
+            value: ethers.utils.parseEther("0.01"),
+          })
       ).to.be.revertedWith("Deadline not met");
     });
 
@@ -773,9 +588,7 @@ describe("Swap", async () => {
         .connect(user1)
         .calculateTokenAmount([String(1e16), String(1e16)], true);
 
-      const calculatedLPTokenAmountWithSlippage = calculatedLPTokenAmount
-        .mul(999)
-        .div(1000);
+      const calculatedLPTokenAmountWithSlippage = calculatedLPTokenAmount.mul(999).div(1000);
 
       await expect(
         test_pool
@@ -792,21 +605,17 @@ describe("Swap", async () => {
 
   describe("removeLiquidity", () => {
     it("Reverts with 'Cannot exceed total supply'", async () => {
-      await expect(
-        test_pool.calculateRemoveLiquidity(MAX_UINT256)
-      ).to.be.revertedWith("Cannot exceed total supply");
+      await expect(test_pool.calculateRemoveLiquidity(MAX_UINT256)).to.be.revertedWith(
+        "Cannot exceed total supply"
+      );
     });
 
     it("Succeeds even when contract is paused", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e16), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("0.01"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(1e16), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("0.01"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("20000000000000000"));
 
       // Owner pauses the contract
@@ -814,14 +623,10 @@ describe("Swap", async () => {
 
       // Owner and user 1 try to remove liquidity
       test_pool_swapToken.approve(test_pool.address, String(3e18));
-      test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
 
       await test_pool.removeLiquidity(String(2e18), [0, 0], MAX_UINT256);
-      await test_pool
-        .connect(user1)
-        .removeLiquidity(currentUser1Balance, [0, 0], MAX_UINT256);
+      await test_pool.connect(user1).removeLiquidity(currentUser1Balance, [0, 0], MAX_UINT256);
 
       await test_pool.unpause();
       expect(await gETHReference.balanceOf(test_pool.address, randId)).to.eq(0);
@@ -830,38 +635,24 @@ describe("Swap", async () => {
 
     it("Succeeds with expected return amounts of underlying tokens", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e16), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("0.02"),
-        });
+      await test_pool.connect(user1).addLiquidity([String(2e16), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("0.02"),
+      });
 
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, MAX_UINT256);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, MAX_UINT256);
 
-      const firstTokenBalanceBefore = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const firstTokenBalanceBefore = await getUserTokenBalance(user1, randId, gETHReference);
 
-      poolTokenBalanceBefore = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      poolTokenBalanceBefore = await test_pool_swapToken.balanceOf(user1Address);
 
       expect(poolTokenBalanceBefore).to.eq(BigNumber.from("29997596210674143"));
 
       const [expectedZerothTokenAmount, expectedFirstTokenAmount] =
         await test_pool.calculateRemoveLiquidity(poolTokenBalanceBefore);
 
-      expect(expectedZerothTokenAmount).to.eq(
-        BigNumber.from("15072701658367972")
-      );
+      expect(expectedZerothTokenAmount).to.eq(BigNumber.from("15072701658367972"));
 
-      expect(expectedFirstTokenAmount).to.eq(
-        BigNumber.from("14924930073482011")
-      );
+      expect(expectedFirstTokenAmount).to.eq(BigNumber.from("14924930073482011"));
 
       await test_pool
         .connect(user1)
@@ -871,17 +662,11 @@ describe("Swap", async () => {
           MAX_UINT256
         );
 
-      const firstTokenBalanceAfter = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const firstTokenBalanceAfter = await getUserTokenBalance(user1, randId, gETHReference);
 
       // Check the actual returned token amounts match the expected amounts
 
-      expect(firstTokenBalanceAfter.sub(firstTokenBalanceBefore)).to.eq(
-        expectedFirstTokenAmount
-      );
+      expect(firstTokenBalanceAfter.sub(firstTokenBalanceBefore)).to.eq(expectedFirstTokenAmount);
     });
 
     it("Returns correct amounts of received tokens", async () => {
@@ -892,71 +677,49 @@ describe("Swap", async () => {
         utils.formatBytes32String("")
       );
 
-      await testSwapReturnValues.test_addLiquidity(
-        [String(1e18), String(2e18)],
-        0,
-        { value: ethers.utils.parseEther("1") }
-      );
+      await testSwapReturnValues.test_addLiquidity([String(1e18), String(2e18)], 0, {
+        value: ethers.utils.parseEther("1"),
+      });
 
-      const tokenBalance = await test_pool_swapToken.balanceOf(
-        testSwapReturnValues.address
-      );
+      const tokenBalance = await test_pool_swapToken.balanceOf(testSwapReturnValues.address);
 
       await testSwapReturnValues.test_removeLiquidity(tokenBalance, [0, 0]);
     });
 
     it("Reverts when user tries to burn more LP tokens than they own", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       await expect(
-        test_pool
-          .connect(user1)
-          .removeLiquidity(currentUser1Balance.add(1), [0, 0], MAX_UINT256)
+        test_pool.connect(user1).removeLiquidity(currentUser1Balance.add(1), [0, 0], MAX_UINT256)
       ).to.be.revertedWith(">LP.balanceOf");
     });
 
     it("Reverts when minAmounts of underlying tokens are not reached due to front running", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       const [expectedZerothTokenAmount, expectedFirstTokenAmount] =
         await test_pool.calculateRemoveLiquidity(currentUser1Balance);
 
-      expect(expectedZerothTokenAmount).to.eq(
-        BigNumber.from("1499604416679853312")
-      );
-      expect(expectedFirstTokenAmount).to.eq(
-        BigNumber.from("504866820282217281")
-      );
+      expect(expectedZerothTokenAmount).to.eq(BigNumber.from("1499604416679853312"));
+      expect(expectedFirstTokenAmount).to.eq(BigNumber.from("504866820282217281"));
 
       // User 2 adds liquidity, which leads to change in balance of underlying tokens
-      await test_pool
-        .connect(user2)
-        .addLiquidity([String(1e16), String(2e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("0.01"),
-        });
+      await test_pool.connect(user2).addLiquidity([String(1e16), String(2e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("0.01"),
+      });
 
       // User 1 tries to remove liquidity which get reverted due to front running
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
       await expect(
         test_pool
           .connect(user1)
@@ -970,52 +733,34 @@ describe("Swap", async () => {
 
     it("Reverts when block is mined after deadline", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
 
       const currentTimestamp = await getCurrentBlockTimestamp();
       await setNextTimestamp(currentTimestamp + 60 * 10);
 
       // User 1 tries removing liquidity with deadline of +5 minutes
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
       await expect(
         test_pool
           .connect(user1)
-          .removeLiquidity(
-            currentUser1Balance,
-            [0, 0],
-            currentTimestamp + 60 * 5
-          )
+          .removeLiquidity(currentUser1Balance, [0, 0], currentTimestamp + 60 * 5)
       ).to.be.revertedWith("Deadline not met");
     });
 
     it("Emits removeLiquidity event", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
 
       // User 1 tries removes liquidity
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
       await expect(
-        test_pool
-          .connect(user1)
-          .removeLiquidity(currentUser1Balance, [0, 0], MAX_UINT256)
+        test_pool.connect(user1).removeLiquidity(currentUser1Balance, [0, 0], MAX_UINT256)
       ).to.emit(test_pool.connect(user1), "RemoveLiquidity");
     });
   });
@@ -1023,14 +768,10 @@ describe("Swap", async () => {
   describe("removeLiquidityImbalance", () => {
     it("Reverts when contract is paused", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       // Owner pauses the contract
@@ -1038,49 +779,31 @@ describe("Swap", async () => {
 
       // Owner and user 1 try to initiate imbalanced liquidity withdrawal
       test_pool_swapToken.approve(test_pool.address, MAX_UINT256);
-      test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, MAX_UINT256);
+      test_pool_swapToken.connect(user1).approve(test_pool.address, MAX_UINT256);
 
       await expect(
-        test_pool.removeLiquidityImbalance(
-          [String(1e18), String(1e16)],
-          randId,
-          MAX_UINT256
-        )
+        test_pool.removeLiquidityImbalance([String(1e18), String(1e16)], randId, MAX_UINT256)
       ).to.be.revertedWith("Pausable: paused");
 
       await expect(
         test_pool
           .connect(user1)
-          .removeLiquidityImbalance(
-            [String(1e18), String(1e16)],
-            randId,
-            MAX_UINT256
-          )
+          .removeLiquidityImbalance([String(1e18), String(1e16)], randId, MAX_UINT256)
       ).to.be.revertedWith("Pausable: paused");
     });
 
     it("Reverts with 'Cannot withdraw more than available'", async () => {
       await expect(
-        test_pool.removeLiquidityImbalance(
-          [MAX_UINT256, MAX_UINT256],
-          randId,
-          MAX_UINT256
-        )
+        test_pool.removeLiquidityImbalance([MAX_UINT256, MAX_UINT256], randId, MAX_UINT256)
       ).to.be.revertedWith("Cannot withdraw more than available");
     });
 
     it("Succeeds with calculated max amount of pool token to be burned (±0.1%)", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       // User 1 calculates amount of pool token to be burned
@@ -1090,27 +813,20 @@ describe("Swap", async () => {
       );
 
       // ±0.1% range of pool token to be burned
-      const maxPoolTokenAmountToBeBurnedNegativeSlippage =
-        maxPoolTokenAmountToBeBurned.mul(1001).div(1000);
-      const maxPoolTokenAmountToBeBurnedPositiveSlippage =
-        maxPoolTokenAmountToBeBurned.mul(999).div(1000);
+      const maxPoolTokenAmountToBeBurnedNegativeSlippage = maxPoolTokenAmountToBeBurned
+        .mul(1001)
+        .div(1000);
+      const maxPoolTokenAmountToBeBurnedPositiveSlippage = maxPoolTokenAmountToBeBurned
+        .mul(999)
+        .div(1000);
       await test_pool_swapToken
         .connect(user1)
-        .approve(
-          test_pool.address,
-          maxPoolTokenAmountToBeBurnedNegativeSlippage
-        );
+        .approve(test_pool.address, maxPoolTokenAmountToBeBurnedNegativeSlippage);
 
       const EtherBefore = await provider.getBalance(user1.address);
-      const firstTokenBalanceBefore = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const firstTokenBalanceBefore = await getUserTokenBalance(user1, randId, gETHReference);
 
-      poolTokenBalanceBefore = await test_pool_swapToken.balanceOf(
-        user1.address
-      );
+      poolTokenBalanceBefore = await test_pool_swapToken.balanceOf(user1.address);
 
       // User 1 withdraws imbalanced tokens
 
@@ -1125,32 +841,20 @@ describe("Swap", async () => {
       const gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
 
       const EtherAfter = await provider.getBalance(user1.address);
-      const firstTokenBalanceAfter = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const firstTokenBalanceAfter = await getUserTokenBalance(user1, randId, gETHReference);
 
       poolTokenBalanceAfter = await test_pool_swapToken.balanceOf(user1Address);
 
       // Check the actual returned token amounts match the requested amounts
       expect(EtherAfter.add(gasUsed).sub(EtherBefore)).to.eq(String(1e18));
-      expect(firstTokenBalanceAfter.sub(firstTokenBalanceBefore)).to.eq(
-        String(1e16)
-      );
+      expect(firstTokenBalanceAfter.sub(firstTokenBalanceBefore)).to.eq(String(1e16));
 
       // Check the actual burned pool token amount
-      const actualPoolTokenBurned = poolTokenBalanceBefore.sub(
-        poolTokenBalanceAfter
-      );
+      const actualPoolTokenBurned = poolTokenBalanceBefore.sub(poolTokenBalanceAfter);
 
       expect(actualPoolTokenBurned).to.eq(String("1002407694457888552"));
-      expect(actualPoolTokenBurned).to.gte(
-        maxPoolTokenAmountToBeBurnedPositiveSlippage
-      );
-      expect(actualPoolTokenBurned).to.lte(
-        maxPoolTokenAmountToBeBurnedNegativeSlippage
-      );
+      expect(actualPoolTokenBurned).to.gte(maxPoolTokenAmountToBeBurnedPositiveSlippage);
+      expect(actualPoolTokenBurned).to.lte(maxPoolTokenAmountToBeBurnedNegativeSlippage);
     });
 
     it("Returns correct amount of burned lpToken", async () => {
@@ -1161,15 +865,11 @@ describe("Swap", async () => {
         utils.formatBytes32String("")
       );
 
-      await testSwapReturnValues.test_addLiquidity(
-        [String(1e18), String(2e18)],
-        0,
-        { value: ethers.utils.parseEther("1") }
-      );
+      await testSwapReturnValues.test_addLiquidity([String(1e18), String(2e18)], 0, {
+        value: ethers.utils.parseEther("1"),
+      });
 
-      const tokenBalance = await test_pool_swapToken.balanceOf(
-        testSwapReturnValues.address
-      );
+      const tokenBalance = await test_pool_swapToken.balanceOf(testSwapReturnValues.address);
       await testSwapReturnValues.test_removeLiquidityImbalance(
         [String(1e18), String(1e17)],
         tokenBalance
@@ -1178,14 +878,10 @@ describe("Swap", async () => {
 
     it("Reverts when user tries to burn more LP tokens than they own", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       await expect(
@@ -1201,14 +897,10 @@ describe("Swap", async () => {
 
     it("Reverts when minAmounts of underlying tokens are not reached due to front running", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       // User 1 calculates amount of pool token to be burned
@@ -1218,23 +910,19 @@ describe("Swap", async () => {
       );
 
       // Calculate +0.1% of pool token to be burned
-      const maxPoolTokenAmountToBeBurnedNegativeSlippage =
-        maxPoolTokenAmountToBeBurned.mul(1001).div(1000);
+      const maxPoolTokenAmountToBeBurnedNegativeSlippage = maxPoolTokenAmountToBeBurned
+        .mul(1001)
+        .div(1000);
 
       // User 2 adds liquidity, which leads to change in balance of underlying tokens
-      await test_pool
-        .connect(user2)
-        .addLiquidity([String(1e16), String(1e20)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("0.01"),
-        });
+      await test_pool.connect(user2).addLiquidity([String(1e16), String(1e20)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("0.01"),
+      });
 
       // User 1 tries to remove liquidity which get reverted due to front running
       await test_pool_swapToken
         .connect(user1)
-        .approve(
-          test_pool.address,
-          maxPoolTokenAmountToBeBurnedNegativeSlippage
-        );
+        .approve(test_pool.address, maxPoolTokenAmountToBeBurnedNegativeSlippage);
       await expect(
         test_pool
           .connect(user1)
@@ -1248,22 +936,16 @@ describe("Swap", async () => {
 
     it("Reverts when block is mined after deadline", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
 
       const currentTimestamp = await getCurrentBlockTimestamp();
       await setNextTimestamp(currentTimestamp + 60 * 10);
 
       // User 1 tries removing liquidity with deadline of +5 minutes
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
       await expect(
         test_pool
           .connect(user1)
@@ -1277,28 +959,18 @@ describe("Swap", async () => {
 
     it("Emits RemoveLiquidityImbalance event", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
 
       // User 1 removes liquidity
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, MAX_UINT256);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, MAX_UINT256);
 
       await expect(
         test_pool
           .connect(user1)
-          .removeLiquidityImbalance(
-            [String(1e18), String(1e16)],
-            currentUser1Balance,
-            MAX_UINT256
-          )
+          .removeLiquidityImbalance([String(1e18), String(1e16)], currentUser1Balance, MAX_UINT256)
       ).to.emit(test_pool.connect(user1), "RemoveLiquidityImbalance");
     });
   });
@@ -1306,14 +978,10 @@ describe("Swap", async () => {
   describe("removeLiquidityOneToken", () => {
     it("Reverts when contract is paused", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       // Owner pauses the contract
@@ -1321,49 +989,36 @@ describe("Swap", async () => {
 
       // Owner and user 1 try to remove liquidity via single token
       test_pool_swapToken.approve(test_pool.address, String(3e18));
-      test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
 
       await expect(
         test_pool.removeLiquidityOneToken(String(2e18), 0, 0, MAX_UINT256)
       ).to.be.revertedWith("Pausable: paused");
       await expect(
-        test_pool
-          .connect(user1)
-          .removeLiquidityOneToken(currentUser1Balance, 0, 0, MAX_UINT256)
+        test_pool.connect(user1).removeLiquidityOneToken(currentUser1Balance, 0, 0, MAX_UINT256)
       ).to.be.revertedWith("Pausable: paused");
     });
 
     it("Reverts with 'Token index out of range'", async () => {
-      await expect(
-        test_pool.calculateRemoveLiquidityOneToken(1, 5)
-      ).to.be.revertedWith("Token index out of range");
+      await expect(test_pool.calculateRemoveLiquidityOneToken(1, 5)).to.be.revertedWith(
+        "Token index out of range"
+      );
     });
 
     it("Reverts with 'Withdraw exceeds available'", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       await expect(
-        test_pool.calculateRemoveLiquidityOneToken(
-          currentUser1Balance.mul(2),
-          0
-        )
+        test_pool.calculateRemoveLiquidityOneToken(currentUser1Balance.mul(2), 0)
       ).to.be.revertedWith("Withdraw exceeds available");
 
       await expect(
-        test_pool
-          .connect(user1)
-          .calculateRemoveLiquidityOneToken(currentUser1Balance.mul(2), 0)
+        test_pool.connect(user1).calculateRemoveLiquidityOneToken(currentUser1Balance.mul(2), 0)
       ).to.be.revertedWith("Withdraw exceeds available");
     });
 
@@ -1375,90 +1030,60 @@ describe("Swap", async () => {
 
     it("Ether: Succeeds with calculated token amount as minAmount", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       // User 1 calculates the amount of underlying token to receive.
-      const calculatedZerothTokenAmount =
-        await test_pool.calculateRemoveLiquidityOneToken(
-          currentUser1Balance,
-          0
-        );
-
-      expect(calculatedZerothTokenAmount).to.eq(
-        BigNumber.from("2009595512856245490")
+      const calculatedZerothTokenAmount = await test_pool.calculateRemoveLiquidityOneToken(
+        currentUser1Balance,
+        0
       );
 
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      expect(calculatedZerothTokenAmount).to.eq(BigNumber.from("2009595512856245490"));
+
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
 
       // User 1 initiates one token withdrawal
       const before = await provider.getBalance(user1.address);
 
       const tx = await test_pool
         .connect(user1)
-        .removeLiquidityOneToken(
-          currentUser1Balance,
-          0,
-          calculatedZerothTokenAmount,
-          MAX_UINT256
-        );
+        .removeLiquidityOneToken(currentUser1Balance, 0, calculatedZerothTokenAmount, MAX_UINT256);
       const receipt = await tx.wait();
       const gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
 
       const after = await provider.getBalance(user1.address);
 
-      expect(after.add(gasUsed).sub(before)).to.eq(
-        BigNumber.from("2009595512856245490")
-      );
+      expect(after.add(gasUsed).sub(before)).to.eq(BigNumber.from("2009595512856245490"));
     });
 
     it("gETH: Succeeds with calculated token amount as minAmount", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(1e16), String(2e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("0.01"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(1e16), String(2e18)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("0.01"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       // User 1 calculates the amount of underlying token to receive.
-      const calculatedTokenAmount =
-        await test_pool.calculateRemoveLiquidityOneToken(
-          currentUser1Balance,
-          1
-        );
-
-      expect(calculatedTokenAmount).to.eq(
-        BigNumber.from("2009595512856245490")
+      const calculatedTokenAmount = await test_pool.calculateRemoveLiquidityOneToken(
+        currentUser1Balance,
+        1
       );
 
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      expect(calculatedTokenAmount).to.eq(BigNumber.from("2009595512856245490"));
+
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
 
       // User 1 initiates one token withdrawal
       const before = await gETHReference.balanceOf(user1Address, randId);
 
       await test_pool
         .connect(user1)
-        .removeLiquidityOneToken(
-          currentUser1Balance,
-          1,
-          calculatedTokenAmount,
-          MAX_UINT256
-        );
+        .removeLiquidityOneToken(currentUser1Balance, 1, calculatedTokenAmount, MAX_UINT256);
 
       const after = await gETHReference.balanceOf(user1Address, randId);
 
@@ -1473,141 +1098,87 @@ describe("Swap", async () => {
         utils.formatBytes32String("")
       );
 
-      await testSwapReturnValues.test_addLiquidity(
-        [String(1e18), String(2e18)],
-        0,
-        { value: ethers.utils.parseEther("1") }
-      );
+      await testSwapReturnValues.test_addLiquidity([String(1e18), String(2e18)], 0, {
+        value: ethers.utils.parseEther("1"),
+      });
 
-      await testSwapReturnValues.test_removeLiquidityOneToken(
-        String(1e18),
-        0,
-        0
-      );
-      await testSwapReturnValues.test_removeLiquidityOneToken(
-        String(5e17),
-        1,
-        0
-      );
+      await testSwapReturnValues.test_removeLiquidityOneToken(String(1e18), 0, 0);
+      await testSwapReturnValues.test_removeLiquidityOneToken(String(5e17), 1, 0);
     });
 
     it("Reverts when user tries to burn more LP tokens than they own", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       await expect(
         test_pool
           .connect(user1)
-          .removeLiquidityOneToken(
-            currentUser1Balance.add(1),
-            0,
-            0,
-            MAX_UINT256
-          )
+          .removeLiquidityOneToken(currentUser1Balance.add(1), 0, 0, MAX_UINT256)
       ).to.be.revertedWith(">LP.balanceOf");
     });
 
     it("Reverts when minAmount of underlying token is not reached due to front running", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
       expect(currentUser1Balance).to.eq(BigNumber.from("1998945389270551378"));
 
       // User 1 calculates the amount of underlying token to receive.
-      const calculatedFirstTokenAmount =
-        await test_pool.calculateRemoveLiquidityOneToken(
-          currentUser1Balance,
-          0
-        );
-      expect(calculatedFirstTokenAmount).to.eq(
-        BigNumber.from("2009595512856245490")
+      const calculatedFirstTokenAmount = await test_pool.calculateRemoveLiquidityOneToken(
+        currentUser1Balance,
+        0
       );
+      expect(calculatedFirstTokenAmount).to.eq(BigNumber.from("2009595512856245490"));
 
       // User 2 adds liquidity before User 1 initiates withdrawal
-      await test_pool
-        .connect(user2)
-        .addLiquidity([String(1e16), String(1e20)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("0.01"),
-        });
+      await test_pool.connect(user2).addLiquidity([String(1e16), String(1e20)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("0.01"),
+      });
 
       // User 1 initiates one token withdrawal
-      test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
       await expect(
         test_pool
           .connect(user1)
-          .removeLiquidityOneToken(
-            currentUser1Balance,
-            0,
-            calculatedFirstTokenAmount,
-            MAX_UINT256
-          )
+          .removeLiquidityOneToken(currentUser1Balance, 0, calculatedFirstTokenAmount, MAX_UINT256)
       ).to.be.revertedWith("dy < minAmount");
     });
 
     it("Reverts when block is mined after deadline", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
 
       const currentTimestamp = await getCurrentBlockTimestamp();
       await setNextTimestamp(currentTimestamp + 60 * 10);
 
       // User 1 tries removing liquidity with deadline of +5 minutes
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
       await expect(
         test_pool
           .connect(user1)
-          .removeLiquidityOneToken(
-            currentUser1Balance,
-            0,
-            0,
-            currentTimestamp + 60 * 5
-          )
+          .removeLiquidityOneToken(currentUser1Balance, 0, 0, currentTimestamp + 60 * 5)
       ).to.be.revertedWith("Deadline not met");
     });
 
     it("Emits RemoveLiquidityOne event", async () => {
       // User 1 adds liquidity
-      await test_pool
-        .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
-        });
-      const currentUser1Balance = await test_pool_swapToken.balanceOf(
-        user1Address
-      );
+      await test_pool.connect(user1).addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
+        value: ethers.utils.parseEther("2"),
+      });
+      const currentUser1Balance = await test_pool_swapToken.balanceOf(user1Address);
 
-      await test_pool_swapToken
-        .connect(user1)
-        .approve(test_pool.address, currentUser1Balance);
+      await test_pool_swapToken.connect(user1).approve(test_pool.address, currentUser1Balance);
       await expect(
-        test_pool
-          .connect(user1)
-          .removeLiquidityOneToken(currentUser1Balance, 0, 0, MAX_UINT256)
+        test_pool.connect(user1).removeLiquidityOneToken(currentUser1Balance, 0, 0, MAX_UINT256)
       ).to.emit(test_pool.connect(user1), "RemoveLiquidityOne");
     });
   });
@@ -1632,9 +1203,9 @@ describe("Swap", async () => {
     });
 
     it("Reverts with 'Token index out of range'", async () => {
-      await expect(
-        test_pool.calculateSwap(0, 9, String(1e17))
-      ).to.be.revertedWith("Token index out of range");
+      await expect(test_pool.calculateSwap(0, 9, String(1e17))).to.be.revertedWith(
+        "Token index out of range"
+      );
     });
 
     it("Reverts with 'Cannot swap more/less than you sent'", async () => {
@@ -1653,19 +1224,11 @@ describe("Swap", async () => {
 
     it("Succeeds with expected swap amounts (Ether => gEther)", async () => {
       // User 1 calculates how much token to receive
-      const calculatedSwapReturn = await test_pool.calculateSwap(
-        0,
-        1,
-        String(1e17)
-      );
+      const calculatedSwapReturn = await test_pool.calculateSwap(0, 1, String(1e17));
       expect(calculatedSwapReturn).to.eq(BigNumber.from("99794806641066759"));
 
       const tokenFromBalanceBefore = await provider.getBalance(user1.address);
-      const tokenToBalanceBefore = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const tokenToBalanceBefore = await getUserTokenBalance(user1, randId, gETHReference);
 
       // User 1 successfully initiates swap
       const tx = await test_pool
@@ -1678,36 +1241,22 @@ describe("Swap", async () => {
 
       const tokenFromBalanceAfter = await provider.getBalance(user1.address);
       // Check the sent and received amounts are as expected
-      const tokenToBalanceAfter = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
+      const tokenToBalanceAfter = await getUserTokenBalance(user1, randId, gETHReference);
+
+      expect(tokenFromBalanceBefore.sub(tokenFromBalanceAfter.add(gasUsed))).to.eq(
+        BigNumber.from(String(1e17))
       );
 
-      expect(
-        tokenFromBalanceBefore.sub(tokenFromBalanceAfter.add(gasUsed))
-      ).to.eq(BigNumber.from(String(1e17)));
-
-      expect(tokenToBalanceAfter.sub(tokenToBalanceBefore)).to.eq(
-        calculatedSwapReturn
-      );
+      expect(tokenToBalanceAfter.sub(tokenToBalanceBefore)).to.eq(calculatedSwapReturn);
     });
 
     it("Succeeds with expected swap amounts (gEther => Ether)", async () => {
       // User 1 calculates how much token to receive
-      const calculatedSwapReturn = await test_pool.calculateSwap(
-        1,
-        0,
-        String(1e17)
-      );
+      const calculatedSwapReturn = await test_pool.calculateSwap(1, 0, String(1e17));
       expect(calculatedSwapReturn).to.eq(BigNumber.from("99794806641066759"));
 
       const tokenToBalanceBefore = await provider.getBalance(user1.address);
-      const tokenFromBalanceBefore = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const tokenFromBalanceBefore = await getUserTokenBalance(user1, randId, gETHReference);
 
       // User 1 successfully initiates swap
       const tx = await test_pool
@@ -1718,15 +1267,9 @@ describe("Swap", async () => {
 
       const tokenToBalanceAfter = await provider.getBalance(user1.address);
       // Check the sent and received amounts are as expected
-      const tokenFromBalanceAfter = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const tokenFromBalanceAfter = await getUserTokenBalance(user1, randId, gETHReference);
 
-      expect(tokenFromBalanceBefore.sub(tokenFromBalanceAfter)).to.eq(
-        BigNumber.from(String(1e17))
-      );
+      expect(tokenFromBalanceBefore.sub(tokenFromBalanceAfter)).to.eq(BigNumber.from(String(1e17)));
 
       expect(tokenToBalanceAfter.sub(tokenToBalanceBefore).add(gasUsed)).to.eq(
         calculatedSwapReturn
@@ -1735,23 +1278,13 @@ describe("Swap", async () => {
 
     it("Succeeds when using lower minDy even when transaction is front-ran", async () => {
       // User 1 calculates how much token to receive with 1% slippage
-      const calculatedSwapReturn = await test_pool.calculateSwap(
-        0,
-        1,
-        String(1e17)
-      );
+      const calculatedSwapReturn = await test_pool.calculateSwap(0, 1, String(1e17));
       expect(calculatedSwapReturn).to.eq(BigNumber.from("99794806641066759"));
 
       const tokenFromBalanceBefore = await provider.getBalance(user1.address);
-      const tokenToBalanceBefore = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const tokenToBalanceBefore = await getUserTokenBalance(user1, randId, gETHReference);
 
-      const calculatedSwapReturnWithNegativeSlippage = calculatedSwapReturn
-        .mul(99)
-        .div(100);
+      const calculatedSwapReturnWithNegativeSlippage = calculatedSwapReturn.mul(99).div(100);
 
       // User 2 swaps before User 1 does
       await test_pool.connect(user2).swap(0, 1, String(1e17), 0, MAX_UINT256, {
@@ -1761,60 +1294,36 @@ describe("Swap", async () => {
       // User 1 successfully initiates swap with 1% slippage from initial calculated amount
       const tx = await test_pool
         .connect(user1)
-        .swap(
-          0,
-          1,
-          String(1e17),
-          calculatedSwapReturnWithNegativeSlippage,
-          MAX_UINT256,
-          {
-            value: ethers.utils.parseEther("0.1"),
-          }
-        );
+        .swap(0, 1, String(1e17), calculatedSwapReturnWithNegativeSlippage, MAX_UINT256, {
+          value: ethers.utils.parseEther("0.1"),
+        });
       const receipt = await tx.wait();
       const gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
 
       // Check the sent and received amounts are as expected
       const tokenFromBalanceAfter = await provider.getBalance(user1.address);
-      const tokenToBalanceAfter = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
+      const tokenToBalanceAfter = await getUserTokenBalance(user1, randId, gETHReference);
+
+      expect(tokenFromBalanceBefore.sub(tokenFromBalanceAfter.add(gasUsed))).to.eq(
+        BigNumber.from(String(1e17))
       );
 
-      expect(
-        tokenFromBalanceBefore.sub(tokenFromBalanceAfter.add(gasUsed))
-      ).to.eq(BigNumber.from(String(1e17)));
-
-      const actualReceivedAmount =
-        tokenToBalanceAfter.sub(tokenToBalanceBefore);
+      const actualReceivedAmount = tokenToBalanceAfter.sub(tokenToBalanceBefore);
 
       expect(actualReceivedAmount).to.eq(BigNumber.from("99445844521513912"));
-      expect(actualReceivedAmount).to.gt(
-        calculatedSwapReturnWithNegativeSlippage
-      );
+      expect(actualReceivedAmount).to.gt(calculatedSwapReturnWithNegativeSlippage);
       expect(actualReceivedAmount).to.lt(calculatedSwapReturn);
     });
 
     it("Succeeds when using lower minDy even when transaction is front-ran gEther => Ether", async () => {
       // User 1 calculates how much token to receive with 1% slippage
-      const calculatedSwapReturn = await test_pool.calculateSwap(
-        1,
-        0,
-        String(1e17)
-      );
+      const calculatedSwapReturn = await test_pool.calculateSwap(1, 0, String(1e17));
       expect(calculatedSwapReturn).to.eq(BigNumber.from("99794806641066759"));
 
       const tokenToBalanceBefore = await provider.getBalance(user1.address);
-      const tokenFromBalanceBefore = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const tokenFromBalanceBefore = await getUserTokenBalance(user1, randId, gETHReference);
 
-      const calculatedSwapReturnWithNegativeSlippage = calculatedSwapReturn
-        .mul(99)
-        .div(100);
+      const calculatedSwapReturnWithNegativeSlippage = calculatedSwapReturn.mul(99).div(100);
 
       // User 2 swaps before User 1 does
       await test_pool.connect(user2).swap(1, 0, String(1e17), 0, MAX_UINT256);
@@ -1822,46 +1331,26 @@ describe("Swap", async () => {
       // User 1 successfully initiates swap with 1% slippage from initial calculated amount
       const tx = await test_pool
         .connect(user1)
-        .swap(
-          1,
-          0,
-          String(1e17),
-          calculatedSwapReturnWithNegativeSlippage,
-          MAX_UINT256
-        );
+        .swap(1, 0, String(1e17), calculatedSwapReturnWithNegativeSlippage, MAX_UINT256);
       const receipt = await tx.wait();
       const gasUsed = receipt.cumulativeGasUsed.mul(receipt.effectiveGasPrice);
 
       // Check the sent and received amounts are as expected
       const tokenToBalanceAfter = await provider.getBalance(user1.address);
-      const tokenFromBalanceAfter = await getUserTokenBalance(
-        user1,
-        randId,
-        gETHReference
-      );
+      const tokenFromBalanceAfter = await getUserTokenBalance(user1, randId, gETHReference);
 
-      expect(tokenFromBalanceBefore.sub(tokenFromBalanceAfter)).to.eq(
-        BigNumber.from(String(1e17))
-      );
+      expect(tokenFromBalanceBefore.sub(tokenFromBalanceAfter)).to.eq(BigNumber.from(String(1e17)));
 
-      const actualReceivedAmount = tokenToBalanceAfter
-        .add(gasUsed)
-        .sub(tokenToBalanceBefore);
+      const actualReceivedAmount = tokenToBalanceAfter.add(gasUsed).sub(tokenToBalanceBefore);
 
       expect(actualReceivedAmount).to.eq(BigNumber.from("99445844521513912"));
-      expect(actualReceivedAmount).to.gt(
-        calculatedSwapReturnWithNegativeSlippage
-      );
+      expect(actualReceivedAmount).to.gt(calculatedSwapReturnWithNegativeSlippage);
       expect(actualReceivedAmount).to.lt(calculatedSwapReturn);
     });
 
     it("Reverts when minDy (minimum amount token to receive) is not reached due to front running", async () => {
       // User 1 calculates how much token to receive
-      const calculatedSwapReturn = await test_pool.calculateSwap(
-        0,
-        1,
-        String(1e17)
-      );
+      const calculatedSwapReturn = await test_pool.calculateSwap(0, 1, String(1e17));
       expect(calculatedSwapReturn).to.eq(BigNumber.from("99794806641066759"));
 
       // User 2 swaps before User 1 does
@@ -1871,11 +1360,9 @@ describe("Swap", async () => {
 
       // User 1 initiates swap
       await expect(
-        test_pool
-          .connect(user1)
-          .swap(0, 1, String(1e17), calculatedSwapReturn, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.1"),
-          })
+        test_pool.connect(user1).swap(0, 1, String(1e17), calculatedSwapReturn, MAX_UINT256, {
+          value: ethers.utils.parseEther("0.1"),
+        })
       ).to.be.revertedWith("Swap didn't result in min tokens");
     });
 
@@ -1887,11 +1374,9 @@ describe("Swap", async () => {
         utils.formatBytes32String("")
       );
 
-      await testSwapReturnValues.test_addLiquidity(
-        [String(1e18), String(2e18)],
-        0,
-        { value: ethers.utils.parseEther("1") }
-      );
+      await testSwapReturnValues.test_addLiquidity([String(1e18), String(2e18)], 0, {
+        value: ethers.utils.parseEther("1"),
+      });
       await testSwapReturnValues.test_swap(0, 1, String(1e18), 0, {
         value: ethers.utils.parseEther("1"),
       });
@@ -1905,11 +1390,9 @@ describe("Swap", async () => {
         utils.formatBytes32String("")
       );
 
-      await testSwapReturnValues.test_addLiquidity(
-        [String(2e18), String(2e18)],
-        0,
-        { value: ethers.utils.parseEther("2") }
-      );
+      await testSwapReturnValues.test_addLiquidity([String(2e18), String(2e18)], 0, {
+        value: ethers.utils.parseEther("2"),
+      });
 
       await testSwapReturnValues.test_swap(1, 0, String(1e18), 0);
     });
@@ -1920,15 +1403,11 @@ describe("Swap", async () => {
 
       // User 1 tries swapping with deadline of +5 minutes
       await expect(
-        test_pool
-          .connect(user1)
-          .swap(0, 1, String(1e17), 0, currentTimestamp + 60 * 5, {})
+        test_pool.connect(user1).swap(0, 1, String(1e17), 0, currentTimestamp + 60 * 5, {})
       ).to.be.revertedWith("Deadline not met");
 
       await expect(
-        test_pool
-          .connect(user1)
-          .swap(1, 0, String(1e17), 0, currentTimestamp + 60 * 5, {})
+        test_pool.connect(user1).swap(1, 0, String(1e17), 0, currentTimestamp + 60 * 5, {})
       ).to.be.revertedWith("Deadline not met");
     });
 
@@ -1940,9 +1419,10 @@ describe("Swap", async () => {
         })
       ).to.emit(test_pool, "TokenSwap");
 
-      await expect(
-        test_pool.connect(user1).swap(1, 0, String(1e17), 0, MAX_UINT256)
-      ).to.emit(test_pool, "TokenSwap");
+      await expect(test_pool.connect(user1).swap(1, 0, String(1e17), 0, MAX_UINT256)).to.emit(
+        test_pool,
+        "TokenSwap"
+      );
     });
   });
 
@@ -1953,10 +1433,7 @@ describe("Swap", async () => {
 
     it("Emits RampA event", async () => {
       await expect(
-        test_pool.rampA(
-          100,
-          (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1
-        )
+        test_pool.rampA(100, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1)
       ).to.emit(test_pool, "RampA");
     });
 
@@ -1968,8 +1445,7 @@ describe("Swap", async () => {
       });
 
       // call rampA(), changing A to 100 within a span of 14 days
-      const endTimestamp =
-        (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1;
+      const endTimestamp = (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1;
       await test_pool.rampA(100, endTimestamp);
 
       // +0 seconds since ramp A
@@ -1998,8 +1474,7 @@ describe("Swap", async () => {
       });
 
       // call rampA()
-      const endTimestamp =
-        (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1;
+      const endTimestamp = (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1;
       await test_pool.rampA(30, endTimestamp);
 
       // +0 seconds since ramp A
@@ -2022,58 +1497,38 @@ describe("Swap", async () => {
 
     it("Reverts when non-owner calls it", async () => {
       await expect(
-        test_pool
-          .connect(user1)
-          .rampA(55, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1)
+        test_pool.connect(user1).rampA(55, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1)
       ).to.be.reverted;
     });
 
     it("Reverts with 'Wait 1 day before starting ramp'", async () => {
-      await test_pool.rampA(
-        55,
-        (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1
-      );
+      await test_pool.rampA(55, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1);
       await expect(
-        test_pool.rampA(
-          55,
-          (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1
-        )
+        test_pool.rampA(55, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1)
       ).to.be.revertedWith("Wait 1 day before starting ramp");
     });
 
     it("Reverts with 'Insufficient ramp time'", async () => {
       await expect(
-        test_pool.rampA(
-          55,
-          (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS - 1
-        )
+        test_pool.rampA(55, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS - 1)
       ).to.be.revertedWith("Insufficient ramp time");
     });
 
     it("Reverts with 'futureA_ must be > 0 and < MAX_A'", async () => {
       await expect(
-        test_pool.rampA(
-          0,
-          (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1
-        )
+        test_pool.rampA(0, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1)
       ).to.be.revertedWith("futureA_ must be > 0 and < MAX_A");
     });
 
     it("Reverts with 'futureA_ is too small'", async () => {
       await expect(
-        test_pool.rampA(
-          24,
-          (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1
-        )
+        test_pool.rampA(24, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1)
       ).to.be.revertedWith("futureA_ is too small");
     });
 
     it("Reverts with 'futureA_ is too large'", async () => {
       await expect(
-        test_pool.rampA(
-          121,
-          (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1
-        )
+        test_pool.rampA(121, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 1)
       ).to.be.revertedWith("futureA_ is too large");
     });
   });
@@ -2081,10 +1536,7 @@ describe("Swap", async () => {
   describe("stopRampA", () => {
     it("Emits StopRampA event", async () => {
       // call rampA()
-      await test_pool.rampA(
-        100,
-        (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 100
-      );
+      await test_pool.rampA(100, (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 100);
 
       // Stop ramp
       expect(test_pool.stopRampA()).to.emit(test_pool, "StopRampA");
@@ -2092,8 +1544,7 @@ describe("Swap", async () => {
 
     it("Stop ramp succeeds", async () => {
       // call rampA()
-      const endTimestamp =
-        (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 100;
+      const endTimestamp = (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 100;
       await test_pool.rampA(100, endTimestamp);
 
       // set timestamp to +100000 seconds
@@ -2116,8 +1567,7 @@ describe("Swap", async () => {
 
     it("Reverts with 'Ramp is already stopped'", async () => {
       // call rampA()
-      const endTimestamp =
-        (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 100;
+      const endTimestamp = (await getCurrentBlockTimestamp()) + 14 * TIME.DAYS + 100;
       await test_pool.rampA(100, endTimestamp);
 
       // set timestamp to +10000 seconds
@@ -2131,9 +1581,7 @@ describe("Swap", async () => {
       expect(await test_pool.getAPrecise()).to.be.eq(6330);
 
       // check call reverts when ramp is already stopped
-      await expect(test_pool.stopRampA()).to.be.revertedWith(
-        "Ramp is already stopped"
-      );
+      await expect(test_pool.stopRampA()).to.be.revertedWith("Ramp is already stopped");
     });
   });
 
@@ -2144,35 +1592,26 @@ describe("Swap", async () => {
       });
 
       it("Debt must be zero when Ether > gEther", async () => {
-        await test_pool
-          .connect(user1)
-          .addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("2"),
-          });
+        await test_pool.connect(user1).addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("2"),
+        });
 
         expect(await test_pool.getDebt()).to.be.eq(0);
       });
 
       it("Debt must be non-zero when Ether < gEther", async () => {
-        await test_pool
-          .connect(user1)
-          .addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
-          });
+        await test_pool.connect(user1).addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("1"),
+        });
 
         expect(await test_pool.getDebt()).to.be.eq("499147041342998336");
       });
 
       describe("Pool should be balanced after the debt was paid.", async () => {
         beforeEach(async () => {
-          await test_pool.addLiquidity(
-            [String(1e18), String(2e18)],
-            0,
-            MAX_UINT256,
-            {
-              value: ethers.utils.parseEther("1"),
-            }
-          );
+          await test_pool.addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
+            value: ethers.utils.parseEther("1"),
+          });
         });
 
         it("price=1", async () => {
@@ -2189,9 +1628,7 @@ describe("Swap", async () => {
           const tokenBalance1 = await test_pool.getTokenBalance(0);
           const tokenBalance2 = await test_pool.getTokenBalance(1);
 
-          expect(
-            tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)
-          ).to.be.eq(String(1e18));
+          expect(tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)).to.be.eq(String(1e18));
           expect(await test_pool.getDebt()).to.be.lte(10);
         });
 
@@ -2209,9 +1646,7 @@ describe("Swap", async () => {
 
           const tokenBalance1 = await test_pool.getTokenBalance(0);
           const tokenBalance2 = await test_pool.getTokenBalance(1);
-          expect(
-            tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)
-          ).to.be.eq(String(12e17));
+          expect(tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)).to.be.eq(String(12e17));
           expect(await test_pool.getDebt()).to.be.lte(10);
         });
 
@@ -2229,29 +1664,23 @@ describe("Swap", async () => {
 
           const tokenBalance1 = await test_pool.getTokenBalance(0);
           const tokenBalance2 = await test_pool.getTokenBalance(1);
-          expect(
-            tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(2)
-          ).to.be.eq(String(2e18));
+          expect(tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(2)).to.be.eq(String(2e18));
           expect(await test_pool.getDebt()).to.be.lte(10);
         });
       });
     });
     describe("When swap fee is 4e6", async () => {
       it("Debt must be zero when Ether > gEther, and more than no fee", async () => {
-        await test_pool
-          .connect(user1)
-          .addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("2"),
-          });
+        await test_pool.connect(user1).addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("2"),
+        });
 
         expect(await test_pool.getDebt()).to.be.eq(0);
       });
       it("Debt must be non-zero when Ether < gEther", async () => {
-        await test_pool
-          .connect(user1)
-          .addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
-          });
+        await test_pool.connect(user1).addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
+          value: ethers.utils.parseEther("1"),
+        });
 
         expect(await test_pool.getDebt()).to.be.gt("499147041342998336");
         expect(await test_pool.getDebt()).to.be.eq("499247211934729736");
@@ -2259,14 +1688,9 @@ describe("Swap", async () => {
 
       describe("Pool debt be < 1e15 after the debt was paid.", async () => {
         beforeEach(async () => {
-          await test_pool.addLiquidity(
-            [String(1e18), String(2e18)],
-            0,
-            MAX_UINT256,
-            {
-              value: ethers.utils.parseEther("1"),
-            }
-          );
+          await test_pool.addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
+            value: ethers.utils.parseEther("1"),
+          });
         });
 
         it("price=1", async () => {
@@ -2284,9 +1708,9 @@ describe("Swap", async () => {
           const tokenBalance1 = await test_pool.getTokenBalance(0);
           const tokenBalance2 = await test_pool.getTokenBalance(1);
 
-          expect(
-            tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)
-          ).to.be.gt(BigNumber.from(String(1e18)).sub(1e15));
+          expect(tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)).to.be.gt(
+            BigNumber.from(String(1e18)).sub(1e15)
+          );
           expect(await test_pool.getDebt()).to.be.lte(1e15);
         });
 
@@ -2305,9 +1729,9 @@ describe("Swap", async () => {
 
           const tokenBalance1 = await test_pool.getTokenBalance(0);
           const tokenBalance2 = await test_pool.getTokenBalance(1);
-          expect(
-            tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)
-          ).to.be.gt(BigNumber.from(String(12e17)).sub(1e15));
+          expect(tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(1)).to.be.gt(
+            BigNumber.from(String(12e17)).sub(1e15)
+          );
           expect(await test_pool.getDebt()).to.be.lte(1e15);
         });
 
@@ -2326,9 +1750,9 @@ describe("Swap", async () => {
 
           const tokenBalance1 = await test_pool.getTokenBalance(0);
           const tokenBalance2 = await test_pool.getTokenBalance(1);
-          expect(
-            tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(2)
-          ).to.be.gt(BigNumber.from(String(2e18)).sub(1e15));
+          expect(tokenBalance1.mul(String(1e18)).div(tokenBalance2).add(2)).to.be.gt(
+            BigNumber.from(String(2e18)).sub(1e15)
+          );
           expect(await test_pool.getDebt()).to.be.lte(1e15);
         });
       });
