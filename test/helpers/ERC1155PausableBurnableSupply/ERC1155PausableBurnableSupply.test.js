@@ -1,5 +1,7 @@
 const { expectRevert, constants, BN } = require("@openzeppelin/test-helpers");
+
 const { expect } = require("chai");
+
 const ERC1155PausableBurnableSupply = artifacts.require("$ERC1155PausableBurnableSupply");
 
 contract("ERC1155PausableBurnableSupply", function (accounts) {
@@ -47,7 +49,10 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
     });
 
     it("others can not set URI", async function () {
-      expectRevert(this.token.setURI(newUri, { from: other }));
+      await expectRevert(
+        this.token.setURI(newUri, { from: other }),
+        `AccessControl: account ${other.toLowerCase()} is missing role ${URI_SETTER_ROLE}`
+      );
     });
   });
 
@@ -58,7 +63,10 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
     });
 
     it("others can not pause", async function () {
-      expectRevert(this.token.pause({ from: other }));
+      await expectRevert(
+        this.token.pause({ from: other }),
+        `AccessControl: account ${other.toLowerCase()} is missing role ${PAUSER_ROLE}`
+      );
     });
   });
 
@@ -73,7 +81,10 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
     });
 
     it("others can not unpause", async function () {
-      expectRevert(this.token.unpause({ from: other }));
+      await expectRevert(
+        this.token.unpause({ from: other }),
+        `AccessControl: account ${other.toLowerCase()} is missing role ${PAUSER_ROLE}`
+      );
     });
   });
 
@@ -84,7 +95,10 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
     });
 
     it("others can not mint", async function () {
-      expectRevert(this.token.mint(other, tokenId, amount, data, { from: other }));
+      await expectRevert(
+        this.token.mint(other, tokenId, amount, data, { from: other }),
+        `AccessControl: account ${other.toLowerCase()} is missing role ${MINTER_ROLE}`
+      );
     });
   });
 
@@ -100,14 +114,17 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
     });
 
     it("others can not mintBatch", async function () {
-      expectRevert(this.token.mintBatch(other, tokenIds, amounts, data, { from: other }));
+      await expectRevert(
+        this.token.mintBatch(other, tokenIds, amounts, data, { from: other }),
+        `AccessControl: account ${other.toLowerCase()} is missing role ${MINTER_ROLE}`
+      );
     });
   });
 
   describe("_beforeTokenTransfer", function () {
     it("can not call when paused", async function () {
       await this.token.pause({ from: deployer });
-      expectRevert(
+      await expectRevert(
         this.token.$_beforeTokenTransfer(deployer, deployer, deployer, tokenIds, amounts, data, {
           from: other,
         }),

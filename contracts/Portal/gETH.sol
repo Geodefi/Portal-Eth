@@ -87,8 +87,8 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @custom:section                           ** EVENTS **
    */
   event PriceUpdated(uint256 id, uint256 pricePerShare, uint256 updateTimestamp);
-  event MiddlewareSet(address indexed newMiddleware, uint256 id, bool isSet);
-  event Avoided(address indexed avoider, uint256 id, bool isAvoid);
+  event MiddlewareSet(uint256 id, address middleware, bool isSet);
+  event Avoider(address avoider, uint256 id, bool isAvoid);
 
   /**
    * @custom:section                           ** CONSTRUCTOR **
@@ -150,7 +150,6 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev ADDED for gETH
    */
   function _setMiddleware(address _middleware, uint256 _id, bool _isSet) internal virtual {
-    require(_middleware != address(0), "gETH:middleware query for the zero address");
     _middlewares[_id][_middleware] = _isSet;
   }
 
@@ -169,11 +168,12 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 id,
     bool isSet
   ) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
+    require(middleware != address(0), "gETH:middleware query for the zero address");
     require(middleware.isContract(), "gETH:middleware must be a contract");
 
     _setMiddleware(middleware, id, isSet);
 
-    emit MiddlewareSet(middleware, id, isSet);
+    emit MiddlewareSet(id, middleware, isSet);
   }
 
   /**
@@ -204,7 +204,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
 
     _avoiders[account][id] = isAvoid;
 
-    emit Avoided(account, id, isAvoid);
+    emit Avoider(account, id, isAvoid);
   }
 
   /**
@@ -351,7 +351,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 amount,
     bytes memory data
   ) internal virtual override {
-    if (!isMiddleware(operator, id)) {
+    if (!(isMiddleware(operator, id))) {
       super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
   }
@@ -377,7 +377,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
       (from == _msgSender()) ||
         (isApprovedForAll(from, _msgSender())) ||
         (isMiddleware(_msgSender(), id) && !isAvoider(from, id)),
-      "ERC1155: caller is not token owner or approved or a middleware"
+      "ERC1155: caller is not token owner or approved"
     );
     _safeTransferFrom(from, to, id, amount, data);
   }
@@ -393,7 +393,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
       (account == _msgSender()) ||
         (isApprovedForAll(account, _msgSender())) ||
         (isMiddleware(_msgSender(), id) && !isAvoider(account, id)),
-      "ERC1155: caller is not token owner or approved or a middleware"
+      "ERC1155: caller is not token owner or approved"
     );
 
     _burn(account, id, value);
