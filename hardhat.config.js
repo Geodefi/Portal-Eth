@@ -4,10 +4,12 @@ require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 require("hardhat-deploy");
+require("hardhat-exposed");
 
 require("@openzeppelin/hardhat-upgrades");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
+require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 const ethers = require("ethers");

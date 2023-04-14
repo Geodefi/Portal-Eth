@@ -16,6 +16,7 @@ import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
 import {DataStoreModuleLib as DSML} from "../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
+import {LiquidityModuleLib} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
