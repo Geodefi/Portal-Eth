@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 
 const { expectRevert, expectEvent, constants, BN } = require("@openzeppelin/test-helpers");
-const { etherStr, getReceiptTimestamp, impersonate } = require("./utils/utils");
+const { ETHER_STR, getReceiptTimestamp, impersonate } = require("./utils/utils");
 const { shouldBehaveLikeERC1155 } = require("./utils/ERC1155.behavior");
 
 const { ZERO_BYTES32, ZERO_ADDRESS } = constants;
@@ -16,7 +16,7 @@ contract("gETH", function (accounts) {
   const name = "Geode Staked Ether";
   const symbol = "gETH";
   const uri = "https://token.com";
-  const denominator = new BN(etherStr);
+  const denominator = new BN(ETHER_STR);
 
   const URI_SETTER_ROLE = web3.utils.soliditySha3("URI_SETTER_ROLE");
   const MINTER_ROLE = web3.utils.soliditySha3("MINTER_ROLE");
@@ -110,7 +110,7 @@ contract("gETH", function (accounts) {
       beforeEach(async function () {
         await this.token.$_mint(user, tokenId, mintAmount, "0x");
         await this.token.setMiddleware(middleware.address, tokenId, { from: deployer });
-        await impersonate(middleware.address, etherStr);
+        await impersonate(middleware.address, ETHER_STR);
       });
 
       it("safeTransferFrom", async function () {
@@ -174,7 +174,7 @@ contract("gETH", function (accounts) {
           await this.token.$_mint(user, tokenId, mintAmount, "0x");
           await this.token.avoidMiddlewares(tokenId, true, { from: user });
           await this.token.setMiddleware(middleware.address, tokenId, { from: deployer });
-          await impersonate(middleware.address, etherStr);
+          await impersonate(middleware.address, ETHER_STR);
         });
 
         describe("safeTransferFrom", async function () {
