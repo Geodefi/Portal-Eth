@@ -75,8 +75,9 @@ library GeodeModuleLib {
    * Note SENATE can be changed by a proposal TYPE 1 by Governance and approved by the current Senate.
    * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
    * @param GOVERNANCE_FEE operation fee on the given contract, acquired by GOVERNANCE. Limited by MAX_GOVERNANCE_FEE
-   * @param CONTRACT_VERSION should always refer to the upgrade proposal ID. Does NOT increase uniformly like one might expect.
    * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
+   * @param PACKAGE_TYPE as defined in ID_TYPE library
+   * @param CONTRACT_VERSION always refers to the upgrade proposal ID. Does NOT increase uniformly like one might expect.
    * @param proposals till approved, proposals are kept separated from the Isolated Storage
    * @param __gap keep the struct size at 16, currently 6 slots(32 bytes)
    **/
@@ -86,9 +87,10 @@ library GeodeModuleLib {
     address APPROVED_UPGRADE;
     uint256 GOVERNANCE_FEE;
     uint256 SENATE_EXPIRY;
+    uint256 PACKAGE_TYPE;
     uint256 CONTRACT_VERSION;
     mapping(uint256 => Proposal) proposals;
-    uint256[10] __gap;
+    uint256[9] __gap;
   }
 
   /**
@@ -217,15 +219,16 @@ library GeodeModuleLib {
     DualGovernance storage self,
     DSML.IsolatedStorage storage DATASTORE,
     uint256 id
-  ) external onlySenate(self) returns (uint256 _type, address _controller) {
+  ) external onlySenate(self) returns (address _controller, uint256 _type, bytes memory _name) {
     require(self.proposals[id].deadline > block.timestamp, "GML:NOT an active proposal");
 
-    _type = self.proposals[id].TYPE;
     _controller = self.proposals[id].CONTROLLER;
+    _type = self.proposals[id].TYPE;
+    _name = self.proposals[id].NAME;
 
     DATASTORE.writeUint(id, rks.TYPE, _type);
     DATASTORE.writeAddress(id, rks.CONTROLLER, _controller);
-    DATASTORE.writeBytes(id, rks.NAME, self.proposals[id].NAME);
+    DATASTORE.writeBytes(id, rks.NAME, _name);
     DATASTORE.allIdsByType[_type].push(id);
 
     if (_type == ID_TYPE.SENATE) {

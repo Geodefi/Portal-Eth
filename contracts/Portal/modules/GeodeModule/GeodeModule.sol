@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
+// globals
+import {ID_TYPE} from "../../globals/id_type.sol";
 // interfaces
 import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
 // libraries
 import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
+import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
 // external
@@ -48,35 +51,56 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
     address governance,
     address senate,
     uint256 governanceFee,
-    uint256 senateExpiry
+    uint256 senateExpiry,
+    uint256 packageType,
+    bytes calldata initVersionName
   ) internal onlyInitializing {
     __UUPSUpgradeable_init_unchained();
     __DataStoreModule_init_unchained();
-    __GeodeModule_init_unchained(governance, senate, governanceFee, senateExpiry);
+    __GeodeModule_init_unchained(
+      governance,
+      senate,
+      governanceFee,
+      senateExpiry,
+      packageType,
+      initVersionName
+    );
   }
 
   function __GeodeModule_init_unchained(
     address governance,
     address senate,
     uint256 governanceFee,
-    uint256 senateExpiry
+    uint256 senateExpiry,
+    uint256 packageType,
+    bytes calldata initVersionName
   ) internal onlyInitializing {
-    GEODE.GOVERNANCE = governance;
-    GEODE.SENATE = senate;
+    GEODE.GOVERNANCE = msg.sender;
+    GEODE.SENATE = msg.sender;
+
     GEODE.GOVERNANCE_FEE = governanceFee;
     GEODE.SENATE_EXPIRY = senateExpiry;
+    GEODE.PACKAGE_TYPE = packageType;
+
+    uint256 initVersion = GEODE.propose(
+      DATASTORE,
+      _getImplementation(),
+      ID_TYPE.CONTRACT_UPGRADE,
+      initVersionName,
+      1 days
+    );
+
+    GEODE.approveProposal(DATASTORE, initVersion);
+
+    _setContractVersion(initVersionName);
+
+    GEODE.GOVERNANCE = governance;
+    GEODE.SENATE = senate;
   }
 
   /**
    * @custom:section                           ** FUNCTIONS TO OVERRIDE **
    */
-  /**
-   * @notice get the latest version of the package using this module, from Portal
-   */
-  function getProposedVersion() public view virtual override returns (uint256);
-
-  function pullUpgrade() external virtual override;
-
   function isolationMode() external view virtual override returns (bool);
 
   /**
@@ -95,9 +119,17 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
     require(isUpgradeAllowed(proposed_implementation), "GM:not allowed to upgrade");
   }
 
-  function _setContractVersion(uint256 newVersion) internal virtual {
+  function _setContractVersion(bytes memory versionName) internal virtual {
+    uint256 newVersion = DSML.generateId(versionName, GEODE.PACKAGE_TYPE);
     GEODE.CONTRACT_VERSION = newVersion;
+
     emit ContractVersionSet(newVersion);
+  }
+
+  function _handleUpgrade(bytes memory versionName) internal virtual {
+    _authorizeUpgrade(GEODE.APPROVED_UPGRADE);
+    _upgradeToAndCallUUPS(GEODE.APPROVED_UPGRADE, new bytes(0), false);
+    _setContractVersion(versionName);
   }
 
   /**
@@ -133,6 +165,7 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
       address approvedUpgrade,
       uint256 governanceFee,
       uint256 senateExpiry,
+      uint256 packageType,
       uint256 contractVersion
     )
   {
@@ -141,6 +174,7 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
     approvedUpgrade = GEODE.APPROVED_UPGRADE;
     governanceFee = GEODE.GOVERNANCE_FEE;
     senateExpiry = GEODE.SENATE_EXPIRY;
+    packageType = GEODE.PACKAGE_TYPE;
     contractVersion = GEODE.CONTRACT_VERSION;
   }
 
@@ -188,8 +222,12 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    */
   function approveProposal(
     uint256 id
-  ) public virtual override returns (uint256 _type, address _controller) {
-    (_type, _controller) = GEODE.approveProposal(DATASTORE, id);
+  ) public virtual override returns (address _controller, uint256 _type, bytes memory _name) {
+    (_controller, _type, _name) = GEODE.approveProposal(DATASTORE, id);
+
+    if (_type == ID_TYPE.CONTRACT_UPGRADE) {
+      _handleUpgrade(_name);
+    }
   }
 
   /**

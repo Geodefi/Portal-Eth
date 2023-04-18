@@ -7,13 +7,9 @@ import {GeodeModuleLib as GML} from "../../modules/GeodeModule/libs/GeodeModuleL
 interface IGeodeModule is IDataStoreModule {
   function getContractVersion() external view returns (uint256);
 
-  function getProposedVersion() external view returns (uint256);
-
   function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
 
   function isolationMode() external view returns (bool);
-
-  function pullUpgrade() external;
 
   function GeodeParams()
     external
@@ -24,6 +20,7 @@ interface IGeodeModule is IDataStoreModule {
       address approvedUpgrade,
       uint256 governanceFee,
       uint256 senateExpiry,
+      uint256 packageType,
       uint256 contractVersion
     );
 
@@ -38,7 +35,9 @@ interface IGeodeModule is IDataStoreModule {
     uint256 duration
   ) external returns (uint256 id, bool success);
 
-  function approveProposal(uint256 id) external returns (uint256 _type, address _controller);
+  function approveProposal(
+    uint256 id
+  ) external returns (address _controller, uint256 _type, bytes memory _name);
 
   function changeSenate(address _newSenate) external;
 

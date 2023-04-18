@@ -74,37 +74,18 @@ contract Portal is IPortal, StakeModule, GeodeModule {
     __UUPSUpgradeable_init_unchained();
     __DataStoreModule_init_unchained();
     __GeodeModule_init_unchained(
-      address(0),
-      address(0),
+      _governance,
+      _senate,
       0,
-      block.timestamp + GML.MAX_SENATE_PERIOD
+      block.timestamp + GML.MAX_SENATE_PERIOD,
+      ID_TYPE.PACKAGE_PORTAL,
+      versionName
     );
     __StakeModule_init_unchained(_gETH, _oracle_position);
-    __Portal_init_unchained(_governance, _senate, versionName);
+    __Portal_init_unchained();
   }
 
-  function __Portal_init_unchained(
-    address _governance,
-    address _senate,
-    bytes calldata versionName
-  ) internal onlyInitializing {
-    GEODE.GOVERNANCE = msg.sender;
-    GEODE.SENATE = msg.sender;
-
-    uint256 portalVersion = GEODE.propose(
-      DATASTORE,
-      address(this),
-      ID_TYPE.CONTRACT_UPGRADE,
-      versionName,
-      1 days
-    );
-    approveProposal(portalVersion);
-
-    GEODE.GOVERNANCE = _governance;
-    GEODE.SENATE = _senate;
-
-    _setContractVersion(portalVersion);
-  }
+  function __Portal_init_unchained() internal onlyInitializing {}
 
   function pause() external virtual override(StakeModule, IStakeModule) onlyGovernance {
     _pause();
@@ -135,14 +116,16 @@ contract Portal is IPortal, StakeModule, GeodeModule {
   }
 
   function pushUpgrade(
-    uint256 moduleType
-  ) external virtual override whenNotPaused nonReentrant returns (uint256 moduleVersion) {
-    moduleVersion = STAKE.packages[moduleType];
+    uint256 packageType
+  ) external virtual override whenNotPaused nonReentrant returns (bytes memory versionName) {
+    uint256 currentPackageVersion = STAKE.packages[packageType];
+    versionName = DATASTORE.readBytes(currentPackageVersion, "NAME");
+
     (, bool success) = IGeodeModule(msg.sender).propose(
-      DATASTORE.readAddress(moduleVersion, "CONTROLLER"),
+      DATASTORE.readAddress(currentPackageVersion, "CONTROLLER"),
       ID_TYPE.CONTRACT_UPGRADE,
-      DATASTORE.readBytes(moduleVersion, "NAME"),
-      3 weeks
+      versionName,
+      GML.MAX_PROPOSAL_DURATION
     );
 
     require(success, "PORTAL: cannot push upgrade");
@@ -158,29 +141,15 @@ contract Portal is IPortal, StakeModule, GeodeModule {
     public
     virtual
     override(GeodeModule, IGeodeModule)
-    returns (uint256 _type, address _controller)
+    returns (address _controller, uint256 _type, bytes memory _name)
   {
-    (_type, _controller) = GEODE.approveProposal(DATASTORE, id);
+    (_controller, _type, _name) = super.approveProposal(id);
 
     if (_type > ID_TYPE.LIMIT_MIN_PACKAGE && _type < ID_TYPE.LIMIT_MAX_PACKAGE) {
       STAKE.packages[_type] = id;
     } else if (_type > ID_TYPE.LIMIT_MIN_MIDDLEWARE && _type < ID_TYPE.LIMIT_MAX_MIDDLEWARE) {
       STAKE.middlewares[_type][id] = true;
     }
-  }
-
-  function getProposedVersion()
-    public
-    view
-    virtual
-    override(GeodeModule, IGeodeModule)
-    returns (uint256)
-  {
-    revert("Portal:check Upgrade proposal instead");
-  }
-
-  function pullUpgrade() external virtual override(GeodeModule, IGeodeModule) {
-    revert("Portal:can not pull from itself");
   }
 
   /**
@@ -206,9 +175,6 @@ contract Portal is IPortal, StakeModule, GeodeModule {
   /**
    * @notice fallback functions
    */
-  function Do_we_care() external pure virtual override returns (bool) {
-    return true;
-  }
 
   fallback() external payable {}
 

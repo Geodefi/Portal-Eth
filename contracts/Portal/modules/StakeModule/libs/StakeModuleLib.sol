@@ -394,9 +394,9 @@ library StakeModuleLib {
         DATASTORE.readAddress(versionId, rks.CONTROLLER),
         abi.encodeWithSelector(
           IGeodePackage(address(0)).initialize.selector,
-          versionId,
           _poolId,
           DATASTORE.readAddress(_poolId, rks.CONTROLLER),
+          DATASTORE.readAddress(versionId, rks.NAME),
           _package_data
         )
       )

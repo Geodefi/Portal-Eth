@@ -59,6 +59,9 @@ library ID_TYPE {
   uint256 internal constant LIMIT_MIN_PACKAGE = 10000;
 
   /// @notice TYPE 10011: Package: The Withdrawal Credential Contract
+  uint256 internal constant PACKAGE_PORTAL = 10001;
+
+  /// @notice TYPE 10011: Package: The Withdrawal Credential Contract
   uint256 internal constant PACKAGE_WITHDRAWAL_CONTRACT = 10011;
 
   /// @notice TYPE 10021: Package: A Liquidity Pool

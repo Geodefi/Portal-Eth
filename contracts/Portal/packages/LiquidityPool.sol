@@ -61,7 +61,6 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /// @notice LPToken implementation referance, needs to be cloned
   address internal immutable LPTokenRef;
   /// @notice LPP package type, useful for Limited Upgradability
-  uint256 internal immutable PACKAGE_TYPE;
 
   /**
    * @custom:section                           ** MODIFIERS **
@@ -91,30 +90,35 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     gETHPos = _gETHPos;
     portalPos = _portalPos;
     LPTokenRef = _LPTokenRef;
-    PACKAGE_TYPE = ID_TYPE.PACKAGE_LIQUIDITY_POOL;
 
     _disableInitializers();
   }
 
   /// @param data only poolName is required from Portal
   function initialize(
-    uint256 versionId,
     uint256 pooledTokenId,
     address poolOwner,
-    bytes memory data
+    bytes calldata versionName,
+    bytes calldata data
   ) public virtual override initializer returns (bool success) {
-    __LiquidityPool_init(versionId, pooledTokenId, poolOwner, data);
+    __LiquidityPool_init(pooledTokenId, poolOwner, versionName, data);
     success = true;
   }
 
   function __LiquidityPool_init(
-    uint256 versionId,
     uint256 pooledTokenId,
     address poolOwner,
-    bytes memory data
+    bytes calldata versionName,
+    bytes calldata data
   ) internal onlyInitializing {
-    __GeodeModule_init(portalPos, poolOwner, 0, type(uint256).max);
-    string memory poolName = string(data);
+    __GeodeModule_init(
+      portalPos,
+      poolOwner,
+      0,
+      type(uint256).max,
+      ID_TYPE.PACKAGE_LIQUIDITY_POOL,
+      versionName
+    );
     __LiquidityModule_init(
       gETHPos,
       LPTokenRef,
@@ -122,14 +126,12 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
       60 * AL.A_PRECISION,
       60 * AL.A_PRECISION,
       (4 * PERCENTAGE_DENOMINATOR) / 10000,
-      poolName
+      string(data)
     );
-    __LiquidityPool_init_unchained(versionId);
+    __LiquidityPool_init_unchained();
   }
 
-  function __LiquidityPool_init_unchained(uint256 versionId) internal onlyInitializing {
-    _setContractVersion(versionId);
-  }
+  function __LiquidityPool_init_unchained() internal onlyInitializing {}
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **
@@ -155,14 +157,8 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /**
    * @dev GeodeModule override
    */
-  function getProposedVersion()
-    public
-    view
-    virtual
-    override(GeodeModule, IGeodeModule)
-    returns (uint256)
-  {
-    return getPortal().getPackageVersion(PACKAGE_TYPE);
+  function getProposedVersion() public view virtual override returns (uint256) {
+    return getPortal().getPackageVersion(GEODE.PACKAGE_TYPE);
   }
 
   /**
@@ -198,19 +194,14 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    * @dev -> external
    */
   /**
-   * @dev GeodeModule override
+   * @dev IGeodePackage override
    */
-  function pullUpgrade() external virtual override(GeodeModule, IGeodeModule) onlyOwner {
+  function pullUpgrade() external virtual override onlyOwner {
     require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
     require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
 
-    uint256 proposedVersion = getPortal().pushUpgrade(PACKAGE_TYPE);
-    require(proposedVersion != 0, "LPP:PROPOSED_VERSION ERROR");
-
-    approveProposal(proposedVersion);
-    _authorizeUpgrade(GEODE.APPROVED_UPGRADE);
-    _upgradeToAndCallUUPS(GEODE.APPROVED_UPGRADE, new bytes(0), false);
-    _setContractVersion(proposedVersion);
+    bytes memory versionName = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
+    approveProposal(DSML.generateId(versionName, ID_TYPE.CONTRACT_UPGRADE));
   }
 
   /**
@@ -266,9 +257,6 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /**
    * @notice fallback functions
    */
-  function Do_we_care() external pure virtual override returns (bool) {
-    return true;
-  }
 
   fallback() external payable {}
 
@@ -277,5 +265,5 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /**
    * @notice keep the contract size at 50
    */
-  uint256[46] private __gap;
+  uint256[47] private __gap;
 }
