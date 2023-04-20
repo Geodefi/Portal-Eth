@@ -17,8 +17,6 @@ interface IWithdrawalContract {
 
   function getPortal() external view returns (IPortal);
 
-  function getPoolId() external view returns (uint256);
-
   function getContractVersion() external view returns (uint256);
 
   function getProposedVersion() external view returns (uint256);

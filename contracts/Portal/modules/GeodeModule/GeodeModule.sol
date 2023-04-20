@@ -75,6 +75,12 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
     uint256 packageType,
     bytes calldata initVersionName
   ) internal onlyInitializing {
+    require(governance != address(0), "GM:governance can not be zero");
+    require(senate != address(0), "LML:_gETH_position can not be zero");
+    require(senateExpiry > block.timestamp, "LML:low senateExpiry");
+    require(packageType != 0, "LML:packageType can not be zero");
+    require(initVersionName.length != 0, "LML:initVersionName can not be zero");
+
     GEODE.GOVERNANCE = msg.sender;
     GEODE.SENATE = msg.sender;
 

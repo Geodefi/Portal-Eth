@@ -19,8 +19,8 @@ contract("LPToken", function (accounts) {
 
   describe("mint", function () {
     it("cannot mint 0", async function () {
-      expectRevert(
-        await this.token.mint(recipient, initialSupply, { from: deployer }),
+      await expectRevert(
+        this.token.mint(deployer, 0, { from: deployer }),
         "LPToken: cannot mint 0"
       );
     });
@@ -28,8 +28,8 @@ contract("LPToken", function (accounts) {
 
   describe("_beforeTokenTransfer", function () {
     it("cannot send to itself", async function () {
-      expectRevert(
-        await this.token.$_beforeTokenTransfer(recipient, anotherAccount, initialSupply),
+      await expectRevert(
+        this.token.$_beforeTokenTransfer(deployer, this.token.address, 1),
         "LPToken: cannot send to itself"
       );
     });

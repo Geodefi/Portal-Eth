@@ -3,11 +3,12 @@ pragma solidity =0.8.7;
 
 // globals
 import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
-// libraries
-import {AmplificationLib as AL} from "./AmplificationLib.sol";
 // interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
-import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
+// libraries
+import {AmplificationLib as AL} from "./AmplificationLib.sol";
+// contracts
+import {LPToken} from "../../../helpers/LPToken.sol";
 
 /**
  * @title LiquidityModule Library - LML
@@ -49,7 +50,7 @@ library LiquidityModuleLib {
    */
   struct Swap {
     IgETH gETH;
-    ILPToken lpToken;
+    LPToken lpToken;
     uint256 pooledTokenId;
     uint256 initialA;
     uint256 futureA;
@@ -78,7 +79,7 @@ library LiquidityModuleLib {
    * {add,remove} Liquidity functions to avoid stack too deep errors
    */
   struct ManageLiquidityInfo {
-    ILPToken lpToken;
+    LPToken lpToken;
     uint256 d0;
     uint256 d1;
     uint256 d2;
@@ -92,13 +93,13 @@ library LiquidityModuleLib {
    */
 
   // Max swap fee is 1% or 100bps of each swap
-  uint256 public constant MAX_SWAP_FEE = 10 ** 8;
+  uint256 public constant MAX_SWAP_FEE = PERCENTAGE_DENOMINATOR / 100;
 
   // Max adminFee is 50% of the swapFee
   // adminFee does not add additional fee on top of swapFee
   // instead it takes a certain percentage of the swapFee.
   // Therefore it has no impact on users but only on the earnings of LPs
-  uint256 public constant MAX_ADMIN_FEE = 5 * 10 ** 9;
+  uint256 public constant MAX_ADMIN_FEE = (50 * PERCENTAGE_DENOMINATOR) / 100;
 
   // Constant value used as max loop limit
   uint256 private constant MAX_LOOP_LIMIT = 256;
@@ -606,7 +607,7 @@ library LiquidityModuleLib {
    */
   function getVirtualPrice(Swap storage self) external view returns (uint256) {
     uint256 d = getD(_pricedInBatch(self, self.balances), AL._getAPrecise(self));
-    ILPToken lpToken = self.lpToken;
+    LPToken lpToken = self.lpToken;
     uint256 supply = lpToken.totalSupply();
     if (supply > 0) {
       return (d * 10 ** 18) / supply;
@@ -874,7 +875,6 @@ library LiquidityModuleLib {
     }
 
     require(toMint >= minToMint, "LML:Could not mint min requested");
-
     // mint the user's LP tokens
     v.lpToken.mint(msg.sender, toMint);
 
@@ -896,7 +896,7 @@ library LiquidityModuleLib {
     uint256 amount,
     uint256[2] calldata minAmounts
   ) external returns (uint256[2] memory) {
-    ILPToken lpToken = self.lpToken;
+    LPToken lpToken = self.lpToken;
     IgETH gETHRef = self.gETH;
     require(amount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
 
@@ -939,7 +939,7 @@ library LiquidityModuleLib {
     uint8 tokenIndex,
     uint256 minAmount
   ) external returns (uint256) {
-    ILPToken lpToken = self.lpToken;
+    LPToken lpToken = self.lpToken;
     IgETH gETHRef = self.gETH;
 
     require(tokenAmount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
@@ -1075,7 +1075,7 @@ library LiquidityModuleLib {
 
     uint256 etherBalance = address(this).balance - self.balances[0];
     if (etherBalance != 0) {
-      (bool sent, ) = payable(msg.sender).call{value: etherBalance}("");
+      (bool sent, ) = payable(receiver).call{value: etherBalance}("");
       require(sent, "LML:Failed to send Ether");
     }
   }

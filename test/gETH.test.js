@@ -84,14 +84,14 @@ contract("gETH", function (accounts) {
 
     describe("setMiddleware", async function () {
       it("reverts for zero address", async function () {
-        expectRevert(
+        await expectRevert(
           this.token.setMiddleware(ZERO_ADDRESS, tokenId, { from: deployer }),
           "gETH:middleware query for the zero address"
         );
       });
 
       it("reverts if not a contract", async function () {
-        expectRevert(
+        await expectRevert(
           this.token.setMiddleware(user, tokenId, { from: deployer }),
           "gETH:middleware must be a contract"
         );
@@ -232,7 +232,7 @@ contract("gETH", function (accounts) {
 
     describe("setPricePerShare", function () {
       it("reverts for zero address", async function () {
-        expectRevert(
+        await expectRevert(
           this.token.setPricePerShare(price, ZERO_BYTES32, { from: deployer }),
           "gETH:price query for the zero address"
         );

@@ -10,14 +10,13 @@ import {IgETH} from "../interfaces/IgETH.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
 import {IGeodePackage} from "../interfaces/packages/IGeodePackage.sol";
 import {ILiquidityPool} from "../interfaces/packages/ILiquidityPool.sol";
-import {ILPToken} from "../interfaces/helpers/ILPToken.sol";
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
-import {LiquidityModuleLib} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
@@ -48,6 +47,8 @@ import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
  */
 contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   using GML for GML.DualGovernance;
+  using AL for LML.Swap;
+  using LML for LML.Swap;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -123,8 +124,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
       gETHPos,
       LPTokenRef,
       pooledTokenId,
-      60 * AL.A_PRECISION,
-      60 * AL.A_PRECISION,
+      60,
       (4 * PERCENTAGE_DENOMINATOR) / 10000,
       string(data)
     );
@@ -169,24 +169,6 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
    */
 
   /**
-   * @custom:section                           ** PAUSABILITY FUNCTIONS **
-   */
-
-  /**
-   * @notice pausing the contract activates the isolationMode
-   */
-  function pause() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    _pause();
-  }
-
-  /**
-   * @notice unpausing the contract deactivates the isolationMode
-   */
-  function unpause() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    _unpause();
-  }
-
-  /**
    * @custom:section                           ** UPGRADABILITY FUNCTIONS **
    */
 
@@ -222,36 +204,54 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   }
 
   /**
+   * @custom:section                           ** PAUSABILITY FUNCTIONS **
+   */
+
+  /**
+   * @notice pausing the contract activates the isolationMode
+   */
+  function pause() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
+    _pause();
+  }
+
+  /**
+   * @notice unpausing the contract deactivates the isolationMode
+   */
+  function unpause() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
+    _unpause();
+  }
+
+  /**
    * @custom:section                           ** LIQUIDITY POOL ADMIN **
    */
 
-  function withdrawAdminFees(
-    address receiver
+  function setSwapFee(
+    uint256 newSwapFee
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.withdrawAdminFees(receiver);
+    LIQUIDITY.setSwapFee(newSwapFee);
   }
 
   function setAdminFee(
     uint256 newAdminFee
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.setAdminFee(newAdminFee);
+    LIQUIDITY.setAdminFee(newAdminFee);
   }
 
-  function setSwapFee(
-    uint256 newSwapFee
+  function withdrawAdminFees(
+    address receiver
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.setSwapFee(newSwapFee);
+    LIQUIDITY.withdrawAdminFees(receiver);
   }
 
   function rampA(
     uint256 futureA,
     uint256 futureTime
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.rampA(futureA, futureTime);
+    LIQUIDITY.rampA(futureA, futureTime);
   }
 
   function stopRampA() public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.stopRampA();
+    LIQUIDITY.stopRampA();
   }
 
   /**

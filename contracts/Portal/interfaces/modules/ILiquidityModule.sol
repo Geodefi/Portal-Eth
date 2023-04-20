@@ -6,21 +6,30 @@ interface ILiquidityModule {
 
   function unpause() external;
 
-  function getgETH() external view returns (address);
+  function LiquidityParams()
+    external
+    view
+    returns (
+      address gETH,
+      address lpToken,
+      uint256 pooledTokenId,
+      uint256 initialA,
+      uint256 futureA,
+      uint256 initialATime,
+      uint256 futureATime,
+      uint256 swapFee,
+      uint256 adminFee
+    );
 
   function getA() external view returns (uint256);
 
   function getAPrecise() external view returns (uint256);
 
-  function getSwapFee() external view returns (uint256);
-
-  function getTokenId() external view returns (uint256);
-
   function getBalance(uint8 index) external view returns (uint256);
 
-  function getVirtualPrice() external view returns (uint256);
-
   function getDebt() external view returns (uint256);
+
+  function getVirtualPrice() external view returns (uint256);
 
   function getAdminBalance(uint256 index) external view returns (uint256);
 
