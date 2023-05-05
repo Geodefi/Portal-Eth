@@ -1,4 +1,9 @@
 module.exports = {
-  skipFiles: ["Portal/helpers/test", "Portal/helpers/BytesLib.sol", "Portal/interfaces"],
+  skipFiles: [
+    "Portal/globals",
+    "Portal/interfaces",
+    "Portal/helpers/test",
+    "Portal/helpers/BytesLib.sol",
+  ],
   configureYulOptimizer: true,
 };

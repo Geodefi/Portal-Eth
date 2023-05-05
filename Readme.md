@@ -89,6 +89,13 @@ To run just one test:
 npx hardhat test path/to/test/file.test.js
 ```
 
+To generate a coverage report:
+
+```sh
+npx hardhat compile --force
+npx hardhat coverage
+```
+
 ### Deployments
 
 There are no deployments here.
