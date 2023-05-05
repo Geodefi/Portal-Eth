@@ -10,7 +10,7 @@ interface IGeodePackage is IGeodeModule {
     address owner,
     bytes calldata versionName,
     bytes memory data
-  ) external returns (bool);
+  ) external;
 
   function getPortal() external view returns (IPortal);
 

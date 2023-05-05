@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
+
+import {IDataStoreModule} from "./IDataStoreModule.sol";
 import {StakeModuleLib as SML} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
 
-interface IStakeModule {
+interface IStakeModule is IDataStoreModule {
   function pause() external;
 
   function unpause() external;
@@ -11,15 +13,17 @@ interface IStakeModule {
     external
     view
     returns (
+      address gETH,
+      address oraclePosition,
       uint256 validatorsIndex,
       uint256 verificationIndex,
       uint256 monopolyThreshold,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
       uint256 dailyPriceDecreaseLimit,
+      uint256 governanceFee,
       bytes32 priceMerkleRoot,
-      bytes32 balanceMerkleRoot,
-      address oraclePosition
+      bytes32 balanceMerkleRoot
     );
 
   function getValidator(bytes calldata pubkey) external view returns (SML.Validator memory);
@@ -46,7 +50,7 @@ interface IStakeModule {
     bool[3] calldata config
   ) external payable returns (uint256 poolId);
 
-  function setPoolVisibility(uint256 poolId, bool isPrivate) external;
+  function setPoolVisibility(uint256 poolId, bool makePrivate) external;
 
   function setWhitelist(uint256 poolId, address whitelist) external;
 
@@ -54,7 +58,7 @@ interface IStakeModule {
 
   function getMaintenanceFee(uint256 id) external view returns (uint256);
 
-  function switchMaintenanceFee(uint256 id, address newMaintainer) external;
+  function switchMaintenanceFee(uint256 id, uint256 newFee) external;
 
   function increaseWalletBalance(uint256 id) external payable returns (bool);
 
@@ -63,6 +67,8 @@ interface IStakeModule {
   function isPrisoned(uint256 operatorId) external view returns (bool);
 
   function blameOperator(bytes calldata pk) external;
+
+  function getValidatorPeriod(uint256 id) external view returns (uint256);
 
   function switchValidatorPeriod(uint256 operatorId, uint256 newPeriod) external;
 
@@ -85,6 +91,8 @@ interface IStakeModule {
 
   function deposit(
     uint256 poolId,
+    uint256 price,
+    bytes32[] calldata priceProof,
     uint256 mingETH,
     uint256 deadline,
     address receiver

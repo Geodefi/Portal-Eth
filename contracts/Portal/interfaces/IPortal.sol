@@ -11,4 +11,6 @@ interface IPortal is IStakeModule, IGeodeModule {
   function pushUpgrade(uint256 packageType) external returns (bytes memory versionName);
 
   function releasePrisoned(uint256 operatorId) external;
+
+  function setGovernanceFee(uint256 newFee) external;
 }

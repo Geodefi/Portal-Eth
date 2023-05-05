@@ -20,87 +20,85 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
- * @title The Staking Library
+ * @title SML: The Staking Library
  *
  * @notice Creating a global standard for Staking, allowing anyone to OWN a trustless staking pool,
- * improving the user experience for stakers and removing the NEED for intermediaries.
+ * improving the user experience for stakers and removing the "need" for centralized or decentralized intermediaries.
  * * Exclusively contains functions related to:
- * * 1. Modular Architecture of Configurable Staking Pools
- * * 2. Depositing.
- * * 3. Operator Marketplace
- * * 4. Staking Operations.
+ * * 1. Initiators and Configurable Staking Pools.
+ * * 2. Pool and Operator management.
+ * * 3. Validator Delegation.
+ * * 4. Depositing.
+ * * 5. Staking Operations.
  *
- * @dev It is important to keep every pool isolated and remember that every validator is unique :)
+ * @dev review: DataStoreModule for the IsolatedStorage logic.
+ * @dev review: OracleExtensionLib for oracle logic.
  *
- * @dev Controllers and Maintainers:
- * * CONTROLLER is the owner of an ID, it manages the pool/operator. Its security is exteremely important.
- * * maintainer is the worker, can be used to automate some daily tasks:
- * * * distributing validators for Staking Pools or creating validators for Operators.
- * * * not so crucial in terms of security.
+ * @dev Every pool is isolated and every validator is unique. Segregate all the risk.
  *
- * @dev Reserved on ID_TYPE:
+ * @dev CONTROLLER and Maintainer:
+ * CONTROLLER is the owner of an ID, it manages the pool/operator. Its security is exteremely important.
+ * maintainer is the worker, can be used to automate some daily tasks:
+ * * distributing validators for Staking Pools or creating validators for Operators.
+ * * not so crucial in terms of security.
  *
- * Users:
- * *
- * * Type 4 : Permissioned Operators
- * * * Needs to be onboarded by the Dual Governance (Senate + Governance).
- * * * Maintains Beacon Chain Validators on behalf of the Staking Pools.
- * * * Can participate in the Operator Marketplace after initiation.
- * * * Can utilize maintainers for staking operations.
- * *
- * * Type 5 : Permissionless Configurable Staking Pools
- * * * Permissionless to create.
- * * * Can utilize powers of packages and middlewares such as Bound Liquidity Pools, gETHMiddlewares etc.
- * * * Can be public or private, can use a whitelist if private.
- * * * Can utilize maintainers for validator distribution on Operator Marketplace.
- * * * Uses a Withdrawal Contract to be given as withdrawalCredential on validator creation,
- * * * * accruing rewards and keeping Staked Ether safe and isolated.
+ * @dev Users:
+ * Type 4 : Permissioned Operators
+ * * Needs to be onboarded by the Dual Governance (Senate + Governance).
+ * * Maintains Beacon Chain Validators on behalf of the Staking Pools.
+ * * Can participate in the Operator Marketplace after initiation.
+ * * Can utilize maintainers for staking operations.
  *
- * Packages:
- * * An ID can only point to 1(one) Package version at a time.
- * * Built by utilizing the Modules!
- * * Can be upgraded by a dual governance, via pullUpgrade.
- * * * A Package's dual governance consists of Portal(governance) and the pool owner(senate).
- * *
- * * Type 10011 : Withdrawal Contract implementation version
- * * * Mandatory.
- * * * CONTROLLER is the implementation contract position (always)
- * * * Version Release Requires the approval of Senate
- * * * Upgrading to a new version is optional for pool owners.
- * * * * Staking Pools are in "Isolation Mode" until their Withdrawal Contract is upgraded.
- * * * * Meaning, no more Depositing or Validator Proposal can happen.
- * * * Custodian of the validator funds after creation, including any type of rewards and fees.
- * *
- * * Type 10021 : Liquidity Pool implementation version
- * * * Optional.
- * * * CONTROLLER is the implementation contract position (always)
- * * * Version Release Requires the approval of Senate
- * * * Upgrading to a new version is optional for pool owners.
- * * * * Liquidity Pools are in "Isolation Mode" until upgraded.
+ * Type 5 : Permissionless Configurable Staking Pools
+ * * Permissionless to create.
+ * * Can utilize powers of packages and middlewares such as Bound Liquidity Pools, gETHMiddlewares etc.
+ * * Can be public or private, can use a whitelist if private.
+ * * Can utilize maintainers for validator distribution on Operator Marketplace.
+ * * Uses a Withdrawal Contract to be given as withdrawalCredential on validator creation,
+ * * accruing rewards and keeping Staked Ether safe and isolated.
  *
- * Middlewares:
- * * Can support many different versions that can be utilized by the Pool Owners.
- * * No particular way to build one.
- * * Can not be upgraded.
- * * Currently only gETHMiddlewares.
+ * @dev Packages:
+ * An ID can only point to 1(one) Package version at a time.
+ * Built by utilizing the Modules!
+ * Can be upgraded by a dual governance, via pullUpgrade.
+ * * A Package's dual governance consists of Portal(governance) and the pool owner(senate).
  *
- * * Type 20011 : gETHMiddleware version
- * * * Optional.
- * * * CONTROLLER is the implementation contract position (always)
- * * * Requires the approval of Senate
- * * * Currently should be utilized on initiation.
+ * Type 10011 : Withdrawal Contract
+ * * Mandatory.
+ * * CONTROLLER is the implementation contract position (always)
+ * * Version Release Requires the approval of Senate
+ * * Upgrading to a new version is optional for pool owners.
+ * * * Staking Pools are in "Isolation Mode" until their Withdrawal Contract is upgraded.
+ * * * Meaning, no more Depositing or Validator Proposal can happen.
+ * * Custodian of the validator funds after creation, including any type of rewards and fees.
+ *
+ * Type 10021 : Liquidity Pool implementation
+ * * Optional.
+ * * CONTROLLER is the implementation contract position (always)
+ * * Version Release Requires the approval of Senate
+ * * Upgrading to a new version is optional for pool owners.
+ * * * Liquidity Pools are in "Isolation Mode" until upgraded.
+ *
+ * @dev Middlewares:
+ * Can support many different versions that can be utilized by the Pool Owners.
+ * No particular way to build one.
+ * Can not be upgraded.
+ * Currently only gETHMiddlewares.
+ *
+ * Type 20011 : gETHMiddleware
+ * * Optional.
+ * * CONTROLLER is the implementation contract position (always)
+ * * Requires the approval of Senate
+ * * Currently should be utilized on initiation.
  *
  * @dev Contracts relying on this library must initialize StakeUtils.PooledStaking
- * @dev Functions are already protected with authentication
  *
- * @dev first review DataStoreModule
- * @dev then review GeodeModule
+ * @dev Functions are protected with authentication function
  *
  * @author Ice Bear & Crash Bandicoot
  */
 
 library StakeModuleLib {
-  /// @notice Using DataStoreModule Library for IsolatedStorage struct
   using DSML for DSML.IsolatedStorage;
 
   /**
@@ -113,9 +111,10 @@ library StakeModuleLib {
    */
   struct ConstantValidatorData {
     uint64 index;
-    uint64 expectedExit;
+    uint64 period;
     uint256 poolFee;
     uint256 operatorFee;
+    uint256 governanceFee;
     bytes withdrawalCredential;
   }
 
@@ -123,27 +122,30 @@ library StakeModuleLib {
    * @param state state of the validator, refer to globals.sol
    * @param index representing this validator's placement on the chronological order of the validators proposals
    * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
-   * @param expectedExit the latest point in time the operator is allowed to maintain this validator (createdAt + validatorPeriod).
+   * @param period the latest point in time the operator is allowed to maintain this validator (createdAt + validatorPeriod).
    * @param poolId needed for withdrawal_credential
    * @param operatorId needed for staking after allowance
    * @param poolFee percentage of the rewards that will go to pool's maintainer, locked when the validator is proposed
    * @param operatorFee percentage of the rewards that will go to operator's maintainer, locked when the validator is proposed
+   * @param governanceFee although governance fee is zero right now, all fees are crucial for the price calculation by the oracle.
    * @param signature31 BLS12-381 signature for the validator, used when the remaining 31 ETH is sent on validator activation.
    **/
   struct Validator {
     uint64 state;
     uint64 index;
     uint64 createdAt;
-    uint64 expectedExit;
+    uint64 period;
     uint256 poolId;
     uint256 operatorId;
     uint256 poolFee;
     uint256 operatorFee;
+    uint256 governanceFee;
     bytes signature31;
   }
 
   /**
-   * @param gETH constant, ERC1155: Staking Derivatives Token.
+   * @param gETH constant, ERC1155, all Geode Staking Derivatives.
+   * @param ORACLE_POSITION constant, address of the Oracle https://github.com/Geodefi/Telescope-Eth
    * @param VALIDATORS_INDEX total number of validators that are proposed at any given point.
    * * Includes all validators: proposed, active, alienated, exited.
    * @param VERIFICATION_INDEX the highest index of the validators that are verified (as not alien) by the Holy Oracle.
@@ -152,8 +154,8 @@ library StakeModuleLib {
    * @param DAILY_PRICE_DECREASE_LIMIT limiting the price decreases for one oracle period, 24h. Effective for any time interval, per second.
    * @param DAILY_PRICE_INCREASE_LIMIT limiting the price increases for one oracle period, 24h. Effective for any time interval, per second.
    * @param PRICE_MERKLE_ROOT merkle root of the prices of every pool, updated by the Holy Oracle.
+   * @param GOVERNANCE_FEE **reserved** Although it is 0 right now, It can be updated in the future.
    * @param BALANCE_MERKLE_ROOT merkle root of the balances and other validator related data, useful on withdrawals, updated by the Holy Oracle.
-   * @param ORACLE_POSITION constant, address of the Oracle https://github.com/Geodefi/Telescope-Eth
    * @param validators pubkey => Validator, contains all the data about proposed, alienated, active, exit-called and fully exited validators.
    * @param packages TYPE => version id, pointing to the latest versions of the given package.
    * * Like default Withdrawal Contract version.
@@ -163,30 +165,34 @@ library StakeModuleLib {
    **/
   struct PooledStaking {
     IgETH gETH;
+    address ORACLE_POSITION;
     uint256 VALIDATORS_INDEX;
     uint256 VERIFICATION_INDEX;
     uint256 MONOPOLY_THRESHOLD;
     uint256 ORACLE_UPDATE_TIMESTAMP;
     uint256 DAILY_PRICE_INCREASE_LIMIT;
     uint256 DAILY_PRICE_DECREASE_LIMIT;
+    uint256 GOVERNANCE_FEE;
     bytes32 PRICE_MERKLE_ROOT;
     bytes32 BALANCE_MERKLE_ROOT;
-    address ORACLE_POSITION;
     mapping(bytes => Validator) validators;
     mapping(uint256 => uint256) packages;
     mapping(uint256 => mapping(uint256 => bool)) middlewares;
-    uint256[3] __gap;
+    uint256[2] __gap;
   }
 
   /**
    * @custom:section                           ** CONSTANTS **
    */
 
+  /// @notice limiting the GOVERNANCE_FEE to 5%
+  uint256 public constant MAX_GOVERNANCE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
+
   /// @notice limiting the pool and operator maintenance fee, 10%
   uint256 public constant MAX_MAINTENANCE_FEE = (PERCENTAGE_DENOMINATOR * 10) / 100;
 
-  /// @notice effective on allowances, prevents overflow. Exclusive, save gas with +1.
-  uint256 public constant MAX_ALLOWANCE = 10 ** 7 + 1;
+  /// @notice effective on allowance per operator, prevents overflow. Exclusive, save gas with +1.
+  uint256 public constant MAX_ALLOWANCE = 10 ** 6 + 1;
 
   /// @notice if a pool has 80% of its allowances filled, fallback operator is active.
   uint256 public constant FALLBACK_THRESHOLD = (PERCENTAGE_DENOMINATOR * 80) / 100;
@@ -224,10 +230,10 @@ library StakeModuleLib {
 
   /**
    * @custom:section                           ** AUTHENTICATION **
+   *
+   * @custom:visibility -> view-internal
    */
-  /**
-   * @dev -> internal view -> one
-   */
+
   /**
    * @notice restricts the access to given function based on TYPE and msg.sender
    * @param _expectCONTROLLER restricts the access to only CONTROLLER.
@@ -244,17 +250,14 @@ library StakeModuleLib {
     bool _expectMaintainer,
     bool[2] memory _restrictionMap
   ) internal view {
-    require(DATASTORE.readUint(_id, rks.initiated) != 0, "SML:ID is not initiated");
+    require(DATASTORE.readUint(_id, rks.initiated) != 0, "SML:not initiated");
 
     uint256 typeOfId = DATASTORE.readUint(_id, rks.TYPE);
 
     if (typeOfId == ID_TYPE.OPERATOR) {
       require(_restrictionMap[0], "SML:TYPE NOT allowed");
       if (_expectCONTROLLER || _expectMaintainer) {
-        require(
-          !isPrisoned(DATASTORE, _id),
-          "SML:operator is in prison, get in touch with governance"
-        );
+        require(!isPrisoned(DATASTORE, _id), "SML:prisoned, get in touch with governance");
       }
     } else if (typeOfId == ID_TYPE.POOL) {
       require(_restrictionMap[1], "SML:TYPE NOT allowed");
@@ -279,10 +282,10 @@ library StakeModuleLib {
 
   /**
    * @custom:section                           ** OPERATOR INITIATOR **
+   *
+   * @custom:visibility -> external
    */
-  /**
-   * @dev -> external -> one
-   */
+
   /**
    * @notice initiates ID as a Permissionned Node Operator
    * @notice requires ID to be approved as a node operator with a specific CONTROLLER
@@ -318,148 +321,8 @@ library StakeModuleLib {
   /**
    * @custom:section                           ** STAKING POOL INITIATOR **
    *
-   * @dev this section also contains the helper functions for packages and middlewares
+   * @dev this section also contains the helper functions for packages and middlewares.
    */
-
-  /**
-   * @dev -> internal
-   */
-
-  /**
-   * @notice internal function to set a gETHMiddleware
-   * @param _middleware address of the new gETHMiddleware for given ID
-   * @dev every middleware has a unique index within the middlewares dynamic array.
-   * @dev if ever unset, SHOULD replace the implementation with address(0) for obvious security reasons.
-   */
-  function _setgETHMiddleware(
-    PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 id,
-    address _middleware
-  ) internal {
-    require(!self.gETH.isMiddleware(_middleware, id), "SML:already middleware");
-
-    DATASTORE.appendAddressArray(id, rks.middlewares, _middleware);
-
-    self.gETH.setMiddleware(_middleware, id, true);
-  }
-
-  /**
-   * @notice deploys a new gETHMiddleware by cloning (no upgradability)
-   * @param _id gETH id, also required for IgETHMiddleware.initialize
-   * @param _versionId provided version id, can use any as a middleware if allowed for TYPE = MIDDLEWARE_GETH
-   * @param _middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
-   * @dev currrently, can NOT deploy a middleware after initiation, thus only used by the initiator.
-   * @dev currrently, can NOT unset a middleware.
-   */
-  function _deploygETHMiddleware(
-    PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 _id,
-    uint256 _versionId,
-    bytes memory _middleware_data
-  ) internal {
-    require(self.middlewares[ID_TYPE.MIDDLEWARE_GETH][_versionId], "SML:not a middleware");
-
-    address newgETHMiddleware = Clones.clone(DATASTORE.readAddress(_versionId, rks.CONTROLLER));
-    require(
-      IgETHMiddleware(newgETHMiddleware).initialize(_id, address(self.gETH), _middleware_data),
-      "SML:could not init IgETHMiddleware"
-    );
-
-    _setgETHMiddleware(self, DATASTORE, _id, newgETHMiddleware);
-
-    // isolate the contract from middleware risk for ID
-    self.gETH.avoidMiddlewares(_id, true);
-  }
-
-  /**
-   * @notice deploys a new package from packages mapping.
-   * @param _type given package type
-   * @param _poolId pool id, required for IGeodePackage.initialize
-   * @param _package_data packages might require additional data on initialization
-   * @dev no cloning because GeodePackages has Limited Upgradability (based on UUPS)
-   */
-  function _deployGeodePackage(
-    PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 _type,
-    uint256 _poolId,
-    bytes memory _package_data
-  ) internal returns (address packageInstance) {
-    uint256 versionId = self.packages[_type];
-
-    packageInstance = address(
-      new ERC1967Proxy(
-        DATASTORE.readAddress(versionId, rks.CONTROLLER),
-        abi.encodeWithSelector(
-          IGeodePackage(address(0)).initialize.selector,
-          _poolId,
-          DATASTORE.readAddress(_poolId, rks.CONTROLLER),
-          DATASTORE.readAddress(versionId, rks.NAME),
-          _package_data
-        )
-      )
-    );
-  }
-
-  /**
-   * @notice Deploys a Withdrawal Contract that will be used as a withdrawal credential on validator creation
-   * @dev every pool requires a Withdrawal Contract, thus this function is only used by the initiator
-   */
-  function _deployWithdrawalContract(
-    PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 _poolId
-  ) internal {
-    require(
-      DATASTORE.readAddress(_poolId, rks.withdrawalContract) == address(0),
-      "SML:already deployed"
-    );
-
-    address wp = _deployGeodePackage(
-      self,
-      DATASTORE,
-      ID_TYPE.PACKAGE_WITHDRAWAL_CONTRACT,
-      _poolId,
-      bytes("")
-    );
-
-    DATASTORE.writeAddress(_poolId, rks.withdrawalContract, wp);
-    DATASTORE.writeBytes(_poolId, rks.withdrawalCredential, DCL.addressToWC(wp));
-  }
-
-  /**
-   * @dev -> external
-   */
-
-  /**
-   * @notice deploys a bound liquidity pool for a staking pool, if it does not have one.
-   * @dev gives full allowance to the pool (should not be a problem as Portal only temporarily holds gETH)
-   * @dev unlike withdrawal Contract, a controller can deploy a liquidity pool after initiation as well
-   * @dev _package_data of a liquidity pool is only the staking pool's name.
-   */
-  function deployLiquidityPool(
-    PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 poolId
-  ) public {
-    _authenticate(DATASTORE, poolId, true, false, [false, true]);
-    require(DATASTORE.readAddress(poolId, rks.liquidityPool) == address(0), "SML:already deployed");
-
-    address lp = _deployGeodePackage(
-      self,
-      DATASTORE,
-      ID_TYPE.PACKAGE_LIQUIDITY_POOL,
-      poolId,
-      DATASTORE.readBytes(poolId, rks.NAME)
-    );
-
-    // approve gETH so we can use it in buybacks
-    self.gETH.setApprovalForAll(lp, true);
-
-    DATASTORE.writeAddress(poolId, rks.liquidityPool, lp);
-  }
 
   /**
    * @notice Creates a Configurable Trustless Staking Pool!
@@ -486,7 +349,7 @@ library StakeModuleLib {
 
     poolId = DSML.generateId(name, ID_TYPE.POOL);
     require(DATASTORE.readUint(poolId, rks.initiated) == 0, "SML:already initiated");
-    require(poolId > 10 ** 9, "SML:Wow! low pool id");
+    require(poolId > 10 ** 9, "SML:Wow! Low pool id");
 
     DATASTORE.writeUint(poolId, rks.initiated, block.timestamp);
 
@@ -525,34 +388,175 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:section                           ** POOL VISIBILITY **
+   * @custom:subsection                           ** POOL INITIATOR HELPERS **
+   *
+   * @custom:visibility -> internal
    */
 
   /**
-   * @dev -> external -> all
+   * @notice internal function to set a gETHMiddleware
+   * @param _middleware address of the new gETHMiddleware for given ID
+   * @dev every middleware has a unique index within the middlewares dynamic array.
+   * @dev if ever unset, SHOULD replace the implementation with address(0) for obvious security reasons.
+   */
+  function _setgETHMiddleware(
+    PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 id,
+    address _middleware
+  ) internal {
+    require(!self.gETH.isMiddleware(_middleware, id), "SML:already middleware");
+
+    DATASTORE.appendAddressArray(id, rks.middlewares, _middleware);
+
+    self.gETH.setMiddleware(_middleware, id, true);
+  }
+
+  /**
+   * @notice deploys a new gETHMiddleware by cloning (no upgradability)
+   * @param _id gETH id, also required for IgETHMiddleware.initialize
+   * @param _versionId provided version id, can use any as a middleware if allowed for TYPE = MIDDLEWARE_GETH
+   * @param _middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
+   * @dev currrently, can NOT deploy a middleware after initiation, thus only used by the initiator.
+   * @dev currrently, can NOT unset a middleware.
+   */
+  function _deploygETHMiddleware(
+    PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 _id,
+    uint256 _versionId,
+    bytes memory _middleware_data
+  ) internal {
+    require(_versionId > 0);
+    require(self.middlewares[ID_TYPE.MIDDLEWARE_GETH][_versionId], "SML:not a middleware");
+
+    address newgETHMiddleware = Clones.clone(DATASTORE.readAddress(_versionId, rks.CONTROLLER));
+
+    IgETHMiddleware(newgETHMiddleware).initialize(_id, address(self.gETH), _middleware_data);
+
+    _setgETHMiddleware(self, DATASTORE, _id, newgETHMiddleware);
+
+    // isolate the contract from middleware risk for ID
+    self.gETH.avoidMiddlewares(_id, true);
+  }
+
+  /**
+   * @notice deploys a new package for given id with given type from packages mapping.
+   * @param _type given package type
+   * @param _poolId pool id, required for IGeodePackage.initialize
+   * @param _package_data packages might require additional data on initialization
+   * @dev no cloning because GeodePackages has Limited Upgradability (based on UUPS)
+   */
+  function _deployGeodePackage(
+    PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 _poolId,
+    uint256 _type,
+    bytes memory _package_data
+  ) internal returns (address packageInstance) {
+    uint256 versionId = self.packages[_type];
+    require(versionId > 0);
+
+    packageInstance = address(
+      new ERC1967Proxy(DATASTORE.readAddress(versionId, rks.CONTROLLER), "")
+    );
+    // we don't call on deployment because initialize uses _getImplementation() which is not available
+    IGeodePackage(packageInstance).initialize(
+      _poolId,
+      DATASTORE.readAddress(_poolId, rks.CONTROLLER),
+      DATASTORE.readBytes(versionId, rks.NAME),
+      _package_data
+    );
+  }
+
+  /**
+   * @notice Deploys a Withdrawal Contract that will be used as a withdrawal credential on validator creation
+   * @dev every pool requires a Withdrawal Contract, thus this function is only used by the initiator
+   */
+  function _deployWithdrawalContract(
+    PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 _poolId
+  ) internal {
+    require(
+      DATASTORE.readAddress(_poolId, rks.withdrawalContract) == address(0),
+      "SML:already deployed"
+    );
+
+    address wp = _deployGeodePackage(
+      self,
+      DATASTORE,
+      _poolId,
+      ID_TYPE.PACKAGE_WITHDRAWAL_CONTRACT,
+      bytes("")
+    );
+
+    DATASTORE.writeAddress(_poolId, rks.withdrawalContract, wp);
+    DATASTORE.writeBytes(_poolId, rks.withdrawalCredential, DCL.addressToWC(wp));
+  }
+
+  /**
+   * @custom:subsection                           ** BOUND LIQUIDITY POOL **
+   *
+   * @custom:visibility -> public
+   */
+
+  /**
+   * @notice deploys a bound liquidity pool for a staking pool, if it does not have one.
+   * @dev gives full allowance to the pool (should not be a problem as Portal only temporarily holds gETH)
+   * @dev unlike withdrawal Contract, a controller can deploy a liquidity pool after initiation as well
+   * @dev _package_data of a liquidity pool is only the staking pool's name.
+   */
+  function deployLiquidityPool(
+    PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 poolId
+  ) public {
+    _authenticate(DATASTORE, poolId, true, false, [false, true]);
+    require(DATASTORE.readAddress(poolId, rks.liquidityPool) == address(0), "SML:already deployed");
+
+    address lp = _deployGeodePackage(
+      self,
+      DATASTORE,
+      poolId,
+      ID_TYPE.PACKAGE_LIQUIDITY_POOL,
+      DATASTORE.readBytes(poolId, rks.NAME)
+    );
+
+    DATASTORE.writeAddress(poolId, rks.liquidityPool, lp);
+    // approve gETH so we can use it in buybacks
+    self.gETH.setApprovalForAll(lp, true);
+  }
+
+  /**
+   * @custom:subsection                           ** BOUND LIQUIDITY POOL **
+   */
+
+  /**
+   * @custom:visibility -> external
    */
 
   /**
    * @notice changes the visibility of the pool
-   * @param isPrivate true if pool should be private, false for public pools
+   * @param makePrivate true if pool should be private, false for public pools
    * @dev whitelist is cleared when pool is set to public, to prevent legacy bugs if ever made private again.
    * Note private pools can whitelist addresses with the help of a third party contract.
    */
   function setPoolVisibility(
     DSML.IsolatedStorage storage DATASTORE,
     uint256 poolId,
-    bool isPrivate
+    bool makePrivate
   ) public {
     _authenticate(DATASTORE, poolId, true, false, [false, true]);
-    require(isPrivate != isPrivatePool(DATASTORE, poolId), "SML:already set");
+    require(makePrivate != isPrivatePool(DATASTORE, poolId), "SML:already set");
 
-    DATASTORE.writeUint(poolId, rks.privatePool, isPrivate ? 1 : 0);
+    DATASTORE.writeUint(poolId, rks.privatePool, makePrivate ? 1 : 0);
 
-    if (!isPrivate) {
+    if (!makePrivate) {
       DATASTORE.writeAddress(poolId, rks.whitelist, address(0));
     }
 
-    emit VisibilitySet(poolId, isPrivate);
+    emit VisibilitySet(poolId, makePrivate);
   }
 
   /**
@@ -571,11 +575,50 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:section                           ** MAINTAINERS **
+   * @custom:visibility -> view-public
    */
 
   /**
-   * @dev -> internal
+   * @notice returns true if the pool is private
+   */
+  function isPrivatePool(
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 poolId
+  ) public view returns (bool) {
+    return (DATASTORE.readUint(poolId, rks.privatePool) == 1);
+  }
+
+  /**
+   * @notice checks if the Whitelist allows staker to use given private pool
+   * @dev Owner of the pool doesn't need whitelisting
+   * @dev Otherwise requires a whitelisting address to be set
+   */
+  function isWhitelisted(
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 poolId,
+    address staker
+  ) public view returns (bool) {
+    if (DATASTORE.readAddress(poolId, rks.CONTROLLER) == staker) {
+      return true;
+    }
+
+    address whitelist = DATASTORE.readAddress(poolId, rks.whitelist);
+    require(whitelist != address(0), "SML:no whitelist");
+
+    return IWhitelist(whitelist).isAllowed(staker);
+  }
+
+  /**
+   * @custom:section                           ** ID MANAGEMENT **
+   *
+   */
+
+  /**
+   * @custom:subsection                           ** MAINTAINER **
+   */
+
+  /**
+   * @custom:visibility -> internal
    */
 
   /**
@@ -594,8 +637,9 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
+
   /**
    * @notice CONTROLLER of the ID can change the maintainer to any address other than ZERO_ADDRESS
    * @dev there can only be 1 maintainer per ID.
@@ -617,15 +661,18 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:section                           ** FEE **
+   * @custom:subsection                           ** FEE **
    */
 
   /**
-   * @dev -> view
+   * @custom:visibility -> view-public
    */
 
   /**
    * @notice Gets fee as a percentage, PERCENTAGE_DENOMINATOR = 100%
+   *
+   * @dev respecs to the switching delay.
+   *
    * @return fee = percentage * PERCENTAGE_DENOMINATOR / 100
    */
   function getMaintenanceFee(
@@ -639,7 +686,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
 
   /**
@@ -655,12 +702,12 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
 
   /**
    * @notice Changes the fee that is applied to the newly created validators, with A DELAY OF SWITCH_LATENCY.
-   * Note Can NOT be called again while its currently switching.
+   * @dev Can NOT be called again while its currently switching.
    * @dev advise that 100% == PERCENTAGE_DENOMINATOR
    */
   function switchMaintenanceFee(
@@ -670,10 +717,7 @@ library StakeModuleLib {
   ) external {
     _authenticate(DATASTORE, id, true, false, [true, true]);
 
-    require(
-      block.timestamp > DATASTORE.readUint(id, rks.feeSwitch),
-      "SML:fee is currently switching"
-    );
+    require(block.timestamp > DATASTORE.readUint(id, rks.feeSwitch), "SML:currently switching");
 
     DATASTORE.writeUint(id, rks.priorFee, DATASTORE.readUint(id, rks.fee));
     DATASTORE.writeUint(id, rks.feeSwitch, block.timestamp + SWITCH_LATENCY);
@@ -684,28 +728,26 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:section                           ** INTERNAL WALLET **
+   * @custom:subsection                           ** INTERNAL WALLET **
    *
-   * Internal wallet of an ID accrues fees over time.
+   * @dev Internal wallet of an ID accrues fees over time.
    * It is also used by Node Operators to fund 1 ETH per validator proposal, which is reimbursed if/when activated.
    */
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
 
   /**
    * @notice Simply increases the balance of an IDs Maintainer wallet
    * @param _value Ether (in Wei) amount to increase the wallet balance.
-   * @return success if the amount was deducted
    */
   function _increaseWalletBalance(
     DSML.IsolatedStorage storage DATASTORE,
     uint256 _id,
     uint256 _value
-  ) internal returns (bool success) {
+  ) internal {
     DATASTORE.addUint(_id, rks.wallet, _value);
-    return true;
   }
 
   /**
@@ -717,12 +759,12 @@ library StakeModuleLib {
     uint256 _id,
     uint256 _value
   ) internal {
-    require(DATASTORE.readUint(_id, rks.wallet) >= _value, "SML:NOT enough funds in wallet");
+    require(DATASTORE.readUint(_id, rks.wallet) >= _value, "SML:insufficient wallet balance");
     DATASTORE.subUint(_id, rks.wallet, _value);
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
 
   /**
@@ -734,7 +776,8 @@ library StakeModuleLib {
     uint256 id
   ) external returns (bool success) {
     _authenticate(DATASTORE, id, false, false, [true, true]);
-    return _increaseWalletBalance(DATASTORE, id, msg.value);
+    _increaseWalletBalance(DATASTORE, id, msg.value);
+    success = true;
   }
 
   /**
@@ -749,94 +792,35 @@ library StakeModuleLib {
   ) external returns (bool success) {
     _authenticate(DATASTORE, id, true, false, [true, true]);
 
-    require(address(this).balance >= value, "SML:not enough funds in Contract");
+    require(address(this).balance >= value, "SML:insufficient contract balance");
 
     _decreaseWalletBalance(DATASTORE, id, value);
     address controller = DATASTORE.readAddress(id, rks.CONTROLLER);
 
-    (bool sent, ) = payable(controller).call{value: value}("");
-    require(sent, "SML:Failed to send ETH");
-    return sent;
+    (success, ) = payable(controller).call{value: value}("");
+    require(success, "SML:Failed to send ETH");
   }
 
   /**
-   * @custom:section                           ** PRISON **
-   *
-   * When node operators act in a malicious way, which can also be interpereted as
-   * an honest mistake like using a faulty signature, Oracle imprisons the operator.
-   * These conditions are:
-   * * 1. Created a malicious validator(alien): faulty withdrawal credential, faulty signatures etc.
-   * * 2. Have not respect the validatorPeriod (or blamed for some other valid case)
-   * * 3. Stole block fees or MEV boost rewards from the pool
+   * @custom:subsection                           ** OPERATORS PERIOD **
    */
 
   /**
-   * @dev -> view
+   * @custom:visibility -> view-public
    */
 
-  /**
-   * @notice Checks if the given operator is Prisoned
-   * @dev rks.released key refers to the end of the last imprisonment, when the limitations of operator is lifted
-   */
-  function isPrisoned(
+  function getValidatorPeriod(
     DSML.IsolatedStorage storage DATASTORE,
-    uint256 operatorId
-  ) public view returns (bool) {
-    return (block.timestamp < DATASTORE.readUint(operatorId, rks.released));
+    uint256 id
+  ) public view returns (uint256 period) {
+    if (DATASTORE.readUint(id, rks.periodSwitch) > block.timestamp) {
+      return DATASTORE.readUint(id, rks.priorPeriod);
+    }
+    return DATASTORE.readUint(id, rks.validatorPeriod);
   }
 
   /**
-   * @dev -> internal
-   */
-
-  /**
-   * @notice Put an operator in prison
-   * @dev rks.released key refers to the end of the last imprisonment, when the limitations of operator is lifted
-   */
-  function _imprison(
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 _operatorId,
-    bytes calldata _proof
-  ) internal {
-    _authenticate(DATASTORE, _operatorId, false, false, [true, false]);
-
-    DATASTORE.writeUint(_operatorId, rks.released, block.timestamp + PRISON_SENTENCE);
-
-    emit Prisoned(_operatorId, _proof, block.timestamp + PRISON_SENTENCE);
-  }
-
-  /**
-   * @dev -> external
-   */
-
-  /**
-   * @notice allows imprisoning an Operator if the validator have not been exited until expectedExit
-   * @dev anyone can call this function
-   * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
-   * todo might add 2 other things:
-   * 1. validator proposed, it passed, but haven't been created even tho it has been a MAX_BEACON_DELAY
-   * 2. validator requested exit, it happened, but it haven't been executed even tho it has been MAX_BEACON_DELAY
-   */
-  function blameOperator(
-    PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
-    bytes calldata pk
-  ) external {
-    require(
-      self.validators[pk].state == VALIDATOR_STATE.ACTIVE,
-      "SML:validator is never activated"
-    );
-    require(block.timestamp > self.validators[pk].expectedExit, "SML:validator is active");
-
-    _imprison(DATASTORE, self.validators[pk].operatorId, pk);
-  }
-
-  /**
-   * @custom:section                           ** OPERATOR FUNCTIONS **
-   */
-
-  /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
 
   /**
@@ -854,7 +838,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
 
   /**
@@ -866,11 +850,11 @@ library StakeModuleLib {
     uint256 operatorId,
     uint256 newPeriod
   ) external {
-    _authenticate(DATASTORE, operatorId, false, true, [true, false]);
+    _authenticate(DATASTORE, operatorId, true, false, [true, false]);
 
     require(
       block.timestamp > DATASTORE.readUint(operatorId, rks.periodSwitch),
-      "SML:period is currently switching"
+      "SML:currently switching"
     );
 
     DATASTORE.writeUint(
@@ -886,14 +870,90 @@ library StakeModuleLib {
   }
 
   /**
+   * @custom:section                           ** PRISON **
+   *
+   * When node operators act in a malicious way, which can also be interpereted as
+   * an honest mistake like using a faulty signature, Oracle imprisons the operator.
+   * These conditions are:
+   * * 1. Created a malicious validator(alien): faulty withdrawal credential, faulty signatures etc.
+   * * 2. Have not respect the validatorPeriod (or blamed for some other valid case)
+   * * 3. Stole block fees or MEV boost rewards from the pool
+   */
+
+  /**
+   * @custom:visibility -> view-public
+   */
+
+  /**
+   * @notice Checks if the given operator is Prisoned
+   * @dev rks.release key refers to the end of the last imprisonment, when the limitations of operator is lifted
+   */
+  function isPrisoned(
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 operatorId
+  ) public view returns (bool) {
+    return (block.timestamp < DATASTORE.readUint(operatorId, rks.release));
+  }
+
+  /**
+   * @custom:visibility -> internal
+   */
+
+  /**
+   * @notice Put an operator in prison
+   * @dev rks.release key refers to the end of the last imprisonment, when the limitations of operator is lifted
+   */
+  function _imprison(
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 _operatorId,
+    bytes calldata _proof
+  ) internal {
+    _authenticate(DATASTORE, _operatorId, false, false, [true, false]);
+
+    DATASTORE.writeUint(_operatorId, rks.release, block.timestamp + PRISON_SENTENCE);
+
+    emit Prisoned(_operatorId, _proof, block.timestamp + PRISON_SENTENCE);
+  }
+
+  /**
+   * @custom:visibility -> external
+   */
+
+  /**
+   * @notice allows imprisoning an Operator if the validator have not been exited until expected exit
+   * @dev anyone can call this function while the state is ACTIVE
+   * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
+   *
+   * @dev this function lacks 2 other punishable acts:
+   * 1. while state is PROPOSED: validator proposed, it is passed, but haven't been created even tho it has been a MAX_BEACON_DELAY
+   * 2. while state is EXIT_REQUESTED:  validator requested exit, but it haven't been executed even tho it has been MAX_BEACON_DELAY
+   */
+  function blameOperator(
+    PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    bytes calldata pk
+  ) external {
+    require(
+      self.validators[pk].state == VALIDATOR_STATE.ACTIVE,
+      "SML:validator is never activated"
+    );
+    require(
+      block.timestamp > self.validators[pk].createdAt + self.validators[pk].period,
+      "SML:validator is active"
+    );
+
+    _imprison(DATASTORE, self.validators[pk].operatorId, pk);
+  }
+
+  /**
    * @custom:section                           ** VALIDATOR DELEGATION **
    */
 
   /**
-   * @dev -> view
+   * @custom:visibility -> view-public
    */
 
-  /** *
+  /**
    * @notice maximum number of remaining operator allowance that the given Operator is allowed to create for given Pool
    * @dev an operator can not create new validators if:
    * * 1. if operator is a monopoly
@@ -929,7 +989,7 @@ library StakeModuleLib {
         uint256 totalAllowance = DATASTORE.readUint(poolId, rks.totalAllowance);
         if (
           totalAllowance == 0 ||
-          (((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) > FALLBACK_THRESHOLD)
+          (((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) >= FALLBACK_THRESHOLD)
         ) {
           return remValidators;
         }
@@ -955,7 +1015,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
 
   function _setFallbackOperator(
@@ -982,7 +1042,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
 
   /**
@@ -1008,7 +1068,17 @@ library StakeModuleLib {
         DATASTORE.readUint(operatorIds[i], rks.TYPE) == ID_TYPE.OPERATOR,
         "SML:id not operator"
       );
-      require(allowances[i] < MAX_ALLOWANCE, "SML: > MAX_ALLOWANCE, set fallback");
+      require(allowances[i] < MAX_ALLOWANCE, "SML:> MAX_ALLOWANCE, set fallback");
+      unchecked {
+        i += 1;
+      }
+    }
+
+    if (fallbackOperator != 0) {
+      require(
+        DATASTORE.readUint(fallbackOperator, rks.TYPE) == ID_TYPE.OPERATOR,
+        "SML:fallback not operator"
+      );
     }
 
     uint256 newCumulativeSubset;
@@ -1031,11 +1101,15 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:section                           ** POOL HELPERS **
+   * @custom:section                           ** POOLING  **
    */
 
   /**
-   * @dev -> internal view
+   * @custom:subsection                           ** DEPOSIT HELPERS **
+   */
+
+  /**
+   * @custom:visibility -> view-internal
    */
 
   function _isGeodePackageIsolated(address _packageAddress) internal view returns (bool) {
@@ -1061,38 +1135,8 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> public view
+   * @custom:visibility -> view-public
    */
-
-  /**
-   * @notice checks if the Whitelist allows staker to use given private pool
-   * @dev Owner of the pool doesn't need whitelisting
-   * @dev Otherwise requires a whitelisting address to be set
-   */
-  function isWhitelisted(
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 poolId,
-    address staker
-  ) public view returns (bool) {
-    if (DATASTORE.readAddress(poolId, rks.CONTROLLER) == msg.sender) {
-      return true;
-    }
-
-    address whitelist = DATASTORE.readAddress(poolId, rks.whitelist);
-    require(whitelist != address(0), "SML:no whitelist");
-
-    return IWhitelist(whitelist).isAllowed(staker);
-  }
-
-  /**
-   * @notice returns true if the pool is private
-   */
-  function isPrivatePool(
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 poolId
-  ) public view returns (bool) {
-    return (DATASTORE.readUint(poolId, rks.privatePool) == 1);
-  }
 
   /**
    * @notice returns true if the price is valid:
@@ -1135,11 +1179,11 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:section                           ** POOLING OPERATIONS **
+   * @custom:subsection                           ** DEPOSIT **
    */
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
 
   /**
@@ -1154,7 +1198,10 @@ library StakeModuleLib {
   ) internal returns (uint256 mintedgETH) {
     require(isMintingAllowed(self, DATASTORE, _poolId), "SML:minting is not allowed");
 
-    mintedgETH = (((_ethAmount * self.gETH.denominator()) / self.gETH.pricePerShare(_poolId)));
+    uint256 price = self.gETH.pricePerShare(_poolId);
+    require(price > 0, "SML:price is zero?");
+
+    mintedgETH = (((_ethAmount * self.gETH.denominator()) / price));
     self.gETH.mint(address(this), _poolId, mintedgETH, "");
     DATASTORE.addUint(_poolId, rks.surplus, _ethAmount);
   }
@@ -1197,7 +1244,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
 
   /**
@@ -1233,7 +1280,7 @@ library StakeModuleLib {
     }
 
     uint256 remEth = msg.value;
-    (boughtgETH, remEth) = _buyback(DATASTORE, poolId, remEth, deadline);
+    (remEth, boughtgETH) = _buyback(DATASTORE, poolId, remEth, deadline);
 
     if (remEth > 0) {
       mintedgETH = _mintgETH(self, DATASTORE, poolId, remEth);
@@ -1250,14 +1297,14 @@ library StakeModuleLib {
   /**
    * @custom:section                           ** VALIDATOR CREATION **
    *
-   * Creation of a Validator takes 2 steps: propose and beacon stake.
+   * @dev Creation of a Validator takes 2 steps: propose and beacon stake.
    * Before entering stake() function, _canStake verifies the eligibility of
    * given pubKey that is proposed by an operator with proposeStake function.
    * Eligibility is defined by an optimistic alienation, check OracleUtils._alienateValidator() for info.
    */
 
   /**
-   * @dev -> view
+   * @custom:visibility -> view
    */
 
   /**
@@ -1333,46 +1380,56 @@ library StakeModuleLib {
     uint256 pkLen = pubkeys.length;
 
     require((pkLen > 0) && (pkLen <= DCL.MAX_DEPOSITS_PER_CALL), "SML:1 - 50 validators");
-    require(pkLen == signatures1.length, "SML:invalid signatures1 length");
-    require(pkLen == signatures31.length, "SML:invalid signatures31 length");
 
-    require(operatorAllowance(self, DATASTORE, poolId, operatorId) >= pkLen, "SML:low allowance");
+    require(
+      pkLen == signatures1.length && pkLen == signatures31.length,
+      "SML:invalid input length"
+    );
 
-    unchecked {
-      require(
-        DATASTORE.readUint(poolId, rks.surplus) >= DCL.DEPOSIT_AMOUNT * pkLen,
-        "SML:NOT enough surplus"
-      );
-    }
+    require(
+      operatorAllowance(self, DATASTORE, poolId, operatorId) >= pkLen,
+      "SML:insufficient allowance"
+    );
+
+    require(
+      DATASTORE.readUint(poolId, rks.surplus) >= DCL.DEPOSIT_AMOUNT * pkLen,
+      "SML:NOT enough surplus"
+    );
 
     for (uint256 i = 0; i < pkLen; ) {
       require(pubkeys[i].length == DCL.PUBKEY_LENGTH, "SML:PUBKEY_LENGTH ERROR");
       require(signatures1[i].length == DCL.SIGNATURE_LENGTH, "SML:SIGNATURE_LENGTH ERROR");
       require(signatures31[i].length == DCL.SIGNATURE_LENGTH, "SML:SIGNATURE_LENGTH ERROR");
-      require(
-        self.validators[pubkeys[i]].state == VALIDATOR_STATE.NONE,
-        "SML: used or alienated pk"
-      );
+      unchecked {
+        i += 1;
+      }
     }
 
     ConstantValidatorData memory valData = ConstantValidatorData({
       index: uint64(self.VALIDATORS_INDEX + 1),
-      expectedExit: uint64(block.timestamp + DATASTORE.readUint(operatorId, rks.validatorPeriod)),
+      period: uint64(getValidatorPeriod(DATASTORE, operatorId)),
       poolFee: getMaintenanceFee(DATASTORE, poolId),
       operatorFee: getMaintenanceFee(DATASTORE, operatorId),
+      governanceFee: self.GOVERNANCE_FEE,
       withdrawalCredential: DATASTORE.readBytes(poolId, rks.withdrawalCredential)
     });
 
     for (uint256 i = 0; i < pkLen; ) {
+      require(
+        self.validators[pubkeys[i]].state == VALIDATOR_STATE.NONE,
+        "SML: used or alienated pk"
+      );
+
       self.validators[pubkeys[i]] = Validator(
         VALIDATOR_STATE.PROPOSED,
         valData.index + uint64(i),
         uint64(block.timestamp),
-        valData.expectedExit,
+        valData.period,
         poolId,
         operatorId,
         valData.poolFee,
         valData.operatorFee,
+        valData.governanceFee,
         signatures31[i]
       );
 
@@ -1397,7 +1454,7 @@ library StakeModuleLib {
     DATASTORE.appendBytesArrayBatch(poolId, rks.validators, pubkeys);
     DATASTORE.appendBytesArrayBatch(operatorId, rks.validators, pubkeys);
 
-    self.VALIDATORS_INDEX += pubkeys.length;
+    self.VALIDATORS_INDEX += pkLen;
 
     emit StakeProposal(poolId, operatorId, pubkeys);
   }
@@ -1433,13 +1490,7 @@ library StakeModuleLib {
 
     {
       uint256 _verificationIndex = self.VERIFICATION_INDEX;
-      uint256 _lastPoolId = self.validators[pubkeys[0]].poolId;
       for (uint256 j = 0; j < pubkeys.length; ) {
-        uint256 _curPoolId = self.validators[pubkeys[j]].poolId;
-        if (_lastPoolId != _curPoolId) {
-          _lastPoolId = _curPoolId;
-        }
-
         require(
           _canStake(self, pubkeys[j], _verificationIndex),
           "SML:NOT all pubkeys are stakeable"
@@ -1494,10 +1545,11 @@ library StakeModuleLib {
         unchecked {
           sinceLastIdChange = pubkeys.length - lastIdChange;
         }
-
-        DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT * (sinceLastIdChange));
-        DATASTORE.subUint(poolId, proposedValKey, (sinceLastIdChange));
-        DATASTORE.addUint(poolId, activeValKey, (sinceLastIdChange));
+        if (sinceLastIdChange > 0) {
+          DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT * (sinceLastIdChange));
+          DATASTORE.subUint(poolId, proposedValKey, (sinceLastIdChange));
+          DATASTORE.addUint(poolId, activeValKey, (sinceLastIdChange));
+        }
       }
 
       _increaseWalletBalance(DATASTORE, operatorId, DCL.DEPOSIT_AMOUNT_PRESTAKE * pubkeys.length);

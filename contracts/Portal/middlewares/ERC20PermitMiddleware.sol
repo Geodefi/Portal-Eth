@@ -3,16 +3,16 @@
 
 pragma solidity =0.8.7;
 
+// interfaces
+import {IERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-IERC20PermitUpgradeable.sol";
 // libraries
 import {BytesLib} from "../helpers/BytesLib.sol";
 // contracts
 import {ERC20Middleware} from "./ERC20Middleware.sol";
 // external
-import {IERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-IERC20PermitUpgradeable.sol";
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @dev differences between ERC20PermitMiddleware and Openzeppelin's implementation of ERC20PermitUpgradable is:
@@ -21,7 +21,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * -> added initialize
  *
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/54803be62207c2412e27d09325243f2f1452f7b9/contracts/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol
- * diffchecker: https://www.diffchecker.com/Hwmvi5HF
  */
 
 /**
@@ -36,12 +35,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  *
  * @custom:storage-size 51
  */
-contract ERC20PermitMiddleware is
-  Initializable,
-  ERC20Middleware,
-  IERC20PermitUpgradeable,
-  EIP712Upgradeable
-{
+contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP712Upgradeable {
   using CountersUpgradeable for CountersUpgradeable.Counter;
 
   mapping(address => CountersUpgradeable.Counter) private _nonces;
@@ -49,14 +43,17 @@ contract ERC20PermitMiddleware is
   // solhint-disable-next-line var-name-mixedcase
   bytes32 private constant _PERMIT_TYPEHASH =
     keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
   /**
    * @dev In previous versions `_PERMIT_TYPEHASH` was declared as `immutable`.
    * However, to ensure consistency with the upgradeable transpiler, we will continue
    * to reserve a slot.
    * @custom:oz-renamed-from _PERMIT_TYPEHASH
+   *
+   * @dev GEODE: we don't need this.
    */
   // solhint-disable-next-line var-name-mixedcase
-  bytes32 private _PERMIT_TYPEHASH_DEPRECATED_SLOT;
+  // bytes32 private _PERMIT_TYPEHASH_DEPRECATED_SLOT;
 
   ///@custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -74,7 +71,7 @@ contract ERC20PermitMiddleware is
     uint256 id_,
     address gETH_,
     bytes calldata data
-  ) public virtual override initializer returns (bool) {
+  ) public virtual override initializer {
     uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
     __ERC20MiddlewarePermit_init(
       id_,
@@ -82,7 +79,6 @@ contract ERC20PermitMiddleware is
       string(BytesLib.slice(data, 32, nameLen)),
       string(BytesLib.slice(data, 32 + nameLen, data.length - (32 + nameLen)))
     );
-    return true;
   }
 
   /**
@@ -96,9 +92,8 @@ contract ERC20PermitMiddleware is
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
-    __Context_init_unchained();
-    __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
-    __EIP712_init_unchained(name_, "1");
+    __EIP712_init(name_, "1");
+    __ERC20Middleware_init(id_, gETH_, name_, symbol_);
     __ERC20MiddlewarePermit_init_unchained();
   }
 
@@ -160,6 +155,9 @@ contract ERC20PermitMiddleware is
    * @dev This empty reserved space is put in place to allow future versions to add new
    * variables without shifting down storage in the inheritance chain.
    * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+   *
+   * @dev GEODE: middlewares are de-facto not upgrdable, just here to be cloned.
+   * * So, we don't need this gap.
    */
-  uint256[49] private __gap;
+  // uint256[] private __gap;
 }

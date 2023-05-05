@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+// external
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ERC20Upgradeable, ERC20BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
 /**
  * @title Liquidity Provider Token
  * @notice This token is an ERC20 detailed token with added capability to be minted by the owner.
- * It is used to represent user's shares when providing liquidity to swap contracts.
- * @dev Only Swap contracts should initialize and own LPToken contracts.
+ * It is used to represent user shares when providing liquidity to LPP.
+ * @dev Only LPP contracts should initialize and own LPToken contracts.
  */
 contract LPToken is ERC20BurnableUpgradeable, OwnableUpgradeable {
   /**

@@ -13,7 +13,7 @@ require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 const ethers = require("ethers");
-require("./scripts");
+// require("./scripts");
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -43,12 +43,15 @@ const config = {
       deploy: ["./deploy"],
       forking: FORK_MAINNET
         ? {
-            url: process.env.GOERLI,
+            url: process.env.GOERLI_URL,
           }
         : undefined,
+      accounts: {
+        accountsBalance: "1000000000000000000000000",
+      },
     },
     goerli: {
-      url: process.env.GOERLI,
+      url: process.env.GOERLI_URL,
       deploy: ["./deploy"],
       chainId: 5,
       gasPrice: ethers.utils.parseUnits("100", "gwei").toNumber(),

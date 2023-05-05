@@ -3,13 +3,14 @@ pragma solidity =0.8.7;
 
 /**
  * @notice Reserved Key Space for DataStoreModule
- * * helps preventing potential dev mistakes
- * * helps keeping track of them
- * * limits keys to bytes32
+ * * helps preventing potential dev mistakes.
+ * * helps keeping track of them.
+ * * limits keys to bytes32.
+ *
  * @dev utilize a key with rks.key
  * @dev keep this list in alphabetical order, per module.
  * @dev NEVER name your variables something else other than *its string value*.
- * @dev array keys actually return uint, which is the lenght of the array.
+ * @dev ! array keys with readUint returns the lenght of the array !
  */
 library RESERVED_KEY_SPACE {
   /**
@@ -124,9 +125,9 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint
-   * @custom:definition timestamp of the release date for the latest imprisonment for an operator
+   * @custom:definition timestamp of the date of the latest imprisonment for an operator
    */
-  bytes32 internal constant released = "released";
+  bytes32 internal constant release = "release";
 
   /**
    * @custom:type uint

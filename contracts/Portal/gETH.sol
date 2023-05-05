@@ -112,9 +112,8 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
 
   /**
    * @custom:section                           ** DENOMINATOR **
-   */
-  /**
-   * @dev -> view: all
+   *
+   * @custom:visibility -> view
    */
   /**
    * @notice a centralized denominator for all contract using gETH
@@ -128,9 +127,11 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** MIDDLEWARES **
    */
+
   /**
-   * @dev -> view
+   * @custom:visibility -> view-public
    */
+
   /**
    * @notice Check if an address is approved as an middleware for an ID
    * @dev ADDED for gETH
@@ -143,7 +144,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
   /**
    * @dev Only authorized parties should set the middleware
@@ -154,7 +155,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
   /**
    * @notice Set an address of a contract that will
@@ -180,7 +181,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @custom:section                           ** AVOIDERS **
    */
   /**
-   * @dev -> view
+   * @custom:visibility -> view-public
    */
   /**
    * @notice Checks if the given address restricts the affect of the middlewares on their gETH
@@ -192,7 +193,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
   /**
    * @notice Restrict any affect of middlewares on the tokens of caller
@@ -210,9 +211,11 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** PRICE **
    */
+
   /**
-   * @dev -> view
+   * @custom:visibility -> view-external
    */
+
   /**
    * @dev ADDED for gETH
    * @return price of the derivative in terms of underlying token, Ether
@@ -230,8 +233,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
+
   /**
    * @dev ADDED for gETH
    */
@@ -241,8 +245,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
+
   /**
    * @notice Only ORACLE can call this function and set price
    * @dev ADDED for gETH
@@ -260,9 +265,8 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
 
   /**
    * @custom:section                           ** ROLES **
-   */
-  /**
-   * @dev -> external: all
+   *
+   * @custom:visibility -> external
    */
 
   /**
@@ -334,7 +338,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    */
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
 
   /**
@@ -357,7 +361,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
 
   /**

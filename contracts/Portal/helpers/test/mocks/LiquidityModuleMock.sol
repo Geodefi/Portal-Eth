@@ -125,7 +125,5 @@ contract LiquidityModuleMock is LiquidityModule {
    * @notice fallback functions
    */
 
-  fallback() external payable {}
-
   receive() external payable {}
 }

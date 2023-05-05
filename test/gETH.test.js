@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 
 const { expectRevert, expectEvent, constants, BN } = require("@openzeppelin/test-helpers");
-const { ETHER_STR, getReceiptTimestamp, impersonate } = require("./utils/utils");
+const { ETHER_STR, getReceiptTimestamp, impersonate } = require("./utils");
 const { shouldBehaveLikeERC1155 } = require("./utils/ERC1155.behavior");
 
 const { ZERO_BYTES32, ZERO_ADDRESS } = constants;

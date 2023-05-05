@@ -19,7 +19,8 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
  *
  * @dev Following contracts are taken from Openzeppelin.
  * Only difference is ERC1155._doSafeTransferAcceptanceCheck is being internal virtual instead of private,
- * because we want to override it in gETH
+ * because we want to override it in gETH.
+ *
  * ERC1155:
  * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol
  * ERC1155Burnable:

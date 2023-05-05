@@ -8,7 +8,7 @@ import {IgETH} from "../../../interfaces/IgETH.sol";
 // libraries
 import {AmplificationLib as AL} from "./AmplificationLib.sol";
 // contracts
-import {LPToken} from "../../../helpers/LPToken.sol";
+import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
 
 /**
  * @title LiquidityModule Library - LML
@@ -17,15 +17,15 @@ import {LPToken} from "../../../helpers/LPToken.sol";
  * * Contains functions responsible for custody and AMM functionalities with some changes.
  * * The main functionality of Liquidity Pools is allowing the depositors to have instant access to liquidity
  * * relying on the Oracle Price, with the help of Liquidity Providers.
- * * * It is important to change the focus point (1-1) of the pricing algorithm with PriceIn and PriceOut functions.
- * * * Because the underlying price of the staked assets are expected to raise in time.
- * * * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
  *
- * @dev Contracts relying on this library must initialize LiquidityModuleLib.Swap struct then use this library
- * for LiquidityModuleLib.Swap struct. Note that this library contains both functions called by users and admins.
- * Admin functions should be protected within contracts using this library.
+ * @dev focus point (1-1) of the pricing algorithm is manipulated with PriceIn and PriceOut functions.
+ * Because the underlying price of the staked assets are expected to raise in time.
+ * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
+ * Whenever "Effective Balance" is mentioned it refers to the balance projected with the underlying price.
  *
- * @dev Whenever "Effective Balance" is mentioned it refers to the balance projected with the underlying price.
+ * @dev Contracts relying on this library must initialize LiquidityModuleLib.Swap struct
+ * * Note that this library contains both functions called by users and admins.
+ * * Admin functions should be protected within contracts using this library.
  *
  * @author Ice Bear & Crash Bandicoot
  */
@@ -36,9 +36,10 @@ library LiquidityModuleLib {
 
   /**
    * @notice Storage struct for the liquidity pool logic, should be correctly initialized.
-   * @param gETH ERC1155 contract reference
+   *
+   * @param gETH ERC1155 contract
    * @param lpToken address of the LP Token
-   * @param pooledTokenId gETH ID of the pooled derivative
+   * @param pooledTokenId gETH ID of the pooled staking derivative
    * @param initialA the amplification coefficient * n * (n - 1)
    * @param futureA the amplification coef that will be effective after futureATime
    * @param initialATime variable around the ramp management of A
@@ -46,11 +47,11 @@ library LiquidityModuleLib {
    * @param swapFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from resulting tokens of a swap
    * @param adminFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from swapFee
    * @param balances the pool balance as [ETH, gETH]; the contract's actual token balance might differ
-   * @param __gap keep the contract size at 16, currently 11 slots(32 bytes)
+   * @param __gap keep the contract size at 16
    */
   struct Swap {
     IgETH gETH;
-    LPToken lpToken;
+    ILPToken lpToken;
     uint256 pooledTokenId;
     uint256 initialA;
     uint256 futureA;
@@ -79,7 +80,7 @@ library LiquidityModuleLib {
    * {add,remove} Liquidity functions to avoid stack too deep errors
    */
   struct ManageLiquidityInfo {
-    LPToken lpToken;
+    ILPToken lpToken;
     uint256 d0;
     uint256 d1;
     uint256 d2;
@@ -92,16 +93,16 @@ library LiquidityModuleLib {
    * @custom:section                           ** CONSTANTS **
    */
 
-  // Max swap fee is 1% or 100bps of each swap
+  /// @notice Max swap fee is 1% or 100bps of each swap
   uint256 public constant MAX_SWAP_FEE = PERCENTAGE_DENOMINATOR / 100;
 
-  // Max adminFee is 50% of the swapFee
-  // adminFee does not add additional fee on top of swapFee
-  // instead it takes a certain percentage of the swapFee.
-  // Therefore it has no impact on users but only on the earnings of LPs
+  /// @notice Max adminFee is 50% of the swapFee
+  /// adminFee does not add additional fee on top of swapFee
+  /// instead it takes a certain percentage of the swapFee.
+  /// Therefore it has no impact on users but only on the earnings of LPs
   uint256 public constant MAX_ADMIN_FEE = (50 * PERCENTAGE_DENOMINATOR) / 100;
 
-  // Constant value used as max loop limit
+  /// @notice Constant value used as max loop limit
   uint256 private constant MAX_LOOP_LIMIT = 256;
 
   /**
@@ -142,22 +143,19 @@ library LiquidityModuleLib {
 
   /**
    * @custom:section                           ** HELPERS **
-   */
-  /**
-   * @dev -> pure: all
-   */
-
-  /**
-   * @dev - Math helpers
+   *
+   * @custom:visibility -> pure-internal
    */
 
   /**
-   * @notice Compares a and b and returns true if the difference between a and b
-   *         is less than 1 or equal to each other.
+   * @custom:subsection Math helpers
+   */
+
+  /**
+   * @notice Compares a and b and returns true if the difference between a and b is 1 or 0.
    * @param a uint256 to compare with
    * @param b uint256 to compare with
-   * @return True if the difference between a and b is less than 1 or equal,
-   *         otherwise return false
+   * @return True if the difference between a and b is less than 1 or equal.
    */
   function within1(uint256 a, uint256 b) internal pure returns (bool) {
     return (difference(a, b) <= 1);
@@ -177,7 +175,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev - StableSwap invariants: D,Y,YD
+   * @custom:subsection StableSwap invariants: D,Y,YD
    */
 
   /**
@@ -320,11 +318,9 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @custom:section                           ** REBASING FUNCTIONS **
-   */
-
-  /**
-   * @dev -> internal view: all
+   * @custom:subsection                           ** REBASING FUNCTIONS **
+   *
+   * @custom:visibility -> view-internal
    */
 
   /**
@@ -394,13 +390,15 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @custom:section                           ** DEBT FUNCTIONS **
+   * @custom:subsection                           ** DEBT FUNCTIONS **
    *
-   * * debt refers to the amount of ETH needed to stabilize the pool
+   * @custom:visibility -> view
+   *
+   * @dev debt refers to the amount of ETH needed to stabilize the pool
    */
 
   /**
-   * @dev -> internal view
+   * @custom:visibility -> internal
    */
   /**
    * @notice Get Debt, The amount of buyback for stable pricing.
@@ -426,7 +424,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev -> external view
+   * @custom:visibility -> external
    */
   /**
    * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
@@ -441,7 +439,7 @@ library LiquidityModuleLib {
    */
 
   /**
-   * @dev -> pure
+   * @custom:visibility -> pure-internal
    */
   /**
    * @notice A simple method to calculate amount of each underlying
@@ -466,7 +464,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev -> internal view
+   * @custom:visibility -> view-internal
    */
 
   function _calculateWithdrawOneToken(
@@ -522,7 +520,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @dev -> external view
+   * @custom:visibility -> view-external
    */
 
   /**
@@ -607,7 +605,7 @@ library LiquidityModuleLib {
    */
   function getVirtualPrice(Swap storage self) external view returns (uint256) {
     uint256 d = getD(_pricedInBatch(self, self.balances), AL._getAPrecise(self));
-    LPToken lpToken = self.lpToken;
+    ILPToken lpToken = self.lpToken;
     uint256 supply = lpToken.totalSupply();
     if (supply > 0) {
       return (d * 10 ** 18) / supply;
@@ -699,10 +697,10 @@ library LiquidityModuleLib {
 
   /**
    * @custom:section                           ** ADMIN HELPER FUNCTIONS **
+   *
+   * @custom:visibility -> view-external
    */
-  /**
-   * @dev -> external view
-   */
+
   /**
    * @notice return accumulated amount of admin fees of the token with given index
    * @param self Swap struct to read from
@@ -713,18 +711,17 @@ library LiquidityModuleLib {
     require(index < 2, "LML:Token index out of range");
     if (index == 0) {
       return address(this).balance - (self.balances[index]);
-    }
-    if (index == 1) {
+    } else if (index == 1) {
       return self.gETH.balanceOf(address(this), self.pooledTokenId) - (self.balances[index]);
+    } else {
+      revert();
     }
-    return 0;
   }
 
   /**
    * @custom:section                           ** STATE MODIFYING FUNCTIONS **
-   */
-  /**
-   * @dev -> external: all
+   *
+   * @custom:visibility -> external
    */
 
   /**
@@ -896,7 +893,7 @@ library LiquidityModuleLib {
     uint256 amount,
     uint256[2] calldata minAmounts
   ) external returns (uint256[2] memory) {
-    LPToken lpToken = self.lpToken;
+    ILPToken lpToken = self.lpToken;
     IgETH gETHRef = self.gETH;
     require(amount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
 
@@ -939,7 +936,7 @@ library LiquidityModuleLib {
     uint8 tokenIndex,
     uint256 minAmount
   ) external returns (uint256) {
-    LPToken lpToken = self.lpToken;
+    ILPToken lpToken = self.lpToken;
     IgETH gETHRef = self.gETH;
 
     require(tokenAmount <= lpToken.balanceOf(msg.sender), "LML:>LP.balanceOf");
@@ -1055,10 +1052,7 @@ library LiquidityModuleLib {
   }
 
   /**
-   * @custom:section                           ** ADMIN FUNCTIONS **
-   */
-  /**
-   * @dev -> external: all
+   * @custom:subsection                           ** ADMIN FUNCTIONS **
    */
 
   /**

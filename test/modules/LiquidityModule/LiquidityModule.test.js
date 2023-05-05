@@ -7,7 +7,7 @@ const {
   PERCENTAGE_DENOMINATOR,
   ETHER_STR,
   DAY,
-} = require("../../utils/utils");
+} = require("../../utils");
 
 const { ZERO_ADDRESS, MAX_UINT256, ZERO_BYTES32 } = constants;
 
@@ -27,11 +27,8 @@ contract("LiquidityModule", function (accounts) {
   const MAX_SWAP_FEE = PERCENTAGE_DENOMINATOR.divn(100); // 1%
   const poolName = "MY POOL";
 
-  /// Note that this will return ethers.contract, instead of a truffleContract object.
-  /// so you gotta use connect, toString() etc.
-  /// truffleContract uses bn.js and ethers uses bignumber.js
   const getLP = async function (address) {
-    return await ethers.getContractAt("LPToken", address);
+    return await LPToken.at(address);
   };
 
   before(async function () {
@@ -232,12 +229,12 @@ contract("LiquidityModule", function (accounts) {
       this.lpToken = await getLP((await this.contract.LiquidityParams()).lpToken);
       await this.gETH.setPricePerShare(ETHER_STR, tokenId);
 
-      for (const [index, account] of [deployer, user1, user2].entries()) {
+      for (const account of [deployer, user1, user2]) {
         await this.gETH.mint(account, tokenId, initBalances[0], "0x", { from: deployer });
         await this.gETH.setApprovalForAll(this.contract.address, true, { from: account });
-        await this.lpToken
-          .connect((await ethers.getSigners())[index])
-          .approve(this.contract.address, MAX_UINT256.toString());
+        await this.lpToken.approve(this.contract.address, MAX_UINT256.toString(), {
+          from: account,
+        });
       }
 
       await this.gETH.mint(deployer, tokenId, initDeposit[1], ZERO_BYTES32, {
@@ -302,7 +299,7 @@ contract("LiquidityModule", function (accounts) {
       });
       describe("getVirtualPrice", function () {
         it("Returns zero if no LP", async function () {
-          const lpTokenBalance = BN((await this.lpToken.balanceOf(deployer)).toString());
+          const lpTokenBalance = await this.lpToken.balanceOf(deployer);
 
           await this.contract.removeLiquidity(lpTokenBalance, [0, 0], MAX_UINT256, {
             from: deployer,
@@ -682,7 +679,7 @@ contract("LiquidityModule", function (accounts) {
           const EtherBefore = await balance.current(user1);
           const firstTokenBefore = await this.gETH.balanceOf(user1, tokenId);
 
-          const user1LPTokenBalance = new BN((await this.lpToken.balanceOf(user1)).toString());
+          const user1LPTokenBalance = await this.lpToken.balanceOf(user1);
 
           const tx = await this.contract.removeLiquidity(user1LPTokenBalance, [0, 0], MAX_UINT256, {
             from: user1,
@@ -866,7 +863,7 @@ contract("LiquidityModule", function (accounts) {
 
     describe("addLiquidity", function () {
       it("Reverts when contract is paused", async function () {
-        const beforePoolTokenAmount = new BN((await this.lpToken.balanceOf(user1)).toString());
+        const beforePoolTokenAmount = await this.lpToken.balanceOf(user1);
         await this.contract.pause();
         await expectRevert(
           this.contract.addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
@@ -875,7 +872,7 @@ contract("LiquidityModule", function (accounts) {
           }),
           "Pausable: paused"
         );
-        const afterPoolTokenAmount = new BN((await this.lpToken.balanceOf(user1)).toString());
+        const afterPoolTokenAmount = await this.lpToken.balanceOf(user1);
 
         expect(afterPoolTokenAmount).to.be.bignumber.equal(beforePoolTokenAmount);
         // unpause
@@ -886,7 +883,7 @@ contract("LiquidityModule", function (accounts) {
           from: user1,
         });
 
-        const finalPoolTokenAmount = new BN((await this.lpToken.balanceOf(user1)).toString());
+        const finalPoolTokenAmount = await this.lpToken.balanceOf(user1);
 
         expect(finalPoolTokenAmount).to.be.bignumber.gt(beforePoolTokenAmount);
         expect(finalPoolTokenAmount).to.be.bignumber.equal("3993470625071427531");
@@ -903,9 +900,9 @@ contract("LiquidityModule", function (accounts) {
       });
 
       it("Reverts with 'Must supply all tokens in pool'", async function () {
-        const lpSupInit = new BN((await this.lpToken.balanceOf(deployer)).toString());
+        const lpSupInit = await this.lpToken.balanceOf(deployer);
         await this.contract.removeLiquidity(lpSupInit, [0, 0], MAX_UINT256);
-        const lpSupEnd = new BN((await this.lpToken.balanceOf(deployer)).toString());
+        const lpSupEnd = await this.lpToken.balanceOf(deployer);
         await expect(lpSupEnd).to.be.bignumber.equal(new BN("0"));
         await expectRevert(
           this.contract.addLiquidity([String(0), String(3e18)], 0, MAX_UINT256, { from: user1 }),
@@ -939,7 +936,7 @@ contract("LiquidityModule", function (accounts) {
           { value: ethers.utils.parseEther("1"), from: user1 }
         );
 
-        const actualPoolTokenAmount = new BN((await this.lpToken.balanceOf(user1)).toString());
+        const actualPoolTokenAmount = await this.lpToken.balanceOf(user1);
 
         // The actual pool token amount is less than 5e18 due to the imbalance of the underlying tokens
         expect(actualPoolTokenAmount).to.be.bignumber.equal("3993470625071427531");
@@ -967,7 +964,7 @@ contract("LiquidityModule", function (accounts) {
           { value: ethers.utils.parseEther("1"), from: user1 }
         );
 
-        const actualPoolTokenAmount = new BN((await this.lpToken.balanceOf(user1)).toString());
+        const actualPoolTokenAmount = await this.lpToken.balanceOf(user1);
 
         expect(actualPoolTokenAmount).to.be.bignumber.gte(
           calculatedPoolTokenAmountWithNegativeSlippage
@@ -993,7 +990,7 @@ contract("LiquidityModule", function (accounts) {
       });
 
       it("Returns correct minted lpToken amount", async function () {
-        const initBal = new BN((await this.lpToken.balanceOf(user1)).toString());
+        const initBal = await this.lpToken.balanceOf(user1);
         const receipt = await this.contract.addLiquidity(
           [String(1e18), String(1e18)],
           0,
@@ -1003,7 +1000,7 @@ contract("LiquidityModule", function (accounts) {
             from: user1,
           }
         );
-        const finalBal = new BN((await this.lpToken.balanceOf(user1)).toString());
+        const finalBal = await this.lpToken.balanceOf(user1);
         const expMint = finalBal.sub(initBal);
 
         expectEvent(receipt, "return$addLiquidity", { ret0: expMint });
@@ -1088,7 +1085,7 @@ contract("LiquidityModule", function (accounts) {
           value: ethers.utils.parseEther("2"),
           from: user1,
         });
-        currentUser1Balance = new BN((await this.lpToken.balanceOf(user1)).toString());
+        currentUser1Balance = await this.lpToken.balanceOf(user1);
         expect(currentUser1Balance).to.be.bignumber.equal("2008115340140025950");
       });
 
@@ -1233,7 +1230,7 @@ contract("LiquidityModule", function (accounts) {
           const EtherBefore = await balance.current(user1);
           const firstTokenBalanceBefore = await this.gETH.balanceOf(user1, tokenId);
 
-          const poolTokenBalanceBefore = new BN((await this.lpToken.balanceOf(user1)).toString());
+          const poolTokenBalanceBefore = await this.lpToken.balanceOf(user1);
 
           // User 1 withdraws imbalanced tokens
 
@@ -1250,7 +1247,7 @@ contract("LiquidityModule", function (accounts) {
           const EtherAfter = await balance.current(user1);
           const firstTokenBalanceAfter = await this.gETH.balanceOf(user1, tokenId);
 
-          const poolTokenBalanceAfter = new BN((await this.lpToken.balanceOf(user1)).toString());
+          const poolTokenBalanceAfter = await this.lpToken.balanceOf(user1);
 
           // Check the actual returned token amounts match the requested amounts
           expect(EtherAfter.add(gasUsed).sub(EtherBefore)).to.be.bignumber.equal(String(1e18));
@@ -1278,7 +1275,7 @@ contract("LiquidityModule", function (accounts) {
             { from: user1 }
           );
 
-          const futureUser1Balance = new BN((await this.lpToken.balanceOf(user1)).toString());
+          const futureUser1Balance = await this.lpToken.balanceOf(user1);
 
           expectEvent(receipt, "return$removeLiquidityImbalance", {
             ret0: currentUser1Balance.sub(futureUser1Balance),

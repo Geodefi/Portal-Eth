@@ -5,18 +5,20 @@ pragma solidity =0.8.7;
 import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
 
 /**
- * @title Amplification Library - AL
+ * @title AL: Amplification Library
  *
- * @notice An helper library for LiquidityModuleLibrary(LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
- * @dev This library assumes the struct is fully validated.
+ * @notice A helper library for Liquidity Module Library (LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
+ *
+ * @dev review: Liquidity Module for the StableSwap logic.
+ * @dev This library assumes the LML.Swap struct is fully validated.
+ *
+ * @dev This is an internal library, requires NO deployment.
  *
  * @author Ice Bear & Crash Bandicoot
  */
 library AmplificationLib {
   /**
    * @custom:section                           ** CONSTANTS **
-   *
-   * @dev Constant values used in ramping A coefficient
    */
   uint256 public constant A_PRECISION = 100;
   uint256 public constant MAX_A = 10 ** 6;
@@ -32,9 +34,7 @@ library AmplificationLib {
   /**
    * @custom:section                           ** GETTER FUNCTIONS **
    *
-   */
-  /**
-   * @dev -> internal view: all
+   * @custom:visibility -> view-internal
    */
 
   /**
@@ -83,11 +83,9 @@ library AmplificationLib {
   }
 
   /**
-   * @custom:section                           ** STATE MODIFYING FUNCTIONS **
+   * @custom:section                           ** SETTER FUNCTIONS **
    *
-   */
-  /**
-   * @dev -> internal: all
+   * @custom:visibility -> internal
    */
 
   /**

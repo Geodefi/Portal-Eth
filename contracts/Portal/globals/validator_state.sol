@@ -14,11 +14,11 @@ library VALIDATOR_STATE {
   /// @notice STATE 2: proposal was approved, operator used pooled funds, 1 ETH is released back to Operator.
   uint8 internal constant ACTIVE = 2;
 
-  /// @notice STATE 3: validator is called to be exited. Currently not used.
-  uint8 internal constant EXIT_CALLED = 3;
+  /// @notice STATE 3: validator is called to be exited.
+  uint8 internal constant EXIT_REQUESTED = 3;
 
-  /// @notice STATE 3: validator is fully exited. Currently not used.
-  uint8 internal constant EXIT_FILLED = 4;
+  /// @notice STATE 4: validator is fully exited.
+  uint8 internal constant EXITED = 4;
 
   /// @notice STATE 69: proposal was malicious(alien). Maybe faulty signatures or probably (https://bit.ly/3Tkc6UC)
   uint8 internal constant ALIENATED = 69;

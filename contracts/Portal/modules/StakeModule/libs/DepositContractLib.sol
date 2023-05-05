@@ -7,10 +7,13 @@ import {IDepositContract} from "../../../interfaces/helpers/IDepositContract.sol
 import {BytesLib} from "../../../helpers/BytesLib.sol";
 
 /**
- * @title DepositContract Library - DCL
+ * @title DCL: Deposit Contract Library
  *
- * @notice Includes constants such as Deposit contract position
- * * & functions that helps with the deposit process.
+ * @notice Includes constants & functions that helps to the deposit process.
+ *
+ * @dev DEPOSIT_CONTRACT is chain specific and should be changed before deployments.
+ *
+ * @dev This is an internal library, requires NO deployment.
  *
  * @author Ice Bear & Crash Bandicoot
  */
@@ -32,9 +35,7 @@ library DepositContractLib {
   /**
    * @custom:section                           ** FUNCTIONS **
    */
-  /**
-   * @dev -> pure
-   */
+
   /**
    * @dev Padding memory array with zeroes up to 64 bytes on the right
    * @param _b Memory array of size 32 .. 64
@@ -96,6 +97,9 @@ library DepositContractLib {
     return depositDataRoot;
   }
 
+  /**
+   * @notice converts an address to withdrawal credential, used on validator creation
+   */
   function addressToWC(address wcAddress) internal pure returns (bytes memory) {
     uint256 w = 1 << 248;
 
@@ -103,7 +107,7 @@ library DepositContractLib {
   }
 
   /**
-   * @dev -> internal
+   * @notice deposit to DEPOSIT_CONTRACT and initiate a validator.
    */
   function depositValidator(
     bytes calldata pubkey,
