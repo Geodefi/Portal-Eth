@@ -141,6 +141,8 @@ Oracle approves the validator if all looks good.
 
 #### Validator Activation
 
+![stake](../../../docs/images/stake.png)
+
 If a validator proposal is approved by the Oracle, it can be activated by using the pool's funds.
 
 ### Oracle Operations
