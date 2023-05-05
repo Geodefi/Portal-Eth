@@ -73,24 +73,24 @@ Portal contains many functionalities:
 
 ### Helpers
 
-Please see this document for information about [Helpers](./Helpers/Readme.md).
+Please see this document for information about [Helpers](./helpers/Readme.md).
 
 ### Globals
 
-Please see this document for information about [Globals](./Globals/Readme.md).
+Please see this document for information about [Globals](./globals/Readme.md).
 
 ### Interfaces
 
-Please see this document for information about [Interfaces](./Interfaces/Readme.md).
+Please see this document for information about [Interfaces](./interfaces/Readme.md).
 
 ### Modules
 
-Please see this document for information about [Modules](./Modules/Readme.md).
+Please see this document for information about [Modules](./modules/Readme.md).
 
 ### Packages
 
-Please see this document for information about [Packages](./Packages/Readme.md).
+Please see this document for information about [Packages](./packages/Readme.md).
 
 ### Middlewares
 
-Please see this document for information about [Middlewares](./Middlewares/Readme.md).
+Please see this document for information about [Middlewares](./middlewares/Readme.md).
