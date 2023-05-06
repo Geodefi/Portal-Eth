@@ -13,9 +13,23 @@ contract("LPToken", function (accounts) {
   const symbol = "TEST";
   const initialSupply = new BN(100);
 
+  let factory;
+
+  const deployWithProxy = async function () {
+    const contract = await upgrades.deployProxy(factory, [name, symbol], {
+      unsafeAllow: ["state-variable-assignment"],
+    });
+    await contract.deployed();
+    return await LPToken.at(contract.address);
+  };
+
+  before(async function () {
+    factory = await ethers.getContractFactory("$LPToken");
+    this.deployWithProxy = deployWithProxy;
+  });
+
   beforeEach(async function () {
-    this.token = await LPToken.new({ from: deployer });
-    this.token.initialize(name, symbol);
+    this.token = await this.deployWithProxy();
     await this.token.mint(deployer, initialSupply);
   });
 
