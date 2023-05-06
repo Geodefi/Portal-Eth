@@ -176,7 +176,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
 
   function setGovernanceFee(uint256 newFee) external virtual override onlyGovernance {
     require(newFee <= SML.MAX_GOVERNANCE_FEE, "Portal:> MAX_GOVERNANCE_FEE");
-    require(block.timestamp > 1714514461, "Portal:not yet");
+    require(block.timestamp > 1714514461, "Portal:not yet.");
 
     STAKE.GOVERNANCE_FEE = newFee;
 

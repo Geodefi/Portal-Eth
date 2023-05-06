@@ -2,9 +2,9 @@ require("dotenv").config();
 
 require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
-require("solidity-coverage");
-require("hardhat-deploy");
 require("hardhat-exposed");
+require("hardhat-deploy");
+require("solidity-coverage");
 
 require("@openzeppelin/hardhat-upgrades");
 require("@nomiclabs/hardhat-web3");
@@ -13,7 +13,8 @@ require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 const ethers = require("ethers");
-// require("./scripts");
+
+require("./scripts");
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -54,7 +55,7 @@ const config = {
       url: process.env.GOERLI_URL,
       deploy: ["./deploy"],
       chainId: 5,
-      gasPrice: ethers.utils.parseUnits("2400", "gwei").toNumber(),
+      gasPrice: ethers.utils.parseUnits("100", "gwei").toNumber(),
     },
   },
   namedAccounts: {
