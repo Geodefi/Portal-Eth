@@ -9,22 +9,24 @@ const func = async function (hre) {
 
     const allContracts = await all();
 
-    const data = Object.keys(allContracts).map((k) => [
-      k,
-      allContracts[k].address,
-      keccak256(allContracts[k].deployedBytecode).toString("hex"),
-    ]);
+    const data = Object.keys(allContracts).map((k) => ({
+      Contract: k,
+      Address: allContracts[k].address,
+      Proof: keccak256(allContracts[k].deployedBytecode).toString("hex"),
+    }));
 
     console.table(data);
 
     const chainId = await web3.eth.getChainId();
-    const releaseId = Object.keys(allContracts).reduce(
-      (h, k) => keccak256(h, allContracts[k].deployedBytecode).toString("hex"),
-      ""
-    );
+    const releaseData = data.map(({ Contract, Address, Proof }) => [Contract, Address, Proof]);
+    const releaseId = keccak256(data.map(({ Proof }) => [Proof]).join()).toString("hex");
 
-    const columns = [["Contract", "Address", "Proof"]];
-    fs.writeFileSync(`./releases/${chainId}/${releaseId}.txt`, table(columns.concat(data)), "utf8");
+    fs.writeFileSync(
+      `./releases/${chainId}/${releaseId}.txt`,
+      table([["Contract", "Address", "Proof"]].concat(releaseData)),
+      "utf8"
+    );
+    console.log("Recorded the new release");
   } catch (error) {
     console.log(error);
     console.log("Could not record the release.");

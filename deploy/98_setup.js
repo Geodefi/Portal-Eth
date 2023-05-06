@@ -39,7 +39,7 @@ const func = async (hre) => {
     const wcAddress = (await get("WithdrawalContract")).address;
     const wcType = 10011;
     const expectedWCPVersion = (await generateId(strToBytes("v1"), wcType)).toString();
-    if ((await read("Portal", "getPackageVersion", wcType)) === expectedWCPVersion) {
+    if ((await read("Portal", "getPackageVersion", wcType)).toString() === expectedWCPVersion) {
       console.log("Withdrawal Contract Package is ALREADY released\n");
     } else {
       await execute(
@@ -58,7 +58,7 @@ const func = async (hre) => {
     const lpAddress = (await get("LiquidityPool")).address;
     const lpType = 10021;
     const expectedLPPVersion = (await generateId(strToBytes("v1"), lpType)).toString();
-    if ((await read("Portal", "getPackageVersion", lpType)) === expectedLPPVersion) {
+    if ((await read("Portal", "getPackageVersion", lpType)).toString() === expectedLPPVersion) {
       console.log("Liquidity Pool Package is ALREADY released\n");
     } else {
       await execute(
