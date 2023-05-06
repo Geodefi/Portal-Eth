@@ -38,3 +38,7 @@ soljson-v0.8.7+commit.e28d00a7.js
 
 # vscode
 .vscode
+
+# deployments
+release/31337/*
+!release/31337/.gitkeep

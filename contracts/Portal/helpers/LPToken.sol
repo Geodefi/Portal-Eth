@@ -12,6 +12,11 @@ import {ERC20Upgradeable, ERC20BurnableUpgradeable} from "@openzeppelin/contract
  * @dev Only LPP contracts should initialize and own LPToken contracts.
  */
 contract LPToken is ERC20BurnableUpgradeable, OwnableUpgradeable {
+  ///@custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   /**
    * @notice Initializes this LPToken contract with the given name and symbol
    * @dev The caller of this function will become the owner. A Swap contract should call this

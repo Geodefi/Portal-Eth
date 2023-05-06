@@ -54,7 +54,7 @@ const config = {
       url: process.env.GOERLI_URL,
       deploy: ["./deploy"],
       chainId: 5,
-      gasPrice: ethers.utils.parseUnits("100", "gwei").toNumber(),
+      gasPrice: ethers.utils.parseUnits("2400", "gwei").toNumber(),
     },
   },
   namedAccounts: {
@@ -62,13 +62,9 @@ const config = {
       default: 0, // here this will by default take the first account as deployer
       1: 0, // similarly on mainnet it will take the first account as deployer.
     },
-    senate: {
+    oracle: {
       default: 1,
       0: 1,
-    },
-    ELECTOR: {
-      default: 2,
-      0: 2,
     },
   },
   paths: {

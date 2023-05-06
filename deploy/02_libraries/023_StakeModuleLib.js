@@ -3,13 +3,12 @@ const func = async function (hre) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("gETH", {
+  await deploy("StakeModuleLib", {
     from: deployer,
     log: true,
-    args: ["Geode Staked Ether", "gETH", "https://api.geode.fi/geth"],
     skipIfAlreadyDeployed: true,
   });
 };
 
 module.exports = func;
-module.exports.tags = ["gETH"];
+module.exports.tags = ["StakeModuleLib"];

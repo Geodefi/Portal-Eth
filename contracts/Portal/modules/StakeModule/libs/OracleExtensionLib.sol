@@ -8,8 +8,8 @@ import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
-import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
+import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
 // external
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 

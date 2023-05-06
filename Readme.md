@@ -98,7 +98,7 @@ npx hardhat coverage
 
 ### Deployments
 
-There are no deployments here.
+Deployments for Goerli can be found [here](./releases/5/).
 
 ## Contributing
 
