@@ -55,7 +55,7 @@ const config = {
       url: process.env.GOERLI_URL,
       deploy: ["./deploy"],
       chainId: 5,
-      gasPrice: ethers.utils.parseUnits("100", "gwei").toNumber(),
+      gasPrice: ethers.utils.parseUnits("10", "gwei").toNumber(),
     },
   },
   namedAccounts: {
