@@ -272,7 +272,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev URI_SETTER is basically a superuser, there can be only 1 at a given time,
    * @dev intended as "Governance/DAO"
    */
-  function transferUriSetterRole(address newUriSetter) external virtual override {
+  function transferUriSetterRole(address newUriSetter) external virtual override onlyRole(URI_SETTER_ROLE) {
     _grantRole(URI_SETTER_ROLE, newUriSetter);
     renounceRole(URI_SETTER_ROLE, _msgSender());
   }
@@ -282,7 +282,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev PAUSER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferPauserRole(address newPauser) external virtual override {
+  function transferPauserRole(address newPauser) external virtual override onlyRole(PAUSER_ROLE) {
     _grantRole(PAUSER_ROLE, newPauser);
     renounceRole(PAUSER_ROLE, _msgSender());
   }
@@ -292,7 +292,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev MINTER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMinterRole(address newMinter) external virtual override {
+  function transferMinterRole(address newMinter) external virtual override onlyRole(MINTER_ROLE) {
     _grantRole(MINTER_ROLE, newMinter);
     renounceRole(MINTER_ROLE, _msgSender());
   }
@@ -302,7 +302,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev ORACLE is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferOracleRole(address newOracle) external virtual override {
+  function transferOracleRole(address newOracle) external virtual override onlyRole(ORACLE_ROLE) {
     _grantRole(ORACLE_ROLE, newOracle);
     renounceRole(ORACLE_ROLE, _msgSender());
   }
@@ -312,7 +312,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev MIDDLEWARE MANAGER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual override {
+  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
     _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
     renounceRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
   }
