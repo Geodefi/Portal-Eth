@@ -45,9 +45,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-  /**
-   * @dev both of these functions are
-   */
+
   bytes32 public constant MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
   bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
   uint256 internal constant DENOMINATOR = 1 ether;
@@ -94,7 +92,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @custom:section                           ** CONSTRUCTOR **
    */
   /**
-   * @notice ID to timestamp, pointing the second that the latest price update happened
+   * @notice Sets name, symbol, uri and grants necessary roles.
    * @param _name chain specific name: Geode Staked Ether, geode Staked Avax etc.
    * @param _symbol chain specific symbol of the staking derivative: gETH, gGNO, gAVAX, etc.
    **/
@@ -159,7 +157,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    */
   /**
    * @notice Set an address of a contract that will
-   * act as an middleware on gETH contract for a spesific ID
+   * act as a middleware on gETH contract for a spesific ID
    * @param middleware Address of the contract that will act as an middleware
    * @param isSet true: sets as an middleware, false: unsets
    * @dev ADDED for gETH

@@ -71,7 +71,7 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint
-   * @custom:definition the timestamp of an "user" TYPE id
+   * @custom:definition the initiation timestamp of a "user" TYPE id
    */
   bytes32 internal constant initiated = "initiated";
 
@@ -106,8 +106,8 @@ library RESERVED_KEY_SPACE {
   bytes32 internal constant priorFee = "priorFee";
 
   /**
-   * @custom:type address
-   * @custom:definition fee that will be effective if validatorPeriod is currently switching
+   * @custom:type uint
+   * @custom:definition period that will be effective if validatorPeriod is currently switching
    */
   bytes32 internal constant priorPeriod = "priorPeriod";
 
@@ -119,7 +119,7 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint, relational, pool[operator]
-   * @custom:definition proposed validator count for
+   * @custom:definition proposed validator count for pool-operator pair.
    */
   bytes32 internal constant proposedValidators = "proposedValidators";
 

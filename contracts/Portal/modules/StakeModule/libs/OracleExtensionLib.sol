@@ -25,7 +25,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  *
  * @dev Telescope is currently responsible from 4 tasks:
  * * Updating the on-chain price of all pools with a MerkleRoot for minting operations
- * * Updating the on-chain balances info of all pools with a MerkleRoot for withdrawal operations
+ * * Updating the on-chain balances info of all validators with a MerkleRoot for withdrawal operations
  * * Confirming validator proposals
  * * Regulating the Node Operators
  *

@@ -12,12 +12,12 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @title DSM: DataStore Module
  *
  * @notice A storage management tool designed to create a safe and scalable storage layout
- * for upgradable contracts with various types of data classes (users,packages,definitions).
+ * for upgradable contracts with various types of data classes (users, packages, definitions).
  *
  * @dev review: this module delegates its functionality to DSML (DataStoreModuleLib).
  * DSM or DSML has NO access control.
  *
- * @dev There are no additional functionalities implemented seperately from the library.
+ * @dev There are no additional functionalities implemented apart from the library.
  *
  * @dev NO function needs to be overriden when inherited.
  *

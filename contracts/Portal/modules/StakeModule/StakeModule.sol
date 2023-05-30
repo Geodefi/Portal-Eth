@@ -29,7 +29,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
  * @dev review: OEL (OracleExtensionLib) is an extension for oracle operations.
  * @dev review: DCL (DepositContractLib) is an helper for validator creation.
  *
- * @dev There are 1 additional functionality implemented seperately from the library:
+ * @dev There is 1 additional functionality implemented apart from the library:
  * * check price validity and accept proofs for updating the price (refer to deposit function).
  * * However, this module inherits and implements nonReentrant & whenNotPaused modifiers.
  * * SM has pausability and expects inheriting contract to provide the access control mechanism.

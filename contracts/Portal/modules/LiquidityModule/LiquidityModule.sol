@@ -28,7 +28,7 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
  * * stops the ratio of the tokens in the pool from changing.
  * * Users can always withdraw their tokens via multi-asset withdraws.
  *
- * @dev There are no additional functionalities implemented seperately from the library.
+ * @dev There are no additional functionalities implemented apart from the library.
  * * However, this module inherits and implements nonReentrant & whenNotPaused modifiers.
  * * LM has pausability and expects inheriting contract to provide the access control mechanism.
  *

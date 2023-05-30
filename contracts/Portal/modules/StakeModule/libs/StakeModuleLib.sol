@@ -20,7 +20,7 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
- * @title SML: The Staking Library
+ * @title SML: Stake Module Library (The Staking Library)
  *
  * @notice Creating a global standard for Staking, allowing anyone to OWN a trustless staking pool,
  * improving the user experience for stakers and removing the "need" for centralized or decentralized intermediaries.
@@ -58,7 +58,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
  * * accruing rewards and keeping Staked Ether safe and isolated.
  *
  * @dev Packages:
- * An ID can only point to 1(one) Package version at a time.
+ * An ID can only point to one version of a Package at a time.
  * Built by utilizing the Modules!
  * Can be upgraded by a dual governance, via pullUpgrade.
  * * A Package's dual governance consists of Portal(governance) and the pool owner(senate).
@@ -956,7 +956,7 @@ library StakeModuleLib {
   /**
    * @notice maximum number of remaining operator allowance that the given Operator is allowed to create for given Pool
    * @dev an operator can not create new validators if:
-   * * 1. if operator is a monopoly
+   * * 1. operator is a monopoly
    * * 2. allowance is filled
    * * * But if operator is set as a fallback, it can if FALLBACK_THRESHOLD (80%) is reached on all allowances.
    * @dev If operator withdraws a validator, then able to create a new one.
@@ -1027,6 +1027,12 @@ library StakeModuleLib {
     emit FallbackOperator(poolId, operatorId);
   }
 
+  /**
+   * @notice To give allowence to node operator for a pool. It re-sets the allowance with the given value.
+   * @dev The value that is returned is not the new allowance, but the old one since it is required 
+   * * at the point where it is being returned.
+   * @return oldAllowance to be used later, nothing is done with it within this function.
+   */
   function _approveOperator(
     DSML.IsolatedStorage storage DATASTORE,
     uint256 poolId,
@@ -1249,7 +1255,7 @@ library StakeModuleLib {
 
   /**
    * @notice Allowing users to deposit into a staking pool.
-   * @notice If a pool is not public only the maintainer can deposit.
+   * @notice If a pool is not public, only the controller and if there is a whitelist contract, the whitelisted addresses can deposit.
    * @param poolId id of the staking pool, liquidity pool and gETH to be used.
    * @param mingETH liquidity pool parameter
    * @param deadline liquidity pool parameter
@@ -1314,8 +1320,7 @@ library StakeModuleLib {
    *  @return true if:
    *   - pubkey should be proposed
    *   - pubkey should not be alienated (https://bit.ly/3Tkc6UC)
-   *   - validator's index should be covered by VERIFICATION_INDEX. Updated by Telescope.
-   * Note: while distributing the rewards, if a validator has 1 Eth, it is safe to assume that the balance belongs to Operator
+   *   - the validator's index is already covered by VERIFICATION_INDEX. Updated by Telescope.
    */
   function _canStake(
     PooledStaking storage self,

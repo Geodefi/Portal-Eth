@@ -23,7 +23,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * @dev review: this module delegates its functionality to GML (GeodeModuleLib):
  * GML has onlyGovernance, onlySenate, onlyController modifiers for access control.
  *
- * @dev There are 1 additional functionalities implemented seperately from the library:
+ * @dev There is 1 additional functionality implemented apart from the library:
  * Mutating UUPS pattern to fit Limited Upgradability:
  * 1. New implementation contract is proposed with CONTRACT_UPGRADE (TYPE 2), refer to globals/id_type.sol.
  * 2. Proposal is approved by the contract owner, Senate.

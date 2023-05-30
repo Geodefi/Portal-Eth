@@ -69,7 +69,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
    * @custom:section                           ** MODIFIERS **
    */
   modifier onlyGovernance() {
-    require(msg.sender == GEODE.SENATE, "Portal:sender NOT governance");
+    require(msg.sender == GEODE.SENATE, "PORTAL:sender NOT governance");
     _;
   }
 
@@ -175,8 +175,8 @@ contract Portal is IPortal, StakeModule, GeodeModule {
   }
 
   function setGovernanceFee(uint256 newFee) external virtual override onlyGovernance {
-    require(newFee <= SML.MAX_GOVERNANCE_FEE, "Portal:> MAX_GOVERNANCE_FEE");
-    require(block.timestamp > 1714514461, "Portal:not yet.");
+    require(newFee <= SML.MAX_GOVERNANCE_FEE, "PORTAL:> MAX_GOVERNANCE_FEE");
+    require(block.timestamp > 1714514461, "PORTAL:not yet.");
 
     STAKE.GOVERNANCE_FEE = newFee;
 
@@ -238,7 +238,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
   receive() external payable {}
 
   /**
-   * @notice keep the contract size at 50
+   * @notice keep the total number of variables at 50
    */
   uint256[50] private __gap;
 }

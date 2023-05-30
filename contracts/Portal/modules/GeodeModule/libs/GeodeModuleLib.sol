@@ -243,7 +243,7 @@ library GeodeModuleLib {
 
   /**
    * @notice approves a proposal and records given data to DataStore
-   * @notice specific changes for the reserved types (1,2,3) are implemented here,
+   * @notice specific changes for the reserved types (1, 2, 3) are implemented here,
    * any other addition should take place in Portal, as not related. Note that GM has additional logic for TYPE 2 approvals.
    * @param id given ID proposal that has will be approved by Senate
    * @dev Senate is not able to approve approved proposals

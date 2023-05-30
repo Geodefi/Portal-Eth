@@ -259,7 +259,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   receive() external payable {}
 
   /**
-   * @notice keep the contract size at 50
+   * @notice keep the total number of variables at 50
    */
   uint256[47] private __gap;
 }
