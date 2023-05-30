@@ -171,10 +171,22 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     override(GeodeModule, IGeodeModule)
     returns (bool)
   {
-    if (paused()) return true;
-    if (getContractVersion() != getProposedVersion()) return true;
-    if (GEODE.APPROVED_UPGRADE != _getImplementation()) return true;
-    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) return true;
+    if (paused()) {
+      return true;
+    }
+
+    if (getContractVersion() != getProposedVersion()) {
+      return true;
+    }
+
+    if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
+      return true;
+    }
+    
+    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) {
+      return true;
+    } 
+
     return false;
   }
 
