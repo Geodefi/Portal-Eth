@@ -1497,6 +1497,11 @@ library StakeModuleLib {
       uint256 _verificationIndex = self.VERIFICATION_INDEX;
       for (uint256 j = 0; j < pubkeys.length; ) {
         require(
+          self.validators[pubkeys[j]].operatorId == operatorId, 
+          "SML:NOT all pubkeys belong to operator"
+        );
+
+        require(
           _canStake(self, pubkeys[j], _verificationIndex),
           "SML:NOT all pubkeys are stakeable"
         );
