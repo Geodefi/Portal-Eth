@@ -11,16 +11,18 @@ module.exports.strToBytes = function (key) {
 
 module.exports.strToBytes32 = function (key) {
   // string to bytes32
-
+  // Note: formatBytes32String becomes encodeBytes32String in v6, currently using v5 of ethers package
   return ethers.utils.formatBytes32String(key);
 };
 
 module.exports.intToBytes32 = function (x) {
   // integer to bytes32
-
+  // Note: The biggest number that hexlify can get is 2^53-2,
   return ethers.utils.hexZeroPad(ethers.utils.hexlify(x), 32);
 };
 module.exports.generateId = function (_name, _type) {
+  // Note: web3.utils.soliditySha3 and ethers.utils.solidityKeccak256 is not returning the same value
+  // while working with numbers, need to be careful while working with it.
   return new BN(
     web3.utils.soliditySha3(
       web3.utils.encodePacked({ value: _name, type: "bytes" }, { value: _type, type: "uint256" })
@@ -29,14 +31,13 @@ module.exports.generateId = function (_name, _type) {
   );
 };
 
-module.exports.generateAddress = function (x) {
+module.exports.generateAddress = function () {
   // integer to bytes32
-
   return web3.eth.accounts.create().address;
 };
 
-module.exports.getBlockTimestamp = async function (receipt) {
-  // returns the timestamp of a tx receipt
+module.exports.getBlockTimestamp = async function () {
+  // returns the timestamp of the latest block
   return new BN((await web3.eth.getBlock("latest")).timestamp);
 };
 
