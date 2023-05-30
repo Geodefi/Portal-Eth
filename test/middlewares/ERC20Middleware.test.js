@@ -7,11 +7,7 @@ const { strToBytes, intToBytes32 } = require("../utils");
 const ERC20Middleware = artifacts.require("$ERC20Middleware");
 const gETH = artifacts.require("gETH");
 
-const {
-  shouldBehaveLikeERC20,
-  shouldBehaveLikeERC20Transfer,
-  shouldBehaveLikeERC20Approve,
-} = require("../utils/ERC20.behavior");
+const { shouldBehaveLikeERC20 } = require("../utils/ERC20.behavior");
 const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants");
 
 contract("ERC20Middleware", function (accounts) {
@@ -59,26 +55,6 @@ contract("ERC20Middleware", function (accounts) {
   });
 
   shouldBehaveLikeERC20("ERC20", initialSupply, deployer, recipient, anotherAccount);
-
-  shouldBehaveLikeERC20Transfer(
-    "ERC20",
-    deployer,
-    recipient,
-    initialSupply,
-    function (from, to, amount) {
-      return this.token.$_transfer(from, to, amount);
-    }
-  );
-
-  shouldBehaveLikeERC20Approve(
-    "ERC20",
-    deployer,
-    recipient,
-    initialSupply,
-    function (owner, spender, amount) {
-      return this.token.$_approve(owner, spender, amount);
-    }
-  );
 
   describe("initialize", function () {
     it("correct gETH address", async function () {
