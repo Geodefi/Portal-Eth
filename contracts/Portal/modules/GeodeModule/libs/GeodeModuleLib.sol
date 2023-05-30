@@ -301,6 +301,8 @@ library GeodeModuleLib {
     uint256 id,
     address newCONTROLLER
   ) external onlyController(DATASTORE, id) {
+    uint256 typeOfId = DATASTORE.readUint(id, rks.TYPE);
+    require(typeOfId > ID_TYPE.LIMIT_MIN_USER && typeOfId < ID_TYPE.LIMIT_MAX_USER, "GML:TYPE of id NOT in limits");
     require(newCONTROLLER != address(0), "GML:CONTROLLER can not be zero");
 
     DATASTORE.writeAddress(id, rks.CONTROLLER, newCONTROLLER);

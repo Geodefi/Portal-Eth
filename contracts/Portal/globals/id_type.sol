@@ -50,11 +50,17 @@ library ID_TYPE {
 
   /// --
 
+  /// @notice TYPE 3: Limit: exclusive, minimum TYPE that will be percieved as a user
+  uint256 internal constant LIMIT_MIN_USER = 3;
+
   /// @notice TYPE 4: USER: Permissionned Node Operator
   uint256 internal constant OPERATOR = 4;
 
   /// @notice TYPE 5: USER: Staking Pool
   uint256 internal constant POOL = 5;
+
+  /// @notice TYPE 9999: Limit: exclusive, maximum TYPE that will be percieved as a user
+  uint256 internal constant LIMIT_MAX_USER = 9999;
 
   /// --
 
