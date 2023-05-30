@@ -84,7 +84,7 @@ library ID_TYPE {
   /// @notice TYPE 20000: Limit: exclusive, minimum TYPE that will be percieved as a middleware
   uint256 internal constant LIMIT_MIN_MIDDLEWARE = 20000;
 
-  /// @notice TYPE 20031: Middleware: A new gETH interface
+  /// @notice TYPE 20011: Middleware: A new gETH interface
   uint256 internal constant MIDDLEWARE_GETH = 20011;
 
   /// @notice TYPE 29999: Limit: exclusive, maximum TYPE that will be percieved as a middleware
