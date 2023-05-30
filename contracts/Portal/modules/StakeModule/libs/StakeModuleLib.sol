@@ -1550,11 +1550,11 @@ library StakeModuleLib {
         unchecked {
           sinceLastIdChange = pubkeys.length - lastIdChange;
         }
-        if (sinceLastIdChange > 0) {
-          DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT * (sinceLastIdChange));
-          DATASTORE.subUint(poolId, proposedValKey, (sinceLastIdChange));
-          DATASTORE.addUint(poolId, activeValKey, (sinceLastIdChange));
-        }
+
+        DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT * (sinceLastIdChange));
+        DATASTORE.subUint(poolId, proposedValKey, (sinceLastIdChange));
+        DATASTORE.addUint(poolId, activeValKey, (sinceLastIdChange));
+        
       }
 
       _increaseWalletBalance(DATASTORE, operatorId, DCL.DEPOSIT_AMOUNT_PRESTAKE * pubkeys.length);
