@@ -1401,6 +1401,8 @@ library StakeModuleLib {
       "SML:NOT enough surplus"
     );
 
+    _decreaseWalletBalance(DATASTORE, operatorId, (pkLen * DCL.DEPOSIT_AMOUNT_PRESTAKE));
+
     for (uint256 i = 0; i < pkLen; ) {
       require(pubkeys[i].length == DCL.PUBKEY_LENGTH, "SML:PUBKEY_LENGTH ERROR");
       require(signatures1[i].length == DCL.SIGNATURE_LENGTH, "SML:SIGNATURE_LENGTH ERROR");
@@ -1449,8 +1451,6 @@ library StakeModuleLib {
         i += 1;
       }
     }
-
-    _decreaseWalletBalance(DATASTORE, operatorId, (pkLen * DCL.DEPOSIT_AMOUNT_PRESTAKE));
 
     DATASTORE.subUint(poolId, rks.surplus, (pkLen * DCL.DEPOSIT_AMOUNT));
     DATASTORE.addUint(poolId, rks.secured, (pkLen * DCL.DEPOSIT_AMOUNT));
