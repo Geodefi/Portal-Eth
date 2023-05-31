@@ -252,6 +252,34 @@ contract("gETH", function (accounts) {
   });
 
   context("Roles", function () {
+    describe("reverts if transfer functions called with address not have the role", function () {
+      it("reverts transferUriSetterRole", async function () {
+        await expectRevert(
+          this.token.transferUriSetterRole(user, { from: user }),
+          "is missing role"
+        );
+      });
+
+      it("reverts transferPauserRole", async function () {
+        await expectRevert(this.token.transferPauserRole(user, { from: user }), "is missing role");
+      });
+
+      it("reverts transferMinterRole", async function () {
+        await expectRevert(this.token.transferMinterRole(user, { from: user }), "is missing role");
+      });
+
+      it("reverts transferOracleRole", async function () {
+        await expectRevert(this.token.transferOracleRole(user, { from: user }), "is missing role");
+      });
+
+      it("reverts transferMiddlewareManagerRole", async function () {
+        await expectRevert(
+          this.token.transferMiddlewareManagerRole(user, { from: user }),
+          "is missing role"
+        );
+      });
+    });
+
     describe("transferUriSetterRole", function () {
       beforeEach(async function () {
         await this.token.transferUriSetterRole(user, { from: deployer });
