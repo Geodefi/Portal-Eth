@@ -194,9 +194,6 @@ library StakeModuleLib {
   /// @notice effective on allowance per operator, prevents overflow. Exclusive, save gas with +1.
   uint256 public constant MAX_ALLOWANCE = 10 ** 6 + 1;
 
-  /// @notice if a pool has 80% of its allowances filled, fallback operator is active.
-  uint256 public constant FALLBACK_THRESHOLD = (PERCENTAGE_DENOMINATOR * 80) / 100;
-
   /// @notice price of gETH is only valid for 24H, minting is not allowed afterwards.
   uint256 public constant PRICE_EXPIRY = 24 hours;
 
@@ -958,7 +955,7 @@ library StakeModuleLib {
    * @dev an operator can not create new validators if:
    * * 1. operator is a monopoly
    * * 2. allowance is filled
-   * * * But if operator is set as a fallback, it can if FALLBACK_THRESHOLD (80%) is reached on all allowances.
+   * * * But if operator is set as a fallback, it can if set fallbackPercentage is reached on all allowances.
    * @dev If operator withdraws a validator, then able to create a new one.
    * @dev prestake checks the approved validator count to make sure the number of validators are not bigger than allowance
    * @dev allowance doesn't change when new validators created or old ones are unstaked.

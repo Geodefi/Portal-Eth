@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 - Unnecessary sinceLastIdChange greater zero check is removed
+- FALLBACK_THRESHOLD constant is removed
 
 ## [0.6.0] - 2023-03-23
 
