@@ -10,12 +10,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - USER limits are added to id_type.sol
+- fallbackPercentage parameter is added to reserved_key_space.sol
 
 ### Changed
 
 - Making all "PORTAL" words all uppercase in require messages on Portal
 - Curly brackets are added to lacking if statements
 - \_decreaseWalletBalance function call bring to top to save gas on proposeStake function
+- Improve fallbackOperator logic by making fallback treshold settable
 
 ### Fixed
 

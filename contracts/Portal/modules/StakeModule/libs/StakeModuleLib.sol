@@ -222,7 +222,7 @@ library StakeModuleLib {
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
   event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
-  event FallbackOperator(uint256 poolId, uint256 indexed operatorId);
+  event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 fallbackPercentage);
   event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
   event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
@@ -987,9 +987,13 @@ library StakeModuleLib {
         // readUint for an array gives us length
         uint256 numPoolValidators = DATASTORE.readUint(poolId, rks.validators);
         uint256 totalAllowance = DATASTORE.readUint(poolId, rks.totalAllowance);
+        uint256 fallbackThreshold = (
+          PERCENTAGE_DENOMINATOR * DATASTORE.readUint(poolId, rks.fallbackPercentage)
+        ) / 100;
+
         if (
           totalAllowance == 0 ||
-          (((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) >= FALLBACK_THRESHOLD)
+          (((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) >= fallbackThreshold)
         ) {
           return remValidators;
         }
@@ -1018,13 +1022,41 @@ library StakeModuleLib {
    * @custom:visibility -> internal
    */
 
-  function _setFallbackOperator(
+  /**
+   * @notice To allow a Node Operator run validators for your Pool without a limit
+   * * after pool reaches a given treshold as percentage.
+   * * fallback operator and percentage can be set again at any given point in the future.
+   * * cannot set an operator as a fallback operator while it is currently in prison.
+   * @param poolId the gETH id of the Pool
+   * @param operatorId Operator ID to allow create validators
+   * @param fallbackPercentage the threshold percentage that fallback operator
+   * * is activated for given Pool. Should not be greater than 100.
+   */
+  function setFallbackOperator(
     DSML.IsolatedStorage storage DATASTORE,
     uint256 poolId,
-    uint256 operatorId
-  ) internal {
-    DATASTORE.writeUint(poolId, rks.fallbackOperator, operatorId);
-    emit FallbackOperator(poolId, operatorId);
+    uint256 operatorId,
+    uint256 fallbackPercentage
+  ) external {
+    _authenticate(DATASTORE, poolId, false, true, [false, true]);
+    
+    if (operatorId == 0) {
+      DATASTORE.writeUint(poolId, rks.fallbackOperator, 0);
+      DATASTORE.writeUint(poolId, rks.fallbackPercentage, 0);
+      emit FallbackOperator(poolId, 0, 0);
+    } else {
+      require(
+        DATASTORE.readUint(operatorId, rks.TYPE) == ID_TYPE.OPERATOR,
+        "SML:fallback not operator"
+      );
+      require(!isPrisoned(DATASTORE, operatorId), "SML:cannot set fallback since prisoned");
+
+      require(fallbackPercentage <= 100, "SML:percentage cannot be greater than 100");
+
+      DATASTORE.writeUint(poolId, rks.fallbackOperator, operatorId);
+      DATASTORE.writeUint(poolId, rks.fallbackPercentage, fallbackPercentage);
+      emit FallbackOperator(poolId, operatorId, fallbackPercentage);
+    }
   }
 
   /**
@@ -1064,8 +1096,7 @@ library StakeModuleLib {
     DSML.IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256[] calldata operatorIds,
-    uint256[] calldata allowances,
-    uint256 fallbackOperator
+    uint256[] calldata allowances
   ) external {
     _authenticate(DATASTORE, poolId, false, true, [false, true]);
     require(operatorIds.length == allowances.length, "SML:allowances should match");
@@ -1078,13 +1109,6 @@ library StakeModuleLib {
       unchecked {
         i += 1;
       }
-    }
-
-    if (fallbackOperator != 0) {
-      require(
-        DATASTORE.readUint(fallbackOperator, rks.TYPE) == ID_TYPE.OPERATOR,
-        "SML:fallback not operator"
-      );
     }
 
     uint256 newCumulativeSubset;
@@ -1102,8 +1126,6 @@ library StakeModuleLib {
     } else if (newCumulativeSubset < oldCumulativeSubset) {
       DATASTORE.subUint(poolId, rks.totalAllowance, oldCumulativeSubset - newCumulativeSubset);
     }
-
-    _setFallbackOperator(DATASTORE, poolId, fallbackOperator);
   }
 
   /**

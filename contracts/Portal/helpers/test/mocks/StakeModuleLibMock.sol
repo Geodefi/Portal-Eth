@@ -141,10 +141,6 @@ contract StakeModuleLibMock is StakeModule {
     StakeModuleLib._setValidatorPeriod(DATASTORE, _operatorId, _newPeriod);
   }
 
-  function $_setFallbackOperator(uint256 poolId, uint256 operatorId) external {
-    StakeModuleLib._setFallbackOperator(DATASTORE, poolId, operatorId);
-  }
-
   function $_approveOperator(
     uint256 poolId,
     uint256 operatorId,

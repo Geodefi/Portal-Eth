@@ -59,6 +59,12 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint
+   * @custom:definition treshold percentage for fallback operator to be activated
+   */
+  bytes32 internal constant fallbackPercentage = "fallbackPercentage";
+
+  /**
+   * @custom:type uint
    * @custom:definition fee of the pool or operator, will be shadowed by priorFee if switching
    */
   bytes32 internal constant fee = "fee";

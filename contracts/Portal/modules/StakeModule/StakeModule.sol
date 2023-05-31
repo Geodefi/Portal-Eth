@@ -339,10 +339,17 @@ abstract contract StakeModule is
   function delegate(
     uint256 poolId,
     uint256[] calldata operatorIds,
-    uint256[] calldata allowances,
-    uint256 fallbackOperator
+    uint256[] calldata allowances
   ) external virtual override whenNotPaused {
-    SML.delegate(DATASTORE, poolId, operatorIds, allowances, fallbackOperator);
+    SML.delegate(DATASTORE, poolId, operatorIds, allowances);
+  }
+
+  function setFallbackOperator(
+    uint256 poolId,
+    uint256 operatorId,
+    uint256 fallbackPercentage
+  ) external virtual override whenNotPaused {
+    SML.setFallbackOperator(DATASTORE, poolId, operatorId, fallbackPercentage);
   }
 
   /**

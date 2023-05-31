@@ -72,13 +72,18 @@ interface IStakeModule is IDataStoreModule {
 
   function switchValidatorPeriod(uint256 operatorId, uint256 newPeriod) external;
 
+  function setFallbackOperator(
+    uint256 poolId,
+    uint256 operatorId,
+    uint256 fallbackPercentage
+  ) external;
+
   function operatorAllowance(uint256 poolId, uint256 operatorId) external view returns (uint256);
 
   function delegate(
     uint256 poolId,
     uint256[] calldata operatorIds,
-    uint256[] calldata allowances,
-    uint256 fallbackOperator
+    uint256[] calldata allowances
   ) external;
 
   function isWhitelisted(uint256 poolId, address staker) external view returns (bool);
