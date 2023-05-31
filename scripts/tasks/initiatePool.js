@@ -7,7 +7,9 @@ const func = async (taskArgs, hre) => {
   const getBytes = (key) => {
     return Web3.utils.toHex(key);
   };
+
   const intToBytes32 = (x) => {
+    // Note: The biggest number that hexlify can get is 2^53-2,
     return ethers.utils.hexZeroPad(ethers.utils.hexlify(x), 32);
   };
 
@@ -30,6 +32,8 @@ const func = async (taskArgs, hre) => {
     const nameBytes = getBytes(taskArgs.tn).substr(2);
     const symbolBytes = getBytes(taskArgs.ts).substr(2);
 
+    // The reason nameBytes.length is divided by 2
+    // is that a byte is always represented with 2 hex characters
     interfaceData = intToBytes32(nameBytes.length / 2) + nameBytes + symbolBytes;
 
     interfaceVersion = await read("Portal", "generateId", taskArgs.i, 20011);
@@ -42,12 +46,11 @@ const func = async (taskArgs, hre) => {
 
   let visibility = false;
 
-  if (visibility) {
-    if (!visibilities.some((e) => e.Name === taskArgs.v)) {
+  if (taskArgs.lp) {
+    if (!visibilities.hasOwnProperty(taskArgs.v)) {
       console.log("Unknown visibility: 'public' (default) or 'private'.");
       return;
     }
-
     visibility = visibilities[taskArgs.v];
   }
 
@@ -66,7 +69,7 @@ const func = async (taskArgs, hre) => {
       taskArgs.m,
       getBytes(taskArgs.n),
       interfaceData,
-      [visibility, deployInterface, taskArgs.lp]
+      [visibility, deployInterface, taskArgs.lp == "true" ? true : false]
     );
     console.log(`created pool: ${taskArgs.n}`);
     console.log(`id: ${await read("Portal", "generateId", taskArgs.n, 5)}`);
