@@ -35,8 +35,10 @@ contract("StakeModuleLib", function (accounts) {
     deployer,
     oracle,
     operatorOwner,
+    maliciousOperatorOwner,
     poolOwner,
     operatorMaintainer,
+    maliciousOperatorMaintainer,
     poolMaintainer,
     staker,
     attacker,
@@ -57,6 +59,7 @@ contract("StakeModuleLib", function (accounts) {
 
   const unknownName = "unknown";
   const operatorName = "myOperator";
+  const maliciousOperatorName = "maliciousOperator";
   let poolNames = ["publicPool", "privatePool", "liquidPool"];
 
   let unknownId;
@@ -126,6 +129,7 @@ contract("StakeModuleLib", function (accounts) {
     const contract = await StakeModuleLibMock.new({ from: deployer });
 
     operatorId = await contract.generateId(operatorName, 4);
+    maliciousOperatorId = await contract.generateId(maliciousOperatorName, 4);
     poolIds = await Promise.all(
       poolNames.map(async function (e) {
         return await contract.generateId(e, 5);
@@ -640,13 +644,14 @@ contract("StakeModuleLib", function (accounts) {
     });
   });
 
-  context("initiated 1 operator & 3 pools: publicPoolId, privatePoolId, liquidPoolId", function () {
+  context("initiated 2 operators & 3 pools", function () {
+    // operators: benevolent, malicious & pools: publicPoolId, privatePoolId, liquidPoolId
     let publicPoolId;
     let privatePoolId;
     let liquidPoolId;
 
     beforeEach(async function () {
-      // initiate the operator
+      // initiate the operators
       await this.contract.$writeUint(operatorId, strToBytes32("TYPE"), 4);
       await this.contract.$writeAddress(operatorId, strToBytes32("CONTROLLER"), operatorOwner);
       tx = await this.contract.initiateOperator(
@@ -655,6 +660,20 @@ contract("StakeModuleLib", function (accounts) {
         MIN_VALIDATOR_PERIOD,
         operatorMaintainer,
         { from: operatorOwner, value: new BN(String(1e18)).muln(10) }
+      );
+
+      await this.contract.$writeUint(maliciousOperatorId, strToBytes32("TYPE"), 4);
+      await this.contract.$writeAddress(
+        maliciousOperatorId,
+        strToBytes32("CONTROLLER"),
+        maliciousOperatorOwner
+      );
+      tx = await this.contract.initiateOperator(
+        maliciousOperatorId,
+        operatorFee,
+        MIN_VALIDATOR_PERIOD,
+        maliciousOperatorMaintainer,
+        { from: maliciousOperatorOwner, value: new BN(String(1e18)).muln(10) }
       );
 
       await this.setWP(this.WithdrawalContract.address);
@@ -2003,6 +2022,15 @@ contract("StakeModuleLib", function (accounts) {
                   from: operatorMaintainer,
                 }),
                 "SML:NOT all pubkeys are stakeable"
+              );
+            });
+
+            it("reverts if malicious operator maintainer tries to stake other operators validator", async function () {
+              await expectRevert(
+                this.contract.stake(maliciousOperatorId, [pubkey0], {
+                  from: maliciousOperatorMaintainer,
+                }),
+                "SML:NOT all pubkeys belong to operator"
               );
             });
 
