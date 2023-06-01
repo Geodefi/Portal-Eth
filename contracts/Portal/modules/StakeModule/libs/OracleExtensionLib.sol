@@ -304,8 +304,8 @@ library OracleExtensionLib {
     } else {
       uint256 currentPrice = STAKE.gETH.pricePerShare(_poolId);
       if (_price > currentPrice) {
-        uint256 supplyDiff = STAKE.gETH.totalSupply(_poolId) * 
-          (_price - currentPrice) / PERCENTAGE_DENOMINATOR;
+        uint256 supplyDiff = (STAKE.gETH.totalSupply(_poolId) * 
+          (_price - currentPrice)) / STAKE.gETH.denominator();
         STAKE.gETH.mint(address(this), _poolId, supplyDiff, "");
         STAKE.gETH.safeTransferFrom(address(this), yieldReceiver, _poolId, supplyDiff, "");
       } else {
