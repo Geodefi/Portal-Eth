@@ -610,6 +610,32 @@ library StakeModuleLib {
    *
    */
 
+   /**
+   * @custom:subsection                           ** YIELD SEPARATION **
+   */
+
+  /**
+   * @custom:visibility -> external
+   */
+
+  /**
+   * @notice Set the yield receiver address to activate or deactivete yield separation logic.
+   * * If set other than address(0) separation will be activated, if set back to address(0)
+   * * separation will be deactivated again.
+   * @param poolId the gETH id of the Pool
+   * @param yieldReceiver address of the yield receiver
+   * @dev Only CONTROLLER of pool can set yield receier.
+   */
+  function setYieldReceiver(
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 poolId,
+    address yieldReceiver
+  ) external {
+    _authenticate(DATASTORE, poolId, true, false, [false, true]);
+    
+    DATASTORE.writeAddress(poolId, rks.yieldReceiver, yieldReceiver);
+  }
+
   /**
    * @custom:subsection                           ** MAINTAINER **
    */

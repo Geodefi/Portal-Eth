@@ -297,7 +297,21 @@ library OracleExtensionLib {
 
     _sanityCheck(STAKE, DATASTORE, _poolId, _price);
 
-    STAKE.gETH.setPricePerShare(_price, _poolId);
+    address yieldReceiver = DATASTORE.readAddress(_poolId, rks.yieldReceiver);
+
+    if (yieldReceiver == address(0)) {
+      STAKE.gETH.setPricePerShare(_price, _poolId);
+    } else {
+      uint256 currentPrice = STAKE.gETH.pricePerShare(_poolId);
+      if (_price > currentPrice) {
+        uint256 supplyDiff = STAKE.gETH.totalSupply(_poolId) * 
+          (_price - currentPrice) / PERCENTAGE_DENOMINATOR;
+        STAKE.gETH.mint(address(this), _poolId, supplyDiff, "");
+        STAKE.gETH.safeTransferFrom(address(this), yieldReceiver, _poolId, supplyDiff, "");
+      } else {
+        STAKE.gETH.setPricePerShare(_price, _poolId);
+      }
+    }
   }
 
   /**

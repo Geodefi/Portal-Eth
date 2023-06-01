@@ -249,6 +249,17 @@ abstract contract StakeModule is
    */
 
   /**
+   * @custom:subsection                           ** YIELD SEPARATION **
+   */
+
+  function setYieldReceiver(
+    uint256 poolId,
+    address yieldReceiver
+  ) external virtual override whenNotPaused {
+    SML.setYieldReceiver(DATASTORE, poolId, yieldReceiver);
+  }
+
+  /**
    * @custom:subsection                           ** MAINTAINER **
    */
 

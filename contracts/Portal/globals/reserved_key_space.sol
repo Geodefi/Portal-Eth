@@ -89,6 +89,13 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type address
+   * @custom:definition yield receiver address for yield seperation functionaliy
+   * * will receive minted gETH instead of pricePerShare update on increase
+   */
+  bytes32 internal constant yieldReceiver = "yieldReceiver";
+
+  /**
+   * @custom:type address
    * @custom:definition hot wallet for pool and operators, automatooor
    */
   bytes32 internal constant maintainer = "maintainer";
