@@ -103,7 +103,7 @@ contract("OracleExtensionLib", function (accounts) {
   };
 
   const proposeValidators = async function (poolId, operatorId, pubkeys) {
-    await this.contract.delegate(poolId, [operatorId], [100], 0, {
+    await this.contract.delegate(poolId, [operatorId], [100], {
       from: poolOwner,
     });
 
