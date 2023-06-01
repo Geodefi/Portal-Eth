@@ -69,7 +69,7 @@ abstract contract StakeModule is
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
   event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
-  event FallbackOperator(uint256 poolId, uint256 indexed operatorId);
+  event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 fallbackThreshold);
   event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
   event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
