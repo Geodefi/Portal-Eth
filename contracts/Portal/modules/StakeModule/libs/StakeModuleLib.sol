@@ -219,7 +219,7 @@ library StakeModuleLib {
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
   event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
-  event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 fallbackPercentage);
+  event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 fallbackThreshold);
   event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
   event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
@@ -984,13 +984,13 @@ library StakeModuleLib {
         // readUint for an array gives us length
         uint256 numPoolValidators = DATASTORE.readUint(poolId, rks.validators);
         uint256 totalAllowance = DATASTORE.readUint(poolId, rks.totalAllowance);
-        uint256 fallbackThreshold = (
-          PERCENTAGE_DENOMINATOR * DATASTORE.readUint(poolId, rks.fallbackPercentage)
-        ) / 100;
 
         if (
           totalAllowance == 0 ||
-          (((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) >= fallbackThreshold)
+          (
+            ((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) >= 
+            DATASTORE.readUint(poolId, rks.fallbackThreshold)
+          )
         ) {
           return remValidators;
         }
@@ -1039,7 +1039,7 @@ library StakeModuleLib {
     
     if (operatorId == 0) {
       DATASTORE.writeUint(poolId, rks.fallbackOperator, 0);
-      DATASTORE.writeUint(poolId, rks.fallbackPercentage, 0);
+      DATASTORE.writeUint(poolId, rks.fallbackThreshold, 0);
       emit FallbackOperator(poolId, 0, 0);
     } else {
       require(
@@ -1050,9 +1050,11 @@ library StakeModuleLib {
 
       require(fallbackPercentage <= 100, "SML:percentage cannot be greater than 100");
 
+      uint256 fallbackThreshold = (PERCENTAGE_DENOMINATOR * fallbackPercentage) / 100;
+      DATASTORE.writeUint(poolId, rks.fallbackThreshold, fallbackThreshold);
       DATASTORE.writeUint(poolId, rks.fallbackOperator, operatorId);
-      DATASTORE.writeUint(poolId, rks.fallbackPercentage, fallbackPercentage);
-      emit FallbackOperator(poolId, operatorId, fallbackPercentage);
+
+      emit FallbackOperator(poolId, operatorId, fallbackThreshold);
     }
   }
 

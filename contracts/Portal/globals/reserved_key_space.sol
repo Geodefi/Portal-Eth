@@ -59,9 +59,9 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint
-   * @custom:definition treshold percentage for fallback operator to be activated
+   * @custom:definition treshold calculated with given percentage value for fallback operator to be activated
    */
-  bytes32 internal constant fallbackPercentage = "fallbackPercentage";
+  bytes32 internal constant fallbackThreshold = "fallbackThreshold";
 
   /**
    * @custom:type uint
