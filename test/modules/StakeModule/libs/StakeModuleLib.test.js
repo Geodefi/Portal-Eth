@@ -46,7 +46,6 @@ contract("StakeModuleLib", function (accounts) {
 
   const MAX_MAINTENANCE_FEE = PERCENTAGE_DENOMINATOR.divn(100).muln(10);
   const MAX_ALLOWANCE = new BN("1000000").addn(1);
-  const FALLBACK_THRESHOLD = PERCENTAGE_DENOMINATOR.divn(100).muln(80);
   const MIN_VALIDATOR_PERIOD = DAY.muln(90);
   const MAX_VALIDATOR_PERIOD = DAY.muln(2).muln(365);
   const SWITCH_LATENCY = DAY.muln(3);
@@ -56,6 +55,9 @@ contract("StakeModuleLib", function (accounts) {
 
   const operatorFee = new BN(String(8e8)); // 8%
   const poolFee = new BN(String(9e8)); // 9%
+
+  const fallbackPercentage = 80;
+  const fallbackThreshold = PERCENTAGE_DENOMINATOR.divn(100).muln(80);
 
   const unknownName = "unknown";
   const operatorName = "myOperator";
@@ -245,7 +247,7 @@ contract("StakeModuleLib", function (accounts) {
       await expectRevert(this.contract.switchValidatorPeriod(0, 0), "Pausable: paused");
     });
     it("delegate", async function () {
-      await expectRevert(this.contract.delegate(0, [], [], 0), "Pausable: paused");
+      await expectRevert(this.contract.delegate(0, [], []), "Pausable: paused");
     });
     it("deposit", async function () {
       await expectRevert(this.contract.deposit(0, 0, [], 0, 0, ZERO_ADDRESS), "Pausable: paused");
@@ -1129,18 +1131,79 @@ contract("StakeModuleLib", function (accounts) {
     context("delegation", function () {
       const allowance = new BN(420);
 
-      describe("_setFallbackOperator", function () {
-        let tx;
-        beforeEach(async function () {
-          tx = await this.contract.$_setFallbackOperator(publicPoolId, operatorId);
+      describe("setFallbackOperator", function () {
+        it("reverts if sender not maintainer", async function () {
+          await expectRevert(
+            this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackPercentage, {
+              from: attacker,
+            }),
+            "SML:sender NOT maintainer"
+          );
         });
-        it("sets fallbackOperator", async function () {
+        it("reverts if fallback not operator", async function () {
+          await expectRevert(
+            this.contract.setFallbackOperator(publicPoolId, privatePoolId, fallbackPercentage, {
+              from: poolMaintainer,
+            }),
+            "SML:fallback not operator"
+          );
+        });
+        it("reverts if given fallback operator is in prison", async function () {
+          await this.contract.$_imprison(operatorId, ZERO_BYTES32);
+          await expectRevert(
+            this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackPercentage, {
+              from: poolMaintainer,
+            }),
+            "SML:cannot set fallback since prisoned"
+          );
+        });
+        it("reverts if fallbackPercentage is greater then 100", async function () {
+          await expectRevert(
+            this.contract.setFallbackOperator(publicPoolId, operatorId, 101, {
+              from: poolMaintainer,
+            }),
+            "SML:percentage cannot be greater than 100"
+          );
+        });
+        it("success: sets fallback operator and resets and emits FallbackOperator event", async function () {
+          let tx = await this.contract.setFallbackOperator(
+            publicPoolId,
+            operatorId,
+            fallbackPercentage,
+            { from: poolMaintainer }
+          );
+
           expect(
             await this.contract.readUint(publicPoolId, strToBytes32("fallbackOperator"))
           ).to.be.bignumber.equal(operatorId);
-        });
-        it("emits FallbackOperator", async function () {
-          await expectEvent(tx, "FallbackOperator", { poolId: publicPoolId, operatorId });
+
+          expect(
+            await this.contract.readUint(publicPoolId, strToBytes32("fallbackThreshold"))
+          ).to.be.bignumber.equal(fallbackThreshold);
+
+          await expectEvent(tx, "FallbackOperator", {
+            operatorId: operatorId,
+            poolId: publicPoolId,
+            fallbackThreshold: fallbackThreshold,
+          });
+
+          tx = await this.contract.setFallbackOperator(publicPoolId, 0, fallbackPercentage, {
+            from: poolMaintainer,
+          });
+
+          expect(
+            await this.contract.readUint(publicPoolId, strToBytes32("fallbackOperator"))
+          ).to.be.bignumber.equal(new BN("0"));
+
+          expect(
+            await this.contract.readUint(publicPoolId, strToBytes32("fallbackThreshold"))
+          ).to.be.bignumber.equal(new BN("0"));
+
+          await expectEvent(tx, "FallbackOperator", {
+            operatorId: new BN("0"),
+            poolId: publicPoolId,
+            fallbackThreshold: new BN("0"),
+          });
         });
       });
       describe("_approveOperator", function () {
@@ -1164,7 +1227,7 @@ contract("StakeModuleLib", function (accounts) {
       describe("delegate", function () {
         it("reverts if arrays do not match", async function () {
           await expectRevert(
-            this.contract.delegate(publicPoolId, [operatorId], [], 0, {
+            this.contract.delegate(publicPoolId, [operatorId], [], {
               from: poolMaintainer,
             }),
             "allowances should match"
@@ -1172,36 +1235,28 @@ contract("StakeModuleLib", function (accounts) {
         });
         it("reverts if id is not an operator", async function () {
           await expectRevert(
-            this.contract.delegate(publicPoolId, [privatePoolId], [allowance], 0, {
+            this.contract.delegate(publicPoolId, [privatePoolId], [allowance], {
               from: poolMaintainer,
             }),
             "SML:id not operator"
           );
         });
-        it("reverts if fallback is not an operator", async function () {
-          await expectRevert(
-            this.contract.delegate(publicPoolId, [operatorId], [allowance], privatePoolId, {
-              from: poolMaintainer,
-            }),
-            "SML:fallback not operator"
-          );
-        });
         it("reverts if > MAX_ALLOWANCE", async function () {
           await expectRevert(
-            this.contract.delegate(publicPoolId, [operatorId], [MAX_ALLOWANCE.addn(1)], 0, {
+            this.contract.delegate(publicPoolId, [operatorId], [MAX_ALLOWANCE.addn(1)], {
               from: poolMaintainer,
             }),
             "SML:> MAX_ALLOWANCE, set fallback"
           );
         });
         it("success: updates totalAllowance", async function () {
-          await this.contract.delegate(publicPoolId, [operatorId], [allowance], 0, {
+          await this.contract.delegate(publicPoolId, [operatorId], [allowance], {
             from: poolMaintainer,
           });
           expect(
             await this.contract.readUint(publicPoolId, strToBytes32("totalAllowance"))
           ).to.be.bignumber.equal(allowance);
-          await this.contract.delegate(publicPoolId, [operatorId], [MAX_ALLOWANCE.subn(1)], 0, {
+          await this.contract.delegate(publicPoolId, [operatorId], [MAX_ALLOWANCE.subn(1)], {
             from: poolMaintainer,
           });
           expect(
@@ -1212,7 +1267,6 @@ contract("StakeModuleLib", function (accounts) {
             publicPoolId,
             [operatorId, operatorId, operatorId],
             [MAX_ALLOWANCE.subn(1), MAX_ALLOWANCE.subn(1), MAX_ALLOWANCE.subn(1)],
-            0,
             {
               from: poolMaintainer,
             }
@@ -1236,7 +1290,6 @@ contract("StakeModuleLib", function (accounts) {
             publicPoolId,
             [operatorId, unknownId, unknownId],
             [MAX_ALLOWANCE.subn(1), MAX_ALLOWANCE.subn(1), allowance],
-            0,
             {
               from: poolMaintainer,
             }
@@ -1249,7 +1302,6 @@ contract("StakeModuleLib", function (accounts) {
             publicPoolId,
             [operatorId, operatorId, unknownId],
             [MAX_ALLOWANCE.subn(1), allowance, 0],
-            0,
             {
               from: poolMaintainer,
             }
@@ -1264,7 +1316,11 @@ contract("StakeModuleLib", function (accounts) {
         beforeEach(async function () {
           await this.contract.$set_MONOPOLY_THRESHOLD(MONOPOLY_THRESHOLD);
 
-          await this.contract.delegate(publicPoolId, [operatorId], [allowance], operatorId, {
+          await this.contract.delegate(publicPoolId, [operatorId], [allowance], {
+            from: poolMaintainer,
+          });
+
+          await this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackPercentage, {
             from: poolMaintainer,
           });
         });
@@ -1319,7 +1375,7 @@ contract("StakeModuleLib", function (accounts) {
         });
 
         context("fallbackOperator", function () {
-          it("returns remaining to MONOPOLY_THRESHOLD, if reached FALLBACK_THRESHOLD", async function () {
+          it("returns remaining to MONOPOLY_THRESHOLD, if reached fallbackThreshold", async function () {
             await this.contract.$writeUint(
               operatorId,
               strToBytes32("validators"),
@@ -1328,13 +1384,13 @@ contract("StakeModuleLib", function (accounts) {
             await this.contract.$writeUint(
               publicPoolId,
               strToBytes32("validators"),
-              allowance.mul(FALLBACK_THRESHOLD).div(PERCENTAGE_DENOMINATOR)
+              allowance.mul(fallbackThreshold).div(PERCENTAGE_DENOMINATOR)
             );
             expect(
               await this.contract.operatorAllowance(publicPoolId, operatorId)
             ).to.be.bignumber.equal("6969");
           });
-          it("returns allowance, if NOT reached FALLBACK_THRESHOLD", async function () {
+          it("returns allowance, if NOT reached fallbackThreshold", async function () {
             expect(
               await this.contract.operatorAllowance(publicPoolId, operatorId)
             ).to.be.bignumber.equal(allowance);
@@ -1717,13 +1773,13 @@ contract("StakeModuleLib", function (accounts) {
         context("after delegation", function () {
           beforeEach(async function () {
             await this.contract.$set_MONOPOLY_THRESHOLD(MONOPOLY_THRESHOLD);
-            await this.contract.delegate(publicPoolId, [operatorId], [2], 0, {
+            await this.contract.delegate(publicPoolId, [operatorId], [2], {
               from: poolMaintainer,
             });
           });
 
           it("reverts if there is not enough funds in the pool", async function () {
-            await this.contract.delegate(publicPoolId, [operatorId], [100], 0, {
+            await this.contract.delegate(publicPoolId, [operatorId], [100], {
               from: poolMaintainer,
             });
             await expectRevert(
@@ -1970,7 +2026,7 @@ contract("StakeModuleLib", function (accounts) {
             await this.contract.$set_MONOPOLY_THRESHOLD(MONOPOLY_THRESHOLD);
 
             // for public pool
-            await this.contract.delegate(publicPoolId, [operatorId], [2], 0, {
+            await this.contract.delegate(publicPoolId, [operatorId], [2], {
               from: poolMaintainer,
             });
 
@@ -1991,7 +2047,7 @@ contract("StakeModuleLib", function (accounts) {
             );
 
             // for private pool
-            await this.contract.delegate(privatePoolId, [operatorId], [1], 0, {
+            await this.contract.delegate(privatePoolId, [operatorId], [1], {
               from: poolMaintainer,
             });
 
