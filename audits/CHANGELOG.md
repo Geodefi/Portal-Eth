@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - USER limits are added to id_type.sol
-- fallbackPercentage parameter is added to reserved_key_space.sol
+- fallbackThreshold parameter is added to reserved_key_space.sol
 
 ### Changed
 
