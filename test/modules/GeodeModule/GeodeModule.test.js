@@ -446,7 +446,6 @@ contract("GeodeModule", function (accounts) {
 
     context("Limited UUPS (TYPE 2 proposal)", function () {
       let newImplementation;
-      const _type = new BN("2");
 
       before(async function () {
         // make sure it is not upgraded yet!
@@ -458,7 +457,7 @@ contract("GeodeModule", function (accounts) {
         newImplementation = await GeodeUpgradedMock.new();
         await this.contract.propose(
           newImplementation.address,
-          _type,
+          packageType,
           _name,
           MIN_PROPOSAL_DURATION,
           {
@@ -466,7 +465,7 @@ contract("GeodeModule", function (accounts) {
           }
         );
 
-        await this.contract.approveProposal(await generateId(_name, _type), {
+        await this.contract.approveProposal(await generateId(_name, packageType), {
           from: senate,
         });
 
