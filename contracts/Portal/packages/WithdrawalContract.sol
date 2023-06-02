@@ -106,8 +106,8 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule {
     require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
     require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
 
-    bytes memory versionName = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
-    approveProposal(DSML.generateId(versionName, ID_TYPE.CONTRACT_UPGRADE));
+    uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
+    approveProposal(id);
   }
 
   /**

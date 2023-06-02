@@ -8,7 +8,7 @@ interface IPortal is IStakeModule, IGeodeModule {
 
   function unpausegETH() external;
 
-  function pushUpgrade(uint256 packageType) external returns (bytes memory versionName);
+  function pushUpgrade(uint256 packageType) external returns (uint256 id);
 
   function releasePrisoned(uint256 operatorId) external;
 

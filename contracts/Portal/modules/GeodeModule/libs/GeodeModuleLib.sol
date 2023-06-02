@@ -60,7 +60,7 @@ library GeodeModuleLib {
   /**
    * @notice Dual Governance allows 2 parties to manage a package with proposals and approvals.
    * @param GOVERNANCE a community that works to improve the core product and ensures its adoption in the DeFi ecosystem
-   * Suggests updates, such as new operators, contract upgrades, a new Senate (without any permission to force them)
+   * Suggests updates, such as new operators, contract/package upgrades, a new Senate (without any permission to force them)
    * @param SENATE An address that protects the users by controlling the state of governance, contract updates and other crucial changes
    * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
    * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
@@ -244,7 +244,8 @@ library GeodeModuleLib {
   /**
    * @notice approves a proposal and records given data to DataStore
    * @notice specific changes for the reserved types (1, 2, 3) are implemented here,
-   * any other addition should take place in Portal, as not related. Note that GM has additional logic for TYPE 2 approvals.
+   * any other addition should take place in Portal, as not related. 
+   * Note that GM has additional logic for package type approvals.
    * @param id given ID proposal that has will be approved by Senate
    * @dev Senate is not able to approve approved proposals
    * @dev Senate is not able to approve expired proposals
@@ -267,7 +268,7 @@ library GeodeModuleLib {
 
     if (_type == ID_TYPE.SENATE) {
       _setSenate(self, _controller, block.timestamp + MAX_SENATE_PERIOD);
-    } else if (_type == ID_TYPE.CONTRACT_UPGRADE) {
+    } else if (_type == self.PACKAGE_TYPE) {
       self.APPROVED_UPGRADE = _controller;
     }
 

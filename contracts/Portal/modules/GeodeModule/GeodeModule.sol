@@ -25,13 +25,12 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *
  * @dev There is 1 additional functionality implemented apart from the library:
  * Mutating UUPS pattern to fit Limited Upgradability:
- * 1. New implementation contract is proposed with CONTRACT_UPGRADE (TYPE 2), refer to globals/id_type.sol.
+ * 1. New implementation contract is proposed with its own package type within the limits, refer to globals/id_type.sol.
  * 2. Proposal is approved by the contract owner, Senate.
  * 3. approveProposal calls _handleUpgrade which mimics UUPS.upgradeTo:
  * 3.1. Checks the implementation address with _authorizeUpgrade, also preventing any UUPS upgrades.
  * 3.2. Upgrades the contract with no function to call afterwards.
- * 3.3. Sets contract version. Note that, mentioned version is different from version defined within UUPS
- * * & does not increase linearly like one might expect.
+ * 3.3. Sets contract version. Note that it does not increase linearly like one might expect.
  *
  * @dev 1 function needs to be overriden when inherited: isolationMode. (also refer to approveProposal)
  *
@@ -114,14 +113,14 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
     uint256 initVersion = GEODE.propose(
       DATASTORE,
       _getImplementation(),
-      ID_TYPE.CONTRACT_UPGRADE,
+      packageType,
       initVersionName,
       1 days
     );
 
     GEODE.approveProposal(DATASTORE, initVersion);
 
-    _setContractVersion(initVersionName);
+    _setContractVersion(DSML.generateId(initVersionName, GEODE.PACKAGE_TYPE));
 
     GEODE.GOVERNANCE = governance;
     GEODE.SENATE = senate;
@@ -143,11 +142,9 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
     );
   }
 
-  function _setContractVersion(bytes memory versionName) internal virtual {
-    uint256 newVersion = DSML.generateId(versionName, GEODE.PACKAGE_TYPE);
-    GEODE.CONTRACT_VERSION = newVersion;
-
-    emit ContractVersionSet(newVersion);
+  function _setContractVersion(uint256 id) internal virtual {
+    GEODE.CONTRACT_VERSION = id;
+    emit ContractVersionSet(id);
   }
 
   /**
@@ -156,11 +153,11 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    */
   function _handleUpgrade(
     address proposed_implementation,
-    bytes memory versionName
+    uint256 id
   ) internal virtual {
     _authorizeUpgrade(proposed_implementation);
     _upgradeToAndCallUUPS(proposed_implementation, new bytes(0), false);
-    _setContractVersion(versionName);
+    _setContractVersion(id);
   }
 
   /**
@@ -229,15 +226,15 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    */
 
   /**
-   * @dev handles TYPE 2 proposals by upgrading the contract immediately.
+   * @dev handles PACKAGE_TYPE proposals by upgrading the contract immediately.
    */
   function approveProposal(
     uint256 id
   ) public virtual override returns (address _controller, uint256 _type, bytes memory _name) {
     (_controller, _type, _name) = GEODE.approveProposal(DATASTORE, id);
 
-    if (_type == ID_TYPE.CONTRACT_UPGRADE) {
-      _handleUpgrade(_controller, _name);
+    if (_type == GEODE.PACKAGE_TYPE) {
+      _handleUpgrade(_controller, id);
     }
   }
 
