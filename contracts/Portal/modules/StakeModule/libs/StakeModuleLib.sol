@@ -215,6 +215,7 @@ library StakeModuleLib {
    */
   event IdInitiated(uint256 id, uint256 indexed TYPE);
   event VisibilitySet(uint256 id, bool isPrivate);
+  event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
@@ -634,6 +635,7 @@ library StakeModuleLib {
     _authenticate(DATASTORE, poolId, true, false, [false, true]);
     
     DATASTORE.writeAddress(poolId, rks.yieldReceiver, yieldReceiver);
+    emit YieldReceiverSet(poolId, yieldReceiver);
   }
 
   /**
