@@ -67,7 +67,7 @@ library ID_TYPE {
   /// @notice TYPE 10000: Limit: exclusive, minimum TYPE that will be percieved as a package
   uint256 internal constant LIMIT_MIN_PACKAGE = 10000;
 
-  /// @notice TYPE 10011: Package: Portal is also a package
+  /// @notice TYPE 10001: Package: Portal is also a package
   uint256 internal constant PACKAGE_PORTAL = 10001;
 
   /// @notice TYPE 10011: Package: The Withdrawal Credential Contract

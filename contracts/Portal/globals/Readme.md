@@ -34,8 +34,8 @@ As mentioned above, IDs are not predefined. However, grouping some\* IDs accordi
 
 For example we can define an ID as a:
 
-- **Operation**, allowing contracts to communicate with other contracts and addresses.
-- **Pool**, allowing it to be used for minting gETH.
+- **Operation (user)**, allowing contracts to communicate with other contracts and addresses.
+- **Pool (user)**, allowing it to be used for minting gETH.
 - **Limit**, allowing a range of IDs to be represented as a group.
 - **Package**, allowing it to have limited upgradability.
 
