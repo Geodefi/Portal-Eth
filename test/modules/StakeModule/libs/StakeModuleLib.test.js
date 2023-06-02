@@ -12,6 +12,7 @@ const {
   getReceiptTimestamp,
   ETHER_STR,
   setTimestamp,
+  generateAddress,
 } = require("../../../utils");
 const { artifacts } = require("hardhat");
 
@@ -233,6 +234,9 @@ contract("StakeModuleLib", function (accounts) {
         this.contract.initiatePool(0, 0, ZERO_ADDRESS, "0x", "0x", [false, false, false]),
         "Pausable: paused"
       );
+    });
+    it("setYieldReceiver", async function () {
+      await expectRevert(this.contract.setYieldReceiver(0, ZERO_ADDRESS), "Pausable: paused");
     });
     it("changeMaintainer", async function () {
       await expectRevert(this.contract.changeMaintainer(0, ZERO_ADDRESS), "Pausable: paused");
@@ -789,6 +793,55 @@ contract("StakeModuleLib", function (accounts) {
           expect(await this.contract.isWhitelisted(privatePoolId, staker)).to.be.equal(true);
           await this.whitelist.setAddress(staker, false, { from: poolOwner });
           expect(await this.contract.isWhitelisted(privatePoolId, staker)).to.be.equal(false);
+        });
+      });
+    });
+
+    context("Yield Receiver", function () {
+      describe("setYieldReceiver", function () {
+        let yieldReceiver;
+        beforeEach(async function () {
+          yieldReceiver = generateAddress();
+        });
+
+        it("reverts if poolId is not pool type", async function () {
+          await expectRevert(
+            this.contract.setYieldReceiver(operatorId, yieldReceiver, { from: poolOwner }),
+            "SML:TYPE NOT allowed"
+          );
+        });
+        it("reverts if sender is not controller of the pool", async function () {
+          await expectRevert(
+            this.contract.setYieldReceiver(publicPoolId, yieldReceiver, { from: poolMaintainer }),
+            "SML:sender NOT CONTROLLER"
+          );
+        });
+        it("success: sets yieldReceiver and set back 0 address and emits YieldReceiverSet event", async function () {
+          let tx = await this.contract.setYieldReceiver(publicPoolId, yieldReceiver, {
+            from: poolOwner,
+          });
+
+          expect(
+            await this.contract.readAddress(publicPoolId, strToBytes32("yieldReceiver"))
+          ).to.be.eq(yieldReceiver);
+
+          expectEvent(tx, "YieldReceiverSet", {
+            poolId: publicPoolId,
+            yieldReceiver: yieldReceiver,
+          });
+
+          tx = await this.contract.setYieldReceiver(publicPoolId, ZERO_ADDRESS, {
+            from: poolOwner,
+          });
+
+          expect(
+            await this.contract.readAddress(publicPoolId, strToBytes32("yieldReceiver"))
+          ).to.be.eq(ZERO_ADDRESS);
+
+          expectEvent(tx, "YieldReceiverSet", {
+            poolId: publicPoolId,
+            yieldReceiver: ZERO_ADDRESS,
+          });
         });
       });
     });
