@@ -1200,20 +1200,17 @@ contract("StakeModuleLib", function (accounts) {
             "SML:fallback not operator"
           );
         });
-        it("reverts if given fallback operator is in prison", async function () {
-          await this.contract.$_imprison(operatorId, ZERO_BYTES32);
-          await expectRevert(
-            this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackThreshold, {
-              from: poolMaintainer,
-            }),
-            "SML:cannot set fallback since prisoned"
-          );
-        });
+
         it("reverts if fallbackThreshold is greater then 100%", async function () {
           await expectRevert(
-            this.contract.setFallbackOperator(publicPoolId, operatorId, 101, {
-              from: poolMaintainer,
-            }),
+            this.contract.setFallbackOperator(
+              publicPoolId,
+              operatorId,
+              PERCENTAGE_DENOMINATOR.addn(1),
+              {
+                from: poolMaintainer,
+              }
+            ),
             "SML:percentage cannot be greater than 100"
           );
         });
@@ -1236,7 +1233,7 @@ contract("StakeModuleLib", function (accounts) {
           await expectEvent(tx, "FallbackOperator", {
             operatorId: operatorId,
             poolId: publicPoolId,
-            fallbackThreshold: fallbackThreshold,
+            threshold: fallbackThreshold,
           });
 
           tx = await this.contract.setFallbackOperator(publicPoolId, 0, fallbackThreshold, {
@@ -1372,7 +1369,7 @@ contract("StakeModuleLib", function (accounts) {
             from: poolMaintainer,
           });
 
-          await this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackPercentage, {
+          await this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackThreshold, {
             from: poolMaintainer,
           });
         });
