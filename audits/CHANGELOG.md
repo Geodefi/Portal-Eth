@@ -38,4 +38,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.6.0] - 2023-03-23
 
-- [Diligence Audit Response](audits/external/Diligence/Diligence-Audit-Response-2023-03-20.pdf) can be counted as the change log until this document.
+- [Diligence Audit Response](audits/external/Diligence/2023-03-Diligence-Audit-Response) can be counted as the change log until this document.

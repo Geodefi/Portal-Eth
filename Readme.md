@@ -106,6 +106,8 @@ See our [contributing guide](./docs/GUIDELINES/CONTRIBUTING.md).
 
 ## Auditing
 
+See our [ChangeLOG](./audits/CHANGELOG.md).
+
 It is advised to audit these smart contracts with the order of:
 
 1. [gETH](./contracts/Portal/gETH.sol)
