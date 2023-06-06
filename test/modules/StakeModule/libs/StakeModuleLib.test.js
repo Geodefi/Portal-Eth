@@ -1251,7 +1251,7 @@ contract("StakeModuleLib", function (accounts) {
           await expectEvent(tx, "FallbackOperator", {
             operatorId: new BN("0"),
             poolId: publicPoolId,
-            fallbackThreshold: new BN("0"),
+            threshold: new BN("0"),
           });
         });
       });
