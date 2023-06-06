@@ -195,7 +195,7 @@ library GeodeModuleLib {
     require(self.proposals[id].deadline == 0, "GML:already proposed");
     require((DATASTORE.readBytes(id, rks.NAME)).length == 0, "GML:ID already exist");
     require(_CONTROLLER != address(0), "GML:CONTROLLER can NOT be ZERO");
-    require((_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.POOL), "GML:TYPE is NONE, GAP or POOL");
+    require((_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.POOL), "GML:TYPE is NONE or POOL");
     require(
       (duration >= MIN_PROPOSAL_DURATION) && (duration <= MAX_PROPOSAL_DURATION),
       "GML:invalid proposal duration"

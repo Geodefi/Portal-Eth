@@ -210,24 +210,18 @@ contract("GeodeModule", function (accounts) {
           "GML:invalid proposal duration"
         );
       });
-      it("reverts if type is 0, 3, 5", async function () {
+      it("reverts if type is 0 or 5", async function () {
         await expectRevert(
           this.contract.propose(user, 0, _name, MIN_PROPOSAL_DURATION, {
             from: governance,
           }),
-          "GML:TYPE is NONE, GAP or POOL"
-        );
-        await expectRevert(
-          this.contract.propose(user, 3, _name, MIN_PROPOSAL_DURATION, {
-            from: governance,
-          }),
-          "GML:TYPE is NONE, GAP or POOL"
+          "GML:TYPE is NONE or POOL"
         );
         await expectRevert(
           this.contract.propose(user, 5, _name, MIN_PROPOSAL_DURATION, {
             from: governance,
           }),
-          "GML:TYPE is NONE, GAP or POOL"
+          "GML:TYPE is NONE or POOL"
         );
       });
       context("success", function () {

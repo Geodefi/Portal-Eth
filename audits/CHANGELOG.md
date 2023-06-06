@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `\_decreaseWalletBalance` function call bring to top to save gas on `proposeStake` function
 - Improve `fallbackOperator` logic by making fallback treshold settable
 - Package update logic (Limited UUPS) changed to use package type as proposal type instead of `CONTRACT_UPGRADE (TYPE 2)`
+- `_imprison` and `BlameOperator` are moved to OracleExtensionLibrary.
 
 ### Fixed
 
