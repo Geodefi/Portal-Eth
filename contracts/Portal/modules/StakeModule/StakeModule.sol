@@ -171,7 +171,7 @@ abstract contract StakeModule is
   }
 
   /**
-   * @custom:section                           ** OPERATOR INITIATORS **
+   * @custom:section                           ** OPERATOR INITIATOR **
    *
    * @custom:visibility -> external
    */
@@ -244,12 +244,6 @@ abstract contract StakeModule is
   }
 
   /**
-   * @custom:section                           ** ID MANAGEMENT **
-   *
-   * @custom:visibility -> external
-   */
-
-  /**
    * @custom:subsection                           ** YIELD SEPARATION **
    */
 
@@ -259,6 +253,12 @@ abstract contract StakeModule is
   ) external virtual override whenNotPaused {
     SML.setYieldReceiver(DATASTORE, poolId, yieldReceiver);
   }
+
+  /**
+   * @custom:section                           ** ID MANAGEMENT **
+   *
+   * @custom:visibility -> external
+   */
 
   /**
    * @custom:subsection                           ** MAINTAINER **

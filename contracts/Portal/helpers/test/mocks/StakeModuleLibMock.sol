@@ -3,10 +3,12 @@ pragma solidity =0.8.7;
 
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract StakeModuleLibMock is StakeModule {
   using StakeModuleLib for StakeModuleLib.PooledStaking;
+  using OracleExtensionLib for StakeModuleLib.PooledStaking;
   using DataStoreModuleLib for DataStoreModuleLib.IsolatedStorage;
 
   event return$_buyback(uint256 remETH, uint256 boughtgETH);
@@ -40,14 +42,6 @@ contract StakeModuleLibMock is StakeModule {
 
   function $writeAddress(uint256 _id, bytes32 _key, address _data) external {
     DATASTORE.writeAddress(_id, _key, _data);
-  }
-
-  function $set_ORACLE_POSITION(address _data) external {
-    STAKE.ORACLE_POSITION = _data;
-  }
-
-  function $set_VALIDATORS_INDEX(uint256 _data) external {
-    STAKE.VALIDATORS_INDEX = _data;
   }
 
   function $set_VERIFICATION_INDEX(uint256 _data) external {
@@ -134,7 +128,7 @@ contract StakeModuleLibMock is StakeModule {
   }
 
   function $_imprison(uint256 _operatorId, bytes calldata _proof) external {
-    StakeModuleLib._imprison(DATASTORE, _operatorId, _proof);
+    OracleExtensionLib._imprison(DATASTORE, _operatorId, _proof);
   }
 
   function $_setValidatorPeriod(uint256 _operatorId, uint256 _newPeriod) external {

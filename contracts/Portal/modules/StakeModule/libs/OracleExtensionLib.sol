@@ -54,7 +54,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * * 6. Minting is allowed within PRICE_EXPIRY (24H) after the last price update.
  * * 7. Updates the regulation around Monopolies and provides BALANCE_MERKLE_ROOT to be used within withdrawal process.
  *
- * @dev External functions have OracleOnly modifier, except priceSync and priceSyncBatch.
+ * @dev Most external functions have OracleOnly modifier. Except: priceSync, priceSyncBatch and blameOperator.
  *
  * @dev This is an external library, requires deployment.
  *
@@ -74,12 +74,15 @@ library OracleExtensionLib {
   /// @notice sensible value for the minimum beacon chain validators. No reasoning.
   uint256 public constant MIN_VALIDATOR_COUNT = 50000;
 
+  /// @notice limiting the access for Operators in case of bad/malicious/faulty behaviour
+  uint256 public constant PRISON_SENTENCE = 14 days;
   /**
    * @custom:section                           ** EVENTS **
    */
   event Alienated(bytes pubkey);
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
   event FeeTheft(uint256 indexed id, bytes proofs);
+  event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event OracleReported(
     bytes32 priceMerkleRoot,
     bytes32 balanceMerkleRoot,
@@ -121,7 +124,7 @@ library OracleExtensionLib {
     );
 
     uint256 operatorId = STAKE.validators[_pk].operatorId;
-    SML._imprison(DATASTORE, operatorId, _pk);
+    _imprison(DATASTORE, operatorId, _pk);
 
     uint256 poolId = STAKE.validators[_pk].poolId;
     DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT);
@@ -162,8 +165,71 @@ library OracleExtensionLib {
 
   /**
    * @dev                                       ** REGULATING OPERATORS **
+   */
+
+  /**
+   * @custom:section                           ** PRISON **
    *
+   * When node operators act in a malicious way, which can also be interpereted as
+   * an honest mistake like using a faulty signature, Oracle imprisons the operator.
+   * These conditions are:
+   * * 1. Created a malicious validator(alien): faulty withdrawal credential, faulty signatures etc.
+   * * 2. Have not respect the validatorPeriod (or blamed for some other valid case)
+   * * 3. Stole block fees or MEV boost rewards from the pool
+   */
+
+  /**
+   * @custom:visibility -> internal
+   */
+
+  /**
+   * @notice Put an operator in prison
+   * @dev rks.release key refers to the end of the last imprisonment, when the limitations of operator is lifted
+   */
+  function _imprison(
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 _operatorId,
+    bytes calldata _proof
+  ) internal {
+    SML._authenticate(DATASTORE, _operatorId, false, false, [true, false]);
+
+    DATASTORE.writeUint(_operatorId, rks.release, block.timestamp + PRISON_SENTENCE);
+
+    emit Prisoned(_operatorId, _proof, block.timestamp + PRISON_SENTENCE);
+  }
+
+  /**
    * @custom:visibility -> external
+   */
+
+  /**
+   * @notice allows imprisoning an Operator if the validator have not been exited until expected exit
+   * @dev anyone can call this function while the state is ACTIVE
+   * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
+   *
+   * @dev this function lacks 2 other punishable acts:
+   * 1. while state is PROPOSED: validator proposed, it is passed, but haven't been created even tho it has been a MAX_BEACON_DELAY
+   * 2. while state is EXIT_REQUESTED:  validator requested exit, but it haven't been executed even tho it has been MAX_BEACON_DELAY
+   */
+  function blameOperator(
+    SML.PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    bytes calldata pk
+  ) external {
+    require(
+      self.validators[pk].state == VALIDATOR_STATE.ACTIVE,
+      "SML:validator is never activated"
+    );
+    require(
+      block.timestamp > self.validators[pk].createdAt + self.validators[pk].period,
+      "SML:validator is active"
+    );
+
+    _imprison(DATASTORE, self.validators[pk].operatorId, pk);
+  }
+
+  /**
+   * @custom:visibility -> onlyOracle
    */
 
   /**
@@ -181,7 +247,7 @@ library OracleExtensionLib {
     require(feeThefts.length == proofs.length, "OEL:invalid proofs");
 
     for (uint256 i = 0; i < feeThefts.length; ++i) {
-      SML._imprison(DATASTORE, feeThefts[i], proofs[i]);
+      _imprison(DATASTORE, feeThefts[i], proofs[i]);
 
       emit FeeTheft(feeThefts[i], proofs[i]);
     }
@@ -304,8 +370,8 @@ library OracleExtensionLib {
     } else {
       uint256 currentPrice = STAKE.gETH.pricePerShare(_poolId);
       if (_price > currentPrice) {
-        uint256 supplyDiff = (STAKE.gETH.totalSupply(_poolId) * 
-          (_price - currentPrice)) / STAKE.gETH.denominator();
+        uint256 supplyDiff = ((_price - currentPrice) * STAKE.gETH.totalSupply(_poolId)) /
+          STAKE.gETH.denominator();
         STAKE.gETH.mint(address(this), _poolId, supplyDiff, "");
         STAKE.gETH.safeTransferFrom(address(this), yieldReceiver, _poolId, supplyDiff, "");
       } else {

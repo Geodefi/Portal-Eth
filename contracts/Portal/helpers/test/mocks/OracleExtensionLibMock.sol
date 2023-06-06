@@ -77,7 +77,7 @@ contract OracleExtensionLibMock is StakeModule {
     return STAKE._alienateValidator(DATASTORE, STAKE.VERIFICATION_INDEX, _pk);
   }
 
-  function $_sanityCheck(uint256 _id, uint256 _newPrice) external {
+  function $_sanityCheck(uint256 _id, uint256 _newPrice) external view {
     return STAKE._sanityCheck(DATASTORE, _id, _newPrice);
   }
 

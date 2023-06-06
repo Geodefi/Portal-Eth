@@ -207,9 +207,6 @@ library StakeModuleLib {
   /// @notice some parameter changes are effective after a delay
   uint256 public constant SWITCH_LATENCY = 3 days;
 
-  /// @notice limiting the access for Operators in case of bad/malicious/faulty behaviour
-  uint256 public constant PRISON_SENTENCE = 14 days;
-
   /**
    * @custom:section                           ** EVENTS **
    */
@@ -221,7 +218,6 @@ library StakeModuleLib {
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
   event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
   event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 fallbackThreshold);
-  event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
   event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
   event Stake(bytes[] pubkeys);
@@ -611,7 +607,7 @@ library StakeModuleLib {
    *
    */
 
-   /**
+  /**
    * @custom:subsection                           ** YIELD SEPARATION **
    */
 
@@ -633,7 +629,7 @@ library StakeModuleLib {
     address yieldReceiver
   ) external {
     _authenticate(DATASTORE, poolId, true, false, [false, true]);
-    
+
     DATASTORE.writeAddress(poolId, rks.yieldReceiver, yieldReceiver);
     emit YieldReceiverSet(poolId, yieldReceiver);
   }
@@ -897,16 +893,8 @@ library StakeModuleLib {
   /**
    * @custom:section                           ** PRISON **
    *
-   * When node operators act in a malicious way, which can also be interpereted as
-   * an honest mistake like using a faulty signature, Oracle imprisons the operator.
-   * These conditions are:
-   * * 1. Created a malicious validator(alien): faulty withdrawal credential, faulty signatures etc.
-   * * 2. Have not respect the validatorPeriod (or blamed for some other valid case)
-   * * 3. Stole block fees or MEV boost rewards from the pool
-   */
-
-  /**
    * @custom:visibility -> view-public
+   * @dev check OEL._blameOperators for imprisonment details
    */
 
   /**
@@ -918,56 +906,6 @@ library StakeModuleLib {
     uint256 operatorId
   ) public view returns (bool) {
     return (block.timestamp < DATASTORE.readUint(operatorId, rks.release));
-  }
-
-  /**
-   * @custom:visibility -> internal
-   */
-
-  /**
-   * @notice Put an operator in prison
-   * @dev rks.release key refers to the end of the last imprisonment, when the limitations of operator is lifted
-   */
-  function _imprison(
-    DSML.IsolatedStorage storage DATASTORE,
-    uint256 _operatorId,
-    bytes calldata _proof
-  ) internal {
-    _authenticate(DATASTORE, _operatorId, false, false, [true, false]);
-
-    DATASTORE.writeUint(_operatorId, rks.release, block.timestamp + PRISON_SENTENCE);
-
-    emit Prisoned(_operatorId, _proof, block.timestamp + PRISON_SENTENCE);
-  }
-
-  /**
-   * @custom:visibility -> external
-   */
-
-  /**
-   * @notice allows imprisoning an Operator if the validator have not been exited until expected exit
-   * @dev anyone can call this function while the state is ACTIVE
-   * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
-   *
-   * @dev this function lacks 2 other punishable acts:
-   * 1. while state is PROPOSED: validator proposed, it is passed, but haven't been created even tho it has been a MAX_BEACON_DELAY
-   * 2. while state is EXIT_REQUESTED:  validator requested exit, but it haven't been executed even tho it has been MAX_BEACON_DELAY
-   */
-  function blameOperator(
-    PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
-    bytes calldata pk
-  ) external {
-    require(
-      self.validators[pk].state == VALIDATOR_STATE.ACTIVE,
-      "SML:validator is never activated"
-    );
-    require(
-      block.timestamp > self.validators[pk].createdAt + self.validators[pk].period,
-      "SML:validator is active"
-    );
-
-    _imprison(DATASTORE, self.validators[pk].operatorId, pk);
   }
 
   /**
@@ -1015,10 +953,8 @@ library StakeModuleLib {
 
         if (
           totalAllowance == 0 ||
-          (
-            ((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) >= 
-            DATASTORE.readUint(poolId, rks.fallbackThreshold)
-          )
+          (((numPoolValidators * PERCENTAGE_DENOMINATOR) / totalAllowance) >=
+            DATASTORE.readUint(poolId, rks.fallbackThreshold))
         ) {
           return remValidators;
         }
@@ -1064,7 +1000,7 @@ library StakeModuleLib {
     uint256 fallbackPercentage
   ) external {
     _authenticate(DATASTORE, poolId, false, true, [false, true]);
-    
+
     if (operatorId == 0) {
       DATASTORE.writeUint(poolId, rks.fallbackOperator, 0);
       DATASTORE.writeUint(poolId, rks.fallbackThreshold, 0);
@@ -1088,7 +1024,7 @@ library StakeModuleLib {
 
   /**
    * @notice To give allowence to node operator for a pool. It re-sets the allowance with the given value.
-   * @dev The value that is returned is not the new allowance, but the old one since it is required 
+   * @dev The value that is returned is not the new allowance, but the old one since it is required
    * * at the point where it is being returned.
    * @return oldAllowance to be used later, nothing is done with it within this function.
    */
@@ -1551,7 +1487,7 @@ library StakeModuleLib {
         );
 
         require(
-          self.validators[pubkeys[j]].operatorId == operatorId, 
+          self.validators[pubkeys[j]].operatorId == operatorId,
           "SML:NOT all pubkeys belong to operator"
         );
 
@@ -1608,7 +1544,6 @@ library StakeModuleLib {
         DATASTORE.subUint(poolId, rks.secured, DCL.DEPOSIT_AMOUNT * (sinceLastIdChange));
         DATASTORE.subUint(poolId, proposedValKey, (sinceLastIdChange));
         DATASTORE.addUint(poolId, activeValKey, (sinceLastIdChange));
-        
       }
 
       _increaseWalletBalance(DATASTORE, operatorId, DCL.DEPOSIT_AMOUNT_PRESTAKE * pubkeys.length);
