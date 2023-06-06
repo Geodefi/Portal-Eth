@@ -1201,7 +1201,7 @@ contract("StakeModuleLib", function (accounts) {
           );
         });
 
-        it("reverts if fallbackThreshold is greater then 100%", async function () {
+        it("reverts if fallbackThreshold is greater then 100", async function () {
           await expectRevert(
             this.contract.setFallbackOperator(
               publicPoolId,
@@ -1211,7 +1211,7 @@ contract("StakeModuleLib", function (accounts) {
                 from: poolMaintainer,
               }
             ),
-            "SML:percentage cannot be greater than 100"
+            "SML:threshold cannot be greater than 100"
           );
         });
         it("success: sets fallback operator and resets and emits FallbackOperator event", async function () {
