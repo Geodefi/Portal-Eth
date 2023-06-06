@@ -57,7 +57,6 @@ contract("StakeModuleLib", function (accounts) {
   const operatorFee = new BN(String(8e8)); // 8%
   const poolFee = new BN(String(9e8)); // 9%
 
-  const fallbackPercentage = 80;
   const fallbackThreshold = PERCENTAGE_DENOMINATOR.divn(100).muln(80);
 
   const unknownName = "unknown";
@@ -1187,7 +1186,7 @@ contract("StakeModuleLib", function (accounts) {
       describe("setFallbackOperator", function () {
         it("reverts if sender not maintainer", async function () {
           await expectRevert(
-            this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackPercentage, {
+            this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackThreshold, {
               from: attacker,
             }),
             "SML:sender NOT maintainer"
@@ -1195,7 +1194,7 @@ contract("StakeModuleLib", function (accounts) {
         });
         it("reverts if fallback not operator", async function () {
           await expectRevert(
-            this.contract.setFallbackOperator(publicPoolId, privatePoolId, fallbackPercentage, {
+            this.contract.setFallbackOperator(publicPoolId, privatePoolId, fallbackThreshold, {
               from: poolMaintainer,
             }),
             "SML:fallback not operator"
@@ -1204,13 +1203,13 @@ contract("StakeModuleLib", function (accounts) {
         it("reverts if given fallback operator is in prison", async function () {
           await this.contract.$_imprison(operatorId, ZERO_BYTES32);
           await expectRevert(
-            this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackPercentage, {
+            this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackThreshold, {
               from: poolMaintainer,
             }),
             "SML:cannot set fallback since prisoned"
           );
         });
-        it("reverts if fallbackPercentage is greater then 100", async function () {
+        it("reverts if fallbackThreshold is greater then 100%", async function () {
           await expectRevert(
             this.contract.setFallbackOperator(publicPoolId, operatorId, 101, {
               from: poolMaintainer,
@@ -1222,7 +1221,7 @@ contract("StakeModuleLib", function (accounts) {
           let tx = await this.contract.setFallbackOperator(
             publicPoolId,
             operatorId,
-            fallbackPercentage,
+            fallbackThreshold,
             { from: poolMaintainer }
           );
 
@@ -1240,7 +1239,7 @@ contract("StakeModuleLib", function (accounts) {
             fallbackThreshold: fallbackThreshold,
           });
 
-          tx = await this.contract.setFallbackOperator(publicPoolId, 0, fallbackPercentage, {
+          tx = await this.contract.setFallbackOperator(publicPoolId, 0, fallbackThreshold, {
             from: poolMaintainer,
           });
 
