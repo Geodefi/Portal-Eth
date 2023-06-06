@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Unnecessary `sinceLastIdChange` greater zero check is removed
 - `FALLBACK_THRESHOLD` constant is removed
+- `CONTRACT_UPGRADE` and `__GAP__` removed from ID_TYPE
 
 ## [0.6.0] - 2023-03-23
 

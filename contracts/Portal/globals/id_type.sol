@@ -10,7 +10,7 @@ pragma solidity =0.8.7;
  *
  * Dual Governance:
  * * SENATE: points to a proposal that will update the current SENATE address of a package(or Portal).
- * * CONTRACT_UPGRADE: proposal to change the given contract's implementation.
+ * * CONTRACT UPGRADE: proposal to change the given contract's implementation. TYPE should be package's TYPE.
  *
  * Users:
  * * OPERATOR: permissionned Node Operators (hosted on Portal).
@@ -41,12 +41,6 @@ library ID_TYPE {
 
   /// @notice TYPE 1: Senate
   uint256 internal constant SENATE = 1;
-
-  /// @notice TYPE 2: Contract Upgrade
-  uint256 internal constant CONTRACT_UPGRADE = 2;
-
-  /// @notice TYPE 3: *gap*: formally represented the admin contract. reserved to be never used.
-  uint256 internal constant __GAP__ = 3;
 
   /// --
 

@@ -195,10 +195,7 @@ library GeodeModuleLib {
     require(self.proposals[id].deadline == 0, "GML:already proposed");
     require((DATASTORE.readBytes(id, rks.NAME)).length == 0, "GML:ID already exist");
     require(_CONTROLLER != address(0), "GML:CONTROLLER can NOT be ZERO");
-    require(
-      (_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.__GAP__) && (_TYPE != ID_TYPE.POOL),
-      "GML:TYPE is NONE, GAP or POOL"
-    );
+    require((_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.POOL), "GML:TYPE is NONE, GAP or POOL");
     require(
       (duration >= MIN_PROPOSAL_DURATION) && (duration <= MAX_PROPOSAL_DURATION),
       "GML:invalid proposal duration"
@@ -244,7 +241,7 @@ library GeodeModuleLib {
   /**
    * @notice approves a proposal and records given data to DataStore
    * @notice specific changes for the reserved types (1, 2, 3) are implemented here,
-   * any other addition should take place in Portal, as not related. 
+   * any other addition should take place in Portal, as not related.
    * Note that GM has additional logic for package type approvals.
    * @param id given ID proposal that has will be approved by Senate
    * @dev Senate is not able to approve approved proposals
@@ -302,9 +299,13 @@ library GeodeModuleLib {
     uint256 id,
     address newCONTROLLER
   ) external onlyController(DATASTORE, id) {
-    uint256 typeOfId = DATASTORE.readUint(id, rks.TYPE);
-    require(typeOfId > ID_TYPE.LIMIT_MIN_USER && typeOfId < ID_TYPE.LIMIT_MAX_USER, "GML:TYPE of id NOT in limits");
     require(newCONTROLLER != address(0), "GML:CONTROLLER can not be zero");
+
+    uint256 typeOfId = DATASTORE.readUint(id, rks.TYPE);
+    require(
+      typeOfId > ID_TYPE.LIMIT_MIN_USER && typeOfId < ID_TYPE.LIMIT_MAX_USER,
+      "GML:ID TYPE is NOT user"
+    );
 
     DATASTORE.writeAddress(id, rks.CONTROLLER, newCONTROLLER);
 
