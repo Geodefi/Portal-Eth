@@ -77,7 +77,7 @@ interface IStakeModule is IDataStoreModule {
   function setFallbackOperator(
     uint256 poolId,
     uint256 operatorId,
-    uint256 fallbackPercentage
+    uint256 fallbackThreshold
   ) external;
 
   function operatorAllowance(uint256 poolId, uint256 operatorId) external view returns (uint256);

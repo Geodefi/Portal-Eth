@@ -921,7 +921,7 @@ library StakeModuleLib {
    * @dev an operator can not create new validators if:
    * * 1. operator is a monopoly
    * * 2. allowance is filled
-   * * * But if operator is set as a fallback, it can if set fallbackPercentage is reached on all allowances.
+   * * * But if operator is set as a fallback, it can if set fallbackThreshold is reached on all allowances.
    * @dev If operator withdraws a validator, then able to create a new one.
    * @dev prestake checks the approved validator count to make sure the number of validators are not bigger than allowance
    * @dev allowance doesn't change when new validators created or old ones are unstaked.
@@ -990,14 +990,14 @@ library StakeModuleLib {
    * * cannot set an operator as a fallback operator while it is currently in prison.
    * @param poolId the gETH id of the Pool
    * @param operatorId Operator ID to allow create validators
-   * @param fallbackPercentage the threshold percentage that fallback operator
+   * @param fallbackThreshold the percentage (with PERCENTAGE_DENOMINATOR) that fallback operator
    * * is activated for given Pool. Should not be greater than 100.
    */
   function setFallbackOperator(
     DSML.IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 operatorId,
-    uint256 fallbackPercentage
+    uint256 fallbackThreshold
   ) external {
     _authenticate(DATASTORE, poolId, false, true, [false, true]);
 
@@ -1010,11 +1010,12 @@ library StakeModuleLib {
         DATASTORE.readUint(operatorId, rks.TYPE) == ID_TYPE.OPERATOR,
         "SML:fallback not operator"
       );
-      require(!isPrisoned(DATASTORE, operatorId), "SML:cannot set fallback since prisoned");
 
-      require(fallbackPercentage <= 100, "SML:percentage cannot be greater than 100");
+      require(
+        fallbackThreshold <= PERCENTAGE_DENOMINATOR,
+        "SML:threshold cannot be greater than 100"
+      );
 
-      uint256 fallbackThreshold = (PERCENTAGE_DENOMINATOR * fallbackPercentage) / 100;
       DATASTORE.writeUint(poolId, rks.fallbackThreshold, fallbackThreshold);
       DATASTORE.writeUint(poolId, rks.fallbackOperator, operatorId);
 

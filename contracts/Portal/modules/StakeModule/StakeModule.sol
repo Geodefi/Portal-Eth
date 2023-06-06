@@ -359,9 +359,9 @@ abstract contract StakeModule is
   function setFallbackOperator(
     uint256 poolId,
     uint256 operatorId,
-    uint256 fallbackPercentage
+    uint256 fallbackThreshold
   ) external virtual override whenNotPaused {
-    SML.setFallbackOperator(DATASTORE, poolId, operatorId, fallbackPercentage);
+    SML.setFallbackOperator(DATASTORE, poolId, operatorId, fallbackThreshold);
   }
 
   /**
