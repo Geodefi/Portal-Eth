@@ -10,10 +10,13 @@ import {IPortal} from "../interfaces/IPortal.sol";
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 // libraries
 import {DataStoreModuleLib as DSML} from "../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
+import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
-contract WithdrawalContract is IWithdrawalContract, GeodeModule {
+contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModule {
   /**
    * @custom:section                           ** VARIABLES **
    * Following immutable parameters are set when the referance library implementation is deployed.
@@ -23,7 +26,7 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule {
   address internal immutable gETHPos;
   /// @notice Portal position
   address internal immutable portalPos;
-  uint internal POOL_ID; // delete this, just a placeholder for now.
+
   /**
    * @custom:section                           ** MODIFIERS **
    */
@@ -80,12 +83,11 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule {
   }
 
   function __WithdrawalContract_init_unchained(uint256 pooledTokenId) internal onlyInitializing {
-    POOL_ID = pooledTokenId;
+    __WithdrawalModule_init(pooledTokenId);
   }
 
-  // todo
   function getPoolId() public view override returns (uint256) {
-    return POOL_ID;
+    return WITHDRAWAL.pooledTokenId;
   }
 
   /**
@@ -120,18 +122,23 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule {
     override(GeodeModule, IGeodeModule)
     returns (bool)
   {
-    if (getContractVersion() != getProposedVersion()) { 
+    if (getContractVersion() != getProposedVersion()) {
       return true;
     }
 
     if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
       return true;
     }
-    
+
     if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) {
       return true;
     }
 
     return false;
   }
+
+  /**
+   * @notice keep the total number of variables at 50
+   */
+  uint256[48] private __gap;
 }

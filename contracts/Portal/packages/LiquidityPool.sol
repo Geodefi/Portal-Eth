@@ -182,10 +182,10 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
       return true;
     }
-    
+
     if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) {
       return true;
-    } 
+    }
 
     return false;
   }
