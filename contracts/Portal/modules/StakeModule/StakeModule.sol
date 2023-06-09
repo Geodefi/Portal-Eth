@@ -64,6 +64,8 @@ abstract contract StakeModule is
    * @custom:section                           ** EVENTS **
    */
   event IdInitiated(uint256 id, uint256 indexed TYPE);
+  event MiddlewareDeployed(uint256 poolId, uint256 version);
+  event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
   event VisibilitySet(uint256 id, bool isPrivate);
   event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);

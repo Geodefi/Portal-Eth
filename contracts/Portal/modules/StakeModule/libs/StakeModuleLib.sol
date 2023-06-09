@@ -211,6 +211,8 @@ library StakeModuleLib {
    * @custom:section                           ** EVENTS **
    */
   event IdInitiated(uint256 id, uint256 indexed TYPE);
+  event MiddlewareDeployed(uint256 poolId, uint256 version);
+  event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
   event VisibilitySet(uint256 id, bool isPrivate);
   event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
@@ -432,6 +434,8 @@ library StakeModuleLib {
 
     // isolate the contract from middleware risk for ID
     self.gETH.avoidMiddlewares(_id, true);
+
+    emit MiddlewareDeployed(_id, _versionId);
   }
 
   /**
@@ -461,6 +465,8 @@ library StakeModuleLib {
       DATASTORE.readBytes(versionId, rks.NAME),
       _package_data
     );
+
+    emit PackageDeployed(_poolId, _type, packageInstance);
   }
 
   /**
@@ -523,7 +529,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:subsection                           ** BOUND LIQUIDITY POOL **
+   * @custom:subsection                           ** POOL VISIBILITY **
    */
 
   /**
@@ -1149,7 +1155,7 @@ library StakeModuleLib {
     uint256 lastupdate = self.gETH.priceUpdateTimestamp(poolId);
     unchecked {
       isValid =
-        lastupdate + PRICE_EXPIRY >= block.timestamp &&
+        lastupdate + PRICE_EXPIRY >= block.timestamp ||
         lastupdate >= self.ORACLE_UPDATE_TIMESTAMP;
     }
   }

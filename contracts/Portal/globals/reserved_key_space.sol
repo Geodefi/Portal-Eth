@@ -90,7 +90,7 @@ library RESERVED_KEY_SPACE {
   /**
    * @custom:type address
    * @custom:definition receiver address for yield seperation functionality
-   * * will receive minted gETH to given receiver instead of updating pricePerShare
+   * * will receive minted gETH to given receiver instead of increasing pricePerShare
    */
   bytes32 internal constant yieldReceiver = "yieldReceiver";
 
