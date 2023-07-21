@@ -1663,15 +1663,25 @@ contract("StakeModuleLib", function (accounts) {
       });
 
       describe("deposit", function () {
+        it("reverts if msg.value is zero", async function () {
+          await expectRevert(
+            this.contract.deposit(privatePoolId, 0, [], 0, MAX_UINT256, ZERO_ADDRESS),
+            "SML:msg.value cannot be zero"
+          );
+        });
         it("reverts if deadline past", async function () {
           await expectRevert(
-            this.contract.deposit(privatePoolId, 0, [], 0, 0, ZERO_ADDRESS),
+            this.contract.deposit(privatePoolId, 0, [], 0, 0, ZERO_ADDRESS, {
+              value: 1,
+            }),
             "SML:deadline not met"
           );
         });
         it("reverts if receiver is zero", async function () {
           await expectRevert(
-            this.contract.deposit(privatePoolId, 0, [], 0, MAX_UINT256, ZERO_ADDRESS),
+            this.contract.deposit(privatePoolId, 0, [], 0, MAX_UINT256, ZERO_ADDRESS, {
+              value: 1,
+            }),
             "SML:receiver is zero address"
           );
         });
@@ -1682,6 +1692,7 @@ contract("StakeModuleLib", function (accounts) {
           await expectRevert(
             this.contract.deposit(privatePoolId, 0, [], 0, MAX_UINT256, attacker, {
               from: attacker,
+              value: 1,
             }),
             "SML:sender NOT whitelisted"
           );
@@ -1690,6 +1701,7 @@ contract("StakeModuleLib", function (accounts) {
           await expectRevert(
             this.contract.deposit(privatePoolId, 0, [], MAX_UINT256, MAX_UINT256, staker, {
               from: poolOwner,
+              value: 1,
             }),
             "SML:less than minimum"
           );
