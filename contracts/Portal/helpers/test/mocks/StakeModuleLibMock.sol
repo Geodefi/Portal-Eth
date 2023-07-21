@@ -198,8 +198,8 @@ contract StakeModuleLibMock is StakeModule {
     payable
     virtual
     override
-    whenNotPaused
     nonReentrant
+    whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
     (boughtgETH, mintedgETH) = STAKE.deposit(DATASTORE, poolId, mingETH, deadline, receiver);

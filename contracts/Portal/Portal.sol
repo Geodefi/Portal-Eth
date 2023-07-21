@@ -212,7 +212,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
 
   function pushUpgrade(
     uint256 packageType
-  ) external virtual override whenNotPaused nonReentrant returns (uint256 id) {
+  ) external virtual override nonReentrant whenNotPaused returns (uint256 id) {
     require(
       packageType > ID_TYPE.LIMIT_MIN_PACKAGE && packageType < ID_TYPE.LIMIT_MAX_PACKAGE,
       "PORTAL:invalid package type"

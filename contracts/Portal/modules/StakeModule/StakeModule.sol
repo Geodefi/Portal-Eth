@@ -182,7 +182,7 @@ abstract contract StakeModule is
     uint256 fee,
     uint256 validatorPeriod,
     address maintainer
-  ) external payable virtual override whenNotPaused nonReentrant {
+  ) external payable virtual override nonReentrant whenNotPaused {
     SML.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
   }
 
@@ -297,7 +297,7 @@ abstract contract StakeModule is
 
   function increaseWalletBalance(
     uint256 id
-  ) external payable virtual override whenNotPaused nonReentrant returns (bool) {
+  ) external payable virtual override nonReentrant whenNotPaused returns (bool) {
     return SML.increaseWalletBalance(DATASTORE, id);
   }
 
@@ -407,8 +407,8 @@ abstract contract StakeModule is
     payable
     virtual
     override
-    whenNotPaused
     nonReentrant
+    whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
     if (!STAKE.isPriceValid(poolId)) {
