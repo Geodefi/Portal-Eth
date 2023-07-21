@@ -164,6 +164,7 @@ library GeodeModuleLib {
    * @custom:visibility -> internal
    */
   function _setSenate(DualGovernance storage self, address _newSenate, uint256 _expiry) internal {
+    require(_newSenate != address(0), "GML:Senate cannot be zero address");
     self.SENATE = _newSenate;
     self.SENATE_EXPIRY = _expiry;
 
