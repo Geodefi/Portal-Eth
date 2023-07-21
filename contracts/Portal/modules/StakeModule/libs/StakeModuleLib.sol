@@ -188,6 +188,9 @@ library StakeModuleLib {
   /// @notice limiting the GOVERNANCE_FEE to 5%
   uint256 public constant MAX_GOVERNANCE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
 
+  /// @notice starting time of the GOVERNANCE_FEE 
+  uint256 public constant GOVERNANCE_FEE_COMMENCEMENT = 1714514461;
+
   /// @notice limiting the pool and operator maintenance fee, 10%
   uint256 public constant MAX_MAINTENANCE_FEE = (PERCENTAGE_DENOMINATOR * 10) / 100;
 
