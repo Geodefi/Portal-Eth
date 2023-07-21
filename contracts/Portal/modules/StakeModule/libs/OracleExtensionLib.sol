@@ -155,7 +155,8 @@ library OracleExtensionLib {
     require(STAKE.VALIDATORS_INDEX >= validatorVerificationIndex, "OEL:high VERIFICATION_INDEX");
     require(validatorVerificationIndex > STAKE.VERIFICATION_INDEX, "OEL:low VERIFICATION_INDEX");
 
-    for (uint256 i = 0; i < alienatedPubkeys.length; ++i) {
+    uint256 alienatedPubkeysLen = alienatedPubkeys.length;
+    for (uint256 i = 0; i < alienatedPubkeysLen; ++i) {
       _alienateValidator(STAKE, DATASTORE, validatorVerificationIndex, alienatedPubkeys[i]);
     }
 
@@ -246,7 +247,8 @@ library OracleExtensionLib {
   ) external onlyOracle(STAKE) {
     require(feeThefts.length == proofs.length, "OEL:invalid proofs");
 
-    for (uint256 i = 0; i < feeThefts.length; ++i) {
+    uint256 feeTheftsLen = feeThefts.length;
+    for (uint256 i = 0; i < feeTheftsLen; ++i) {
       _imprison(DATASTORE, feeThefts[i], proofs[i]);
 
       emit FeeTheft(feeThefts[i], proofs[i]);
@@ -414,7 +416,8 @@ library OracleExtensionLib {
     require(poolIds.length == prices.length, "OEL:array lengths not equal");
     require(poolIds.length == priceProofs.length, "OEL:array lengths not equal");
 
-    for (uint256 i = 0; i < poolIds.length; ++i) {
+    uint256 poolIdsLen = poolIds.length;
+    for (uint256 i = 0; i < poolIdsLen; ++i) {
       _priceSync(STAKE, DATASTORE, poolIds[i], prices[i], priceProofs[i]);
     }
   }

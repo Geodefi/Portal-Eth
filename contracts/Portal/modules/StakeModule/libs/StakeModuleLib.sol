@@ -1072,8 +1072,10 @@ library StakeModuleLib {
     uint256[] calldata allowances
   ) external {
     _authenticate(DATASTORE, poolId, false, true, [false, true]);
-    require(operatorIds.length == allowances.length, "SML:allowances should match");
-    for (uint256 i = 0; i < operatorIds.length; ) {
+    uint256 operatorIdsLen = operatorIds.length;
+    require(operatorIdsLen == allowances.length, "SML:allowances should match");
+    
+    for (uint256 i = 0; i < operatorIdsLen; ) {
       require(
         DATASTORE.readUint(operatorIds[i], rks.TYPE) == ID_TYPE.OPERATOR,
         "SML:id not operator"
@@ -1086,7 +1088,7 @@ library StakeModuleLib {
 
     uint256 newCumulativeSubset;
     uint256 oldCumulativeSubset;
-    for (uint256 i = 0; i < operatorIds.length; ) {
+    for (uint256 i = 0; i < operatorIdsLen; ) {
       newCumulativeSubset += allowances[i];
       oldCumulativeSubset += _approveOperator(DATASTORE, poolId, operatorIds[i], allowances[i]);
       unchecked {
@@ -1483,15 +1485,16 @@ library StakeModuleLib {
     bytes[] calldata pubkeys
   ) external {
     _authenticate(DATASTORE, operatorId, false, true, [true, false]);
-
+    
     require(
       (pubkeys.length > 0) && (pubkeys.length <= DCL.MAX_DEPOSITS_PER_CALL),
       "SML:1 - 50 validators"
     );
-
+    
     {
+      uint256 pubkeysLen = pubkeys.length;
       uint256 _verificationIndex = self.VERIFICATION_INDEX;
-      for (uint256 j = 0; j < pubkeys.length; ) {
+      for (uint256 j = 0; j < pubkeysLen; ) {
         require(
           _canStake(self, pubkeys[j], _verificationIndex),
           "SML:NOT all pubkeys are stakeable"
