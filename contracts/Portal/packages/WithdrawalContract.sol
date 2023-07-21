@@ -138,5 +138,5 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
   /**
    * @notice keep the total number of variables at 50
    */
-  uint256[48] private __gap;
+  uint256[50] private __gap;
 }
