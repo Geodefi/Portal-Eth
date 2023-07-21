@@ -65,7 +65,7 @@ library DataStoreModuleLib {
    * TYPEs will be considered during ID generation.
    */
   function generateId(bytes memory _name, uint256 _type) internal pure returns (uint256 id) {
-    id = uint256(keccak256(abi.encodePacked(_name, _type)));
+    id = uint256(keccak256(abi.encode(_name, _type)));
   }
 
   /**
@@ -73,7 +73,7 @@ library DataStoreModuleLib {
    * @return key bytes32, hash.
    **/
   function getKey(uint256 id, bytes32 param) internal pure returns (bytes32 key) {
-    key = keccak256(abi.encodePacked(id, param));
+    key = keccak256(abi.encode(id, param));
   }
 
   /**

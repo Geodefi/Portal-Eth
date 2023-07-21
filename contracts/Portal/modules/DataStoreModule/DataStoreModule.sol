@@ -60,7 +60,7 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
     string calldata _name,
     uint256 _type
   ) external pure virtual override returns (uint256 id) {
-    id = uint256(keccak256(abi.encodePacked(_name, _type)));
+    id = uint256(keccak256(abi.encode(_name, _type)));
   }
 
   /**
