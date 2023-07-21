@@ -260,7 +260,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     LIQUIDITY.rampA(futureA, futureTime);
   }
 
-  function stopRampA() public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
+  function stopRampA() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     LIQUIDITY.stopRampA();
   }
 
