@@ -635,10 +635,16 @@ contract("OracleExtensionLib", function (accounts) {
           await setTimestamp(ts.add(DAY).toNumber());
         });
         it("reverts if poolIds.length != prices.length", async function () {
-          await expectRevert.unspecified(this.contract.priceSyncBatch(poolIds, [], []));
+          await expectRevert(
+            this.contract.priceSyncBatch(poolIds, [], []),
+            "OEL:array lengths not equal"
+          );
         });
         it("reverts if poolIds.length != priceProofs.length", async function () {
-          await expectRevert.unspecified(this.contract.priceSyncBatch(poolIds, prices, []));
+          await expectRevert(
+            this.contract.priceSyncBatch(poolIds, prices, []),
+            "OEL:array lengths not equal"
+          );
         });
         it("success", async function () {
           const ids = poolIds.map(function (e) {

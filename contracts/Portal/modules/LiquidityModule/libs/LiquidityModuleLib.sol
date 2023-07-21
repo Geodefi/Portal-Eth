@@ -714,7 +714,7 @@ library LiquidityModuleLib {
     } else if (index == 1) {
       return self.gETH.balanceOf(address(this), self.pooledTokenId) - (self.balances[index]);
     } else {
-      revert();
+      revert("LML:invalid index");
     }
   }
 

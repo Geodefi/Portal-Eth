@@ -109,8 +109,8 @@ abstract contract StakeModule is
     address _gETH,
     address _oracle_position
   ) internal onlyInitializing {
-    require(_gETH != address(0));
-    require(_oracle_position != address(0));
+    require(_gETH != address(0), "SM:gETH cannot be zero address");
+    require(_oracle_position != address(0), "SM:oracle cannot be zero address");
     STAKE.gETH = IgETH(_gETH);
     STAKE.ORACLE_POSITION = _oracle_position;
     STAKE.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;

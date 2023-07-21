@@ -426,7 +426,7 @@ library StakeModuleLib {
     uint256 _versionId,
     bytes memory _middleware_data
   ) internal {
-    require(_versionId > 0);
+    require(_versionId > 0, "SML:versionId cannot be 0");
     require(self.middlewares[ID_TYPE.MIDDLEWARE_GETH][_versionId], "SML:not a middleware");
 
     address newgETHMiddleware = Clones.clone(DATASTORE.readAddress(_versionId, rks.CONTROLLER));
@@ -456,7 +456,7 @@ library StakeModuleLib {
     bytes memory _package_data
   ) internal returns (address packageInstance) {
     uint256 versionId = self.packages[_type];
-    require(versionId > 0);
+    require(versionId > 0, "SML:versionId cannot be 0");
 
     packageInstance = address(
       new ERC1967Proxy(DATASTORE.readAddress(versionId, rks.CONTROLLER), "")

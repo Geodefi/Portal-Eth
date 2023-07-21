@@ -183,14 +183,16 @@ contract("StakeModuleLib", function (accounts) {
 
   context("__StakeModule_init_unchained", function () {
     it("reverts with gETH=0", async function () {
-      await expectRevert.unspecified(
-        (await StakeModuleLibMock.new()).initialize(ZERO_ADDRESS, oracle)
+      await expectRevert(
+        (await StakeModuleLibMock.new()).initialize(ZERO_ADDRESS, oracle),
+        "SM:gETH cannot be zero address"
       );
     });
 
     it("reverts with oracle=0", async function () {
-      await expectRevert.unspecified(
-        (await StakeModuleLibMock.new()).initialize(this.gETH.address, ZERO_ADDRESS)
+      await expectRevert(
+        (await StakeModuleLibMock.new()).initialize(this.gETH.address, ZERO_ADDRESS),
+        "SM:oracle cannot be zero address"
       );
     });
 
@@ -402,7 +404,10 @@ contract("StakeModuleLib", function (accounts) {
       });
       describe("_deploygETHMiddleware", function () {
         it("reverts: if _versionId is zero", async function () {
-          await expectRevert.unspecified(this.contract.$_deploygETHMiddleware(unknownId, 0, "0x"));
+          await expectRevert(
+            this.contract.$_deploygETHMiddleware(unknownId, 0, "0x"),
+            "SML:versionId cannot be 0"
+          );
         });
         it("reverts: if _versionId is not allowed", async function () {
           await expectRevert(
@@ -423,7 +428,10 @@ contract("StakeModuleLib", function (accounts) {
       });
       describe("_deployGeodePackage", function () {
         it("reverts: if _versionId is zero", async function () {
-          await expectRevert.unspecified(this.contract.$_deployGeodePackage(10021, 0, "0x"));
+          await expectRevert(
+            this.contract.$_deployGeodePackage(10021, 0, "0x"),
+            "SML:versionId cannot be 0"
+          );
         });
         it("success", async function () {
           await this.setLP(this.LiquidityPool.address);

@@ -411,8 +411,8 @@ library OracleExtensionLib {
     uint256[] calldata prices,
     bytes32[][] calldata priceProofs
   ) external {
-    require(poolIds.length == prices.length);
-    require(poolIds.length == priceProofs.length);
+    require(poolIds.length == prices.length, "OEL:array lengths not equal");
+    require(poolIds.length == priceProofs.length, "OEL:array lengths not equal");
 
     for (uint256 i = 0; i < poolIds.length; ++i) {
       _priceSync(STAKE, DATASTORE, poolIds[i], prices[i], priceProofs[i]);
