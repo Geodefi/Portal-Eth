@@ -396,7 +396,7 @@ contract("GeodeModule", function (accounts) {
       it("reverts if new senate is zero address", async function () {
         await setTimestamp(initTs.add(MAX_SENATE_PERIOD).addn(10).toNumber());
         await expectRevert(
-          await this.contract.rescueSenate(ZERO_ADDRESS, { from: governance }),
+          this.contract.rescueSenate(ZERO_ADDRESS, { from: governance }),
           "GML:Senate cannot be zero address"
         );
       });
