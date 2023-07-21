@@ -413,12 +413,12 @@ library LiquidityModuleLib {
     uint256[2] memory xp,
     uint256 a
   ) internal view returns (uint256 debt) {
-    uint256 halfD = getD(xp, a) / 2;
+    uint256 halfD = getD(xp, a) >> 1;
     if (xp[0] >= halfD) {
       debt = 0;
     } else {
       uint256 dy = xp[1] - halfD;
-      uint256 feeHalf = (dy * self.swapFee) / PERCENTAGE_DENOMINATOR / 2;
+      uint256 feeHalf = ((dy * self.swapFee) / PERCENTAGE_DENOMINATOR) >> 1;
       debt = halfD - xp[0] + feeHalf;
     }
   }
@@ -578,7 +578,7 @@ library LiquidityModuleLib {
 
     uint256[2] memory xpReduced;
 
-    v.feePerToken = self.swapFee / 2;
+    v.feePerToken = self.swapFee >> 1;
     for (uint256 i; i < 2; ++i) {
       uint256 xpi = self.balances[i];
       xpReduced[i] =
@@ -847,7 +847,7 @@ library LiquidityModuleLib {
     uint256[2] memory fees;
 
     if (v.totalSupply != 0) {
-      uint256 feePerToken = self.swapFee / 2;
+      uint256 feePerToken = self.swapFee >> 1;
       for (uint256 i = 0; i < 2; ++i) {
         uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
         fees[i] =
@@ -1005,7 +1005,7 @@ library LiquidityModuleLib {
       "LML:>LP.balanceOf"
     );
 
-    uint256 feePerToken = self.swapFee / 2;
+    uint256 feePerToken = self.swapFee >> 1;
     uint256[2] memory fees;
 
     {
