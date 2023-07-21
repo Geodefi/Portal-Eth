@@ -1075,7 +1075,7 @@ library StakeModuleLib {
     uint256 operatorIdsLen = operatorIds.length;
     require(operatorIdsLen == allowances.length, "SML:allowances should match");
     
-    for (uint256 i = 0; i < operatorIdsLen; ) {
+    for (uint256 i; i < operatorIdsLen; ) {
       require(
         DATASTORE.readUint(operatorIds[i], rks.TYPE) == ID_TYPE.OPERATOR,
         "SML:id not operator"
@@ -1401,7 +1401,7 @@ library StakeModuleLib {
 
     _decreaseWalletBalance(DATASTORE, operatorId, (pkLen * DCL.DEPOSIT_AMOUNT_PRESTAKE));
 
-    for (uint256 i = 0; i < pkLen; ) {
+    for (uint256 i; i < pkLen; ) {
       require(pubkeys[i].length == DCL.PUBKEY_LENGTH, "SML:PUBKEY_LENGTH ERROR");
       require(signatures1[i].length == DCL.SIGNATURE_LENGTH, "SML:SIGNATURE_LENGTH ERROR");
       require(signatures31[i].length == DCL.SIGNATURE_LENGTH, "SML:SIGNATURE_LENGTH ERROR");
@@ -1494,7 +1494,7 @@ library StakeModuleLib {
     {
       uint256 pubkeysLen = pubkeys.length;
       uint256 _verificationIndex = self.VERIFICATION_INDEX;
-      for (uint256 j = 0; j < pubkeysLen; ) {
+      for (uint256 j; j < pubkeysLen; ) {
         require(
           _canStake(self, pubkeys[j], _verificationIndex),
           "SML:NOT all pubkeys are stakeable"
@@ -1518,7 +1518,7 @@ library StakeModuleLib {
       bytes memory withdrawalCredential = DATASTORE.readBytes(poolId, rks.withdrawalCredential);
 
       uint256 lastIdChange = 0;
-      for (uint256 i = 0; i < pubkeys.length; ) {
+      for (uint256 i; i < pubkeys.length; ) {
         uint256 newPoolId = self.validators[pubkeys[i]].poolId;
         if (poolId != newPoolId) {
           uint256 sinceLastIdChange;

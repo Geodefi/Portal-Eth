@@ -242,7 +242,7 @@ library DataStoreModuleLib {
     uint256 arrayLen = self.uintData[arrayKey];
 
     uint256 _dataLen = _data.length;
-    for (uint256 i = 0; i < _dataLen; ) {
+    for (uint256 i; i < _dataLen; ) {
       self.uintData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
@@ -262,7 +262,7 @@ library DataStoreModuleLib {
     uint256 arrayLen = self.uintData[arrayKey];
 
     uint256 _dataLen = _data.length;
-    for (uint256 i = 0; i < _dataLen; ) {
+    for (uint256 i; i < _dataLen; ) {
       self.bytesData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
@@ -282,7 +282,7 @@ library DataStoreModuleLib {
     uint256 arrayLen = self.uintData[arrayKey];
 
     uint256 _dataLen = _data.length;
-    for (uint256 i = 0; i < _dataLen; ) {
+    for (uint256 i; i < _dataLen; ) {
       self.addressData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;

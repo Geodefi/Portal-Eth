@@ -209,7 +209,7 @@ library LiquidityModuleLib {
     uint256 s;
     uint256 nA = a * numTokens;
 
-    for (uint256 i = 0; i < numTokens; ++i) {
+    for (uint256 i; i < numTokens; ++i) {
       if (i != tokenIndex) {
         s = s + xp[i];
         c = (c * d) / (xp[i] * (numTokens));
@@ -253,7 +253,7 @@ library LiquidityModuleLib {
     uint256 d = s;
     uint256 nA = a * numTokens;
 
-    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
+    for (uint256 i; i < MAX_LOOP_LIMIT; ++i) {
       uint256 dP = (d ** (numTokens + 1)) / (numTokens ** numTokens * xp[0] * xp[1]);
       prevD = d;
       d =
@@ -307,7 +307,7 @@ library LiquidityModuleLib {
     uint256 yPrev;
     uint256 y = d;
 
-    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
+    for (uint256 i; i < MAX_LOOP_LIMIT; ++i) {
       yPrev = y;
       y = ((y * y) + c) / (2 * y + b - d);
       if (within1(y, yPrev)) {
@@ -579,7 +579,7 @@ library LiquidityModuleLib {
     uint256[2] memory xpReduced;
 
     v.feePerToken = self.swapFee / 2;
-    for (uint256 i = 0; i < 2; ++i) {
+    for (uint256 i; i < 2; ++i) {
       uint256 xpi = self.balances[i];
       xpReduced[i] =
         xpi -
@@ -677,7 +677,7 @@ library LiquidityModuleLib {
     uint256[2] memory balances = self.balances;
 
     uint256 d0 = getD(_pricedInBatch(self, balances), a);
-    for (uint256 i = 0; i < 2; ++i) {
+    for (uint256 i; i < 2; ++i) {
       if (deposit) {
         balances[i] = balances[i] + amounts[i];
       } else {
@@ -823,7 +823,7 @@ library LiquidityModuleLib {
     uint256[2] memory newBalances;
     newBalances[0] = v.balances[0] + msg.value;
 
-    for (uint256 i = 0; i < 2; ++i) {
+    for (uint256 i; i < 2; ++i) {
       require(v.totalSupply != 0 || amounts[i] > 0, "LML:Must supply all tokens in pool");
     }
 
@@ -905,7 +905,7 @@ library LiquidityModuleLib {
       _calculateRemoveLiquidity(_pricedInBatch(self, balances), amount, totalSupply)
     );
 
-    for (uint256 i = 0; i < amounts.length; ++i) {
+    for (uint256 i; i < amounts.length; ++i) {
       require(amounts[i] >= minAmounts[i], "LML:amounts[i] < minAmounts[i]");
       self.balances[i] = balances[i] - amounts[i];
     }
@@ -1012,7 +1012,7 @@ library LiquidityModuleLib {
       uint256[2] memory balances1;
 
       v.d0 = getD(_pricedInBatch(self, v.balances), v.preciseA);
-      for (uint256 i = 0; i < 2; ++i) {
+      for (uint256 i; i < 2; ++i) {
         require(amounts[i] <= v.balances[i], "LML:Cannot withdraw > available");
         balances1[i] = v.balances[i] - amounts[i];
       }
