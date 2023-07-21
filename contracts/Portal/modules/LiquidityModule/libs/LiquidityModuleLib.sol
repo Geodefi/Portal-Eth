@@ -608,7 +608,7 @@ library LiquidityModuleLib {
     ILPToken lpToken = self.lpToken;
     uint256 supply = lpToken.totalSupply();
     if (supply > 0) {
-      return (d * 10 ** 18) / supply;
+      return (d * 1e18) / supply;
     }
     return 0;
   }
