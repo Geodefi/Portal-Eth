@@ -9,8 +9,6 @@ import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.so
 import {IPortal} from "../interfaces/IPortal.sol";
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
-import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
