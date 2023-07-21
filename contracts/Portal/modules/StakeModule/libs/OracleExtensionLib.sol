@@ -23,7 +23,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * @dev review: DataStoreModule for the IsolatedStorage logic.
  * @dev review: StakeModuleLib for base staking logic.
  *
- * @dev Telescope is currently responsible from 4 tasks:
+ * @dev Telescope is currently responsible for 4 tasks:
  * * Updating the on-chain price of all pools with a MerkleRoot for minting operations
  * * Updating the on-chain balances info of all validators with a MerkleRoot for withdrawal operations
  * * Confirming validator proposals
@@ -41,13 +41,13 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * 2. regulateOperators: Regulating the Operators
  * * Operators can act faulty in many different ways. To prevent such actions,
  * * Telescope regulates them with well defined limitations.
- * * Currently only issue is the fee theft, meaning operator have not
+ * * Currently only issue is the fee theft, meaning operators have not
  * * used the withdrawal contract for miner fees or MEV boost.
  * * There can be other restrictions in the future.
  *
  * 2. reportBeacon: Continous Data from Beacon chain: Price Merkle Root & Balances Merkle Root & # of active validators
  * * 1. Oracle Nodes calculate the price of its derivative, according to the validator data such as balance and fees.
- * * 2. If a pool doesn't have a validator, price kept same.
+ * * 2. If a pool doesn't have a validator, the price is kept the same.
  * * 3. A merkle tree is constructed with the order of allIdsByType array.
  * * 4. A watcher collects all the signatures from Multiple Oracle Nodes, and submits the merkle root.
  * * 5. Anyone can update the price of the derivative  by calling priceSync() functions with correct merkle proofs
@@ -170,7 +170,7 @@ library OracleExtensionLib {
   /**
    * @custom:section                           ** PRISON **
    *
-   * When node operators act in a malicious way, which can also be interpereted as
+   * When node operators act in a malicious way, which can also be interpreted as
    * an honest mistake like using a faulty signature, Oracle imprisons the operator.
    * These conditions are:
    * * 1. Created a malicious validator(alien): faulty withdrawal credential, faulty signatures etc.
@@ -208,8 +208,8 @@ library OracleExtensionLib {
    * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
    *
    * @dev this function lacks 2 other punishable acts:
-   * 1. while state is PROPOSED: validator proposed, it is passed, but haven't been created even tho it has been a MAX_BEACON_DELAY
-   * 2. while state is EXIT_REQUESTED:  validator requested exit, but it haven't been executed even tho it has been MAX_BEACON_DELAY
+   * 1. while the state is PROPOSED: validator proposed, it is passed, but hasn't been created even though it has been a MAX_BEACON_DELAY
+   * 2. while state is EXIT_REQUESTED:  validator requested exit, but it hasn't been executed even tho it has been MAX_BEACON_DELAY
    */
   function blameOperator(
     SML.PooledStaking storage self,

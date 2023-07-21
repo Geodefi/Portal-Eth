@@ -163,7 +163,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
   }
 
   /**
-   * @notice releases an imprisoned operator immidately
+   * @notice releases an imprisoned operator immediately
    * @dev in different situations such as a faulty imprisonment or coordinated testing periods
    * * Governance can release the prisoners
    * @dev onlyGovernance SHOULD be checked in Portal

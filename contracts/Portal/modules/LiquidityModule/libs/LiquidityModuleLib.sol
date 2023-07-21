@@ -767,7 +767,7 @@ library LiquidityModuleLib {
     uint256[2] memory balances = self.balances;
     (dy, dyFee) = _calculateSwap(self, tokenIndexFrom, tokenIndexTo, dx, balances);
 
-    require(dy >= minDy, "LML:Swap didnot result in min tokens");
+    require(dy >= minDy, "LML:Swap didn't result in min tokens");
     uint256 dyAdminFee = (dyFee * self.adminFee) / PERCENTAGE_DENOMINATOR;
 
     // To prevent any Reentrancy, balances are updated before transfering the tokens.

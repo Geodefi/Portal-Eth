@@ -1468,7 +1468,7 @@ library StakeModuleLib {
    *  pk1, pk2, pk3 from pool1
    *  pk4, pk5 from pool2
    *  pk6 from pool3
-   *  seperate them in similar groups as much as possible.
+   *  separate them in similar groups as much as possible.
    *  @dev Max number of validators to boostrap is MAX_DEPOSITS_PER_CALL (currently 50)
    *  @dev A pubkey that is alienated will not get through. Do not frontrun during ProposeStake.
    */

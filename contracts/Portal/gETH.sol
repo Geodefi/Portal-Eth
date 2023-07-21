@@ -157,7 +157,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    */
   /**
    * @notice Set an address of a contract that will
-   * act as a middleware on gETH contract for a spesific ID
+   * act as a middleware on gETH contract for a specific ID
    * @param middleware Address of the contract that will act as an middleware
    * @param isSet true: sets as an middleware, false: unsets
    * @dev ADDED for gETH

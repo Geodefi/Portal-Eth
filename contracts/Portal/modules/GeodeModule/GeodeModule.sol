@@ -166,7 +166,7 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    * @custom:visibility -> view-external
    */
 
-  // TODO: maybe seperate this? why not.
+  // TODO: maybe separate this? why not.
   function GeodeParams()
     external
     view
