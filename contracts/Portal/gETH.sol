@@ -46,10 +46,10 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @custom:section                           ** CONSTANTS **
    */
 
-  bytes32 public constant MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
-  bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
+  bytes32 public immutable MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
+  bytes32 public immutable ORACLE_ROLE = keccak256("ORACLE_ROLE");
   uint256 internal constant DENOMINATOR = 1 ether;
-
+  
   /**
    * @custom:section                           ** VARIABLES **
    */
@@ -104,8 +104,8 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     name = _name;
     symbol = _symbol;
 
-    _grantRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
-    _grantRole(ORACLE_ROLE, _msgSender());
+    _grantRole(keccak256("MIDDLEWARE_MANAGER_ROLE"), _msgSender());
+    _grantRole(keccak256("ORACLE_ROLE"), _msgSender());
   }
 
   /**

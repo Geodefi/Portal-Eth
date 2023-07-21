@@ -41,7 +41,7 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
   mapping(address => CountersUpgradeable.Counter) private _nonces;
 
   // solhint-disable-next-line var-name-mixedcase
-  bytes32 private constant _PERMIT_TYPEHASH =
+  bytes32 private immutable _PERMIT_TYPEHASH =
     keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
   /**
