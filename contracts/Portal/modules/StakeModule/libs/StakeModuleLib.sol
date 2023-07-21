@@ -1273,7 +1273,7 @@ library StakeModuleLib {
     address receiver
   ) external returns (uint256 boughtgETH, uint256 mintedgETH) {
     _authenticate(DATASTORE, poolId, false, false, [false, true]);
-    require(msg.value != 0, "SML:msg.value cannot be zero");
+    require(msg.value > 0, "SML:msg.value cannot be zero");
     require(deadline > block.timestamp, "SML:deadline not met");
     require(receiver != address(0), "SML:receiver is zero address");
 
