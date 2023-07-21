@@ -186,29 +186,29 @@ library StakeModuleLib {
    */
 
   /// @notice limiting the GOVERNANCE_FEE to 5%
-  uint256 public constant MAX_GOVERNANCE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
+  uint256 internal constant MAX_GOVERNANCE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
 
   /// @notice starting time of the GOVERNANCE_FEE 
-  uint256 public constant GOVERNANCE_FEE_COMMENCEMENT = 1714514461;
+  uint256 internal constant GOVERNANCE_FEE_COMMENCEMENT = 1714514461;
 
   /// @notice limiting the pool and operator maintenance fee, 10%
-  uint256 public constant MAX_MAINTENANCE_FEE = (PERCENTAGE_DENOMINATOR * 10) / 100;
+  uint256 internal constant MAX_MAINTENANCE_FEE = (PERCENTAGE_DENOMINATOR * 10) / 100;
 
   /// @notice effective on allowance per operator, prevents overflow. Exclusive, save gas with +1.
-  uint256 public constant MAX_ALLOWANCE = 10 ** 6 + 1;
+  uint256 internal constant MAX_ALLOWANCE = 10 ** 6 + 1;
 
   /// @notice price of gETH is only valid for 24H, minting is not allowed afterwards.
-  uint256 public constant PRICE_EXPIRY = 24 hours;
+  uint256 internal constant PRICE_EXPIRY = 24 hours;
 
   /// @notice ignoring any buybacks if the Liquidity Pool has a low debt
-  uint256 public constant IGNORABLE_DEBT = 1 ether;
+  uint256 internal constant IGNORABLE_DEBT = 1 ether;
 
   /// @notice limiting the operator.validatorPeriod, between 3 months to 2 years
-  uint256 public constant MIN_VALIDATOR_PERIOD = 3 * 30 days;
-  uint256 public constant MAX_VALIDATOR_PERIOD = 2 * 365 days;
+  uint256 internal constant MIN_VALIDATOR_PERIOD = 3 * 30 days;
+  uint256 internal constant MAX_VALIDATOR_PERIOD = 2 * 365 days;
 
   /// @notice some parameter changes are effective after a delay
-  uint256 public constant SWITCH_LATENCY = 3 days;
+  uint256 internal constant SWITCH_LATENCY = 3 days;
 
   /**
    * @custom:section                           ** EVENTS **

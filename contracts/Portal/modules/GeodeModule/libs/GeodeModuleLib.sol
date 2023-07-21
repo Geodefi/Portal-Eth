@@ -84,12 +84,12 @@ library GeodeModuleLib {
    */
 
   /// @notice a proposal can have a duration between 1 days to 4 weeks (inclusive)
-  uint32 public constant MIN_PROPOSAL_DURATION = 1 days;
-  uint32 public constant MAX_PROPOSAL_DURATION = 4 weeks;
+  uint32 internal constant MIN_PROPOSAL_DURATION = 1 days;
+  uint32 internal constant MAX_PROPOSAL_DURATION = 4 weeks;
 
   /// @notice if expiry is utilized, a senate can be active for a year.
   /// @dev "MAX" underlines a new senate can be set without expecting an expiry
-  uint32 public constant MAX_SENATE_PERIOD = 365 days;
+  uint32 internal constant MAX_SENATE_PERIOD = 365 days;
 
   /**
    * @custom:section                           ** EVENTS **

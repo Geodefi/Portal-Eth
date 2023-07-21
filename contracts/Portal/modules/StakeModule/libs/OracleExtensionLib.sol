@@ -69,13 +69,13 @@ library OracleExtensionLib {
    * @custom:section                           ** CONSTANTS **
    */
   /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators: Set to 1%
-  uint256 public constant MONOPOLY_RATIO = PERCENTAGE_DENOMINATOR / 100;
+  uint256 internal constant MONOPOLY_RATIO = PERCENTAGE_DENOMINATOR / 100;
 
   /// @notice sensible value for the minimum beacon chain validators. No reasoning.
-  uint256 public constant MIN_VALIDATOR_COUNT = 50000;
+  uint256 internal constant MIN_VALIDATOR_COUNT = 50000;
 
   /// @notice limiting the access for Operators in case of bad/malicious/faulty behaviour
-  uint256 public constant PRISON_SENTENCE = 14 days;
+  uint256 internal constant PRISON_SENTENCE = 14 days;
   /**
    * @custom:section                           ** EVENTS **
    */

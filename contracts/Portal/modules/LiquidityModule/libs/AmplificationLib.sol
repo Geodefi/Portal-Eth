@@ -20,10 +20,10 @@ library AmplificationLib {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-  uint256 public constant A_PRECISION = 100;
-  uint256 public constant MAX_A = 10 ** 6;
-  uint256 public constant MAX_A_CHANGE = 2;
-  uint256 public constant MIN_RAMP_TIME = 14 days;
+  uint256 internal constant A_PRECISION = 100;
+  uint256 internal constant MAX_A = 10 ** 6;
+  uint256 internal constant MAX_A_CHANGE = 2;
+  uint256 internal constant MIN_RAMP_TIME = 14 days;
 
   /**
    * @custom:section                           ** EVENTS **
