@@ -6,6 +6,8 @@ const approveProposal = require("./tasks/approveProposal");
 const initiateOperator = require("./tasks/initiateOperator");
 const initiatePool = require("./tasks/initiatePool");
 
+const upgradePortal = require("./tasks/upgradePortal");
+
 // proposals
 task("propose", "Creates a proposal with desired parameters")
   .addParam("t", "defines type such as pool , operator , senate , Upgrade")
@@ -35,3 +37,8 @@ task("initiate-operator", "initiate an operator with correct parameters")
   .addParam("m", "maintainer address")
   .addParam("p", "maintainer period")
   .setAction(initiateOperator);
+
+task(
+  "upgrade-portal",
+  "Upgrade the portal with redeploying related libraries and implementation"
+).setAction(upgradePortal);

@@ -231,6 +231,13 @@ contract Portal is IPortal, StakeModule, GeodeModule {
   }
 
   /**
+   * @notice hotfix for faulty goerli deployment, will not be live on mainnet.
+   */
+  function hotfix_monopoly_threshold(uint256 _data) external onlyGovernance {
+    STAKE.MONOPOLY_THRESHOLD = _data;
+  }
+
+  /**
    * @notice fallback functions
    */
 
