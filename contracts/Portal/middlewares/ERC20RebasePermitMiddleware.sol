@@ -8,16 +8,16 @@ import {IERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token
 // libraries
 import {BytesLib} from "../helpers/BytesLib.sol";
 // contracts
-import {ERC20Middleware} from "./ERC20Middleware.sol";
+import {ERC20RebaseMiddleware} from "./ERC20RebaseMiddleware.sol";
 // external
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 /**
- * @dev differences between ERC20PermitMiddleware and Openzeppelin's implementation of ERC20PermitUpgradable is:
+ * @dev differences between ERC20RebasePermitMiddleware and Openzeppelin's implementation of ERC20PermitUpgradable is:
  * -> pragma set to =0.8.7;
- * -> using ERC20Middleware instead of ERC20Upgradeable
+ * -> using ERC20RebaseMiddleware instead of ERC20Upgradeable
  * -> added initialize
  *
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/54803be62207c2412e27d09325243f2f1452f7b9/contracts/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol
@@ -35,7 +35,11 @@ import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cou
  *
  * @custom:storage-size 51
  */
-contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP712Upgradeable {
+contract ERC20RebasePermitMiddleware is
+  ERC20RebaseMiddleware,
+  IERC20PermitUpgradeable,
+  EIP712Upgradeable
+{
   using CountersUpgradeable for CountersUpgradeable.Counter;
 
   mapping(address => CountersUpgradeable.Counter) private _nonces;
@@ -73,7 +77,7 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
     bytes calldata data
   ) public virtual override initializer {
     uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
-    __ERC20MiddlewarePermit_init(
+    __ERC20RebaseMiddlewarePermit_init(
       id_,
       gETH_,
       string(BytesLib.slice(data, 32, nameLen)),
@@ -86,18 +90,18 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
    *
    * It's a good idea to use the same `name` that is defined as the ERC20 token name.
    */
-  function __ERC20MiddlewarePermit_init(
+  function __ERC20RebaseMiddlewarePermit_init(
     uint256 id_,
     address gETH_,
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
     __EIP712_init(name_, "1");
-    __ERC20Middleware_init(id_, gETH_, name_, symbol_);
-    __ERC20MiddlewarePermit_init_unchained();
+    __ERC20RebaseMiddleware_init(id_, gETH_, name_, symbol_);
+    __ERC20RebaseMiddlewarePermit_init_unchained();
   }
 
-  function __ERC20MiddlewarePermit_init_unchained() internal onlyInitializing {}
+  function __ERC20RebaseMiddlewarePermit_init_unchained() internal onlyInitializing {}
 
   /**
    * @dev See {IERC20Permit-permit}.
@@ -111,7 +115,7 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
     bytes32 r,
     bytes32 s
   ) public virtual override {
-    require(block.timestamp <= deadline, "ERC20Permit: expired deadline");
+    require(block.timestamp <= deadline, "ERC20RPermit: expired deadline");
 
     bytes32 structHash = keccak256(
       abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline)
@@ -120,7 +124,7 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
     bytes32 hash = _hashTypedDataV4(structHash);
 
     address signer = ECDSAUpgradeable.recover(hash, v, r, s);
-    require(signer == owner, "ERC20Permit: invalid signature");
+    require(signer == owner, "ERC20RPermit: invalid signature");
 
     _approve(owner, spender, value);
   }
