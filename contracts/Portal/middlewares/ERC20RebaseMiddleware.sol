@@ -190,6 +190,15 @@ contract ERC20RebaseMiddleware is
   }
 
   /**
+   * @dev shows the underlying ETH for 1 staked ether for a given id
+   * @dev CHANGED for gETH.
+   * @dev See {gETH-pricePerShare}.
+   */
+  function pricePerShare() public view returns (uint256) {
+    return ERC1155.pricePerShare(ERC1155_ID);
+  }
+
+  /**
    * @dev See {IERC20-transfer}.
    *
    * Requirements:
