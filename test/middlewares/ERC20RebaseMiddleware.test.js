@@ -70,6 +70,9 @@ contract("ERC20RebaseMiddleware", function (accounts) {
     it("correct symbol", async function () {
       expect(await this.token.symbol()).to.be.equal(symbol);
     });
+    it("correct pricePerShare", async function () {
+      expect(await this.token.pricePerShare()).to.be.bignumber.equal(price);
+    });
     it("has 18 decimals", async function () {
       expect(await this.token.decimals()).to.be.bignumber.equal("18");
     });
@@ -243,6 +246,63 @@ contract("ERC20RebaseMiddleware", function (accounts) {
           "ERC20R: approve to the zero address"
         );
       });
+    });
+  });
+
+  describe("price change", function () {
+    it("transfers correctly before and after price change", async function () {
+      const beforeBalanceOwner = await this.token.balanceOf(deployer);
+      const beforeBalanceReceiver = await this.token.balanceOf(anotherAccount);
+
+      await this.token.transfer(anotherAccount, 1e9, { from: deployer });
+
+      const afterBalanceOwner = await this.token.balanceOf(deployer);
+      const afterBalanceReceiver = await this.token.balanceOf(anotherAccount);
+
+      expect(afterBalanceOwner).to.be.bignumber.eq(beforeBalanceOwner.sub(new BN(1e9)));
+      expect(afterBalanceReceiver).to.be.bignumber.eq(new BN(1e9));
+
+      await this.gETH.setPricePerShare(price.muln(4), tokenId); // setting price to 8, initally it was 2
+
+      const afterPPS_beforeBalanceOwner = await this.token.balanceOf(deployer);
+      const afterPPS_beforeBalanceReceiver = await this.token.balanceOf(anotherAccount);
+
+      expect(afterPPS_beforeBalanceOwner).to.be.bignumber.eq(afterBalanceOwner.muln(4));
+      expect(afterPPS_beforeBalanceReceiver).to.be.bignumber.eq(afterBalanceReceiver.muln(4));
+
+      await this.token.transfer(anotherAccount, 1e9, { from: deployer });
+
+      const afterPPS_afterBalanceOwner = await this.token.balanceOf(deployer);
+      const afterPPS_afterBalanceReceiver = await this.token.balanceOf(anotherAccount);
+
+      expect(afterPPS_afterBalanceOwner).to.be.bignumber.eq(
+        afterPPS_beforeBalanceOwner.sub(new BN(1e9))
+      );
+      expect(afterPPS_afterBalanceReceiver).to.be.bignumber.eq(
+        afterPPS_beforeBalanceReceiver.add(new BN(1e9))
+      );
+
+      await this.gETH.setPricePerShare(price.muln(2), tokenId); // setting price to 4, it was set 8 previously and initially 2, so decreased
+
+      const afterPPS_2_beforeBalanceOwner = await this.token.balanceOf(deployer);
+      const afterPPS_2_beforeBalanceReceiver = await this.token.balanceOf(anotherAccount);
+
+      expect(afterPPS_2_beforeBalanceOwner).to.be.bignumber.eq(afterPPS_afterBalanceOwner.divn(2));
+      expect(afterPPS_2_beforeBalanceReceiver).to.be.bignumber.eq(
+        afterPPS_afterBalanceReceiver.divn(2)
+      );
+
+      await this.token.transfer(anotherAccount, 1e9, { from: deployer });
+
+      const afterPPS_2_afterBalanceOwner = await this.token.balanceOf(deployer);
+      const afterPPS_2_afterBalanceReceiver = await this.token.balanceOf(anotherAccount);
+
+      expect(afterPPS_2_afterBalanceOwner).to.be.bignumber.eq(
+        afterPPS_2_beforeBalanceOwner.sub(new BN(1e9))
+      );
+      expect(afterPPS_2_afterBalanceReceiver).to.be.bignumber.eq(
+        afterPPS_2_beforeBalanceReceiver.add(new BN(1e9))
+      );
     });
   });
 });
