@@ -7,7 +7,7 @@ contract("LPToken", function (accounts) {
   const [deployer, recipient, anotherAccount] = accounts;
   const name = "Test Token";
   const symbol = "TEST";
-  const initialSupply = new BN(100);
+  const initialSupply = new BN(String(1e18)).muln(100);
 
   let factory;
 
