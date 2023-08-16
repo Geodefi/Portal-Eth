@@ -19,7 +19,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
  * -> unique id of ERC1155 is used
  * -> there is no mint or burn functionality implemented here.
- * -> using pricePerShare for rebase.
+ * -> using pricePerShare for rebasing.
  *
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/2cb8996b777060e658e2b8c9b1630313aedb04c0/contracts/token/ERC20/ERC20Upgradeable.sol
  */
@@ -58,7 +58,7 @@ contract ERC20RebaseMiddleware is
   IERC20MetadataUpgradeable
 {
   /**
-   * @dev gETH ERC20 interface doesn't use balance info, catches it from ERC1155 rebased with pricePerShare.
+   * @dev gETH ERC20 interface doesn't use balance info, catches it from ERC1155 while making use of the `pricePerShare`.
    * mapping(address => uint256) private _balances;
    **/
 
@@ -167,8 +167,8 @@ contract ERC20RebaseMiddleware is
   }
 
   /**
-   * @notice totalSupply is actually totalSupply multiplied by pricePerShare
-   * * since it is a rebase token.
+   * @notice totalSupply represents underlying staked Ether amount,
+   * instead of the TotalSupply of the gETH ID like ERC20Middleware does.
    * @dev See {IERC20-totalSupply}.
    * @dev CHANGED for gETH.
    * @dev See {gETH-totalSupply}.

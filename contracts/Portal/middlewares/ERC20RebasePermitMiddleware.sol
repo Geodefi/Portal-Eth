@@ -160,7 +160,7 @@ contract ERC20RebasePermitMiddleware is
    * variables without shifting down storage in the inheritance chain.
    * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
    *
-   * @dev GEODE: middlewares are de-facto not upgrdable, just here to be cloned.
+   * @dev GEODE: middlewares are de-facto immutable, just here to be cloned.
    * * So, we don't need this gap.
    */
   // uint256[] private __gap;

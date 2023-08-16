@@ -92,8 +92,8 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
-    __EIP712_init(name_, "1");
-    __ERC20Middleware_init(id_, gETH_, name_, symbol_);
+    __EIP712_init_unchained(name_, "1");
+    __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
     __ERC20MiddlewarePermit_init_unchained();
   }
 
@@ -156,8 +156,8 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
    * variables without shifting down storage in the inheritance chain.
    * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
    *
-   * @dev GEODE: middlewares are de-facto not upgrdable, just here to be cloned.
-   * * So, we don't need this gap.
+   * @dev GEODE: middlewares are de-facto immutable, just here to be cloned.
+   * So, we don't need this gap.
    */
   // uint256[] private __gap;
 }

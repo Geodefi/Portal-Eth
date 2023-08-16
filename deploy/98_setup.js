@@ -36,8 +36,10 @@ const func = async (hre) => {
     }
     console.log("Portal is now gETH minter\n");
 
-    const wcAddress = (await get("WithdrawalContract")).address;
+    // WITHDRAWAL CONTRACT
     const wcType = 10011;
+
+    const wcAddress = (await get("WithdrawalContract")).address;
     const expectedWCPVersion = (await generateId(strToBytes("v1"), wcType)).toString();
     if ((await read("Portal", "getPackageVersion", wcType)).toString() === expectedWCPVersion) {
       console.log("Withdrawal Contract Package is ALREADY released\n");
@@ -55,8 +57,10 @@ const func = async (hre) => {
       console.log("Withdrawal Contract Package is released\n");
     }
 
-    const lpAddress = (await get("LiquidityPool")).address;
+    // LIQUIDITY POOL
     const lpType = 10021;
+
+    const lpAddress = (await get("LiquidityPool")).address;
     const expectedLPPVersion = (await generateId(strToBytes("v1"), lpType)).toString();
     if ((await read("Portal", "getPackageVersion", lpType)).toString() === expectedLPPVersion) {
       console.log("Liquidity Pool Package is ALREADY released\n");
@@ -74,7 +78,10 @@ const func = async (hre) => {
       console.log("Liquidity Pool Package is released\n");
     }
 
+    // MIDDLEWARES
     const middlewareType = 20011;
+
+    // erc20
     const erc20Address = (await get("ERC20Middleware")).address;
     const erc20Version = (await generateId(strToBytes("ERC20"), middlewareType)).toString();
     if (await read("Portal", "isMiddleware", middlewareType, erc20Version)) {
@@ -93,6 +100,7 @@ const func = async (hre) => {
       console.log("ERC20 Middleware is released\n");
     }
 
+    // erc20-permit
     const erc20PermitAddress = (await get("ERC20PermitMiddleware")).address;
     const erc20PermitVersion = (
       await generateId(strToBytes("ERC20Permit"), middlewareType)
@@ -111,6 +119,53 @@ const func = async (hre) => {
       );
       await execute("Portal", { from: deployer, log: true }, "approveProposal", erc20PermitVersion);
       console.log("ERC20Permit Middleware is released\n");
+    }
+
+    // erc20-rebase
+    const erc20RebaseAddress = (await get("ERC20RebaseMiddleware")).address;
+    const erc20RebaseVersion = (
+      await generateId(strToBytes("ERC20Rebase"), middlewareType)
+    ).toString();
+    if (await read("Portal", "isMiddleware", middlewareType, erc20RebaseVersion)) {
+      console.log("ERC20Rebase Middleware is ALREADY released\n");
+    } else {
+      await execute(
+        "Portal",
+        { from: deployer, log: true },
+        "propose",
+        erc20RebaseAddress,
+        middlewareType,
+        strToBytes("ERC20Rebase"),
+        DAY
+      );
+      await execute("Portal", { from: deployer, log: true }, "approveProposal", erc20RebaseVersion);
+      console.log("ERC20Rebase Middleware is released\n");
+    }
+
+    // erc20-rebase-permit
+    const erc20RebasePermitAddress = (await get("ERC20RebasePermitMiddleware")).address;
+    const erc20RebasePermitVersion = (
+      await generateId(strToBytes("ERC20RebasePermit"), middlewareType)
+    ).toString();
+    if (await read("Portal", "isMiddleware", middlewareType, erc20RebasePermitVersion)) {
+      console.log("ERC20RebasePermit Middleware is ALREADY released\n");
+    } else {
+      await execute(
+        "Portal",
+        { from: deployer, log: true },
+        "propose",
+        erc20RebasePermitAddress,
+        middlewareType,
+        strToBytes("ERC20RebasePermit"),
+        DAY
+      );
+      await execute(
+        "Portal",
+        { from: deployer, log: true },
+        "approveProposal",
+        erc20RebasePermitVersion
+      );
+      console.log("ERC20RebasePermit Middleware is released\n");
     }
   } catch (error) {
     console.log(error);
