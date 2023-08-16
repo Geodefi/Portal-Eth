@@ -13,18 +13,18 @@ import {IWhitelist} from "../interfaces/helpers/IWhitelist.sol";
  * @dev Even though this is a fairly small contract, use it at your own risk.
  */
 contract Whitelist is IWhitelist, Ownable {
-  mapping(address => bool) private whitelist;
+  mapping(address => bool) private _whitelist;
 
   event Listed(address indexed account, bool isWhitelisted);
 
   function isAllowed(address _address) external view virtual override returns (bool) {
-    return whitelist[_address];
+    return _whitelist[_address];
   }
 
   function setAddress(address _address, bool allow) external virtual onlyOwner {
-    require(whitelist[_address] != allow, "Whitelist: already set");
+    require(_whitelist[_address] != allow, "Whitelist: already set");
 
-    whitelist[_address] = allow;
+    _whitelist[_address] = allow;
 
     emit Listed(_address, allow);
   }

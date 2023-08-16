@@ -45,11 +45,10 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-
+  uint256 internal immutable DENOMINATOR = 1 ether;
   bytes32 public immutable MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
   bytes32 public immutable ORACLE_ROLE = keccak256("ORACLE_ROLE");
-  uint256 internal constant DENOMINATOR = 1 ether;
-  
+
   /**
    * @custom:section                           ** VARIABLES **
    */
@@ -272,7 +271,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev URI_SETTER is basically a superuser, there can be only 1 at a given time,
    * @dev intended as "Governance/DAO"
    */
-  function transferUriSetterRole(address newUriSetter) external virtual override onlyRole(URI_SETTER_ROLE) {
+  function transferUriSetterRole(
+    address newUriSetter
+  ) external virtual override onlyRole(URI_SETTER_ROLE) {
     _grantRole(URI_SETTER_ROLE, newUriSetter);
     renounceRole(URI_SETTER_ROLE, _msgSender());
   }
@@ -312,7 +313,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev MIDDLEWARE MANAGER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
+  function transferMiddlewareManagerRole(
+    address newMiddlewareManager
+  ) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
     _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
     renounceRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
   }

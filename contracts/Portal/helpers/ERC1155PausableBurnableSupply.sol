@@ -630,17 +630,17 @@ contract ERC1155PausableBurnableSupply is
   ERC1155Burnable,
   ERC1155Supply
 {
-  bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
-  bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-  bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+  bytes32 public immutable URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
+  bytes32 public immutable PAUSER_ROLE = keccak256("PAUSER_ROLE");
+  bytes32 public immutable MINTER_ROLE = keccak256("MINTER_ROLE");
 
   /**
    * @dev DEFAULT_ADMIN_ROLE is not set, no more role management here.
    */
   constructor(string memory uri_) ERC1155(uri_) {
-    _grantRole(URI_SETTER_ROLE, msg.sender);
-    _grantRole(PAUSER_ROLE, msg.sender);
-    _grantRole(MINTER_ROLE, msg.sender);
+    _grantRole(keccak256("URI_SETTER_ROLE"), msg.sender);
+    _grantRole(keccak256("PAUSER_ROLE"), msg.sender);
+    _grantRole(keccak256("MINTER_ROLE"), msg.sender);
   }
 
   function setURI(string memory newuri) public override onlyRole(URI_SETTER_ROLE) {
