@@ -1744,7 +1744,7 @@ contract("LiquidityModule", function (accounts) {
             from: user1,
             value: ethers.utils.parseEther("0.1"),
           }),
-          "LML:Swap didn't result in min tokens"
+          "LML:Swap didnot result in min tokens"
         );
       });
 

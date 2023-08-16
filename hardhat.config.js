@@ -50,6 +50,7 @@ const config = {
       accounts: {
         accountsBalance: "1000000000000000000000000",
       },
+      allowUnlimitedContractSize: true,
     },
     goerli: {
       url: process.env.GOERLI_URL,

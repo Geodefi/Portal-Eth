@@ -20,7 +20,17 @@ module.exports.intToBytes32 = function (x) {
   // Note: The biggest number that hexlify can get is 2^53-2,
   return ethers.utils.hexZeroPad(ethers.utils.hexlify(x), 32);
 };
+
 module.exports.generateId = function (_name, _type) {
+  // Note: web3.utils.soliditySha3 and ethers.utils.solidityKeccak256 is not returning the same value
+  // while working with numbers, need to be careful while working with it.
+  return new BN(
+    web3.utils.soliditySha3(web3.eth.abi.encodeParameters(["bytes", "uint256"], [_name, _type])),
+    "hex"
+  );
+};
+
+module.exports.generateId_old = function (_name, _type) {
   // Note: web3.utils.soliditySha3 and ethers.utils.solidityKeccak256 is not returning the same value
   // while working with numbers, need to be careful while working with it.
   return new BN(
