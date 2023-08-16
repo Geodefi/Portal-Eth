@@ -319,7 +319,7 @@ contract("OracleExtensionLib", function (accounts) {
         "OEL:sender NOT ORACLE"
       );
     });
-    it("reverts if lengths doesn't match", async function () {
+    it("reverts if lengths don't match", async function () {
       await expectRevert(
         this.contract.regulateOperators([operatorIds[0]], [], { from: oracle }),
         "OEL:invalid proofs"

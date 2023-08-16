@@ -267,10 +267,10 @@ abstract contract StakeModule is
    */
 
   function changeMaintainer(
-    uint256 poolId,
+    uint256 id,
     address newMaintainer
   ) external virtual override whenNotPaused {
-    SML.changeMaintainer(DATASTORE, poolId, newMaintainer);
+    SML.changeMaintainer(DATASTORE, id, newMaintainer);
   }
 
   /**

@@ -56,7 +56,7 @@ interface IStakeModule is IDataStoreModule {
 
   function setYieldReceiver(uint256 poolId, address yieldReceiver) external;
 
-  function changeMaintainer(uint256 poolId, address newMaintainer) external;
+  function changeMaintainer(uint256 id, address newMaintainer) external;
 
   function getMaintenanceFee(uint256 id) external view returns (uint256);
 
