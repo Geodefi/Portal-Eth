@@ -165,6 +165,10 @@ abstract contract StakeModule is
     return STAKE.packages[_type];
   }
 
+  function getBalancesMerkleRoot() external view virtual override returns (bytes32) {
+    return STAKE.BALANCE_MERKLE_ROOT;
+  }
+
   function isMiddleware(
     uint256 _type,
     uint256 _version
@@ -489,5 +493,20 @@ abstract contract StakeModule is
     bytes32[][] calldata priceProofs
   ) external virtual override whenNotPaused {
     STAKE.priceSyncBatch(DATASTORE, poolIds, prices, priceProofs);
+  }
+
+  /**
+   * @custom:section                           ** VALIDATOR STATE SETTER **
+   *
+   * @custom:visibility -> external
+   */
+  function setValidatorStateBatch(
+    uint256 poolId,
+    bytes[] memory pks,
+    uint64 state
+  ) external virtual override nonReentrant whenNotPaused {
+    for (uint256 i = 0; i < pks.length; i++) {
+      STAKE.setValidatorState(DATASTORE, poolId, pks[i], state);
+    }
   }
 }

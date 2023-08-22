@@ -30,6 +30,8 @@ interface IStakeModule is IDataStoreModule {
 
   function getPackageVersion(uint256 _type) external view returns (uint256);
 
+  function getBalancesMerkleRoot() external view returns (bytes32);
+
   function isMiddleware(uint256 _type, uint256 _version) external view returns (bool);
 
   function initiateOperator(
@@ -137,4 +139,6 @@ interface IStakeModule is IDataStoreModule {
     uint256[] calldata prices,
     bytes32[][] calldata priceProofs
   ) external;
+
+  function setValidatorStateBatch(uint256 poolId, bytes[] memory pks, uint64 state) external;
 }

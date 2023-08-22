@@ -188,7 +188,7 @@ library StakeModuleLib {
   /// @notice limiting the GOVERNANCE_FEE to 5%
   uint256 internal constant MAX_GOVERNANCE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
 
-  /// @notice starting time of the GOVERNANCE_FEE 
+  /// @notice starting time of the GOVERNANCE_FEE
   uint256 internal constant GOVERNANCE_FEE_COMMENCEMENT = 1714514461;
 
   /// @notice limiting the pool and operator maintenance fee, 10%
@@ -1074,7 +1074,7 @@ library StakeModuleLib {
     _authenticate(DATASTORE, poolId, false, true, [false, true]);
     uint256 operatorIdsLen = operatorIds.length;
     require(operatorIdsLen == allowances.length, "SML:allowances should match");
-    
+
     for (uint256 i; i < operatorIdsLen; ) {
       require(
         DATASTORE.readUint(operatorIds[i], rks.TYPE) == ID_TYPE.OPERATOR,
@@ -1485,12 +1485,12 @@ library StakeModuleLib {
     bytes[] calldata pubkeys
   ) external {
     _authenticate(DATASTORE, operatorId, false, true, [true, false]);
-    
+
     require(
       (pubkeys.length > 0) && (pubkeys.length <= DCL.MAX_DEPOSITS_PER_CALL),
       "SML:1 - 50 validators"
     );
-    
+
     {
       uint256 pubkeysLen = pubkeys.length;
       uint256 _verificationIndex = self.VERIFICATION_INDEX;
@@ -1564,5 +1564,25 @@ library StakeModuleLib {
 
       emit Stake(pubkeys);
     }
+  }
+
+  /**
+   * @custom:section                           ** VALIDATOR STATE SETTER **
+   *
+   * @custom:visibility -> external
+   */
+
+  function setValidatorState(
+    PooledStaking storage self,
+    DSML.IsolatedStorage storage DATASTORE,
+    uint256 poolId,
+    bytes memory pk,
+    uint64 state
+  ) external {
+    require(
+      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
+      "SML:sender is NOT a withdrawal contract"
+    );
+    self.validators[pk].state = state;
   }
 }
