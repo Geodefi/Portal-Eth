@@ -608,8 +608,16 @@ library StakeModuleLib {
     address whitelist = DATASTORE.readAddress(poolId, rks.whitelist);
     if (whitelist == address(0)) {
       return false;
+    }
+
+    if (whitelist.code.length > 0) {
+      try IWhitelist(whitelist).isAllowed(staker) returns (bool _isAllowed) {
+        return _isAllowed;
+      } catch {
+        return false;
+      }
     } else {
-      return IWhitelist(whitelist).isAllowed(staker);
+      return false;
     }
   }
 
