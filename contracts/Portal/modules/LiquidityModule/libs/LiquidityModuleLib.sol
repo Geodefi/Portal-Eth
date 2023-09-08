@@ -747,6 +747,7 @@ library LiquidityModuleLib {
       require(dx == msg.value, "LML:Cannot swap != eth sent");
     }
     if (tokenIndexFrom == 1) {
+      // TODO: ask if this is necessary to the auditors...
       // Means user is selling some gETH to the pool to get some ETH.
 
       require(dx <= gETHRef.balanceOf(msg.sender, self.pooledTokenId), "LML:Cannot swap > you own");

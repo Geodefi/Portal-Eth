@@ -213,6 +213,7 @@ library OracleExtensionLib {
    * 2. while state is EXIT_REQUESTED:  validator requested exit, but it hasn't been executed even tho it has been MAX_BEACON_DELAY
    */
   function blameOperator(
+    // TODO: this should be blameValidatorProposal, blameValidatorPeriod, blameExitRequest etc.
     SML.PooledStaking storage self,
     DSML.IsolatedStorage storage DATASTORE,
     bytes calldata pk
