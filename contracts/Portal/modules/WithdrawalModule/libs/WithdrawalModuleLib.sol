@@ -735,6 +735,6 @@ library WithdrawalModuleLib {
     }
     self.queue.commonPoll = commonPoll;
 
-    _realizeProcessedEther(self, processed); // TODO
+    _realizeProcessedEther(self, processed);
   }
 }

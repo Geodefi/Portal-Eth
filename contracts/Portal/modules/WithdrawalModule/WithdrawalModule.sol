@@ -49,7 +49,6 @@ abstract contract WithdrawalModule is
    *
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
-   * todo: enqueue, enqueue and process, process and enqueue
    */
   WML.PooledWithdrawal internal WITHDRAWAL;
 
