@@ -22,8 +22,8 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
  * * Allowing (Instant Run-off) elections on which validators to exit.
  * @dev all done while preserving the validator segregation.
  *
- * @dev There are 1 additional functionality implemented apart from the library:
- * * if the price is not valid, user can prove it before processing validators.
+ * @dev There is 1 additional functionality implemented apart from the library:
+ * * if the price is not valid, user must prove it before processing validators.
  *
  * @dev review: this module delegates its functionality to WML (WithdrawalModuleLib).
  *
@@ -154,19 +154,17 @@ abstract contract WithdrawalModule is
   }
 
   function getValidatorData(
-    uint256 index
+    bytes calldata pubkey
   )
     external
     view
     virtual
     override
-    returns (address owner, uint256 trigger, uint256 size, uint256 fulfilled, uint256 claimableETH)
+    returns (uint256 beaconBalance, uint256 withdrawnBalance, uint256 poll)
   {
-    owner = WITHDRAWAL.requests[index].owner;
-    trigger = WITHDRAWAL.requests[index].trigger;
-    size = WITHDRAWAL.requests[index].size;
-    fulfilled = WITHDRAWAL.requests[index].fulfilled;
-    claimableETH = WITHDRAWAL.requests[index].claimableETH;
+    beaconBalance = WITHDRAWAL.validators[pubkey].beaconBalance;
+    withdrawnBalance = WITHDRAWAL.validators[pubkey].withdrawnBalance;
+    poll = WITHDRAWAL.validators[pubkey].poll;
   }
 
   /**

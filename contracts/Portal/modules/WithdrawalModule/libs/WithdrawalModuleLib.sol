@@ -39,7 +39,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * * If a validator is not specified, vote goes to 'commonPoll'. It can be used for any validator to top-up the EXIT_THRESHOLD
  * * If a validator is called for exit but there is remaining votes in it, it is transferred to the commonPoll.
  * * Note that, elections are basically just stating a preferance:
- * * * Exit of the voted validator, do not change the voter's index in the queue.
+ * * * Exit of the voted validator does not change the voter's priority in the queue.
  *
  * @dev The Queue
  * Lets say every '-' is representing 1 gETH.
@@ -86,13 +86,15 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * None of these approaches will be expensive, nor will disrupt the internal pricing for the latter requests.
  *
  * @dev while conducting the price calculations, a part of the balance within this contract should be taken into consideration.
- * This balance can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - processedBalance
+ * This balance can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - realizedBalance
  *
  * @dev Contracts relying on this library must initialize WithdrawalModuleLib.PooledWithdrawal
  *
  * @dev There are 'owner' checks on 'transferRequest', _dequeue (used by dequeue, dequeueBatch).
  * However, we preferred to not use a modifier for that.
  *
+ * @dev all parameters related to balance are denominated in gETH; except realizedBalance and claimableETH:
+ * (requested, realized, fulfilled, commonPoll, trigger, size, fulfilled)
  * @author Ice Bear & Crash Bandicoot
  */
 library WithdrawalModuleLib {
@@ -106,8 +108,8 @@ library WithdrawalModuleLib {
    * @param realized cumulative size of gETH that is processed and can be used to fulfill Requests, as in gETH
    * ex: ----- -- -- - ----- --    : 17 : there are 17 gETH, processed as a response to the withdrawn funds.
    * @param fulfilled cumulative size of the fulfilled requests, claimed or claimable, as in gETH
-   * ex: --- ------ --xxxx - x --- : 15 : there are 15 gETH being used to fulfill requests,including one that is partially filled. 2 gETH is still claimable.
-   * @param realizedPrice cumulative size of the withdrawn and realized balances. Note that, (realizedBalance * realizedPrice != realized) as price changes constantly.
+   * ex: --- ----xx ------ x - ooo : 14 : there are 15 gETH being used to fulfill requests,including one that is partially filled. 3 gETH is still claimable.
+   * @param realizedBalance cumulative size of the withdrawn and realized balances. Note that, (realizedBalance * realizedPrice != realized) as price changes constantly.
    * @param realizedPrice current Price of the queue, used when fulfilling a Request, updated with processValidators.
    * @param commonPoll current size of requests that did not vote on any specific validator, as in gETH.
    **/
@@ -477,13 +479,11 @@ library WithdrawalModuleLib {
    * @notice by using the realized size that is burned, we fulfill a single request by making use of the internal pricing.
    */
   function _fulfill(PooledWithdrawal storage self, uint256 index) internal {
-    uint256 Qfulfilled = self.queue.fulfilled;
-    uint256 toFulfill = fulfillable(self, index, self.queue.realized, Qfulfilled);
+    uint256 toFulfill = fulfillable(self, index, self.queue.realized, self.queue.fulfilled);
     if (toFulfill > 0) {
       self.requests[index].claimableETH += toFulfill * self.queue.realizedPrice;
       self.requests[index].fulfilled += toFulfill;
-      Qfulfilled += toFulfill;
-      self.queue.fulfilled = Qfulfilled;
+      self.queue.fulfilled = toFulfill;
     }
   }
 
@@ -642,9 +642,7 @@ library WithdrawalModuleLib {
   /**
    * @notice acting like queue is one entity, we sell it some gETH in respect to Oracle price.
    * * by using the Ether from the latest withdrawals.
-   * @dev
    */
-
   function _realizeProcessedEther(
     PooledWithdrawal storage self,
     uint256 processedBalance
@@ -735,6 +733,8 @@ library WithdrawalModuleLib {
     }
     self.queue.commonPoll = commonPoll;
 
-    _realizeProcessedEther(self, processed);
+    if (processed > 0) {
+      _realizeProcessedEther(self, processed);
+    }
   }
 }

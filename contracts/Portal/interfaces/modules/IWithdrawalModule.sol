@@ -33,11 +33,8 @@ interface IWithdrawalModule {
     returns (address owner, uint256 trigger, uint256 size, uint256 fulfilled, uint256 claimableETH);
 
   function getValidatorData(
-    uint256 index
-  )
-    external
-    view
-    returns (address owner, uint256 trigger, uint256 size, uint256 fulfilled, uint256 claimableETH);
+    bytes calldata pubkey
+  ) external view returns (uint256 beaconBalance, uint256 withdrawnBalance, uint256 poll);
 
   function canFinalizeExit(bytes memory pubkey) external view returns (bool);
 

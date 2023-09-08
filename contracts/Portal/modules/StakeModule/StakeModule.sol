@@ -461,16 +461,16 @@ abstract contract StakeModule is
 
   function requestExit(
     uint256 poolId,
-    bytes memory pks
+    bytes memory pk
   ) external virtual override nonReentrant whenNotPaused {
-    STAKE.requestExit(DATASTORE, poolId, pks);
+    STAKE.requestExit(DATASTORE, poolId, pk);
   }
 
   function finalizeExit(
     uint256 poolId,
-    bytes memory pks
+    bytes memory pk
   ) external virtual override nonReentrant whenNotPaused {
-    STAKE.finalizeExit(DATASTORE, poolId, pks);
+    STAKE.finalizeExit(DATASTORE, poolId, pk);
   }
 
   /**
