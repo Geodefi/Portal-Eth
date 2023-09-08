@@ -119,6 +119,10 @@ interface IStakeModule is IDataStoreModule {
 
   function stake(uint256 operatorId, bytes[] calldata pubkeys) external;
 
+  function requestExit(uint256 poolId, bytes memory pk) external;
+
+  function finalizeExit(uint256 poolId, bytes memory pk) external;
+
   function updateVerificationIndex(
     uint256 validatorVerificationIndex,
     bytes[] calldata alienatedPubkeys
@@ -139,6 +143,4 @@ interface IStakeModule is IDataStoreModule {
     uint256[] calldata prices,
     bytes32[][] calldata priceProofs
   ) external;
-
-  function setValidatorStateBatch(uint256 poolId, bytes[] memory pks, uint64 state) external;
 }

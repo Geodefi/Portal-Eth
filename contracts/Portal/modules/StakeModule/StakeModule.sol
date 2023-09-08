@@ -8,6 +8,7 @@ import {IgETH} from "../../interfaces/IgETH.sol";
 import {IStakeModule} from "../../interfaces/modules/IStakeModule.sol";
 // libraries
 import {StakeModuleLib as SML} from "./libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib as IEL} from "./libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib as OEL} from "./libs/OracleExtensionLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
@@ -50,6 +51,7 @@ abstract contract StakeModule is
   ReentrancyGuardUpgradeable
 {
   using SML for SML.PooledStaking;
+  using IEL for SML.PooledStaking;
   using OEL for SML.PooledStaking;
 
   /**
@@ -187,7 +189,7 @@ abstract contract StakeModule is
     uint256 validatorPeriod,
     address maintainer
   ) external payable virtual override nonReentrant whenNotPaused {
-    SML.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
+    IEL.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
   }
 
   /**
@@ -452,6 +454,26 @@ abstract contract StakeModule is
   }
 
   /**
+   * @custom:section                           ** VALIDATOR EXITS **
+   *
+   * @custom:visibility -> external
+   */
+
+  function requestExit(
+    uint256 poolId,
+    bytes memory pks
+  ) external virtual override nonReentrant whenNotPaused {
+    STAKE.requestExit(DATASTORE, poolId, pks);
+  }
+
+  function finalizeExit(
+    uint256 poolId,
+    bytes memory pks
+  ) external virtual override nonReentrant whenNotPaused {
+    STAKE.finalizeExit(DATASTORE, poolId, pks);
+  }
+
+  /**
    * @custom:section                           ** ORACLE OPERATIONS **
    *
    * @custom:visibility -> external
@@ -493,20 +515,5 @@ abstract contract StakeModule is
     bytes32[][] calldata priceProofs
   ) external virtual override whenNotPaused {
     STAKE.priceSyncBatch(DATASTORE, poolIds, prices, priceProofs);
-  }
-
-  /**
-   * @custom:section                           ** VALIDATOR STATE SETTER **
-   *
-   * @custom:visibility -> external
-   */
-  function setValidatorStateBatch(
-    uint256 poolId,
-    bytes[] memory pks,
-    uint64 state
-  ) external virtual override nonReentrant whenNotPaused {
-    for (uint256 i = 0; i < pks.length; i++) {
-      STAKE.setValidatorState(DATASTORE, poolId, pks[i], state);
-    }
   }
 }

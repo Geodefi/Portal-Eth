@@ -15,7 +15,9 @@ import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
 contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModule {
+  using WML for WML.PooledWithdrawal;
   /**
+   * TODO: this should be withdrawalQueue or ValidatorCustodian
    * @custom:section                           ** VARIABLES **
    * Following immutable parameters are set when the referance library implementation is deployed.
    * Making necessary data for initialization reachable for all instances of LP package.
@@ -30,7 +32,7 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
    */
 
   modifier onlyOwner() {
-    require(msg.sender == GEODE.SENATE, "LPP:sender NOT owner");
+    require(msg.sender == GEODE.SENATE, "WC:sender NOT owner");
     _;
   }
 
@@ -46,8 +48,8 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
    * and fetch when needed on initialization.
    */
   constructor(address _gETHPos, address _portalPos) {
-    require(_gETHPos != address(0), "LPP:_gETHPos can not be zero");
-    require(_portalPos != address(0), "LPP:_portalPos can not be zero");
+    require(_gETHPos != address(0), "WC:_gETHPos can not be zero");
+    require(_portalPos != address(0), "WC:_portalPos can not be zero");
 
     gETHPos = _gETHPos;
     portalPos = _portalPos;
@@ -56,16 +58,16 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
   }
 
   function initialize(
-    uint256 pooledTokenId,
+    uint256 poolId,
     address poolOwner,
     bytes calldata versionName,
     bytes calldata data
   ) public virtual override initializer {
-    __WithdrawalContract_init(pooledTokenId, poolOwner, versionName);
+    __WithdrawalContract_init(poolId, poolOwner, versionName);
   }
 
   function __WithdrawalContract_init(
-    uint256 pooledTokenId,
+    uint256 poolId,
     address poolOwner,
     bytes calldata versionName
   ) internal onlyInitializing {
@@ -76,16 +78,14 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
       ID_TYPE.PACKAGE_WITHDRAWAL_CONTRACT,
       versionName
     );
-
-    __WithdrawalContract_init_unchained(pooledTokenId);
+    __WithdrawalModule_init(gETHPos, portalPos, poolId);
+    __WithdrawalContract_init_unchained();
   }
 
-  function __WithdrawalContract_init_unchained(uint256 pooledTokenId) internal onlyInitializing {
-    __WithdrawalModule_init(pooledTokenId);
-  }
+  function __WithdrawalContract_init_unchained() internal onlyInitializing {}
 
   function getPoolId() public view override returns (uint256) {
-    return WITHDRAWAL.pooledTokenId;
+    return WITHDRAWAL.POOL_ID;
   }
 
   /**
@@ -102,14 +102,6 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
     return getPortal().getPackageVersion(GEODE.PACKAGE_TYPE);
   }
 
-  function pullUpgrade() external virtual override onlyOwner {
-    require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
-    require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
-
-    uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
-    approveProposal(id);
-  }
-
   /**
    * @dev GeodeModule override
    */
@@ -120,6 +112,10 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
     override(GeodeModule, IGeodeModule)
     returns (bool)
   {
+    if (paused()) {
+      return true;
+    }
+
     if (getContractVersion() != getProposedVersion()) {
       return true;
     }
@@ -133,6 +129,56 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
     }
 
     return false;
+  }
+
+  /**
+   * @custom:section                           ** ADMIN FUNCTIONS **
+   *
+   * @custom:visibility -> external
+   */
+
+  /**
+   * @custom:subsection                           ** UPGRADABILITY FUNCTIONS **
+   */
+
+  /**
+   * @dev IGeodePackage override
+   */
+  function pullUpgrade() external virtual override onlyOwner {
+    require(!(getPortal().isolationMode()), "WC:Portal is isolated");
+    require(getProposedVersion() != getContractVersion(), "WC:no upgrades");
+
+    uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
+    approveProposal(id);
+  }
+
+  /**
+   * @custom:subsection                           ** PAUSABILITY FUNCTIONS **
+   */
+
+  /**
+   * @notice pausing the contract activates the isolationMode
+   */
+  function pause() external virtual override(WithdrawalModule) onlyOwner {
+    _pause();
+  }
+
+  /**
+   * @notice unpausing the contract deactivates the isolationMode
+   */
+  function unpause() external virtual override(WithdrawalModule) onlyOwner {
+    _unpause();
+  }
+
+  /**
+   * @custom:subsection                           ** WITHDRAWAL QUEUE **
+   *
+   * @dev WM override
+   */
+  function setExitThreshold(
+    uint256 newThreshold
+  ) external virtual override(WithdrawalModule) onlyOwner {
+    WITHDRAWAL.setExitThreshold(newThreshold);
   }
 
   /**
