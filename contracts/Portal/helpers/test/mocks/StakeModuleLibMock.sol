@@ -3,12 +3,14 @@ pragma solidity =0.8.7;
 
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract StakeModuleLibMock is StakeModule {
   using StakeModuleLib for StakeModuleLib.PooledStaking;
   using OracleExtensionLib for StakeModuleLib.PooledStaking;
+  using InitiatorExtensionLib for StakeModuleLib.PooledStaking;
   using DataStoreModuleLib for DataStoreModuleLib.IsolatedStorage;
 
   event return$_buyback(uint256 remETH, uint256 boughtgETH);

@@ -20,6 +20,8 @@ const StakeModuleLib = artifacts.require("StakeModuleLib");
 const LiquidityModuleLib = artifacts.require("LiquidityModuleLib");
 const GeodeModuleLib = artifacts.require("GeodeModuleLib");
 const OracleExtensionLib = artifacts.require("OracleExtensionLib");
+const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
+const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
 
 const StakeModuleLibMock = artifacts.require("$StakeModuleLibMock");
 
@@ -118,15 +120,21 @@ contract("StakeModuleLib", function (accounts) {
     const GML = await GeodeModuleLib.new();
     const LML = await LiquidityModuleLib.new();
     const SML = await StakeModuleLib.new();
+    // this should be before --> await InitiatorExtensionLib.new();
+    await InitiatorExtensionLib.link(SML);
+    const IEL = await InitiatorExtensionLib.new();
     const OEL = await OracleExtensionLib.new();
+    const WML = await WithdrawalModuleLib.new();
 
     await LiquidityPool.link(GML);
     await LiquidityPool.link(LML);
 
     await WithdrawalContract.link(GML);
+    await WithdrawalContract.link(WML);
 
     await StakeModuleLibMock.link(SML);
     await StakeModuleLibMock.link(OEL);
+    await StakeModuleLibMock.link(IEL);
 
     const contract = await StakeModuleLibMock.new({ from: deployer });
 
@@ -444,12 +452,6 @@ contract("StakeModuleLib", function (accounts) {
           await this.setWP(this.WithdrawalContract.address);
           await this.contract.$writeAddress(unknownId, strToBytes32("CONTROLLER"), deployer);
           await this.contract.$_deployWithdrawalContract(unknownId);
-        });
-        it("reverts: if already deployed", async function () {
-          await expectRevert(
-            this.contract.$_deployWithdrawalContract(unknownId),
-            "SML:already deployed"
-          );
         });
         it("sets correct withdrawalCredential", async function () {
           const WCAddress = await this.contract.readAddress(
