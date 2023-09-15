@@ -91,6 +91,8 @@ abstract contract WithdrawalModule is
     address _portal_position,
     uint256 _poolId
   ) internal onlyInitializing {
+    require(_gETH_position != address(0), "WM:gETH cannot be zero address");
+    require(_portal_position != address(0), "WM:portal cannot be zero address");
     WITHDRAWAL.gETH = IgETH(_gETH_position);
     WITHDRAWAL.PORTAL = IPortal(_portal_position);
     WITHDRAWAL.POOL_ID = _poolId;
