@@ -31,8 +31,8 @@ contract("WithdrawalModuleLib", function (accounts) {
     randomAddress,
   ] = accounts;
 
-  const operatorFee = new BN(String(5e8)); // 8%
-  const poolFee = new BN(String(5e8)); // 9%
+  const operatorFee = new BN(String(8e8)); // 8%
+  const poolFee = new BN(String(9e8)); // 9%
 
   const MIN_VALIDATOR_PERIOD = DAY.muln(90);
   const MONOPOLY_THRESHOLD = new BN("50000");
@@ -350,22 +350,46 @@ contract("WithdrawalModuleLib", function (accounts) {
 
     context("_distributeFees", function () {
       it("if reportedWithdrawn is not bigger than processedWithdrawn wallet balances stay same", async function () {
+        const beforePoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
+        const beforeOperatorWallet = await this.SMLM.readUint(
+          this.operatorId,
+          strToBytes32("wallet")
+        );
+        await this.contract.$_distributeFees(pubkey0, new BN(String(1e18)), new BN(String(2e18)));
+        const afterPoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
+        const afterOperatorWallet = await this.SMLM.readUint(
+          this.operatorId,
+          strToBytes32("wallet")
+        );
+        expect(afterPoolWallet).to.be.bignumber.equal(beforePoolWallet);
+        expect(afterOperatorWallet).to.be.bignumber.equal(beforeOperatorWallet);
+      });
+      it("success, balances updated accordingly", async function () {
+        // const mockReportedWithdrawn = new BN(String(2e18));
+        // const mockProcessedWithdrawn = new BN(String(1e18));
         // const beforePoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
         // const beforeOperatorWallet = await this.SMLM.readUint(
         //   this.operatorId,
         //   strToBytes32("wallet")
         // );
-        // await this.contract.$_distributeFees(pubkey0, new BN(String(1e18)), new BN(String(2e18)));
+        // console.log(await this.SMLM.getValidator(pubkey0));
+        // const extra = await this.contract.$_distributeFees.call(pubkey0, 500, 100);
+        // console.log("EXTRA", extra.toString());
         // const afterPoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
         // const afterOperatorWallet = await this.SMLM.readUint(
         //   this.operatorId,
         //   strToBytes32("wallet")
         // );
-        // expect(beforePoolWallet).to.be.bignumber.equal(afterPoolWallet);
-        // expect(beforeOperatorWallet).to.be.bignumber.equal(afterOperatorWallet);
-      });
-      it("success, balances updated accordingly", async function () {
-        // TODO: check return value "extra"
+        // const poolProfit = mockReportedWithdrawn
+        //   .sub(mockProcessedWithdrawn)
+        //   .mul(poolFee)
+        //   .div(PERCENTAGE_DENOMINATOR);
+        // const operatorProfit = mockReportedWithdrawn
+        //   .sub(mockProcessedWithdrawn)
+        //   .mul(operatorFee)
+        //   .div(PERCENTAGE_DENOMINATOR);
+        // expect(afterPoolWallet).to.be.bignumber.equal(beforePoolWallet.add(poolProfit));
+        // expect(afterOperatorWallet).to.be.bignumber.equal(beforeOperatorWallet.add(operatorProfit));
       });
     });
   });

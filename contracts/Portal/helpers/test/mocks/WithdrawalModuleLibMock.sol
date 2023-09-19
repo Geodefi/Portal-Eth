@@ -12,8 +12,6 @@ import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStor
 contract WithdrawalModuleLibMock is WithdrawalModule {
   using WithdrawalModuleLib for WithdrawalModuleLib.PooledWithdrawal;
 
-  event return$initiatePool(uint256 poolId);
-
   function initialize(
     address _gETH_position,
     address _portal_position,
@@ -107,8 +105,7 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     bytes memory pubkey,
     uint256 reportedWithdrawn,
     uint256 processedWithdrawn
-  ) internal returns (uint256 extra) {
-    // TODO: fix return
-    WITHDRAWAL._distributeFees(pubkey, reportedWithdrawn, processedWithdrawn);
+  ) external returns (uint256 extra) {
+    extra = WITHDRAWAL._distributeFees(pubkey, reportedWithdrawn, processedWithdrawn);
   }
 }
