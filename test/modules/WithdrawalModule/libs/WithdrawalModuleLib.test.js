@@ -296,14 +296,6 @@ contract("WithdrawalModuleLib", function (accounts) {
         from: poolMaintainer,
       });
 
-      // preWallet = await this.SMLM.readUint(operatorId, strToBytes32("wallet"));
-      // preSurplus = await this.SMLM.readUint(publicPoolId, strToBytes32("surplus"));
-      // preSecured = await this.SMLM.readUint(publicPoolId, strToBytes32("secured"));
-      // preProposedValidators = await this.SMLM.readUint(
-      //   publicPoolId,
-      //   await this.SMLM.getKey(operatorId, strToBytes32("proposedValidators"))
-      // );
-
       await this.SMLM.proposeStake(
         this.poolId,
         this.operatorId,
@@ -344,17 +336,107 @@ contract("WithdrawalModuleLib", function (accounts) {
       });
     });
 
-    // _checkAndRequestExit
+    context("_checkAndRequestExit", function () {
+      const mockBeaconBalance = new BN(String(10e18));
+      const mockWithdrawnBalance = new BN(String(2e18));
+      const mockPrice = new BN(String(15e17));
+      const mockCommonPoll = new BN(String(2e18));
+
+      beforeEach(async function () {
+        await this.SMLM.$set_PricePerShare(mockPrice, this.poolId);
+        await this.contract.$setMockQueueData(0, 0, 0, 0, 0, mockCommonPoll);
+
+        await this.SMLM.$set_VERIFICATION_INDEX(1);
+        await this.SMLM.stake(this.operatorId, [pubkey0], {
+          from: operatorMaintainer,
+        });
+
+        // set mock contract as withdrawalContract
+        await this.SMLM.$writeAddress(
+          this.poolId,
+          strToBytes32("withdrawalContract"),
+          this.contract.address
+        );
+      });
+      it("if commonPoll + validatorPoll is not bigger than validatorThreshold, returns commonPoll as it is and status stay ACTIVE", async function () {
+        const mockValidatorPoll = new BN(String(2e18));
+        await this.contract.$setMockValidatorData(
+          pubkey0,
+          mockBeaconBalance,
+          mockWithdrawnBalance,
+          mockValidatorPoll
+        );
+
+        const returnedCommonPoll = await this.contract.$_checkAndRequestExit.call(
+          pubkey0,
+          mockCommonPoll
+        );
+        await this.contract.$_checkAndRequestExit(pubkey0, mockCommonPoll);
+
+        const val = await this.SMLM.getValidator(pubkey0);
+
+        expect(returnedCommonPoll).to.be.bignumber.equal(mockCommonPoll);
+        expect(val.state).to.be.bignumber.equal(new BN(String(2))); // ACTIVE;
+      });
+      it("validator state changes to EXIT_REQUESTED and commonPoll increases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than validatorThreshold", async function () {
+        const mockValidatorPoll = new BN(String(7e18));
+        await this.contract.$setMockValidatorData(
+          pubkey0,
+          mockBeaconBalance,
+          mockWithdrawnBalance,
+          mockValidatorPoll
+        );
+        const threshold = await this.contract.$validatorThreshold(pubkey0);
+
+        const returnedCommonPoll = await this.contract.$_checkAndRequestExit.call(
+          pubkey0,
+          mockCommonPoll
+        );
+        await this.contract.$_checkAndRequestExit(pubkey0, mockCommonPoll);
+
+        const val = await this.SMLM.getValidator(pubkey0);
+        expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
+        expect(returnedCommonPoll).to.be.bignumber.equal(
+          mockCommonPoll.add(mockValidatorPoll.sub(threshold))
+        );
+      });
+      it("validator state changes to EXIT_REQUESTED and commonPoll decreases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is smaller than validatorThreshold", async function () {
+        const mockValidatorPoll = new BN(String(5e18));
+        await this.contract.$setMockValidatorData(
+          pubkey0,
+          mockBeaconBalance,
+          mockWithdrawnBalance,
+          mockValidatorPoll
+        );
+
+        const threshold = await this.contract.$validatorThreshold(pubkey0);
+
+        const returnedCommonPoll = await this.contract.$_checkAndRequestExit.call(
+          pubkey0,
+          mockCommonPoll
+        );
+        await this.contract.$_checkAndRequestExit(pubkey0, mockCommonPoll);
+
+        const val = await this.SMLM.getValidator(pubkey0);
+        expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
+        expect(returnedCommonPoll).to.be.bignumber.equal(
+          mockCommonPoll.sub(threshold.sub(mockValidatorPoll))
+        );
+      });
+    });
+
     // enqueue
     // enqueueBatch
 
     context("_distributeFees", function () {
+      let beforePoolWallet;
+      let beforeOperatorWallet;
+      beforeEach(async function () {
+        await this.contract.send(new BN(String(5e18)));
+        beforePoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
+        beforeOperatorWallet = await this.SMLM.readUint(this.operatorId, strToBytes32("wallet"));
+      });
       it("if reportedWithdrawn is not bigger than processedWithdrawn wallet balances stay same", async function () {
-        const beforePoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
-        const beforeOperatorWallet = await this.SMLM.readUint(
-          this.operatorId,
-          strToBytes32("wallet")
-        );
         await this.contract.$_distributeFees(pubkey0, new BN(String(1e18)), new BN(String(2e18)));
         const afterPoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
         const afterOperatorWallet = await this.SMLM.readUint(
@@ -365,31 +447,43 @@ contract("WithdrawalModuleLib", function (accounts) {
         expect(afterOperatorWallet).to.be.bignumber.equal(beforeOperatorWallet);
       });
       it("success, balances updated accordingly", async function () {
-        // const mockReportedWithdrawn = new BN(String(2e18));
-        // const mockProcessedWithdrawn = new BN(String(1e18));
-        // const beforePoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
-        // const beforeOperatorWallet = await this.SMLM.readUint(
-        //   this.operatorId,
-        //   strToBytes32("wallet")
-        // );
-        // console.log(await this.SMLM.getValidator(pubkey0));
-        // const extra = await this.contract.$_distributeFees.call(pubkey0, 500, 100);
-        // console.log("EXTRA", extra.toString());
-        // const afterPoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
-        // const afterOperatorWallet = await this.SMLM.readUint(
-        //   this.operatorId,
-        //   strToBytes32("wallet")
-        // );
-        // const poolProfit = mockReportedWithdrawn
-        //   .sub(mockProcessedWithdrawn)
-        //   .mul(poolFee)
-        //   .div(PERCENTAGE_DENOMINATOR);
-        // const operatorProfit = mockReportedWithdrawn
-        //   .sub(mockProcessedWithdrawn)
-        //   .mul(operatorFee)
-        //   .div(PERCENTAGE_DENOMINATOR);
-        // expect(afterPoolWallet).to.be.bignumber.equal(beforePoolWallet.add(poolProfit));
-        // expect(afterOperatorWallet).to.be.bignumber.equal(beforeOperatorWallet.add(operatorProfit));
+        const mockReportedWithdrawn = new BN(String(2e18));
+        const mockProcessedWithdrawn = new BN(String(1e18));
+
+        // this one is not changing the values, just to get the return statement
+        const extra = await this.contract.$_distributeFees.call(
+          pubkey0,
+          mockReportedWithdrawn,
+          mockProcessedWithdrawn
+        );
+
+        await this.contract.$_distributeFees(
+          pubkey0,
+          mockReportedWithdrawn,
+          mockProcessedWithdrawn
+        );
+
+        console.log("EXTRA", extra.toString());
+        const afterPoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
+        const afterOperatorWallet = await this.SMLM.readUint(
+          this.operatorId,
+          strToBytes32("wallet")
+        );
+
+        const poolProfit = mockReportedWithdrawn
+          .sub(mockProcessedWithdrawn)
+          .mul(poolFee)
+          .div(PERCENTAGE_DENOMINATOR);
+        const operatorProfit = mockReportedWithdrawn
+          .sub(mockProcessedWithdrawn)
+          .mul(operatorFee)
+          .div(PERCENTAGE_DENOMINATOR);
+
+        expect(afterPoolWallet).to.be.bignumber.equal(beforePoolWallet.add(poolProfit));
+        expect(afterOperatorWallet).to.be.bignumber.equal(beforeOperatorWallet.add(operatorProfit));
+        expect(extra).to.be.bignumber.equal(
+          mockReportedWithdrawn.sub(mockProcessedWithdrawn).sub(poolProfit).sub(operatorProfit)
+        );
       });
     });
   });

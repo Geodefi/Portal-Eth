@@ -2271,6 +2271,8 @@ contract("StakeModuleLib", function (accounts) {
           });
         });
       });
+
+      // TODO: test requestExit and finalizeExit
     });
   });
 });

@@ -89,6 +89,29 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     WITHDRAWAL.validators[pubkey].poll = poll;
   }
 
+  function $setMockQueueData(
+    uint256 requested,
+    uint256 realized,
+    uint256 fulfilled,
+    uint256 realizedBalance,
+    uint256 realizedPrice,
+    uint256 commonPoll
+  ) external {
+    WITHDRAWAL.queue.requested = requested;
+    WITHDRAWAL.queue.realized = realized;
+    WITHDRAWAL.queue.fulfilled = fulfilled;
+    WITHDRAWAL.queue.realizedBalance = realizedBalance;
+    WITHDRAWAL.queue.realizedPrice = realizedPrice;
+    WITHDRAWAL.queue.commonPoll = commonPoll;
+  }
+
+  function $_checkAndRequestExit(
+    bytes calldata pubkey,
+    uint256 commonPoll
+  ) external returns (uint256) {
+    return WITHDRAWAL._checkAndRequestExit(pubkey, commonPoll);
+  }
+
   function $_vote(bytes calldata pubkey, uint256 size) external {
     WITHDRAWAL._vote(pubkey, size);
   }
@@ -108,4 +131,10 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
   ) external returns (uint256 extra) {
     extra = WITHDRAWAL._distributeFees(pubkey, reportedWithdrawn, processedWithdrawn);
   }
+
+  /**
+   * @notice fallback functions
+   */
+
+  receive() external payable {}
 }
