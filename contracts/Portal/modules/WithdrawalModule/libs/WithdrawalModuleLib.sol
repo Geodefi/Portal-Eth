@@ -469,7 +469,9 @@ library WithdrawalModuleLib {
       } else {
         return 0;
       }
-    } else return 0;
+    } else {
+      return 0;
+    }
   }
 
   /**
@@ -481,9 +483,11 @@ library WithdrawalModuleLib {
   function _fulfill(PooledWithdrawal storage self, uint256 index) internal {
     uint256 toFulfill = fulfillable(self, index, self.queue.realized, self.queue.fulfilled);
     if (toFulfill > 0) {
-      self.requests[index].claimableETH += toFulfill * self.queue.realizedPrice;
+      self.requests[index].claimableETH +=
+        (toFulfill * self.queue.realizedPrice) /
+        self.gETH.denominator();
       self.requests[index].fulfilled += toFulfill;
-      self.queue.fulfilled = toFulfill;
+      self.queue.fulfilled += toFulfill;
     }
   }
 
