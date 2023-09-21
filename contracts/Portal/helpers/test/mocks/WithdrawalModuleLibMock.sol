@@ -51,6 +51,26 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     poll = WITHDRAWAL.validators[pubkey].poll;
   }
 
+  function $getQueueData()
+    external
+    view
+    returns (
+      uint256 requested,
+      uint256 realized,
+      uint256 fulfilled,
+      uint256 realizedBalance,
+      uint256 realizedPrice,
+      uint256 commonPoll
+    )
+  {
+    requested = WITHDRAWAL.queue.requested;
+    realized = WITHDRAWAL.queue.realized;
+    fulfilled = WITHDRAWAL.queue.fulfilled;
+    realizedBalance = WITHDRAWAL.queue.realizedBalance;
+    realizedPrice = WITHDRAWAL.queue.realizedPrice;
+    commonPoll = WITHDRAWAL.queue.commonPoll;
+  }
+
   function $getRequestFromLastIndex(
     uint256 index
   )
@@ -105,6 +125,10 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     WITHDRAWAL.queue.commonPoll = commonPoll;
   }
 
+  function $canFinalizeExit(bytes memory pubkey) external view returns (bool) {
+    return WITHDRAWAL.canFinalizeExit(pubkey);
+  }
+
   function $_checkAndRequestExit(
     bytes calldata pubkey,
     uint256 commonPoll
@@ -120,8 +144,32 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     WITHDRAWAL._enqueue(trigger, size, owner);
   }
 
+  function $enqueueBatch(
+    uint256[] calldata sizes,
+    bytes[] calldata pubkeys,
+    address owner
+  ) external {
+    WITHDRAWAL.enqueueBatch(sizes, pubkeys, owner);
+  }
+
+  function $enqueue(uint256 size, bytes calldata pubkey, address owner) external {
+    WITHDRAWAL.enqueue(size, pubkey, owner);
+  }
+
   function $transferRequest(uint256 index, address newOwner) external {
     WITHDRAWAL.transferRequest(index, newOwner);
+  }
+
+  function $fulfillable(
+    uint256 index,
+    uint256 Qrealized,
+    uint256 Qfulfilled
+  ) external view returns (uint256) {
+    return WITHDRAWAL.fulfillable(index, Qrealized, Qfulfilled);
+  }
+
+  function $fulfill(uint256 index) external {
+    WITHDRAWAL.fulfill(index);
   }
 
   function $_distributeFees(
