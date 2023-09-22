@@ -172,6 +172,26 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     WITHDRAWAL.fulfill(index);
   }
 
+  function $fulfillBatch(uint256[] calldata indexes) external {
+    WITHDRAWAL.fulfillBatch(indexes);
+  }
+
+  function $_dequeue(uint256 index) external returns (uint256 claimableETH) {
+    return WITHDRAWAL._dequeue(index);
+  }
+
+  function $dequeue(uint256 index, address receiver) external {
+    WITHDRAWAL.dequeue(index, receiver);
+  }
+
+  function $dequeueBatch(uint256[] calldata indexes, address receiver) external {
+    WITHDRAWAL.dequeueBatch(indexes, receiver);
+  }
+
+  function $_realizeProcessedEther(uint256 processedBalance) external {
+    WITHDRAWAL._realizeProcessedEther(processedBalance);
+  }
+
   function $_distributeFees(
     bytes memory pubkey,
     uint256 reportedWithdrawn,

@@ -331,13 +331,13 @@ contract("WithdrawalModuleLib", function (accounts) {
 
   context("fulfill", function () {
     it("success", async function () {
-      const mockEnqueueTrigger = new BN(String(4e18)); // Rtrigger
+      const mockEnqueueTrigger = new BN(String(3e18)); // Rtrigger
       const mockEnqueueSize = new BN(String(2e18)); // Rsize
       const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
       await this.contract.$setMockQueueData(
         0,
-        new BN(String(8e18)), // realized
-        new BN(String(3e18)), // fulfilled
+        new BN(String(8e18)), // Qrealized
+        new BN(String(3e18)), // Qfulfilled
         0,
         mockRealizedPrice,
         0
@@ -347,13 +347,302 @@ contract("WithdrawalModuleLib", function (accounts) {
         new BN(String(0)) // index
       );
       const req = await this.contract.$getRequestFromLastIndex(0);
-      expect(req.fulfilled).to.be.bignumber.equal(new BN(String(2e18)));
+      expect(req.fulfilled).to.be.bignumber.equal(mockEnqueueSize);
       expect(req.claimableETH).to.be.bignumber.equal(
-        new BN(String(2e18)).mul(mockRealizedPrice).div(new BN(String(1e18)))
+        mockEnqueueSize.mul(mockRealizedPrice).div(new BN(String(1e18)))
       );
       expect((await this.contract.$getQueueData()).fulfilled).to.be.bignumber.equal(
         new BN(String(5e18))
       );
+    });
+  });
+
+  context("fulfillBatch", function () {
+    it("success", async function () {
+      const mockEnqueueTrigger0 = new BN(String(3e18)); // Rtrigger0
+      const mockEnqueueSize0 = new BN(String(2e18)); // Rsize0
+      const mockEnqueueTrigger1 = mockEnqueueTrigger0.add(mockEnqueueSize0); // Rtrigger1
+      const mockEnqueueSize1 = new BN(String(4e18)); // Rsize1
+      const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+      await this.contract.$setMockQueueData(
+        0,
+        new BN(String(8e18)), // Qrealized
+        new BN(String(3e18)), // Qfulfilled
+        0,
+        mockRealizedPrice,
+        0
+      );
+      await this.contract.$_enqueue(mockEnqueueTrigger0, mockEnqueueSize0, staker);
+      await this.contract.$_enqueue(mockEnqueueTrigger1, mockEnqueueSize1, staker);
+      await this.contract.$fulfillBatch(
+        [new BN(String(0)), new BN(String(1))] // index
+      );
+      const req0 = await this.contract.$getRequestFromLastIndex(1);
+      const req1 = await this.contract.$getRequestFromLastIndex(0);
+      expect(req0.fulfilled).to.be.bignumber.equal(mockEnqueueSize0);
+      expect(req0.claimableETH).to.be.bignumber.equal(
+        new BN(String(2e18)).mul(mockRealizedPrice).div(new BN(String(1e18)))
+      );
+      expect(req1.fulfilled).to.be.bignumber.equal(new BN(String(3e18))); // 3e18 since it can be at most it
+      expect(req1.claimableETH).to.be.bignumber.equal(
+        new BN(String(3e18)).mul(mockRealizedPrice).div(new BN(String(1e18))) // 3e18 since it can be at most it
+      );
+      expect((await this.contract.$getQueueData()).fulfilled).to.be.bignumber.equal(
+        new BN(String(8e18)) // Qrealized (since it can be at most it)
+      );
+    });
+  });
+
+  context("_dequeue", function () {
+    const mockEnqueueTrigger = new BN(String(3e18)); // Rtrigger
+    const mockEnqueueSize = new BN(String(2e18)); // Rsize
+    const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+
+    beforeEach(async function () {
+      await this.contract.$setMockQueueData(
+        0,
+        new BN(String(8e18)), // Qrealized
+        new BN(String(3e18)), // Qfulfilled
+        0,
+        mockRealizedPrice,
+        0
+      );
+      await this.contract.$_enqueue(mockEnqueueTrigger, mockEnqueueSize, staker);
+    });
+
+    it("reverts if not owner", async function () {
+      await this.contract.$fulfill(new BN(String(0)));
+      await expectRevert(
+        this.contract.$_dequeue(new BN(String(0)), { from: randomAddress }),
+        "WML:not owner"
+      );
+    });
+    it("reverts if claimableETH is 0", async function () {
+      await expectRevert(
+        this.contract.$_dequeue(new BN(String(0)), { from: staker }),
+        "WML:not claimable"
+      );
+    });
+    it("success", async function () {
+      await this.contract.$fulfill(new BN(String(0)));
+
+      // to get the return value, not changing the state
+      const claimableETH = await this.contract.$_dequeue.call(new BN(String(0)), { from: staker });
+      await this.contract.$_dequeue(new BN(String(0)), { from: staker });
+      expect(claimableETH).to.be.bignumber.equal(
+        mockEnqueueSize.mul(mockRealizedPrice).div(new BN(String(1e18)))
+      );
+      expect((await this.contract.$getRequestFromLastIndex(0)).claimableETH).to.be.bignumber.equal(
+        new BN(String(0))
+      );
+    });
+  });
+
+  context("dequeue", function () {
+    const mockEnqueueTrigger = new BN(String(3e18)); // Rtrigger
+    const mockEnqueueSize = new BN(String(2e18)); // Rsize
+    const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+
+    beforeEach(async function () {
+      await this.contract.$setMockQueueData(
+        0,
+        new BN(String(8e18)), // Qrealized
+        new BN(String(3e18)), // Qfulfilled
+        0,
+        mockRealizedPrice,
+        0
+      );
+      await this.contract.$_enqueue(mockEnqueueTrigger, mockEnqueueSize, staker);
+    });
+
+    it("reverts if receiver is ZERO_ADDRESS", async function () {
+      await expectRevert(
+        this.contract.$dequeue(new BN(String(0)), ZERO_ADDRESS, { from: staker }),
+        "WML:receiver can not be zero address"
+      );
+    });
+    it("reverts if WC does not have enough balance", async function () {
+      await expectRevert(
+        this.contract.$dequeue(new BN(String(0)), randomAddress, { from: staker }),
+        "WML:Failed to send Ether"
+      );
+    });
+    it("success", async function () {
+      const [deployer] = await ethers.getSigners();
+      await deployer.sendTransaction({
+        to: this.contract.address,
+        value: ethers.utils.parseEther("10.0"), // sends 10.0 ether
+      });
+
+      const beforeContractBalance = await ethers.provider.getBalance(this.contract.address);
+      const beforeBalance = await ethers.provider.getBalance(randomAddress);
+
+      await this.contract.$dequeue(new BN(String(0)), randomAddress, { from: staker });
+
+      const afterBalance = await ethers.provider.getBalance(randomAddress);
+      const afterContractBalance = await ethers.provider.getBalance(this.contract.address);
+
+      expect(new BN(String(afterBalance))).to.be.bignumber.equal(
+        new BN(String(beforeBalance)).add(
+          mockEnqueueSize.mul(mockRealizedPrice).div(new BN(String(1e18)))
+        )
+      );
+      expect(new BN(String(afterContractBalance))).to.be.bignumber.equal(
+        new BN(String(beforeContractBalance)).sub(
+          mockEnqueueSize.mul(mockRealizedPrice).div(new BN(String(1e18)))
+        )
+      );
+    });
+  });
+
+  context("dequeueBatch", function () {
+    const mockEnqueueTrigger0 = new BN(String(3e18)); // Rtrigger
+    const mockEnqueueSize0 = new BN(String(2e18)); // Rsize
+    const mockEnqueueTrigger1 = mockEnqueueTrigger0.add(mockEnqueueSize0); // Rtrigger
+    const mockEnqueueSize1 = new BN(String(4e18)); // Rsize
+    const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+
+    beforeEach(async function () {
+      await this.contract.$setMockQueueData(
+        0,
+        new BN(String(8e18)), // Qrealized
+        new BN(String(3e18)), // Qfulfilled
+        0,
+        mockRealizedPrice,
+        0
+      );
+      await this.contract.$_enqueue(mockEnqueueTrigger0, mockEnqueueSize0, staker);
+      await this.contract.$_enqueue(mockEnqueueTrigger1, mockEnqueueSize1, staker);
+    });
+
+    it("reverts if receiver is ZERO_ADDRESS", async function () {
+      await expectRevert(
+        this.contract.$dequeueBatch([new BN(String(0)), new BN(String(1))], ZERO_ADDRESS, {
+          from: staker,
+        }),
+        "WML:receiver can not be zero address"
+      );
+    });
+    it("reverts if WC does not have enough balance", async function () {
+      await expectRevert(
+        this.contract.$dequeueBatch([new BN(String(0)), new BN(String(1))], randomAddress, {
+          from: staker,
+        }),
+        "WML:Failed to send Ether"
+      );
+    });
+    it("success", async function () {
+      const [deployer] = await ethers.getSigners();
+      await deployer.sendTransaction({
+        to: this.contract.address,
+        value: ethers.utils.parseEther("10.0"), // sends 10.0 ether
+      });
+
+      const beforeContractBalance = await ethers.provider.getBalance(this.contract.address);
+      const beforeBalance = await ethers.provider.getBalance(randomAddress);
+
+      await this.contract.$dequeueBatch([new BN(String(0)), new BN(String(1))], randomAddress, {
+        from: staker,
+      });
+
+      const afterBalance = await ethers.provider.getBalance(randomAddress);
+      const afterContract = await ethers.provider.getBalance(this.contract.address);
+
+      expect(new BN(String(afterBalance))).to.be.bignumber.equal(
+        new BN(String(beforeBalance)).add(
+          new BN(String(5e18)).mul(mockRealizedPrice).div(new BN(String(1e18))) // 5e18 since it can be at most it
+        )
+      );
+      expect(new BN(String(afterContract))).to.be.bignumber.equal(
+        new BN(String(beforeContractBalance)).sub(
+          new BN(String(5e18)).mul(mockRealizedPrice).div(new BN(String(1e18))) // 5e18 since it can be at most it
+        )
+      );
+    });
+  });
+
+  context("_realizeProcessedEther", function () {
+    const mockQrealized = new BN(String(11e18)); // Qrealized
+    const mockQfulfilled = new BN(String(1e18)); // Qfulfilled
+    const mockRealizedPrice = new BN(String(4e18)); // realizedPrice
+    const mockPricePerShare = new BN(String(2e18)); // pricePerShare
+    const mockProcessedBalance = new BN(String(20e18)); // processedBalance
+    const denominator = new BN(String(1e18)); // denominator
+    const processedgEth = mockProcessedBalance.mul(denominator).div(mockPricePerShare); // processedgEth
+    const claimable = mockQrealized.sub(mockQfulfilled); // claimable
+
+    beforeEach(async function () {
+      // for mocking enqueue and put gETH to the contract
+      await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
+        from: poolOwner,
+        value: new BN(String(1e18)).muln(64),
+      });
+      await this.gETH.safeTransferFrom(
+        staker,
+        this.contract.address,
+        this.poolId,
+        processedgEth,
+        strToBytes(""),
+        { from: staker }
+      );
+
+      // set price per share
+      await this.SMLM.$set_PricePerShare(mockPricePerShare, this.poolId);
+    });
+
+    it("sets realizedPrice to pps if internalPrice is 0", async function () {
+      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      await this.contract.$_realizeProcessedEther(mockProcessedBalance);
+      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
+
+      const queueData = await this.contract.$getQueueData();
+      expect(queueData.realizedPrice).to.be.bignumber.equal(mockPricePerShare);
+      expect(queueData.realized).to.be.bignumber.equal(processedgEth);
+      expect(queueData.realizedBalance).to.be.bignumber.equal(mockProcessedBalance);
+    });
+    it("sets realizedPrice to pps if claimable is 0", async function () {
+      await this.contract.$setMockQueueData(
+        0,
+        mockQrealized,
+        mockQrealized, // Qfulfilled = Qrealized
+        0,
+        mockRealizedPrice,
+        0
+      );
+      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      await this.contract.$_realizeProcessedEther(mockProcessedBalance);
+      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
+
+      const queueData = await this.contract.$getQueueData();
+      expect(queueData.realizedPrice).to.be.bignumber.equal(mockPricePerShare);
+      expect(queueData.realized).to.be.bignumber.equal(mockQrealized.add(processedgEth));
+      expect(queueData.realizedBalance).to.be.bignumber.equal(mockProcessedBalance);
+    });
+    it("calculates realizedPrice correctly", async function () {
+      await this.contract.$setMockQueueData(
+        0,
+        mockQrealized,
+        mockQfulfilled,
+        0,
+        mockRealizedPrice,
+        0
+      );
+      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      await this.contract.$_realizeProcessedEther(mockProcessedBalance);
+      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
+
+      const queueData = await this.contract.$getQueueData();
+      expect(queueData.realizedPrice).to.be.bignumber.equal(
+        claimable
+          .mul(mockRealizedPrice)
+          .add(mockProcessedBalance.mul(denominator))
+          .div(claimable.add(processedgEth))
+      );
+      expect(queueData.realized).to.be.bignumber.equal(mockQrealized.add(processedgEth));
+      expect(queueData.realizedBalance).to.be.bignumber.equal(mockProcessedBalance);
     });
   });
 
@@ -732,23 +1021,6 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockRequested.add(mockRequestSizeCommon).add(mockRequestSize0).add(mockRequestSize1)
         );
 
-        console.log(
-          "\nCOMMON POLL",
-          mockCommonPoll.toString(),
-          "\nREQUEST SIZE",
-          mockRequestSizeCommon.toString(),
-          "\nVALIDATOR POLL",
-          mockValidatorPoll.toString(),
-          "\nREQUEST SIZE 0",
-          mockRequestSize0.toString(),
-          "\nREQUEST SIZE 1",
-          mockRequestSize1.toString(),
-          "\nTHRESHOLD 1",
-          threshold1.toString()
-        );
-
-        console.log("\nCURRENT COMMONPOLL", queueData.commonPoll.toString());
-
         expect(queueData.commonPoll).to.be.bignumber.equal(
           mockCommonPoll
             .add(mockRequestSizeCommon)
@@ -799,7 +1071,6 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockProcessedWithdrawn
         );
 
-        console.log("EXTRA", extra.toString());
         const afterPoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
         const afterOperatorWallet = await this.SMLM.readUint(
           this.operatorId,
