@@ -507,7 +507,7 @@ library WithdrawalModuleLib {
     for (uint256 i = 0; i < indexes.length; i++) {
       uint256 toFulfill = fulfillable(self, indexes[i], Qrealized, Qfulfilled);
       if (toFulfill > 0) {
-        self.requests[indexes[i]].claimableETH += toFulfill * Qprice;
+        self.requests[indexes[i]].claimableETH += (toFulfill * Qprice) / self.gETH.denominator();
         self.requests[indexes[i]].fulfilled += toFulfill;
         Qfulfilled += toFulfill;
       }
