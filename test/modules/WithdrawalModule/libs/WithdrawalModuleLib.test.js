@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 
+const { StandardMerkleTree } = require("@openzeppelin/merkle-tree");
 const { expectRevert, constants, BN } = require("@openzeppelin/test-helpers");
 const { ZERO_ADDRESS, MAX_UINT256 } = constants;
 const { strToBytes, strToBytes32, PERCENTAGE_DENOMINATOR, DAY } = require("../../../utils");
@@ -653,33 +654,52 @@ contract("WithdrawalModuleLib", function (accounts) {
       "0xa3b3eb55b16999ffeff52e5a898af89e4194b7221b2eaf03cb85fd558a390dc042beba94f907db6091b4cf141b18d1f5";
     const pubkeyNotExists =
       "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
+    const pubkey2 =
+      "0x8c104d1e9cdf2c1bdd107b34bbd2c060de8a2fab1cfb3ee15bb2334d18b878f2d151cfd8c98fba6eb60df917eb02b7f9";
+    const pubkey3 =
+      "0xb49c13f4b8ffad378bac0c89eeb8f4087cd763f9f72860a4e176ea4681020d9ee7856279d6a53e6f609b8a97f2cfbc0b";
+    const pubkey4 =
+      "0x8a8bb626ef9dfb4573a868fca0e9a9e1baf814ef83d393a4f5373593864ee6800eff284a215374d3fc938db8e81fc71b";
 
     const signature01 =
       "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
     const signature11 =
       "0xa2e94c3def1e53d7d1b5a0f037f765868b4bbae3ee59de673bc7ab7b142b929e08f47c1c2a6cdc91aee9442468ab095406b8ce356aef42403febe385424f97d6d109f6423dcb1acc3def45af56e4407416f0773bd18e50d880cb7d3e00ca9932";
+    const signature21 =
+      "0xa6175becfef2d233fd494bc46ed57db5478ebe94d8cc107a014c9cacae155a3a11f71f092018a98328e2852bf99dde67123c71c7a755cc0aa2bca1104da812a5aea39d72dbbcf48c9b69abf4f7d6280709b1db69c14f7dacdbdbdda298959b8b";
+    const signature31 =
+      "0xa7a63f12df0cdb8ee84d2a8d65f7d6a9ea8099a1454388d469ace34e7cc165a6748c9490404aead4e4bbd02bc117212e0b0f41e75eb5547f7ea618cc82a6dce8bf414a24bc2b84317075d8e54638e2ec846e54e78afa7d4e9fac2887c84e1cc0";
+    const signature41 =
+      "0xb0db285096f2eec2a3e17a4d40b4c19ed2fc6e8c91132bb3d168f5fd97ba2910289025dfde92e02f15d1ed9f323c6033016903b19b02180507fe2dd08c9a77bfed5477fbfa59f144c5b40351dce04eef497fb7df90553709947e7e053a8933d6";
+
     const signature031 =
       "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
     const signature131 =
       "0xa7290722d0b9350504fd44cd166fabc85db76fab07fb2876bff51e0ede2856e6160e4288853cf713cbf3cd7a0541ab1d0ed5e0858c980870f3a4c791264d8b4ee090677f507b599409e86433590ee3a93cae5103d2e03c66bea623e3ccd590ae";
+    const signature231 =
+      "0xae46112c21f86fd0061fedbd77da0f2b6e6aef494bcde7836e75329732af07cff42a3024b58c8281fc51f658f821271811f6b4e991564352a46edaadc5efcff064253598ae3b7193f166f4a892dee048ff9b15311a686f5cd5255cb9aad067ed";
+    const signature331 =
+      "0x83d9f2df7a87994f4ea9b68cf61ed800d1e1c8ea01ad42d7c286eb5fec81fc66cd8088bb0bc6f35399c313de63169a340366a62748647c8aae09c6c0bd3985937e3509475adc21df2bb441353e37269a0c79100c7b3273038327225146389ed5";
+    const signature431 =
+      "0x8e3776be0a15f2570c257d78508827cb319e8a8f18ffcf423e241c93b60be9a95a8dbc6f0cfc7a539709bd0fd7a2208a163e6b5735b5bae2195549aedf6b5c0d535ca2fc976a74d1ea6319041ef9c2f5e47ba00664f2022556a4c94adcd9c147";
 
     beforeEach(async function () {
       await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
         from: poolOwner,
-        value: new BN(String(1e18)).muln(64),
+        value: new BN(String(160e18)),
       });
 
       await this.SMLM.$set_MONOPOLY_THRESHOLD(MONOPOLY_THRESHOLD);
-      await this.SMLM.delegate(this.poolId, [this.operatorId], [2], {
+      await this.SMLM.delegate(this.poolId, [this.operatorId], [5], {
         from: poolMaintainer,
       });
 
       await this.SMLM.proposeStake(
         this.poolId,
         this.operatorId,
-        [pubkey0, pubkey1],
-        [signature01, signature11],
-        [signature031, signature131],
+        [pubkey0, pubkey1, pubkey2, pubkey3, pubkey4],
+        [signature01, signature11, signature21, signature31, signature41],
+        [signature031, signature131, signature231, signature331, signature431],
         {
           from: operatorMaintainer,
         }
@@ -1091,6 +1111,163 @@ contract("WithdrawalModuleLib", function (accounts) {
         expect(extra).to.be.bignumber.equal(
           mockReportedWithdrawn.sub(mockProcessedWithdrawn).sub(poolProfit).sub(operatorProfit)
         );
+      });
+    });
+
+    describe("processValidators", function () {
+      let tree;
+      let proofs = [];
+      const pks = [pubkey0, pubkey1, pubkey2, pubkey3, pubkey4];
+      const beaconBalances = [String(0), String(0), String(32e18), String(32e18), String(30e18)];
+      const withdrawnBalances = [
+        String(31e18),
+        String(34e18),
+        String(1e18),
+        String(7e18), // 5e18 previously now 7e18 so profit from here will be 2e18
+        String(0),
+      ];
+
+      const beaconBalancesBN = [
+        new BN(String(0)),
+        new BN(String(0)),
+        new BN(String(32e18)),
+        new BN(String(32e18)),
+        new BN(String(30e18)),
+      ];
+      const withdrawnBalancesBN = [
+        new BN(String(31e18)),
+        new BN(String(34e18)),
+        new BN(String(1e18)),
+        new BN(String(7e18)), // 5e18 previously now 7e18 so profit from here will be 2e18
+        new BN(String(0)),
+      ];
+      const isExited = [true, true, false, false, false];
+
+      const profit = new BN(String(5e18));
+      const fees = profit.mul(new BN(String(17))).div(new BN(String(100)));
+
+      beforeEach(async function () {
+        //add money to contract to distribute fees
+        await this.contract.send(new BN(String(160e18)));
+
+        // this assumption is needed for the test to work
+        // but actually it is a problem since there is a possiblity
+        // that processValidators is called before any enqueue
+        // which means that there is no gETH to burn and it will revert
+        await this.gETH.safeTransferFrom(
+          staker,
+          this.contract.address,
+          this.poolId,
+          new BN(String(100e18)),
+          strToBytes(""),
+          { from: staker }
+        );
+
+        // make validators active
+        await this.SMLM.$set_VERIFICATION_INDEX(5);
+        await this.SMLM.stake(this.operatorId, [pubkey0, pubkey1, pubkey2, pubkey3, pubkey4], {
+          from: operatorMaintainer,
+        });
+
+        // set validator fees
+
+        // set mock contract as withdrawalContract
+        await this.SMLM.$writeAddress(
+          this.poolId,
+          strToBytes32("withdrawalContract"),
+          this.contract.address
+        );
+
+        const values = [
+          [pks[0], beaconBalances[0], withdrawnBalances[0]],
+          [pks[1], beaconBalances[1], withdrawnBalances[1]],
+          [pks[2], beaconBalances[2], withdrawnBalances[2]],
+          [pks[3], beaconBalances[3], withdrawnBalances[3]],
+          [pks[4], beaconBalances[4], withdrawnBalances[4]],
+        ];
+        tree = StandardMerkleTree.of(values, ["bytes", "uint256", "uint256"]);
+        proofs = [];
+        for (let i = 0; i < pks.length; i++) {
+          proofs.push(tree.getProof(i));
+        }
+
+        await this.SMLM.reportBeacon(strToBytes32("not important"), tree.root, 50001, {
+          from: oracle,
+        });
+
+        // set validator data to check the cumulative withdrawn balance
+        await this.contract.$setMockValidatorData(
+          pks[3],
+          new BN(String(20e18)), // since price is 2e18 and EXIT_THRESHOLD is 60%, threshold value is 6e18
+          new BN(String(5e18)),
+          new BN(String(0))
+        );
+
+        //set pricePerShare
+        await this.SMLM.$set_PricePerShare(new BN(String(2e18)), this.poolId);
+
+        // set mock commonPoll to check the exit of validator
+        await this.contract.$setMockQueueData(0, 0, 0, 0, 0, new BN(String(65e17))); //so commonPoll will left 5e17 afterwards
+      });
+
+      it("reverts if lengths of arrays are not matching", async function () {
+        await expectRevert(
+          this.contract.$processValidators(
+            pks.slice(1),
+            beaconBalancesBN,
+            withdrawnBalancesBN,
+            proofs
+          ),
+          "WML:invalid lengths"
+        );
+        await expectRevert(
+          this.contract.$processValidators(
+            pks,
+            beaconBalancesBN.slice(1),
+            withdrawnBalancesBN,
+            proofs
+          ),
+          "WML:invalid lengths"
+        );
+        await expectRevert(
+          this.contract.$processValidators(
+            pks,
+            beaconBalancesBN,
+            withdrawnBalancesBN.slice(1),
+            proofs
+          ),
+          "WML:invalid lengths"
+        );
+        await expectRevert(
+          this.contract.$processValidators(
+            pks,
+            beaconBalancesBN,
+            withdrawnBalancesBN,
+            proofs.slice(1)
+          ),
+          "WML:invalid lengths"
+        );
+      });
+      it("reverts if not all proofs are valid", async function () {
+        proofs[0] = proofs[1];
+        await expectRevert(
+          this.contract.$processValidators(pks, beaconBalancesBN, withdrawnBalancesBN, proofs),
+          "WML:NOT all proofs are valid"
+        );
+      });
+      it("success", async function () {
+        await this.contract.$processValidators(pks, beaconBalancesBN, withdrawnBalancesBN, proofs);
+
+        for (let i = 0; i < pks.length; i++) {
+          const val = await this.contract.$getValidatorData(pks[i]);
+          expect(val.beaconBalance).to.be.bignumber.equal(beaconBalancesBN[i]);
+          expect(val.withdrawnBalance).to.be.bignumber.equal(withdrawnBalancesBN[i]);
+        }
+
+        const queueData = await this.contract.$getQueueData();
+        expect(queueData.realizedBalance).to.be.bignumber.equal(profit.sub(fees));
+        // TODO: commonPoll is not updating somehow, check it
+        expect(queueData.commonPoll).to.be.bignumber.equal(new BN(String(5e17)));
       });
     });
   });

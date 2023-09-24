@@ -200,6 +200,15 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     extra = WITHDRAWAL._distributeFees(pubkey, reportedWithdrawn, processedWithdrawn);
   }
 
+  function $processValidators(
+    bytes[] calldata pubkeys,
+    uint256[] calldata beaconBalances,
+    uint256[] calldata withdrawnBalances,
+    bytes32[][] calldata balanceProofs
+  ) external {
+    WITHDRAWAL.processValidators(pubkeys, beaconBalances, withdrawnBalances, balanceProofs);
+  }
+
   /**
    * @notice fallback functions
    */
