@@ -444,28 +444,28 @@ library WithdrawalModuleLib {
   /**
    * @notice given a request, figure out the fulfillable gETH amount, limited upto its size.
    * @param index placement of the Request within the requests array.
-   * @param Qrealized self.queue.realized, might also be hot value for Batch optimizations
-   * @param Qfulfilled self.queue.fulfilled, might also be a hot value for Batch optimizations
+   * @param qRealized self.queue.realized, might also be hot value for Batch optimizations
+   * @param qFulfilled self.queue.fulfilled, might also be a hot value for Batch optimizations
    * @dev taking the previously fulfilled amount into consideration as it is the previously claimed part.
    */
   function fulfillable(
     PooledWithdrawal storage self,
     uint256 index,
-    uint256 Qrealized,
-    uint256 Qfulfilled
+    uint256 qRealized,
+    uint256 qFulfilled
   ) public view returns (uint256) {
-    if (Qrealized > Qfulfilled) {
-      uint256 Rtrigger = self.requests[index].trigger;
-      uint256 Rsize = self.requests[index].size;
-      uint256 Rfulfilled = self.requests[index].fulfilled;
+    if (qRealized > qFulfilled) {
+      uint256 rTrigger = self.requests[index].trigger;
+      uint256 rSize = self.requests[index].size;
+      uint256 rFulfilled = self.requests[index].fulfilled;
 
-      uint256 Rfloor = Rtrigger + Rfulfilled;
-      uint256 Rceil = Rtrigger + Rsize;
+      uint256 rFloor = rTrigger + rFulfilled;
+      uint256 rCeil = rTrigger + rSize;
 
-      if (Qrealized > Rceil) {
-        return Rsize - Rfulfilled;
-      } else if (Qrealized > Rfloor) {
-        return Qrealized - Rfloor;
+      if (qRealized > rCeil) {
+        return rSize - rFulfilled;
+      } else if (qRealized > rFloor) {
+        return qRealized - rFloor;
       } else {
         return 0;
       }
@@ -493,26 +493,26 @@ library WithdrawalModuleLib {
 
   /**
    * @notice _fulfill with Batch optimizations
-   * @param Qrealized queue.realized, as a hot value.
-   * @param Qfulfilled queue.fulfilled, as a hot value.
-   * @param Qprice queue.realizedPrice, as a hot value.
+   * @param qRealized queue.realized, as a hot value.
+   * @param qFulfilled queue.fulfilled, as a hot value.
+   * @param qPrice queue.realizedPrice, as a hot value.
    */
   function _fulfillBatch(
     PooledWithdrawal storage self,
     uint256[] calldata indexes,
-    uint256 Qrealized,
-    uint256 Qfulfilled,
-    uint256 Qprice
+    uint256 qRealized,
+    uint256 qFulfilled,
+    uint256 qPrice
   ) internal {
     for (uint256 i = 0; i < indexes.length; i++) {
-      uint256 toFulfill = fulfillable(self, indexes[i], Qrealized, Qfulfilled);
+      uint256 toFulfill = fulfillable(self, indexes[i], qRealized, qFulfilled);
       if (toFulfill > 0) {
-        self.requests[indexes[i]].claimableETH += (toFulfill * Qprice) / self.gETH.denominator();
+        self.requests[indexes[i]].claimableETH += (toFulfill * qPrice) / self.gETH.denominator();
         self.requests[indexes[i]].fulfilled += toFulfill;
-        Qfulfilled += toFulfill;
+        qFulfilled += toFulfill;
       }
     }
-    self.queue.fulfilled = Qfulfilled;
+    self.queue.fulfilled = qFulfilled;
   }
 
   /**
