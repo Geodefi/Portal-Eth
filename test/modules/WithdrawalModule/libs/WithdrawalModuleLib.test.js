@@ -12,7 +12,7 @@ const OracleExtensionLib = artifacts.require("OracleExtensionLib");
 const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
 
-const WithdawalModuleLibMock = artifacts.require("$WithdrawalModuleLibMock");
+const WithdrawalModuleLibMock = artifacts.require("$WithdrawalModuleLibMock");
 
 const StakeModuleLibMock = artifacts.require("$StakeModuleLibMock");
 
@@ -102,7 +102,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     await StakeModuleLibMock.link(OEL);
     await StakeModuleLibMock.link(IEL);
 
-    await WithdawalModuleLibMock.link(WML);
+    await WithdrawalModuleLibMock.link(WML);
 
     this.createPool = createPool;
     this.createOperator = createOperator;
@@ -111,7 +111,7 @@ contract("WithdrawalModuleLib", function (accounts) {
 
   beforeEach(async function () {
     this.gETH = await gETH.new("name", "symbol", "uri", { from: deployer });
-    this.contract = await WithdawalModuleLibMock.new();
+    this.contract = await WithdrawalModuleLibMock.new();
 
     this.SMLM = await StakeModuleLibMock.new({ from: deployer });
     await this.SMLM.initialize(this.gETH.address, oracle);
@@ -137,7 +137,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     it("reverts with gETH=0", async function () {
       await expectRevert(
         (
-          await WithdawalModuleLibMock.new()
+          await WithdrawalModuleLibMock.new()
         ).initialize(ZERO_ADDRESS, this.SMLM.address, this.poolId),
         "WM:gETH cannot be zero address"
       );
@@ -146,7 +146,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     it("reverts with portal=0", async function () {
       await expectRevert(
         (
-          await WithdawalModuleLibMock.new()
+          await WithdrawalModuleLibMock.new()
         ).initialize(this.gETH.address, ZERO_ADDRESS, this.poolId),
         "WM:portal cannot be zero address"
       );

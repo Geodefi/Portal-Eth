@@ -1810,7 +1810,7 @@ contract("StakeModuleLib", function (accounts) {
               "SML:1 - 50 validators"
             );
           });
-          it("reverts if array lenghts are not the same", async function () {
+          it("reverts if array lengths are not the same", async function () {
             await expectRevert(
               this.contract.proposeStake(publicPoolId, operatorId, [pubkey0], [], [], {
                 from: operatorMaintainer,

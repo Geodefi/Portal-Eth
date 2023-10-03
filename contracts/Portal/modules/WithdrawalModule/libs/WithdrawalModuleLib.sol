@@ -37,14 +37,14 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * 4. Allowing (Instant Run-off) elections on which validators to exit.
  * * While getting into the queue, caller can vote on a validator, increasing it's 'poll'.
  * * If a validator is not specified, vote goes to 'commonPoll'. It can be used for any validator to top-up the EXIT_THRESHOLD
- * * If a validator is called for exit but there is remaining votes in it, it is transferred to the commonPoll.
- * * Note that, elections are basically just stating a preferance:
+ * * If a validator is called for exit but there are remaining votes in it, it is transferred to the commonPoll.
+ * * Note that, elections are basically just stating a preference:
  * * * Exit of the voted validator does not change the voter's priority in the queue.
  *
  * @dev The Queue
  * Lets say every '-' is representing 1 gETH.
  * Queue: --- -- ---------- -- --- --- - --- -- ---- ----- - ------- ---- -- -- - - -------- --
- * There are 20 requests in this queue, adding upto 65 gETH, this is 'requested'.
+ * There are 20 requests in this queue, adding up to 65 gETH, this is 'requested'.
  * Every request has a 'size', first request' is 3 gETH , second' is 2 gETH.
  * Every request has a 'trigger', pointing it's kickoff point. Thus, 3rd request' is 5 gETH.
  * Let's say, there are 8 ETH processed in the contract, we burn 8 ETH worth of gETH.
@@ -65,12 +65,12 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * * We can not, nor should, enforce an 'unbound for loop' on requests array.
  * 3. We derisk the Request when it is dequeued:
  * * Simply, price changes would have unpredictable effects on the Queue: A request can be claimable now, but might become unclaimable later.
- * * Derisked Requests that is waiting to be claimed, would hijack the real stakers' APR, while sitting on top of some allocated Ether.
+ * * Derisked Requests that are waiting to be claimed, would hijack the real stakers' APR, while sitting on top of some allocated Ether.
  * * Unclaimed Requests can prevent the latter requests since there would be no way to keep track of the previous unclaimed requests without enforcing the order.
  * We do not want to promise vague returns, we do not want for loops over requests array or price checkpoints, we do not want APR hijacking.
  * Thus, none of these points can be implemented without utilizing a trusted third party, like an Oracle.
  * However, we want Withdrawal logic to have the minimum Third Party risk as Geode Developers.
- * As a result, we have came up with a logic that will allow stakers to maintain their profitablity without distrupting the 'derisk' moment.
+ * As a result, we have came up with a logic that will allow stakers to maintain their profitability without disrupting the 'derisk' moment.
  * * a. We keep track of an internal price, stating the ratio of the claimable ETH and processed gETH: realizedPrice.
  * * b. We derisk the Queue on 'processValidators' by increasing the cumulative gETH that can be claimed.
  * * * We also adjust the realizedPrice considering the pricePerShare of the currently derisked asset amount.
@@ -104,7 +104,7 @@ library WithdrawalModuleLib {
 
   /**
    * @param requested cumulative size of all requests, as in gETH.
-   * ex: --- ------ ------ - - --- : 20 : there are 6 requests totaling upto 20 gETH.
+   * ex: --- ------ ------ - - --- : 20 : there are 6 requests totaling up to 20 gETH.
    * @param realized cumulative size of gETH that is processed and can be used to fulfill Requests, as in gETH
    * ex: ----- -- -- - ----- --    : 17 : there are 17 gETH, processed as a response to the withdrawn funds.
    * @param fulfilled cumulative size of the fulfilled requests, claimed or claimable, as in gETH
@@ -442,7 +442,7 @@ library WithdrawalModuleLib {
    * @custom:visibility -> view
    */
   /**
-   * @notice given a request, figure out the fulfillable gETH amount, limited upto its size.
+   * @notice given a request, figure out the fulfillable gETH amount, limited up to its size.
    * @param index placement of the Request within the requests array.
    * @param qRealized self.queue.realized, might also be hot value for Batch optimizations
    * @param qFulfilled self.queue.fulfilled, might also be a hot value for Batch optimizations

@@ -56,7 +56,7 @@ Any Contract that requires a Dual Governance for it's management should inherit 
 
 The first use case of Dual Governance is upgrading the code of a package.
 
-With another contract that acts like a version manager (as Governance), which is Portal (Except for the Portal which manages its own version with an external Senate), we can release new versions for the Packages without distrupting the owner's control.
+With another contract that acts like a version manager (as Governance), which is Portal (Except for the Portal which manages its own version with an external Senate), we can release new versions for the Packages without disrupting the owner's control.
 
 ![limited upgradability](../../../docs/images/limited%20upgradability.png)
 
@@ -193,9 +193,9 @@ A request can be fulfilled if there is claimable ETH, it can be fulfilled partia
 
 ### Elections on Which Validators to Exit
 
-While getting into the queue, caller can vote on a validator, increasing it's `poll`. If a validator is not specified, vote goes to `commonPoll`. It can be used for any validator to top-up the `EXIT_THRESHOLD` which is the threshold that can be set as percentage to decide the minimum gETH amount over beacon balance of the validator for withdrawal contract to call `requestExit` function from Portal to make operator to know that validator is selected for the exit and it should be exited as soon as possible. If a validator is called for exit but there is remaining votes in it, it is transferred to the commonPoll.
+While getting into the queue, caller can vote on a validator, increasing it's `poll`. If a validator is not specified, vote goes to `commonPoll`. It can be used for any validator to top-up the `EXIT_THRESHOLD` which is the threshold that can be set as percentage to decide the minimum gETH amount over beacon balance of the validator for withdrawal contract to call `requestExit` function from Portal to make operator to know that validator is selected for the exit and it should be exited as soon as possible. If a validator is called for exit but there are remaining votes in it, it is transferred to the commonPoll.
 
-- Note that, elections are basically just stating a preferance, exit of the voted validator does not change the voter's priority in the queue.
+- Note that, elections are basically just stating a preference, exit of the voted validator does not change the voter's priority in the queue.
 
 ### Dequeue
 
@@ -208,7 +208,7 @@ A request can be dequeued if not fulfilled but fulfillable. `dequeue` function f
 
 ### When Derisked?
 
-We derisk the Request when validators are processed, with the latest price for the derivative. This is the correct approach since we `realize` the price at this exact point by increasing the cumulative claimable gETH. However, we would need to insert an unbound for loop through `realized` requests, when a `processValidators` operation is finalized which we cannot, nor should. So we have came up with a logic that will allow stakers to maintain their profitablity without distrupting the 'derisk' moment.
+We derisk the Request when validators are processed, with the latest price for the derivative. This is the correct approach since we `realize` the price at this exact point by increasing the cumulative claimable gETH. However, we would need to insert an unbound for loop through `realized` requests, when a `processValidators` operation is finalized which we cannot, nor should. So we have came up with a logic that will allow stakers to maintain their profitability without disrupting the 'derisk' moment.
 
 - We keep track `realizedPrice`.
 - We derisk the queue on `processValidators` by increasing the cumulative gETH that can be claimed.
@@ -216,7 +216,7 @@ We derisk the Request when validators are processed, with the latest price for t
 
 ### Why Using an Internal Price, Instead of Enforcing the PricePerShare Makes Sense
 
-All Requests, without considering their index, are in the same pool until they are derisked through price processing. If all of the claimable requests are fulfilled periodically (via a script etc.), we would expect internal price to be equal to `PricePerShare`. This way, a well maintained pool can prevent APR hijacking by fulfilling neglected Requests, while it is not enforced for all of the pools.
+All Requests, without considering their index, are in the same pool until they are derisked through price processing. If all of the claimable requests are fulfilled periodically (via a script etc.), we would expect internal price to be equal to `PricePerShare`. This way, a well-maintained pool can prevent APR hijacking by fulfilling neglected Requests, while it is not enforced for all of the pools.
 
 ### Gas Related Concerns
 
