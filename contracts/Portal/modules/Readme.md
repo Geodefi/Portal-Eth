@@ -181,7 +181,7 @@ If a validator proposal is approved by the Oracle, it can be activated by using 
 
 ### Queueing Withdrawal Requests
 
-Users can request a withdrawal by forfeiting their gETH tokens with `enqueue` function with minimum 0.05 gETH. Requests would be put in a queue (First-In-First-Out). While requesting, requester can choose any address as the owner of the request, which means it can be handed over during enqueuing. It can also be changed later by using `transferRequest` function.
+Users can request a withdrawal by forfeiting their gETH tokens with `enqueue` function with minimum 0.05 gETH. Requests would be put in a queue (First-In-First-Fulfilled). While requesting, requester can choose any address as the owner of the request, which means it can be handed over during enqueuing. It can also be changed later by using `transferRequest` function.
 
 ### Processing the Withdrawals (partial and exits)
 

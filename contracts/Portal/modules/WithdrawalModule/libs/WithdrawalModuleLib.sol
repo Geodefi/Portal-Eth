@@ -152,10 +152,10 @@ library WithdrawalModuleLib {
    * @param gETH constant, ERC1155, all Geode Staking Derivatives.
    * @param PORTAL constant, address of the PORTAL.
    * @param POOL_ID constant, ID of the pool, also the token ID of represented gETH.
-   * @param EXIT_THRESHOLD
-   * @param queue
-   * @param requests
-   * @param validators
+   * @param EXIT_THRESHOLD variable, current exit threshold that is set by the owner.
+   * @param queue main variables related to Enqueue-Dequeue operations.
+   * @param requests an array of requests
+   * @param validators as pubkey being the key, the related data for the validators of the given pool. Updated on processValidators.
    **/
   struct PooledWithdrawal {
     IgETH gETH;
@@ -171,7 +171,7 @@ library WithdrawalModuleLib {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-  /// @notice EXIT_THRESHOLD should be more than 60% and less than 100%
+  /// @notice EXIT_THRESHOLD should be at least 60% and at most 100%
   uint256 constant MIN_EXIT_THRESHOLD = (6 * PERCENTAGE_DENOMINATOR) / 10;
   // minimum withdrawal request is 0.05 ETH
   uint256 constant MIN_REQUEST_SIZE = 5 * 10 ** 16;
