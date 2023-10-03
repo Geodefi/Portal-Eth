@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 // globals
-import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {gETH_DENOMINATOR, PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 // interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 // libraries
@@ -336,9 +336,7 @@ library LiquidityModuleLib {
     uint256 i
   ) internal view returns (uint256) {
     return
-      i == 1
-        ? (balance * self.gETH.pricePerShare(self.pooledTokenId)) / self.gETH.denominator()
-        : balance;
+      i == 1 ? (balance * self.gETH.pricePerShare(self.pooledTokenId)) / gETH_DENOMINATOR : balance;
   }
 
   /**
@@ -354,9 +352,7 @@ library LiquidityModuleLib {
     uint256 i
   ) internal view returns (uint256) {
     return
-      i == 1
-        ? (balance * self.gETH.denominator()) / self.gETH.pricePerShare(self.pooledTokenId)
-        : balance;
+      i == 1 ? (balance * gETH_DENOMINATOR) / self.gETH.pricePerShare(self.pooledTokenId) : balance;
   }
 
   /**
@@ -370,7 +366,7 @@ library LiquidityModuleLib {
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
-    _p[1] = (balances[1] * self.gETH.pricePerShare(self.pooledTokenId)) / self.gETH.denominator();
+    _p[1] = (balances[1] * self.gETH.pricePerShare(self.pooledTokenId)) / gETH_DENOMINATOR;
     return _p;
   }
 
@@ -385,7 +381,7 @@ library LiquidityModuleLib {
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
-    _p[1] = (balances[1] * self.gETH.denominator()) / self.gETH.pricePerShare(self.pooledTokenId);
+    _p[1] = (balances[1] * gETH_DENOMINATOR) / self.gETH.pricePerShare(self.pooledTokenId);
     return _p;
   }
 

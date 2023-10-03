@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 // globals
-import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
@@ -374,7 +374,7 @@ library OracleExtensionLib {
       uint256 currentPrice = STAKE.gETH.pricePerShare(_poolId);
       if (_price > currentPrice) {
         uint256 supplyDiff = ((_price - currentPrice) * STAKE.gETH.totalSupply(_poolId)) /
-          STAKE.gETH.denominator();
+          gETH_DENOMINATOR;
         STAKE.gETH.mint(address(this), _poolId, supplyDiff, "");
         STAKE.gETH.safeTransferFrom(address(this), yieldReceiver, _poolId, supplyDiff, "");
       } else {

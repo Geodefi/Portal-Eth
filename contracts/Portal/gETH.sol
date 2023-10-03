@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.7;
 
+// globals
+import {gETH_DENOMINATOR} from "./globals/macros.sol";
 // interfaces
 import {IgETH} from "./interfaces/IgETH.sol";
 // libraries
@@ -45,7 +47,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-  uint256 internal immutable DENOMINATOR = 1 ether;
+  uint256 internal immutable DENOMINATOR = gETH_DENOMINATOR;
   bytes32 public immutable MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
   bytes32 public immutable ORACLE_ROLE = keccak256("ORACLE_ROLE");
 

@@ -3,7 +3,7 @@ pragma solidity =0.8.7;
 
 // globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
-import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // libraries
@@ -949,7 +949,7 @@ library StakeModuleLib {
     uint256 price = self.gETH.pricePerShare(_poolId);
     require(price > 0, "SML:price is zero?");
 
-    mintedgETH = (((_ethAmount * self.gETH.denominator()) / price));
+    mintedgETH = (((_ethAmount * gETH_DENOMINATOR) / price));
     self.gETH.mint(address(this), _poolId, mintedgETH, "");
     DATASTORE.addUint(_poolId, rks.surplus, _ethAmount);
   }

@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 // globals
-import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 // libraries
 import {DepositContractLib as DCL} from "../../StakeModule/libs/DepositContractLib.sol";
@@ -295,7 +295,7 @@ library WithdrawalModuleLib {
       PERCENTAGE_DENOMINATOR;
 
     uint256 price = self.gETH.pricePerShare(self.POOL_ID);
-    threshold = (((threshold_ETH * self.gETH.denominator()) / price));
+    threshold = (((threshold_ETH * gETH_DENOMINATOR) / price));
   }
 
   /**
@@ -485,7 +485,7 @@ library WithdrawalModuleLib {
     if (toFulfill > 0) {
       self.requests[index].claimableETH +=
         (toFulfill * self.queue.realizedPrice) /
-        self.gETH.denominator();
+        gETH_DENOMINATOR;
       self.requests[index].fulfilled += toFulfill;
       self.queue.fulfilled += toFulfill;
     }
@@ -507,7 +507,7 @@ library WithdrawalModuleLib {
     for (uint256 i = 0; i < indexes.length; i++) {
       uint256 toFulfill = fulfillable(self, indexes[i], qRealized, qFulfilled);
       if (toFulfill > 0) {
-        self.requests[indexes[i]].claimableETH += (toFulfill * qPrice) / self.gETH.denominator();
+        self.requests[indexes[i]].claimableETH += (toFulfill * qPrice) / gETH_DENOMINATOR;
         self.requests[indexes[i]].fulfilled += toFulfill;
         qFulfilled += toFulfill;
       }
@@ -653,9 +653,8 @@ library WithdrawalModuleLib {
     uint256 processedBalance
   ) internal {
     uint256 pps = self.gETH.pricePerShare(self.POOL_ID);
-    uint256 denominator = self.gETH.denominator();
 
-    uint256 processedgETH = ((processedBalance * denominator) / pps);
+    uint256 processedgETH = ((processedBalance * gETH_DENOMINATOR) / pps);
     uint256 newPrice = pps;
 
     uint256 internalPrice = self.queue.realizedPrice;
@@ -663,7 +662,7 @@ library WithdrawalModuleLib {
       uint256 claimable = self.queue.realized - self.queue.fulfilled;
       if (claimable > 0) {
         newPrice =
-          ((claimable * internalPrice) + (processedBalance * denominator)) /
+          ((claimable * internalPrice) + (processedBalance * gETH_DENOMINATOR)) /
           (claimable + processedgETH);
       }
     }
