@@ -786,6 +786,7 @@ library StakeModuleLib {
         "SML:id not operator"
       );
       require(allowances[i] <= MAX_ALLOWANCE, "SML:> MAX_ALLOWANCE, set fallback");
+
       unchecked {
         i += 1;
       }
@@ -796,6 +797,7 @@ library StakeModuleLib {
     for (uint256 i; i < operatorIdsLen; ) {
       newCumulativeSubset += allowances[i];
       oldCumulativeSubset += _approveOperator(DATASTORE, poolId, operatorIds[i], allowances[i]);
+
       unchecked {
         i += 1;
       }
@@ -1150,6 +1152,7 @@ library StakeModuleLib {
       require(pubkeys[i].length == DCL.PUBKEY_LENGTH, "SML:PUBKEY_LENGTH ERROR");
       require(signatures1[i].length == DCL.SIGNATURE_LENGTH, "SML:SIGNATURE_LENGTH ERROR");
       require(signatures31[i].length == DCL.SIGNATURE_LENGTH, "SML:SIGNATURE_LENGTH ERROR");
+
       unchecked {
         i += 1;
       }

@@ -284,8 +284,12 @@ abstract contract WithdrawalModule is
     bytes[] calldata data
   ) external virtual override returns (bytes[] memory results) {
     results = new bytes[](data.length);
-    for (uint256 i; i < data.length; ++i) {
+    for (uint256 i; i < data.length; ) {
       results[i] = Address.functionDelegateCall(address(this), data[i]);
+
+      unchecked {
+        i += 1;
+      }
     }
     return results;
   }

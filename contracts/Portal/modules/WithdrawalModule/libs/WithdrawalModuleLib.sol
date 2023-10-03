@@ -396,7 +396,7 @@ library WithdrawalModuleLib {
     uint256 requestedgETH = self.queue.requested;
     uint256 totalSize;
 
-    for (uint256 i; i < len; ++i) {
+    for (uint256 i; i < len; ) {
       _enqueue(self, requestedgETH, sizes[i], owner);
 
       if (pubkeys[i].length == 0) {
@@ -407,6 +407,10 @@ library WithdrawalModuleLib {
       }
       requestedgETH = requestedgETH + sizes[i];
       totalSize += sizes[i];
+
+      unchecked {
+        i += 1;
+      }
     }
 
     self.queue.commonPoll = commonPoll;
@@ -505,12 +509,16 @@ library WithdrawalModuleLib {
     uint256 qPrice
   ) internal {
     uint256 indexesLen = indexes.length;
-    for (uint256 i; i < indexesLen; ++i) {
+    for (uint256 i; i < indexesLen; ) {
       uint256 toFulfill = fulfillable(self, indexes[i], qRealized, qFulfilled);
       if (toFulfill > 0) {
         self.requests[indexes[i]].claimableETH += (toFulfill * qPrice) / gETH_DENOMINATOR;
         self.requests[indexes[i]].fulfilled += toFulfill;
         qFulfilled += toFulfill;
+      }
+
+      unchecked {
+        i += 1;
       }
     }
     self.queue.fulfilled = qFulfilled;
@@ -602,8 +610,12 @@ library WithdrawalModuleLib {
 
     uint256 claimableETH;
     uint256 indexesLen = indexes.length;
-    for (uint256 i; i < indexesLen; ++i) {
+    for (uint256 i; i < indexesLen; ) {
       claimableETH += _dequeue(self, indexes[i]);
+
+      unchecked {
+        i += 1;
+      }
     }
 
     // send ETH
@@ -703,7 +715,7 @@ library WithdrawalModuleLib {
     );
 
     bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
-    for (uint256 i; i < pkLen; ++i) {
+    for (uint256 i; i < pkLen; ) {
       // verify balances
       bytes32 leaf = keccak256(
         bytes.concat(keccak256(abi.encode(pubkeys[i], beaconBalances[i], withdrawnBalances[i])))
@@ -712,11 +724,15 @@ library WithdrawalModuleLib {
         MerkleProof.verify(balanceProofs[i], balanceMerkleRoot, leaf),
         "WML:NOT all proofs are valid"
       );
+
+      unchecked {
+        i += 1;
+      }
     }
 
     uint256 commonPoll = self.queue.commonPoll;
     uint256 processed;
-    for (uint256 j; j < pkLen; ++j) {
+    for (uint256 j; j < pkLen; ) {
       uint256 oldWitBal = self.validators[pubkeys[j]].withdrawnBalance;
 
       self.validators[pubkeys[j]].beaconBalance = beaconBalances[j];
@@ -735,6 +751,10 @@ library WithdrawalModuleLib {
         // check if should request exit
         processed += _distributeFees(self, pubkeys[j], withdrawnBalances[j], oldWitBal);
         commonPoll = _checkAndRequestExit(self, pubkeys[j], commonPoll);
+      }
+
+      unchecked {
+        j += 1;
       }
     }
     self.queue.commonPoll = commonPoll;
