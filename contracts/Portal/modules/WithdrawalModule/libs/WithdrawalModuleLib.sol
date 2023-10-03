@@ -126,7 +126,7 @@ library WithdrawalModuleLib {
    * @param owner the address that can dequeue the request. Ownership can be transferred.
    * @param trigger cumulative sum of the previous requests, as in gETH.
    * @param size size of the withdrawal request, as in gETH.
-   * @param realized part of the size that became is processed in relative to the 'currentClaimPrice', as in gETH.
+   * @param fulfilled part of the 'size' that became available after being processed relative to the 'realizedPrice'. as in gETH.
    * @param claimableETH current ETH amount that can be claimed by the Owner, increased in respect to 'fulfilled' and 'realizedPrice', decreased with dequeue.
    **/
   struct Request {
