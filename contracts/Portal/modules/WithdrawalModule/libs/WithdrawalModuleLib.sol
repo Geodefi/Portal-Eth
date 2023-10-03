@@ -396,7 +396,7 @@ library WithdrawalModuleLib {
     uint256 requestedgETH = self.queue.requested;
     uint256 totalSize;
 
-    for (uint256 i = 0; i < len; i++) {
+    for (uint256 i; i < len; ++i) {
       _enqueue(self, requestedgETH, sizes[i], owner);
 
       if (pubkeys[i].length == 0) {
@@ -504,7 +504,8 @@ library WithdrawalModuleLib {
     uint256 qFulfilled,
     uint256 qPrice
   ) internal {
-    for (uint256 i = 0; i < indexes.length; i++) {
+    uint256 indexesLen = indexes.length;
+    for (uint256 i; i < indexesLen; ++i) {
       uint256 toFulfill = fulfillable(self, indexes[i], qRealized, qFulfilled);
       if (toFulfill > 0) {
         self.requests[indexes[i]].claimableETH += (toFulfill * qPrice) / gETH_DENOMINATOR;
@@ -600,7 +601,8 @@ library WithdrawalModuleLib {
     );
 
     uint256 claimableETH;
-    for (uint256 i = 0; i < indexes.length; i++) {
+    uint256 indexesLen = indexes.length;
+    for (uint256 i; i < indexesLen; ++i) {
       claimableETH += _dequeue(self, indexes[i]);
     }
 
@@ -701,7 +703,7 @@ library WithdrawalModuleLib {
     );
 
     bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
-    for (uint256 i = 0; i < pubkeys.length; i++) {
+    for (uint256 i; i < pkLen; ++i) {
       // verify balances
       bytes32 leaf = keccak256(
         bytes.concat(keccak256(abi.encode(pubkeys[i], beaconBalances[i], withdrawnBalances[i])))
@@ -714,7 +716,7 @@ library WithdrawalModuleLib {
 
     uint256 commonPoll = self.queue.commonPoll;
     uint256 processed;
-    for (uint256 j = 0; j < pubkeys.length; j++) {
+    for (uint256 j; j < pkLen; ++j) {
       uint256 oldWitBal = self.validators[pubkeys[j]].withdrawnBalance;
 
       self.validators[pubkeys[j]].beaconBalance = beaconBalances[j];

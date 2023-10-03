@@ -793,7 +793,7 @@ library StakeModuleLib {
 
     uint256 newCumulativeSubset;
     uint256 oldCumulativeSubset;
-    for (uint256 i = 0; i < operatorIdsLen; ) {
+    for (uint256 i; i < operatorIdsLen; ) {
       newCumulativeSubset += allowances[i];
       oldCumulativeSubset += _approveOperator(DATASTORE, poolId, operatorIds[i], allowances[i]);
       unchecked {
@@ -1164,7 +1164,7 @@ library StakeModuleLib {
       withdrawalCredential: DATASTORE.readBytes(poolId, rks.withdrawalCredential)
     });
 
-    for (uint256 i = 0; i < pkLen; ) {
+    for (uint256 i; i < pkLen; ) {
       require(
         self.validators[pubkeys[i]].state == VALIDATOR_STATE.NONE,
         "SML: used or alienated pk"

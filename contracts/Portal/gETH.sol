@@ -47,7 +47,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-  uint256 internal immutable DENOMINATOR = gETH_DENOMINATOR;
+  uint256 private immutable DENOMINATOR = gETH_DENOMINATOR;
   bytes32 public immutable MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
   bytes32 public immutable ORACLE_ROLE = keccak256("ORACLE_ROLE");
 
@@ -119,7 +119,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev ERC1155 does not have a decimals, and it is not wise to use the same name
    * @dev ADDED for gETH
    */
-  function denominator() external view virtual override returns (uint256) {
+  function denominator() public view virtual override returns (uint256) {
     return DENOMINATOR;
   }
 

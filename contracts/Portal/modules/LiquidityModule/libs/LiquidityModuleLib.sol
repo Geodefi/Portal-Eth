@@ -224,7 +224,7 @@ library LiquidityModuleLib {
     uint256 yPrev;
     uint256 y = d;
 
-    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
+    for (uint256 i; i < MAX_LOOP_LIMIT; ++i) {
       yPrev = y;
       y = ((y * y) + c) / (2 * y + b - d);
       if (within1(y, yPrev)) {
@@ -845,7 +845,7 @@ library LiquidityModuleLib {
 
     if (v.totalSupply != 0) {
       uint256 feePerToken = self.swapFee >> 1;
-      for (uint256 i = 0; i < 2; ++i) {
+      for (uint256 i; i < 2; ++i) {
         uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
         fees[i] =
           (feePerToken * (difference(idealBalance, newBalances[i]))) /
@@ -1015,7 +1015,7 @@ library LiquidityModuleLib {
       }
       v.d1 = getD(_pricedInBatch(self, balances1), v.preciseA);
 
-      for (uint256 i = 0; i < 2; ++i) {
+      for (uint256 i; i < 2; ++i) {
         uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
         uint256 _diff = difference(idealBalance, balances1[i]);
         fees[i] = (feePerToken * _diff) / PERCENTAGE_DENOMINATOR;
