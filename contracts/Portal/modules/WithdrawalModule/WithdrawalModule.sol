@@ -200,7 +200,6 @@ abstract contract WithdrawalModule is
   }
 
   function enqueueBatch(
-    uint256 size,
     uint256[] calldata sizes,
     bytes[] calldata pubkeys,
     address owner

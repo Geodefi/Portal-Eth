@@ -42,12 +42,7 @@ interface IWithdrawalModule {
 
   function enqueue(uint256 size, bytes calldata pubkey, address owner) external;
 
-  function enqueueBatch(
-    uint256 size,
-    uint256[] calldata sizes,
-    bytes[] calldata pubkeys,
-    address owner
-  ) external;
+  function enqueueBatch(uint256[] calldata sizes, bytes[] calldata pubkeys, address owner) external;
 
   function transferRequest(uint256 index, address newOwner) external;
 
