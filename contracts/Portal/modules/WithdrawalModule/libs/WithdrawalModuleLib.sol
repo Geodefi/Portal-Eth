@@ -238,11 +238,11 @@ library WithdrawalModuleLib {
    * @param commonPoll cached commonPoll
    * @dev passing commonPoll around helps on gas on batch TXs.
    */
-  function _checkAndRequestExit(
+  function checkAndRequestExit(
     PooledWithdrawal storage self,
     bytes calldata pubkey,
     uint256 commonPoll
-  ) internal returns (uint256) {
+  ) public returns (uint256) {
     uint256 threshold = getValidatorThreshold(self, pubkey);
     uint256 validatorPoll = self.validators[pubkey].poll;
 
@@ -368,7 +368,7 @@ library WithdrawalModuleLib {
       self.queue.commonPoll += size;
     } else {
       _vote(self, pubkey, size);
-      self.queue.commonPoll = _checkAndRequestExit(self, pubkey, self.queue.commonPoll);
+      self.queue.commonPoll = checkAndRequestExit(self, pubkey, self.queue.commonPoll);
     }
 
     self.queue.requested = requestedgETH + size;
@@ -403,7 +403,7 @@ library WithdrawalModuleLib {
         commonPoll += sizes[i];
       } else {
         _vote(self, pubkeys[i], sizes[i]);
-        commonPoll = _checkAndRequestExit(self, pubkeys[i], commonPoll);
+        commonPoll = checkAndRequestExit(self, pubkeys[i], commonPoll);
       }
       requestedgETH = requestedgETH + sizes[i];
       totalSize += sizes[i];
@@ -750,7 +750,7 @@ library WithdrawalModuleLib {
       } else {
         // check if should request exit
         processed += _distributeFees(self, pubkeys[j], withdrawnBalances[j], oldWitBal);
-        commonPoll = _checkAndRequestExit(self, pubkeys[j], commonPoll);
+        commonPoll = checkAndRequestExit(self, pubkeys[j], commonPoll);
       }
 
       unchecked {

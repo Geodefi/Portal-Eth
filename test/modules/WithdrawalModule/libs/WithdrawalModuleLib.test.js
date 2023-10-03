@@ -744,14 +744,14 @@ contract("WithdrawalModuleLib", function (accounts) {
       });
       it("returns true if validator in EXIT_REQUESTED state and beaconBalance is not 0", async function () {
         const mockCommonPoll = new BN(String(20e18));
-        await this.contract.$_checkAndRequestExit(pubkey0, mockCommonPoll);
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
         const val = await this.SMLM.getValidator(pubkey0);
         expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
         expect(await this.contract.$canFinalizeExit(pubkey0)).to.be.equal(true);
       });
     });
 
-    context("_checkAndRequestExit", function () {
+    context("checkAndRequestExit", function () {
       const mockBeaconBalance = new BN(String(10e18));
       const mockWithdrawnBalance = new BN(String(2e18));
       const mockPrice = new BN(String(15e17));
@@ -782,11 +782,11 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        const returnedCommonPoll = await this.contract.$_checkAndRequestExit.call(
+        const returnedCommonPoll = await this.contract.$checkAndRequestExit.call(
           pubkey0,
           mockCommonPoll
         );
-        await this.contract.$_checkAndRequestExit(pubkey0, mockCommonPoll);
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
 
         const val = await this.SMLM.getValidator(pubkey0);
 
@@ -803,11 +803,11 @@ contract("WithdrawalModuleLib", function (accounts) {
         );
         const threshold = await this.contract.$validatorThreshold(pubkey0);
 
-        const returnedCommonPoll = await this.contract.$_checkAndRequestExit.call(
+        const returnedCommonPoll = await this.contract.$checkAndRequestExit.call(
           pubkey0,
           mockCommonPoll
         );
-        await this.contract.$_checkAndRequestExit(pubkey0, mockCommonPoll);
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
 
         const val = await this.SMLM.getValidator(pubkey0);
         expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
@@ -826,11 +826,11 @@ contract("WithdrawalModuleLib", function (accounts) {
 
         const threshold = await this.contract.$validatorThreshold(pubkey0);
 
-        const returnedCommonPoll = await this.contract.$_checkAndRequestExit.call(
+        const returnedCommonPoll = await this.contract.$checkAndRequestExit.call(
           pubkey0,
           mockCommonPoll
         );
-        await this.contract.$_checkAndRequestExit(pubkey0, mockCommonPoll);
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
 
         const val = await this.SMLM.getValidator(pubkey0);
         expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;

@@ -40,6 +40,8 @@ interface IWithdrawalModule {
 
   function validatorThreshold(bytes memory pubkey) external view returns (uint256);
 
+  function checkAndRequestExit(bytes memory pubkey) external returns (uint256);
+
   function enqueue(uint256 size, bytes calldata pubkey, address owner) external;
 
   function enqueueBatch(uint256[] calldata sizes, bytes[] calldata pubkeys, address owner) external;

@@ -129,11 +129,11 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     return WITHDRAWAL.canFinalizeExit(pubkey);
   }
 
-  function $_checkAndRequestExit(
+  function $checkAndRequestExit(
     bytes calldata pubkey,
     uint256 commonPoll
   ) external returns (uint256) {
-    return WITHDRAWAL._checkAndRequestExit(pubkey, commonPoll);
+    return WITHDRAWAL.checkAndRequestExit(pubkey, commonPoll);
   }
 
   function $_vote(bytes calldata pubkey, uint256 size) external {

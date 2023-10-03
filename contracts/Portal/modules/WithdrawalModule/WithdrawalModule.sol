@@ -187,14 +187,21 @@ abstract contract WithdrawalModule is
     return WITHDRAWAL.getValidatorThreshold(pubkey);
   }
 
-  //   /**
-  //    * @custom:section                           ** REQUESTS QUEUE **
-  //    */
-  //   /**
-  //    * @custom:subsection                        ** ENQUEUE **
-  //    *
-  //    * @custom:visibility -> external
-  //    */
+  /**
+   * @custom:visibility -> external
+   */
+  function checkAndRequestExit(bytes memory pubkey) external virtual override returns (uint256) {
+    return WITHDRAWAL.checkAndRequestExit(pubkey, WITHDRAWAL.queue.commonPoll);
+  }
+
+  /**
+   * @custom:section                           ** REQUESTS QUEUE **
+   */
+  /**
+   * @custom:subsection                        ** ENQUEUE **
+   *
+   * @custom:visibility -> external
+   */
 
   function enqueue(uint256 size, bytes calldata pubkey, address owner) external virtual override {
     WITHDRAWAL.enqueue(size, pubkey, owner);
