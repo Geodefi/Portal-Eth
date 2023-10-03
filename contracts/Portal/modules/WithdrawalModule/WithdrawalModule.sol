@@ -183,8 +183,8 @@ abstract contract WithdrawalModule is
 
   function validatorThreshold(
     bytes memory pubkey
-  ) external view virtual override returns (uint256) {
-    return WITHDRAWAL.getValidatorThreshold(pubkey);
+  ) external view virtual override returns (uint256 threshold) {
+    (threshold, ) = WITHDRAWAL.getValidatorThreshold(pubkey);
   }
 
   /**
@@ -280,6 +280,7 @@ abstract contract WithdrawalModule is
   /**
    * @custom:section                           ** MULTICALL **
    */
+
   /**
    * @dev Receives and executes a batch of function calls on this contract.
    * @dev This is necessary for the multistep operations done in this contract:

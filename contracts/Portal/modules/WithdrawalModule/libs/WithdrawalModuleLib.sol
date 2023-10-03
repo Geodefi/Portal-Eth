@@ -243,15 +243,18 @@ library WithdrawalModuleLib {
     bytes calldata pubkey,
     uint256 commonPoll
   ) public returns (uint256) {
-    uint256 threshold = getValidatorThreshold(self, pubkey);
+    (uint256 threshold, uint256 beaconBalancePriced) = getValidatorThreshold(self, pubkey);
     uint256 validatorPoll = self.validators[pubkey].poll;
 
     if (commonPoll + validatorPoll > threshold) {
       // meaning it can request withdrawal
-      if (validatorPoll > threshold) {
-        commonPoll += validatorPoll - threshold;
-      } else if (threshold > validatorPoll) {
+
+      if (threshold > validatorPoll) {
+        // If Poll is not enough spend votes from commonPoll.
         commonPoll -= threshold - validatorPoll;
+      } else if (validatorPoll > beaconBalancePriced) {
+        // If Poll is bigger than needed, move the extra votes instead of spending.
+        commonPoll += validatorPoll - beaconBalancePriced;
       }
 
       _requestExit(self, pubkey);
@@ -290,12 +293,10 @@ library WithdrawalModuleLib {
   function getValidatorThreshold(
     PooledWithdrawal storage self,
     bytes calldata pubkey
-  ) public view returns (uint256 threshold) {
-    uint256 threshold_ETH = (self.validators[pubkey].beaconBalance * self.EXIT_THRESHOLD) /
-      PERCENTAGE_DENOMINATOR;
-
+  ) public view returns (uint256 threshold, uint256 beaconBalancePriced) {
     uint256 price = self.gETH.pricePerShare(self.POOL_ID);
-    threshold = (((threshold_ETH * gETH_DENOMINATOR) / price));
+    beaconBalancePriced = (((self.validators[pubkey].beaconBalance * gETH_DENOMINATOR) / price));
+    threshold = (beaconBalancePriced * self.EXIT_THRESHOLD) / PERCENTAGE_DENOMINATOR;
   }
 
   /**

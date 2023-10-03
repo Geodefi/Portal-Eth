@@ -38,7 +38,7 @@ interface IWithdrawalModule {
 
   function canFinalizeExit(bytes memory pubkey) external view returns (bool);
 
-  function validatorThreshold(bytes memory pubkey) external view returns (uint256);
+  function validatorThreshold(bytes memory pubkey) external view returns (uint256 threshold);
 
   function checkAndRequestExit(bytes memory pubkey) external returns (uint256);
 
