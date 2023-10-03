@@ -57,6 +57,10 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
     _disableInitializers();
   }
 
+  /**
+   * @dev While 'data' parameter is not currently used it is a standarized approach on all
+   * * GeodePackages have the same function signature on 'initialize'.
+   */
   function initialize(
     uint256 poolId,
     address poolOwner,
