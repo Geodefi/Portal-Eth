@@ -172,9 +172,9 @@ library WithdrawalModuleLib {
    * @custom:section                           ** CONSTANTS **
    */
   /// @notice EXIT_THRESHOLD should be at least 60% and at most 100%
-  uint256 constant MIN_EXIT_THRESHOLD = (6 * PERCENTAGE_DENOMINATOR) / 10;
+  uint256 internal constant MIN_EXIT_THRESHOLD = (6 * PERCENTAGE_DENOMINATOR) / 10;
   // minimum withdrawal request is 0.05 ETH
-  uint256 constant MIN_REQUEST_SIZE = 5 * 10 ** 16;
+  uint256 internal constant MIN_REQUEST_SIZE = 5e16;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -621,8 +621,9 @@ library WithdrawalModuleLib {
    * @param pubkey public key of the given validator.
    * @param reportedWithdrawn withdrawn Ether amount according to the fresh Merkle root.
    * @param processedWithdrawn previously reported withdrawn amount.
+   * @dev can not overflow since max fee is 10%, if we change fee structure ever, we need to reconsider the math there! 
    * * Note that if a validator is EXITED, we would assume 32 ETH that the pool put is also accounted for.
-   * @return extra calculated profit since the last time validator was processed
+   @return extra calculated profit since the last time validator was processed
    */
   function _distributeFees(
     PooledWithdrawal storage self,

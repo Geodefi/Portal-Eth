@@ -116,7 +116,7 @@ library InitiatorExtensionLib {
 
     poolId = DSML.generateId(name, ID_TYPE.POOL);
     require(DATASTORE.readUint(poolId, rks.initiated) == 0, "SML:already initiated");
-    require(poolId > 10 ** 9, "SML:Wow! Low pool id");
+    require(poolId > 1e9, "SML:Wow! Low pool id");
 
     DATASTORE.writeUint(poolId, rks.initiated, block.timestamp);
 

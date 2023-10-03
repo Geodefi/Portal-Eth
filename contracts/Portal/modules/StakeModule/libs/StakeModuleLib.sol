@@ -192,7 +192,7 @@ library StakeModuleLib {
   uint256 internal constant MAX_MAINTENANCE_FEE = (PERCENTAGE_DENOMINATOR * 10) / 100;
 
   /// @notice effective on allowance per operator, prevents overflow. Exclusive, save gas with +1.
-  uint256 internal constant MAX_ALLOWANCE = 10 ** 6 + 1;
+  uint256 internal constant MAX_ALLOWANCE = 1e6;
 
   /// @notice price of gETH is only valid for 24H, minting is not allowed afterwards.
   uint256 internal constant PRICE_EXPIRY = 24 hours;
@@ -785,7 +785,7 @@ library StakeModuleLib {
         DATASTORE.readUint(operatorIds[i], rks.TYPE) == ID_TYPE.OPERATOR,
         "SML:id not operator"
       );
-      require(allowances[i] < MAX_ALLOWANCE, "SML:> MAX_ALLOWANCE, set fallback");
+      require(allowances[i] <= MAX_ALLOWANCE, "SML:> MAX_ALLOWANCE, set fallback");
       unchecked {
         i += 1;
       }
