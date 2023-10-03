@@ -11,6 +11,7 @@ import {WithdrawalModuleLib as WML} from "./libs/WithdrawalModuleLib.sol";
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title WM: Withdrawal Module
@@ -267,5 +268,25 @@ abstract contract WithdrawalModule is
       WITHDRAWAL.PORTAL.priceSync(WITHDRAWAL.POOL_ID, price, priceProof);
     }
     WITHDRAWAL.processValidators(pubkeys, beaconBalances, withdrawnBalances, balanceProofs);
+  }
+
+  /**
+   * @custom:section                           ** MULTICALL **
+   */
+  /**
+   * @dev Receives and executes a batch of function calls on this contract.
+   * @dev This is necessary for the multistep operations done in this contract:
+   * * Enqueue, Process, Fulfill, Dequeue.
+   * @dev Using 'functionDelegateCall' so it does not cause any issues when using msg.sender etc.
+   * @custom:oz-upgrades-unsafe-allow-reachable delegatecall
+   */
+  function multicall(
+    bytes[] calldata data
+  ) external virtual override returns (bytes[] memory results) {
+    results = new bytes[](data.length);
+    for (uint256 i = 0; i < data.length; i++) {
+      results[i] = Address.functionDelegateCall(address(this), data[i]);
+    }
+    return results;
   }
 }

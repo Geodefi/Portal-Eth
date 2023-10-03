@@ -68,4 +68,6 @@ interface IWithdrawalModule {
     uint256 price,
     bytes32[] calldata priceProof
   ) external;
+
+  function multicall(bytes[] calldata data) external returns (bytes[] memory results);
 }
