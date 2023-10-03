@@ -204,7 +204,7 @@ library WithdrawalModuleLib {
     }
 
     SML.Validator memory val = self.PORTAL.getValidator(pubkey);
-    if (!(val.state == VALIDATOR_STATE.ACTIVE || val.state == VALIDATOR_STATE.EXIT_REQUESTED)) {
+    if (val.state != VALIDATOR_STATE.ACTIVE && val.state != VALIDATOR_STATE.EXIT_REQUESTED) {
       return false;
     }
 
