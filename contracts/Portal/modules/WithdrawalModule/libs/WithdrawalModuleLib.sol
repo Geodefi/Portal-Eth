@@ -341,7 +341,7 @@ library WithdrawalModuleLib {
     uint256 size,
     address owner
   ) internal {
-    require(size >= MIN_REQUEST_SIZE, "WML:min 0.01 gETH");
+    require(size >= MIN_REQUEST_SIZE, "WML:min 0.05 gETH");
     require(owner != address(0), "WML:owner can not be zero address");
 
     self.requests.push(
