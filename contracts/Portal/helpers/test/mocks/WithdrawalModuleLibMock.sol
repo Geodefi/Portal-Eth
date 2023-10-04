@@ -57,17 +57,19 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     returns (
       uint256 requested,
       uint256 realized,
-      uint256 fulfilled,
-      uint256 realizedBalance,
+      uint256 realizedEtherBalance,
       uint256 realizedPrice,
+      uint256 fulfilled,
+      uint256 fulfilledEtherBalance,
       uint256 commonPoll
     )
   {
     requested = WITHDRAWAL.queue.requested;
     realized = WITHDRAWAL.queue.realized;
-    fulfilled = WITHDRAWAL.queue.fulfilled;
-    realizedBalance = WITHDRAWAL.queue.realizedBalance;
+    realizedEtherBalance = WITHDRAWAL.queue.realizedEtherBalance;
     realizedPrice = WITHDRAWAL.queue.realizedPrice;
+    fulfilled = WITHDRAWAL.queue.fulfilled;
+    fulfilledEtherBalance = WITHDRAWAL.queue.fulfilledEtherBalance;
     commonPoll = WITHDRAWAL.queue.commonPoll;
   }
 
@@ -82,7 +84,7 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
       uint256 trigger,
       uint256 size,
       uint256 fulfilled,
-      uint256 claimableETH
+      uint256 claimableEther
     )
   {
     require(index < WITHDRAWAL.requests.length, "WMLM: index exceeds length");
@@ -91,11 +93,13 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     trigger = WITHDRAWAL.requests[realIndex].trigger;
     size = WITHDRAWAL.requests[realIndex].size;
     fulfilled = WITHDRAWAL.requests[realIndex].fulfilled;
-    claimableETH = WITHDRAWAL.requests[realIndex].claimableETH;
+    claimableEther = WITHDRAWAL.requests[realIndex].claimableEther;
   }
 
-  function $validatorThreshold(bytes memory pubkey) external view returns (uint256) {
-    return WITHDRAWAL.getValidatorThreshold(pubkey);
+  function $getValidatorThreshold(
+    bytes memory pubkey
+  ) external view returns (uint256 threshold, uint256 beaconBalancePriced) {
+    (threshold, beaconBalancePriced) = WITHDRAWAL.getValidatorThreshold(pubkey);
   }
 
   function $setMockValidatorData(
@@ -113,14 +117,14 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     uint256 requested,
     uint256 realized,
     uint256 fulfilled,
-    uint256 realizedBalance,
+    uint256 realizedEtherBalance,
     uint256 realizedPrice,
     uint256 commonPoll
   ) external {
     WITHDRAWAL.queue.requested = requested;
     WITHDRAWAL.queue.realized = realized;
     WITHDRAWAL.queue.fulfilled = fulfilled;
-    WITHDRAWAL.queue.realizedBalance = realizedBalance;
+    WITHDRAWAL.queue.realizedEtherBalance = realizedEtherBalance;
     WITHDRAWAL.queue.realizedPrice = realizedPrice;
     WITHDRAWAL.queue.commonPoll = commonPoll;
   }

@@ -298,8 +298,9 @@ library WithdrawalModuleLib {
     bytes calldata pubkey
   ) public view returns (uint256 threshold, uint256 beaconBalancePriced) {
     uint256 price = self.gETH.pricePerShare(self.POOL_ID);
-    beaconBalancePriced = (((self.validators[pubkey].beaconBalance * gETH_DENOMINATOR) / price));
-    threshold = (beaconBalancePriced * self.EXIT_THRESHOLD) / PERCENTAGE_DENOMINATOR;
+    beaconBalancePriced = ((self.validators[pubkey].beaconBalance * gETH_DENOMINATOR));
+    threshold = (beaconBalancePriced * self.EXIT_THRESHOLD) / PERCENTAGE_DENOMINATOR / price;
+    beaconBalancePriced = beaconBalancePriced / price;
   }
 
   /**

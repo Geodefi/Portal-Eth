@@ -126,19 +126,19 @@ abstract contract WithdrawalModule is
     returns (
       uint256 requested,
       uint256 realized,
-      uint256 realizedBalance,
+      uint256 realizedEtherBalance,
       uint256 realizedPrice,
       uint256 fulfilled,
-      uint256 fulfilledBalance,
+      uint256 fulfilledEtherBalance,
       uint256 commonPoll
     )
   {
     requested = WITHDRAWAL.queue.requested;
     realized = WITHDRAWAL.queue.realized;
-    realizedBalance = WITHDRAWAL.queue.realizedBalance;
+    realizedEtherBalance = WITHDRAWAL.queue.realizedEtherBalance;
     realizedPrice = WITHDRAWAL.queue.realizedPrice;
     fulfilled = WITHDRAWAL.queue.fulfilled;
-    fulfilledBalance = WITHDRAWAL.queue.fulfilledBalance;
+    fulfilledEtherBalance = WITHDRAWAL.queue.fulfilledEtherBalance;
     commonPoll = WITHDRAWAL.queue.commonPoll;
   }
 
@@ -149,13 +149,19 @@ abstract contract WithdrawalModule is
     view
     virtual
     override
-    returns (address owner, uint256 trigger, uint256 size, uint256 fulfilled, uint256 claimableETH)
+    returns (
+      address owner,
+      uint256 trigger,
+      uint256 size,
+      uint256 fulfilled,
+      uint256 claimableEther
+    )
   {
     owner = WITHDRAWAL.requests[index].owner;
     trigger = WITHDRAWAL.requests[index].trigger;
     size = WITHDRAWAL.requests[index].size;
     fulfilled = WITHDRAWAL.requests[index].fulfilled;
-    claimableETH = WITHDRAWAL.requests[index].claimableETH;
+    claimableEther = WITHDRAWAL.requests[index].claimableEther;
   }
 
   function getValidatorData(
