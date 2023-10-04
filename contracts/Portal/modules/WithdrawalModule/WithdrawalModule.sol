@@ -126,17 +126,19 @@ abstract contract WithdrawalModule is
     returns (
       uint256 requested,
       uint256 realized,
-      uint256 fulfilled,
       uint256 realizedBalance,
       uint256 realizedPrice,
+      uint256 fulfilled,
+      uint256 fulfilledBalance,
       uint256 commonPoll
     )
   {
     requested = WITHDRAWAL.queue.requested;
     realized = WITHDRAWAL.queue.realized;
-    fulfilled = WITHDRAWAL.queue.fulfilled;
     realizedBalance = WITHDRAWAL.queue.realizedBalance;
     realizedPrice = WITHDRAWAL.queue.realizedPrice;
+    fulfilled = WITHDRAWAL.queue.fulfilled;
+    fulfilledBalance = WITHDRAWAL.queue.fulfilledBalance;
     commonPoll = WITHDRAWAL.queue.commonPoll;
   }
 

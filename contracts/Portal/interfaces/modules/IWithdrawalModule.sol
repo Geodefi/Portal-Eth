@@ -19,9 +19,10 @@ interface IWithdrawalModule {
     returns (
       uint256 requested,
       uint256 realized,
-      uint256 fulfilled,
       uint256 realizedBalance,
       uint256 realizedPrice,
+      uint256 fulfilled,
+      uint256 fulfilledBalance,
       uint256 commonPoll
     );
 

@@ -86,14 +86,15 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * None of these approaches will be expensive, nor will disrupt the internal pricing for the latter requests.
  *
  * @dev while conducting the price calculations, a part of the balance within this contract should be taken into consideration.
- * This balance can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - realizedBalance
+ * This ETH amount can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - (TODO: ![realizedEtherBalance] OR [fulfilledEtherBalance])
+ * Note that, this is because: a price of the derivative is = total ETH / total Supply, and total ETH should include the balance within WC.
  *
  * @dev Contracts relying on this library must initialize WithdrawalModuleLib.PooledWithdrawal
  *
  * @dev There are 'owner' checks on 'transferRequest', _dequeue (used by dequeue, dequeueBatch).
  * However, we preferred to not use a modifier for that.
  *
- * @dev all parameters related to balance are denominated in gETH; except realizedBalance and claimableETH:
+ * @dev all parameters related to balance are denominated in gETH; except realizedEtherBalance,fulfilledEtherBalance and claimableEther:
  * (requested, realized, fulfilled, commonPoll, trigger, size, fulfilled)
  * @author Ice Bear & Crash Bandicoot
  */
@@ -109,16 +110,18 @@ library WithdrawalModuleLib {
    * ex: ----- -- -- - ----- --    : 17 : there are 17 gETH, processed as a response to the withdrawn funds.
    * @param fulfilled cumulative size of the fulfilled requests, claimed or claimable, as in gETH
    * ex: --- ----xx ------ x - ooo : 14 : there are 15 gETH being used to fulfill requests,including one that is partially filled. 3 gETH is still claimable.
-   * @param realizedBalance cumulative size of the withdrawn and realized balances. Note that, (realizedBalance * realizedPrice != realized) as price changes constantly.
+   * @param realizedEtherBalance cumulative size of the withdrawn and realized balances. Note that, (realizedEtherBalance * realizedPrice != realized) as price changes constantly.
+   * @param fulfilledEtherBalance cumulative size of the fulfilled requests.
    * @param realizedPrice current Price of the queue, used when fulfilling a Request, updated with processValidators.
    * @param commonPoll current size of requests that did not vote on any specific validator, as in gETH.
    **/
   struct Queue {
     uint256 requested;
     uint256 realized;
-    uint256 fulfilled;
-    uint256 realizedBalance;
+    uint256 realizedEtherBalance;
     uint256 realizedPrice;
+    uint256 fulfilled;
+    uint256 fulfilledEtherBalance;
     uint256 commonPoll;
   }
 
@@ -127,14 +130,14 @@ library WithdrawalModuleLib {
    * @param trigger cumulative sum of the previous requests, as in gETH.
    * @param size size of the withdrawal request, as in gETH.
    * @param fulfilled part of the 'size' that became available after being processed relative to the 'realizedPrice'. as in gETH.
-   * @param claimableETH current ETH amount that can be claimed by the Owner, increased in respect to 'fulfilled' and 'realizedPrice', decreased with dequeue.
+   * @param claimableEther current ETH amount that can be claimed by the Owner, increased in respect to 'fulfilled' and 'realizedPrice', decreased with dequeue.
    **/
   struct Request {
     address owner;
     uint256 trigger;
     uint256 size;
     uint256 fulfilled;
-    uint256 claimableETH;
+    uint256 claimableEther;
   }
 
   /**
@@ -341,7 +344,7 @@ library WithdrawalModuleLib {
     require(owner != address(0), "WML:owner can not be zero address");
 
     self.requests.push(
-      Request({owner: owner, trigger: trigger, size: size, fulfilled: 0, claimableETH: 0})
+      Request({owner: owner, trigger: trigger, size: size, fulfilled: 0, claimableEther: 0})
     );
 
     emit Enqueue(self.requests.length - 1, owner);
@@ -483,17 +486,22 @@ library WithdrawalModuleLib {
    * @custom:visibility -> internal
    */
   /**
-   * @notice by using the realized size that is burned, we fulfill a single request by making use of the internal pricing.
+   * @notice by using the realized part of the size, we fulfill a single request by making use of the internal pricing.
+   * @dev we burn the realized size of the Queue here because we do not want this process to mess with price
+   * * calculations of the oracle.
    */
   function _fulfill(PooledWithdrawal storage self, uint256 index) internal {
     uint256 toFulfill = fulfillable(self, index, self.queue.realized, self.queue.fulfilled);
+
     if (toFulfill > 0) {
-      self.requests[index].claimableETH +=
-        (toFulfill * self.queue.realizedPrice) /
-        gETH_DENOMINATOR;
+      uint256 claimableETH = (toFulfill * self.queue.realizedPrice) / gETH_DENOMINATOR;
+      self.requests[index].claimableEther += claimableETH;
       self.requests[index].fulfilled += toFulfill;
       self.queue.fulfilled += toFulfill;
+      self.queue.fulfilledEtherBalance += claimableETH;
     }
+
+    self.gETH.burn(address(this), self.POOL_ID, toFulfill);
   }
 
   /**
@@ -510,19 +518,27 @@ library WithdrawalModuleLib {
     uint256 qPrice
   ) internal {
     uint256 indexesLen = indexes.length;
+
+    uint256 oldFulfilled = qFulfilled;
+    uint256 qfulfilledEtherBalance;
     for (uint256 i; i < indexesLen; ) {
       uint256 toFulfill = fulfillable(self, indexes[i], qRealized, qFulfilled);
       if (toFulfill > 0) {
-        self.requests[indexes[i]].claimableETH += (toFulfill * qPrice) / gETH_DENOMINATOR;
+        uint256 claimableETH = (toFulfill * qPrice) / gETH_DENOMINATOR;
+        self.requests[indexes[i]].claimableEther += claimableETH;
         self.requests[indexes[i]].fulfilled += toFulfill;
         qFulfilled += toFulfill;
+        qfulfilledEtherBalance += claimableETH;
       }
 
       unchecked {
         i += 1;
       }
     }
+
     self.queue.fulfilled = qFulfilled;
+    self.queue.fulfilledEtherBalance += qfulfilledEtherBalance;
+    self.gETH.burn(address(this), self.POOL_ID, qFulfilled - oldFulfilled);
   }
 
   /**
@@ -561,10 +577,10 @@ library WithdrawalModuleLib {
   ) internal returns (uint256 claimableETH) {
     require(msg.sender == self.requests[index].owner, "WML:not owner");
 
-    claimableETH = self.requests[index].claimableETH;
+    claimableETH = self.requests[index].claimableEther;
     require(claimableETH > 0, "WML:not claimable");
 
-    self.requests[index].claimableETH = 0;
+    self.requests[index].claimableEther = 0;
 
     emit Dequeue(index, claimableETH);
   }
@@ -591,8 +607,6 @@ library WithdrawalModuleLib {
 
   /**
    * @notice dequeue() with batch optimizations
-   * @dev we burn the realized size of the Queue here because we do not want this process to mess with price
-   * * calculations of the oracle.
    */
   function dequeueBatch(
     PooledWithdrawal storage self,
@@ -683,11 +697,8 @@ library WithdrawalModuleLib {
     }
 
     self.queue.realized += processedgETH;
-    self.queue.realizedBalance += processedBalance;
+    self.queue.realizedEtherBalance += processedBalance;
     self.queue.realizedPrice = newPrice;
-
-    // burn gETH
-    self.gETH.burn(address(this), self.POOL_ID, processedgETH);
   }
 
   /**
