@@ -192,9 +192,9 @@ contract("WithdrawalModuleLib", function (accounts) {
       "0x986e1dee05f3a018bab83343b3b3d96dd573a50ffb03e8145b2964a389ceb14cb3780266b99ef7cf0e16ee34648e2151";
 
     it("returns 0 if empty", async function () {
-      expect(await this.contract.$validatorThreshold(pubkeyNotExists)).to.be.bignumber.equal(
-        new BN(0)
-      );
+      expect(
+        (await this.contract.$getValidatorThreshold(pubkeyNotExists)).threshold
+      ).to.be.bignumber.equal(new BN(0));
     });
     it("returns correct threshold", async function () {
       const mockBeaconBalance = new BN(String(32e18));
@@ -209,13 +209,20 @@ contract("WithdrawalModuleLib", function (accounts) {
       await this.SMLM.$set_PricePerShare(mockPrice, this.poolId);
       const exitThreshold = new BN((await this.contract.$getWithdrawalParams()).EXIT_THRESHOLD);
 
-      expect(await this.contract.$validatorThreshold(pubkeyNotExists)).to.be.bignumber.equal(
+      expect(
+        (await this.contract.$getValidatorThreshold(pubkeyNotExists)).threshold
+      ).to.be.bignumber.equal(
         exitThreshold
           .mul(mockBeaconBalance)
           .div(new BN(String(PERCENTAGE_DENOMINATOR)))
           .mul(new BN(String(1e18)))
           .div(mockPrice)
       );
+      // mockBeaconBalance
+      // .mul(new BN(String(1e18)))
+      // .div(mockPrice)
+      // .mul(exitThreshold)
+      // .div(new BN(String(PERCENTAGE_DENOMINATOR)))
     });
   });
 
@@ -242,7 +249,7 @@ contract("WithdrawalModuleLib", function (accounts) {
       expect(req.trigger).to.be.bignumber.equal(mockEnqueueTrigger);
       expect(req.size).to.be.bignumber.equal(mockEnqueueSize);
       expect(req.fulfilled).to.be.bignumber.equal(new BN(String(0)));
-      expect(req.claimableETH).to.be.bignumber.equal(new BN(String(0)));
+      expect(req.claimableEther).to.be.bignumber.equal(new BN(String(0)));
     });
   });
 
@@ -331,6 +338,30 @@ contract("WithdrawalModuleLib", function (accounts) {
   });
 
   context("fulfill", function () {
+    const mockPricePerShare = new BN(String(2e18)); // pricePerShare
+    const mockProcessedBalance = new BN(String(20e18)); // processedBalance
+    const denominator = new BN(String(1e18)); // denominator
+    const processedgEth = mockProcessedBalance.mul(denominator).div(mockPricePerShare); // processedgEth
+
+    beforeEach(async function () {
+      // for mocking enqueue and put gETH to the contract
+      await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
+        from: poolOwner,
+        value: new BN(String(1e18)).muln(64),
+      });
+      await this.gETH.safeTransferFrom(
+        staker,
+        this.contract.address,
+        this.poolId,
+        processedgEth,
+        strToBytes(""),
+        { from: staker }
+      );
+
+      // set price per share
+      await this.SMLM.$set_PricePerShare(mockPricePerShare, this.poolId);
+    });
+
     it("success", async function () {
       const mockEnqueueTrigger = new BN(String(3e18)); // Rtrigger
       const mockEnqueueSize = new BN(String(2e18)); // Rsize
@@ -349,7 +380,7 @@ contract("WithdrawalModuleLib", function (accounts) {
       );
       const req = await this.contract.$getRequestFromLastIndex(0);
       expect(req.fulfilled).to.be.bignumber.equal(mockEnqueueSize);
-      expect(req.claimableETH).to.be.bignumber.equal(
+      expect(req.claimableEther).to.be.bignumber.equal(
         mockEnqueueSize.mul(mockRealizedPrice).div(new BN(String(1e18)))
       );
       expect((await this.contract.$getQueueData()).fulfilled).to.be.bignumber.equal(
@@ -359,6 +390,30 @@ contract("WithdrawalModuleLib", function (accounts) {
   });
 
   context("fulfillBatch", function () {
+    const mockPricePerShare = new BN(String(2e18)); // pricePerShare
+    const mockProcessedBalance = new BN(String(20e18)); // processedBalance
+    const denominator = new BN(String(1e18)); // denominator
+    const processedgEth = mockProcessedBalance.mul(denominator).div(mockPricePerShare); // processedgEth
+
+    beforeEach(async function () {
+      // for mocking enqueue and put gETH to the contract
+      await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
+        from: poolOwner,
+        value: new BN(String(1e18)).muln(64),
+      });
+      await this.gETH.safeTransferFrom(
+        staker,
+        this.contract.address,
+        this.poolId,
+        processedgEth,
+        strToBytes(""),
+        { from: staker }
+      );
+
+      // set price per share
+      await this.SMLM.$set_PricePerShare(mockPricePerShare, this.poolId);
+    });
+
     it("success", async function () {
       const mockEnqueueTrigger0 = new BN(String(3e18)); // Rtrigger0
       const mockEnqueueSize0 = new BN(String(2e18)); // Rsize0
@@ -381,11 +436,11 @@ contract("WithdrawalModuleLib", function (accounts) {
       const req0 = await this.contract.$getRequestFromLastIndex(1);
       const req1 = await this.contract.$getRequestFromLastIndex(0);
       expect(req0.fulfilled).to.be.bignumber.equal(mockEnqueueSize0);
-      expect(req0.claimableETH).to.be.bignumber.equal(
+      expect(req0.claimableEther).to.be.bignumber.equal(
         new BN(String(2e18)).mul(mockRealizedPrice).div(new BN(String(1e18)))
       );
       expect(req1.fulfilled).to.be.bignumber.equal(new BN(String(3e18))); // 3e18 since it can be at most it
-      expect(req1.claimableETH).to.be.bignumber.equal(
+      expect(req1.claimableEther).to.be.bignumber.equal(
         new BN(String(3e18)).mul(mockRealizedPrice).div(new BN(String(1e18))) // 3e18 since it can be at most it
       );
       expect((await this.contract.$getQueueData()).fulfilled).to.be.bignumber.equal(
@@ -398,6 +453,10 @@ contract("WithdrawalModuleLib", function (accounts) {
     const mockEnqueueTrigger = new BN(String(3e18)); // Rtrigger
     const mockEnqueueSize = new BN(String(2e18)); // Rsize
     const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+    const mockPricePerShare = new BN(String(2e18)); // pricePerShare
+    const mockProcessedBalance = new BN(String(20e18)); // processedBalance
+    const denominator = new BN(String(1e18)); // denominator
+    const processedgEth = mockProcessedBalance.mul(denominator).div(mockPricePerShare); // processedgEth
 
     beforeEach(async function () {
       await this.contract.$setMockQueueData(
@@ -409,6 +468,23 @@ contract("WithdrawalModuleLib", function (accounts) {
         0
       );
       await this.contract.$_enqueue(mockEnqueueTrigger, mockEnqueueSize, staker);
+
+      // for mocking enqueue and put gETH to the contract
+      await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
+        from: poolOwner,
+        value: new BN(String(1e18)).muln(64),
+      });
+      await this.gETH.safeTransferFrom(
+        staker,
+        this.contract.address,
+        this.poolId,
+        processedgEth,
+        strToBytes(""),
+        { from: staker }
+      );
+
+      // set price per share
+      await this.SMLM.$set_PricePerShare(mockPricePerShare, this.poolId);
     });
 
     it("reverts if not owner", async function () {
@@ -418,7 +494,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         "WML:not owner"
       );
     });
-    it("reverts if claimableETH is 0", async function () {
+    it("reverts if claimableEther is 0", async function () {
       await expectRevert(
         this.contract.$_dequeue(new BN(String(0)), { from: staker }),
         "WML:not claimable"
@@ -428,14 +504,16 @@ contract("WithdrawalModuleLib", function (accounts) {
       await this.contract.$fulfill(new BN(String(0)));
 
       // to get the return value, not changing the state
-      const claimableETH = await this.contract.$_dequeue.call(new BN(String(0)), { from: staker });
+      const claimableEther = await this.contract.$_dequeue.call(new BN(String(0)), {
+        from: staker,
+      });
       await this.contract.$_dequeue(new BN(String(0)), { from: staker });
-      expect(claimableETH).to.be.bignumber.equal(
+      expect(claimableEther).to.be.bignumber.equal(
         mockEnqueueSize.mul(mockRealizedPrice).div(new BN(String(1e18)))
       );
-      expect((await this.contract.$getRequestFromLastIndex(0)).claimableETH).to.be.bignumber.equal(
-        new BN(String(0))
-      );
+      expect(
+        (await this.contract.$getRequestFromLastIndex(0)).claimableEther
+      ).to.be.bignumber.equal(new BN(String(0)));
     });
   });
 
@@ -443,6 +521,10 @@ contract("WithdrawalModuleLib", function (accounts) {
     const mockEnqueueTrigger = new BN(String(3e18)); // Rtrigger
     const mockEnqueueSize = new BN(String(2e18)); // Rsize
     const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+    const mockPricePerShare = new BN(String(2e18)); // pricePerShare
+    const mockProcessedBalance = new BN(String(20e18)); // processedBalance
+    const denominator = new BN(String(1e18)); // denominator
+    const processedgEth = mockProcessedBalance.mul(denominator).div(mockPricePerShare); // processedgEth
 
     beforeEach(async function () {
       await this.contract.$setMockQueueData(
@@ -454,6 +536,23 @@ contract("WithdrawalModuleLib", function (accounts) {
         0
       );
       await this.contract.$_enqueue(mockEnqueueTrigger, mockEnqueueSize, staker);
+
+      // for mocking enqueue and put gETH to the contract
+      await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
+        from: poolOwner,
+        value: new BN(String(1e18)).muln(64),
+      });
+      await this.gETH.safeTransferFrom(
+        staker,
+        this.contract.address,
+        this.poolId,
+        processedgEth,
+        strToBytes(""),
+        { from: staker }
+      );
+
+      // set price per share
+      await this.SMLM.$set_PricePerShare(mockPricePerShare, this.poolId);
     });
 
     it("reverts if receiver is ZERO_ADDRESS", async function () {
@@ -502,6 +601,10 @@ contract("WithdrawalModuleLib", function (accounts) {
     const mockEnqueueTrigger1 = mockEnqueueTrigger0.add(mockEnqueueSize0); // Rtrigger
     const mockEnqueueSize1 = new BN(String(4e18)); // Rsize
     const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+    const mockPricePerShare = new BN(String(2e18)); // pricePerShare
+    const mockProcessedBalance = new BN(String(20e18)); // processedBalance
+    const denominator = new BN(String(1e18)); // denominator
+    const processedgEth = mockProcessedBalance.mul(denominator).div(mockPricePerShare); // processedgEth
 
     beforeEach(async function () {
       await this.contract.$setMockQueueData(
@@ -514,6 +617,23 @@ contract("WithdrawalModuleLib", function (accounts) {
       );
       await this.contract.$_enqueue(mockEnqueueTrigger0, mockEnqueueSize0, staker);
       await this.contract.$_enqueue(mockEnqueueTrigger1, mockEnqueueSize1, staker);
+
+      // for mocking enqueue and put gETH to the contract
+      await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
+        from: poolOwner,
+        value: new BN(String(1e18)).muln(64),
+      });
+      await this.gETH.safeTransferFrom(
+        staker,
+        this.contract.address,
+        this.poolId,
+        processedgEth,
+        strToBytes(""),
+        { from: staker }
+      );
+
+      // set price per share
+      await this.SMLM.$set_PricePerShare(mockPricePerShare, this.poolId);
     });
 
     it("reverts if receiver is ZERO_ADDRESS", async function () {
@@ -592,15 +712,16 @@ contract("WithdrawalModuleLib", function (accounts) {
     });
 
     it("sets realizedPrice to pps if internalPrice is 0", async function () {
-      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      // TODO: delete these and put into fulfill
+      // const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
       await this.contract.$_realizeProcessedEther(mockProcessedBalance);
-      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
-      expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
+      // const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      // expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
 
       const queueData = await this.contract.$getQueueData();
       expect(queueData.realizedPrice).to.be.bignumber.equal(mockPricePerShare);
       expect(queueData.realized).to.be.bignumber.equal(processedgEth);
-      expect(queueData.realizedBalance).to.be.bignumber.equal(mockProcessedBalance);
+      expect(queueData.realizedEtherBalance).to.be.bignumber.equal(mockProcessedBalance);
     });
     it("sets realizedPrice to pps if claimable is 0", async function () {
       await this.contract.$setMockQueueData(
@@ -611,15 +732,16 @@ contract("WithdrawalModuleLib", function (accounts) {
         mockRealizedPrice,
         0
       );
-      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      // TODO: delete these and put into fulfill
+      // const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
       await this.contract.$_realizeProcessedEther(mockProcessedBalance);
-      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
-      expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
+      // const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      // expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
 
       const queueData = await this.contract.$getQueueData();
       expect(queueData.realizedPrice).to.be.bignumber.equal(mockPricePerShare);
       expect(queueData.realized).to.be.bignumber.equal(mockQrealized.add(processedgEth));
-      expect(queueData.realizedBalance).to.be.bignumber.equal(mockProcessedBalance);
+      expect(queueData.realizedEtherBalance).to.be.bignumber.equal(mockProcessedBalance);
     });
     it("calculates realizedPrice correctly", async function () {
       await this.contract.$setMockQueueData(
@@ -630,10 +752,11 @@ contract("WithdrawalModuleLib", function (accounts) {
         mockRealizedPrice,
         0
       );
-      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      // TODO: delete these and put into fulfill
+      // const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
       await this.contract.$_realizeProcessedEther(mockProcessedBalance);
-      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
-      expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
+      // const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      // expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
 
       const queueData = await this.contract.$getQueueData();
       expect(queueData.realizedPrice).to.be.bignumber.equal(
@@ -643,7 +766,7 @@ contract("WithdrawalModuleLib", function (accounts) {
           .div(claimable.add(processedgEth))
       );
       expect(queueData.realized).to.be.bignumber.equal(mockQrealized.add(processedgEth));
-      expect(queueData.realizedBalance).to.be.bignumber.equal(mockProcessedBalance);
+      expect(queueData.realizedEtherBalance).to.be.bignumber.equal(mockProcessedBalance);
     });
   });
 
@@ -774,7 +897,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         );
       });
       it("if commonPoll + validatorPoll is not bigger than validatorThreshold, returns commonPoll as it is and status stay ACTIVE", async function () {
-        const mockValidatorPoll = new BN(String(2e18));
+        const mockValidatorPoll = new BN(String(1e18));
         await this.contract.$setMockValidatorData(
           pubkey0,
           mockBeaconBalance,
@@ -782,37 +905,31 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        const returnedCommonPoll = await this.contract.$checkAndRequestExit.call(
-          pubkey0,
-          mockCommonPoll
-        );
         await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
-
+        const queueData = await this.contract.$getQueueData();
         const val = await this.SMLM.getValidator(pubkey0);
 
-        expect(returnedCommonPoll).to.be.bignumber.equal(mockCommonPoll);
+        expect(queueData.commonPoll).to.be.bignumber.equal(mockCommonPoll);
         expect(val.state).to.be.bignumber.equal(new BN(String(2))); // ACTIVE;
       });
-      it("validator state changes to EXIT_REQUESTED and commonPoll increases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than validatorThreshold", async function () {
-        const mockValidatorPoll = new BN(String(7e18));
+      it("validator state changes to EXIT_REQUESTED and commonPoll increases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than beaconBalancePriced", async function () {
+        const mockValidatorPoll = new BN(String(18e18)); // beaconBalance for validator is set to 10e18 and price set to 15e17 so 10e18 * 15e17 / 1e18 = 15e18 is bigger than beaconBalancePriced
         await this.contract.$setMockValidatorData(
           pubkey0,
           mockBeaconBalance,
           mockWithdrawnBalance,
           mockValidatorPoll
         );
-        const threshold = await this.contract.$validatorThreshold(pubkey0);
 
-        const returnedCommonPoll = await this.contract.$checkAndRequestExit.call(
-          pubkey0,
-          mockCommonPoll
-        );
+        const { beaconBalancePriced } = await this.contract.$getValidatorThreshold(pubkey0);
+
         await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
+        const queueData = await this.contract.$getQueueData();
 
         const val = await this.SMLM.getValidator(pubkey0);
         expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
-        expect(returnedCommonPoll).to.be.bignumber.equal(
-          mockCommonPoll.add(mockValidatorPoll.sub(threshold))
+        expect(queueData.commonPoll).to.be.bignumber.equal(
+          mockCommonPoll.add(mockValidatorPoll.sub(beaconBalancePriced))
         );
       });
       it("validator state changes to EXIT_REQUESTED and commonPoll decreases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is smaller than validatorThreshold", async function () {
@@ -824,17 +941,14 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        const threshold = await this.contract.$validatorThreshold(pubkey0);
+        const { threshold } = await this.contract.$getValidatorThreshold(pubkey0);
 
-        const returnedCommonPoll = await this.contract.$checkAndRequestExit.call(
-          pubkey0,
-          mockCommonPoll
-        );
         await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
+        const queueData = await this.contract.$getQueueData();
 
         const val = await this.SMLM.getValidator(pubkey0);
         expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
-        expect(returnedCommonPoll).to.be.bignumber.equal(
+        expect(queueData.commonPoll).to.be.bignumber.equal(
           mockCommonPoll.sub(threshold.sub(mockValidatorPoll))
         );
       });
@@ -917,7 +1031,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         expect(req.trigger).to.be.bignumber.equal(mockRequested);
         expect(req.size).to.be.bignumber.equal(mockRequestSize);
         expect(req.fulfilled).to.be.bignumber.equal(new BN(String(0)));
-        expect(req.claimableETH).to.be.bignumber.equal(new BN(String(0)));
+        expect(req.claimableEther).to.be.bignumber.equal(new BN(String(0)));
 
         const queueData = await this.contract.$getQueueData();
         expect(queueData.requested).to.be.bignumber.equal(mockRequested.add(mockRequestSize));
@@ -938,9 +1052,9 @@ contract("WithdrawalModuleLib", function (accounts) {
         expect(req.trigger).to.be.bignumber.equal(mockRequested);
         expect(req.size).to.be.bignumber.equal(mockRequestSize);
         expect(req.fulfilled).to.be.bignumber.equal(new BN(String(0)));
-        expect(req.claimableETH).to.be.bignumber.equal(new BN(String(0)));
+        expect(req.claimableEther).to.be.bignumber.equal(new BN(String(0)));
 
-        const threshold = await this.contract.$validatorThreshold(pubkey0);
+        const threshold = await this.contract.$getValidatorThreshold(pubkey0);
         const queueData = await this.contract.$getQueueData();
         expect(queueData.requested).to.be.bignumber.equal(mockRequested.add(mockRequestSize));
         expect(queueData.commonPoll).to.be.bignumber.equal(
@@ -1024,7 +1138,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         expect(req0.trigger).to.be.bignumber.equal(mockRequested.add(mockRequestSizeCommon));
         expect(req0.size).to.be.bignumber.equal(mockRequestSize0);
         expect(req0.fulfilled).to.be.bignumber.equal(new BN(String(0)));
-        expect(req0.claimableETH).to.be.bignumber.equal(new BN(String(0)));
+        expect(req0.claimableEther).to.be.bignumber.equal(new BN(String(0)));
         const req1 = await this.contract.$getRequestFromLastIndex(0);
         expect(req1.owner).to.be.equal(staker);
         expect(req1.trigger).to.be.bignumber.equal(
@@ -1032,10 +1146,10 @@ contract("WithdrawalModuleLib", function (accounts) {
         );
         expect(req1.size).to.be.bignumber.equal(mockRequestSize1);
         expect(req1.fulfilled).to.be.bignumber.equal(new BN(String(0)));
-        expect(req1.claimableETH).to.be.bignumber.equal(new BN(String(0)));
+        expect(req1.claimableEther).to.be.bignumber.equal(new BN(String(0)));
 
-        const threshold0 = await this.contract.$validatorThreshold(pubkey0);
-        const threshold1 = await this.contract.$validatorThreshold(pubkey1);
+        const threshold0 = await this.contract.$getValidatorThreshold(pubkey0);
+        const threshold1 = await this.contract.$getValidatorThreshold(pubkey1);
         const queueData = await this.contract.$getQueueData();
         expect(queueData.requested).to.be.bignumber.equal(
           mockRequested.add(mockRequestSizeCommon).add(mockRequestSize0).add(mockRequestSize1)
@@ -1141,13 +1255,13 @@ contract("WithdrawalModuleLib", function (accounts) {
         new BN(String(7e18)), // 5e18 previously now 7e18 so profit from here will be 2e18
         new BN(String(0)),
       ];
-      const isExited = [true, true, false, false, false];
+      // const isExited = [true, true, false, false, false];
 
       const profit = new BN(String(5e18));
       const fees = profit.mul(new BN(String(17))).div(new BN(String(100)));
 
       beforeEach(async function () {
-        //add money to contract to distribute fees
+        // add money to contract to distribute fees
         await this.contract.send(new BN(String(160e18)));
 
         // this assumption is needed for the test to work
@@ -1203,11 +1317,11 @@ contract("WithdrawalModuleLib", function (accounts) {
           new BN(String(0))
         );
 
-        //set pricePerShare
+        // set pricePerShare
         await this.SMLM.$set_PricePerShare(new BN(String(2e18)), this.poolId);
 
         // set mock commonPoll to check the exit of validator
-        await this.contract.$setMockQueueData(0, 0, 0, 0, 0, new BN(String(65e17))); //so commonPoll will left 5e17 afterwards
+        await this.contract.$setMockQueueData(0, 0, 0, 0, 0, new BN(String(65e17))); // so commonPoll will left 5e17 afterwards
       });
 
       it("reverts if lengths of arrays are not matching", async function () {
@@ -1265,7 +1379,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         }
 
         const queueData = await this.contract.$getQueueData();
-        expect(queueData.realizedBalance).to.be.bignumber.equal(profit.sub(fees));
+        expect(queueData.realizedEtherBalance).to.be.bignumber.equal(profit.sub(fees));
         // TODO: commonPoll is not updating somehow, check it
         expect(queueData.commonPoll).to.be.bignumber.equal(new BN(String(5e17)));
       });
