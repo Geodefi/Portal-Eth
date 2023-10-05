@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {GeodeModule} from "../../../modules/GeodeModule/GeodeModule.sol";
 import {GeodeModuleLib, DualGovernance} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 import {IGeodeModule} from "./modules/IGeodeModule.sol";
 import {IStakeModule} from "./modules/IStakeModule.sol";
 

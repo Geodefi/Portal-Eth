@@ -28,7 +28,7 @@ const config = {
   solidity: {
     compilers: [
       {
-        version: "0.8.7",
+        version: "0.8.19",
         settings: {
           optimizer: {
             runs: 200,

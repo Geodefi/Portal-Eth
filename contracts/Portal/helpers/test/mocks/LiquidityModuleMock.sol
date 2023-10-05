@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {LiquidityModule} from "../../../modules/LiquidityModule/LiquidityModule.sol";
 import {LiquidityModuleLib as LML, Swap} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";

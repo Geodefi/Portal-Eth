@@ -33,8 +33,9 @@ contracts-exposed
 # openzeppelin
 .openzeppelin/*
 
-# local 0.8.7 compiler
+# local solidity compilers
 soljson-v0.8.7+commit.e28d00a7.js
+soljson-v0.8.19+commit.7dd6d404.js
 
 # vscode
 .vscode

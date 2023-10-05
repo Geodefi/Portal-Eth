@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {gETH_DENOMINATOR} from "./globals/macros.sol";
 // interfaces
 import {IgETH} from "./interfaces/IgETH.sol";
+import {IERC1155} from "./interfaces/helpers/IERC1155PausableBurnableSupply.sol";
 // libraries
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // contracts
-import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
+import {ERC1155, ERC1155PausableBurnableSupply, ERC1155Burnable, IERC1155Burnable} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
  * @title gETH : Geode Finance Liquid Staking Derivatives
@@ -379,7 +380,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 id,
     uint256 amount,
     bytes memory data
-  ) public virtual override {
+  ) public virtual override(ERC1155, IERC1155) {
     require(
       (from == _msgSender()) ||
         (isApprovedForAll(from, _msgSender())) ||
@@ -395,7 +396,11 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev See ERC1155Burnable burn:
    * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Burnable.sol#L15
    */
-  function burn(address account, uint256 id, uint256 value) public virtual override {
+  function burn(
+    address account,
+    uint256 id,
+    uint256 value
+  ) public virtual override(ERC1155Burnable, IERC1155Burnable) {
     require(
       (account == _msgSender()) ||
         (isApprovedForAll(account, _msgSender())) ||

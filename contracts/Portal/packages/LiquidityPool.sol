@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
