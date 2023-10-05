@@ -152,8 +152,7 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    * but it is external, OZ have not made it public yet.
    */
   function _handleUpgrade(address proposed_implementation, uint256 id) internal virtual {
-    _authorizeUpgrade(proposed_implementation);
-    _upgradeToAndCallUUPS(proposed_implementation, new bytes(0), false);
+    upgradeTo(proposed_implementation);
     _setContractVersion(id);
   }
 
