@@ -1,18 +1,19 @@
 require("dotenv").config();
 
-require("hardhat-contract-sizer");
-require("hardhat-gas-reporter");
-require("hardhat-exposed");
+require("@openzeppelin/hardhat-upgrades");
+
 require("hardhat-deploy");
+require("hardhat-deploy-ethers");
+require("hardhat-exposed");
+require("hardhat-gas-reporter");
+require("hardhat-contract-sizer");
 require("solidity-coverage");
 
-require("@openzeppelin/hardhat-upgrades");
 require("@nomiclabs/hardhat-web3");
-require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-truffle5");
-require("@nomiclabs/hardhat-waffle");
-require("@nomiclabs/hardhat-ethers");
-const ethers = require("ethers");
+require("@nomicfoundation/hardhat-verify");
+require("@nomicfoundation/hardhat-ethers");
+require("ethers");
 
 require("./scripts");
 
@@ -56,7 +57,7 @@ const config = {
       url: process.env.GOERLI_URL,
       deploy: ["./deploy"],
       chainId: 5,
-      gasPrice: ethers.utils.parseUnits("10", "gwei").toNumber(),
+      gasPrice: 1e10, // 10 gwei
     },
   },
   namedAccounts: {
