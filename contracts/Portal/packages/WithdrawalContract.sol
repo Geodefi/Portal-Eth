@@ -10,13 +10,13 @@ import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
 import {IWithdrawalModule} from "../interfaces/modules/IWithdrawalModule.sol";
 // libraries
-import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib as WML, PooledWithdrawal} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
 contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModule {
-  using WML for WML.PooledWithdrawal;
+  using WML for PooledWithdrawal;
   /**
    * TODO: this can be renamed to withdrawalQueue or ValidatorCustodian
    * @custom:section                           ** VARIABLES **

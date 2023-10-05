@@ -6,7 +6,7 @@ import {ID_TYPE} from "../../globals/id_type.sol";
 // interfaces
 import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
 // libraries
-import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
+import {GeodeModuleLib as GML, Proposal, DualGovernance} from "./libs/GeodeModuleLib.sol";
 import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
@@ -43,7 +43,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * @author Ice Bear & Crash Bandicoot
  */
 abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
-  using GML for GML.DualGovernance;
+  using GML for DualGovernance;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -51,7 +51,7 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  GML.DualGovernance internal GEODE;
+  DualGovernance internal GEODE;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -151,10 +151,7 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
    * @dev Would use the public upgradeTo() call, which does _authorizeUpgrade and _upgradeToAndCallUUPS,
    * but it is external, OZ have not made it public yet.
    */
-  function _handleUpgrade(
-    address proposed_implementation,
-    uint256 id
-  ) internal virtual {
+  function _handleUpgrade(address proposed_implementation, uint256 id) internal virtual {
     _authorizeUpgrade(proposed_implementation);
     _upgradeToAndCallUUPS(proposed_implementation, new bytes(0), false);
     _setContractVersion(id);
@@ -192,7 +189,7 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
 
   function getProposal(
     uint256 id
-  ) external view virtual override returns (GML.Proposal memory proposal) {
+  ) external view virtual override returns (Proposal memory proposal) {
     proposal = GEODE.getProposal(id);
   }
 

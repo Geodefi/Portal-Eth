@@ -4,13 +4,13 @@ pragma solidity =0.8.7;
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {WithdrawalModule} from "../../../modules/WithdrawalModule/WithdrawalModule.sol";
-import {WithdrawalModuleLib} from "../../../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib, PooledWithdrawal} from "../../../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract WithdrawalModuleLibMock is WithdrawalModule {
-  using WithdrawalModuleLib for WithdrawalModuleLib.PooledWithdrawal;
+  using WithdrawalModuleLib for PooledWithdrawal;
 
   function initialize(
     address _gETH_position,

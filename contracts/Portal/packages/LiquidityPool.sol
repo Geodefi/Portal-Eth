@@ -11,9 +11,9 @@ import {ILiquidityPool} from "../interfaces/packages/ILiquidityPool.sol";
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
 // libraries
-import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLib as GML, DualGovernance} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
-import {LiquidityModuleLib as LML} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML, Swap} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
@@ -42,9 +42,9 @@ import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
  * @author Ice Bear & Crash Bandicoot
  */
 contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
-  using GML for GML.DualGovernance;
-  using AL for LML.Swap;
-  using LML for LML.Swap;
+  using GML for DualGovernance;
+  using AL for Swap;
+  using LML for Swap;
 
   /**
    * @custom:section                           ** VARIABLES **

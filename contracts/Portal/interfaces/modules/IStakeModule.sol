@@ -2,7 +2,7 @@
 pragma solidity =0.8.7;
 
 import {IDataStoreModule} from "./IDataStoreModule.sol";
-import {StakeModuleLib as SML} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {Validator} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
 
 interface IStakeModule is IDataStoreModule {
   function pause() external;
@@ -26,7 +26,7 @@ interface IStakeModule is IDataStoreModule {
       bytes32 balanceMerkleRoot
     );
 
-  function getValidator(bytes calldata pubkey) external view returns (SML.Validator memory);
+  function getValidator(bytes calldata pubkey) external view returns (Validator memory);
 
   function getPackageVersion(uint256 _type) external view returns (uint256);
 

@@ -6,7 +6,7 @@ import {IgETH} from "../../interfaces/IgETH.sol";
 import {IPortal} from "../../interfaces/IPortal.sol";
 import {IWithdrawalModule} from "../../interfaces/modules/IWithdrawalModule.sol";
 // libraries
-import {WithdrawalModuleLib as WML} from "./libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib as WML, PooledWithdrawal} from "./libs/WithdrawalModuleLib.sol";
 // external
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -44,14 +44,14 @@ abstract contract WithdrawalModule is
   PausableUpgradeable,
   ReentrancyGuardUpgradeable
 {
-  using WML for WML.PooledWithdrawal;
+  using WML for PooledWithdrawal;
   /**
    * @custom:section                           ** VARIABLES **
    *
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  WML.PooledWithdrawal internal WITHDRAWAL;
+  PooledWithdrawal internal WITHDRAWAL;
 
   /**
    * @custom:section                           ** EVENTS **

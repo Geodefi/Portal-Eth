@@ -4,7 +4,7 @@ pragma solidity =0.8.7;
 // interfaces
 import {IDataStoreModule} from "../../interfaces/modules/IDataStoreModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML, IsolatedStorage} from "./libs/DataStoreModuleLib.sol";
 // external
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -28,7 +28,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @author Ice Bear & Crash Bandicoot
  */
 abstract contract DataStoreModule is IDataStoreModule, Initializable {
-  using DSML for DSML.IsolatedStorage;
+  using DSML for IsolatedStorage;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -36,7 +36,7 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  DSML.IsolatedStorage internal DATASTORE;
+  IsolatedStorage internal DATASTORE;
 
   /**
    * @custom:section                           ** INITIALIZING **

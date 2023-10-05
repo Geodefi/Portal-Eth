@@ -7,7 +7,7 @@ import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IStakeModule} from "../../interfaces/modules/IStakeModule.sol";
 // libraries
-import {StakeModuleLib as SML} from "./libs/StakeModuleLib.sol";
+import {StakeModuleLib as SML, Validator, PooledStaking} from "./libs/StakeModuleLib.sol";
 import {InitiatorExtensionLib as IEL} from "./libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib as OEL} from "./libs/OracleExtensionLib.sol";
 // contracts
@@ -50,9 +50,9 @@ abstract contract StakeModule is
   PausableUpgradeable,
   ReentrancyGuardUpgradeable
 {
-  using SML for SML.PooledStaking;
-  using IEL for SML.PooledStaking;
-  using OEL for SML.PooledStaking;
+  using SML for PooledStaking;
+  using IEL for PooledStaking;
+  using OEL for PooledStaking;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -60,7 +60,7 @@ abstract contract StakeModule is
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  SML.PooledStaking internal STAKE;
+  PooledStaking internal STAKE;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -159,7 +159,7 @@ abstract contract StakeModule is
 
   function getValidator(
     bytes calldata pubkey
-  ) external view virtual override returns (SML.Validator memory) {
+  ) external view virtual override returns (Validator memory) {
     return STAKE.validators[pubkey];
   }
 

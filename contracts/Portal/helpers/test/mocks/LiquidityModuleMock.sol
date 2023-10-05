@@ -2,12 +2,12 @@
 pragma solidity =0.8.7;
 
 import {LiquidityModule} from "../../../modules/LiquidityModule/LiquidityModule.sol";
-import {LiquidityModuleLib as LML} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML, Swap} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "../../../modules/LiquidityModule/libs/AmplificationLib.sol";
 
 contract LiquidityModuleMock is LiquidityModule {
-  using LML for LML.Swap;
-  using AL for LML.Swap;
+  using LML for Swap;
+  using AL for Swap;
 
   event return$swap(uint256 ret0);
 

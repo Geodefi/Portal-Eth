@@ -6,12 +6,81 @@ import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 // libraries
 import {DepositContractLib as DCL} from "../../StakeModule/libs/DepositContractLib.sol";
-import {StakeModuleLib as SML} from "../../StakeModule/libs/StakeModuleLib.sol";
+import {Validator} from "../../StakeModule/libs/StakeModuleLib.sol";
 // interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {IPortal} from "../../../interfaces/IPortal.sol";
 // external
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
+/**
+ * @param requested cumulative size of all requests, as in gETH.
+ * ex: --- ------ ------ - - --- : 20 : there are 6 requests totaling up to 20 gETH.
+ * @param realized cumulative size of gETH that is processed and can be used to fulfill Requests, as in gETH
+ * ex: ----- -- -- - ----- --    : 17 : there are 17 gETH, processed as a response to the withdrawn funds.
+ * @param fulfilled cumulative size of the fulfilled requests, claimed or claimable, as in gETH
+ * ex: --- ----xx ------ x - ooo : 14 : there are 15 gETH being used to fulfill requests,including one that is partially filled. 3 gETH is still claimable.
+ * @param realizedEtherBalance cumulative size of the withdrawn and realized balances. Note that, (realizedEtherBalance * realizedPrice != realized) as price changes constantly.
+ * @param fulfilledEtherBalance cumulative size of the fulfilled requests.
+ * @param realizedPrice current Price of the queue, used when fulfilling a Request, updated with processValidators.
+ * @param commonPoll current size of requests that did not vote on any specific validator, as in gETH.
+ **/
+struct Queue {
+  uint256 requested;
+  uint256 realized;
+  uint256 realizedEtherBalance;
+  uint256 realizedPrice;
+  uint256 fulfilled;
+  uint256 fulfilledEtherBalance;
+  uint256 commonPoll;
+}
+
+/**
+ * @param owner the address that can dequeue the request. Ownership can be transferred.
+ * @param trigger cumulative sum of the previous requests, as in gETH.
+ * @param size size of the withdrawal request, as in gETH.
+ * @param fulfilled part of the 'size' that became available after being processed relative to the 'realizedPrice'. as in gETH.
+ * @param claimableEther current ETH amount that can be claimed by the Owner, increased in respect to 'fulfilled' and 'realizedPrice', decreased with dequeue.
+ **/
+struct Request {
+  address owner;
+  uint256 trigger;
+  uint256 size;
+  uint256 fulfilled;
+  uint256 claimableEther;
+}
+
+/**
+ * @param beaconBalance  Beacon Chain balance of the validator (current).
+ * @param withdrawnBalance  Representing any Ether sent from Beacon Chain to a withdrawal contract (cumulative).
+ * @param poll size of the requests that specifically voted for given validator to exit. as in gETH.
+ **/
+struct ValidatorData {
+  uint256 beaconBalance;
+  uint256 withdrawnBalance;
+  uint256 poll;
+}
+
+/**
+ * @notice Storage struct for the Withdrawal Contract for the Queued Withdrawal Requests with instant run-off validator exit elections
+ * @param gETH constant, ERC1155, all Geode Staking Derivatives.
+ * @param PORTAL constant, address of the PORTAL.
+ * @param POOL_ID constant, ID of the pool, also the token ID of represented gETH.
+ * @param EXIT_THRESHOLD variable, current exit threshold that is set by the owner.
+ * @param queue main variables related to Enqueue-Dequeue operations.
+ * @param requests an array of requests
+ * @param validators as pubkey being the key, the related data for the validators of the given pool. Updated on processValidators.
+ **/
+struct PooledWithdrawal {
+  IgETH gETH;
+  IPortal PORTAL;
+  uint256 POOL_ID;
+  uint256 EXIT_THRESHOLD;
+  Queue queue;
+  Request[] requests;
+  mapping(bytes => ValidatorData) validators;
+  uint256[9] __gap;
+}
 
 /**
  * @title WML: Withdrawal Module Library
@@ -100,78 +169,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library WithdrawalModuleLib {
   /**
-   * @custom:section                           ** STRUCTS **
-   */
-
-  /**
-   * @param requested cumulative size of all requests, as in gETH.
-   * ex: --- ------ ------ - - --- : 20 : there are 6 requests totaling up to 20 gETH.
-   * @param realized cumulative size of gETH that is processed and can be used to fulfill Requests, as in gETH
-   * ex: ----- -- -- - ----- --    : 17 : there are 17 gETH, processed as a response to the withdrawn funds.
-   * @param fulfilled cumulative size of the fulfilled requests, claimed or claimable, as in gETH
-   * ex: --- ----xx ------ x - ooo : 14 : there are 15 gETH being used to fulfill requests,including one that is partially filled. 3 gETH is still claimable.
-   * @param realizedEtherBalance cumulative size of the withdrawn and realized balances. Note that, (realizedEtherBalance * realizedPrice != realized) as price changes constantly.
-   * @param fulfilledEtherBalance cumulative size of the fulfilled requests.
-   * @param realizedPrice current Price of the queue, used when fulfilling a Request, updated with processValidators.
-   * @param commonPoll current size of requests that did not vote on any specific validator, as in gETH.
-   **/
-  struct Queue {
-    uint256 requested;
-    uint256 realized;
-    uint256 realizedEtherBalance;
-    uint256 realizedPrice;
-    uint256 fulfilled;
-    uint256 fulfilledEtherBalance;
-    uint256 commonPoll;
-  }
-
-  /**
-   * @param owner the address that can dequeue the request. Ownership can be transferred.
-   * @param trigger cumulative sum of the previous requests, as in gETH.
-   * @param size size of the withdrawal request, as in gETH.
-   * @param fulfilled part of the 'size' that became available after being processed relative to the 'realizedPrice'. as in gETH.
-   * @param claimableEther current ETH amount that can be claimed by the Owner, increased in respect to 'fulfilled' and 'realizedPrice', decreased with dequeue.
-   **/
-  struct Request {
-    address owner;
-    uint256 trigger;
-    uint256 size;
-    uint256 fulfilled;
-    uint256 claimableEther;
-  }
-
-  /**
-   * @param beaconBalance  Beacon Chain balance of the validator (current).
-   * @param withdrawnBalance  Representing any Ether sent from Beacon Chain to a withdrawal contract (cumulative).
-   * @param poll size of the requests that specifically voted for given validator to exit. as in gETH.
-   **/
-  struct ValidatorData {
-    uint256 beaconBalance;
-    uint256 withdrawnBalance;
-    uint256 poll;
-  }
-
-  /**
-   * @param gETH constant, ERC1155, all Geode Staking Derivatives.
-   * @param PORTAL constant, address of the PORTAL.
-   * @param POOL_ID constant, ID of the pool, also the token ID of represented gETH.
-   * @param EXIT_THRESHOLD variable, current exit threshold that is set by the owner.
-   * @param queue main variables related to Enqueue-Dequeue operations.
-   * @param requests an array of requests
-   * @param validators as pubkey being the key, the related data for the validators of the given pool. Updated on processValidators.
-   **/
-  struct PooledWithdrawal {
-    IgETH gETH;
-    IPortal PORTAL;
-    uint256 POOL_ID;
-    uint256 EXIT_THRESHOLD;
-    Queue queue;
-    Request[] requests;
-    mapping(bytes => ValidatorData) validators;
-    uint256[9] __gap;
-  }
-
-  /**
    * @custom:section                           ** CONSTANTS **
    */
   /// @notice EXIT_THRESHOLD should be at least 60% and at most 100%
@@ -206,7 +203,7 @@ library WithdrawalModuleLib {
       return false;
     }
 
-    SML.Validator memory val = self.PORTAL.getValidator(pubkey);
+    Validator memory val = self.PORTAL.getValidator(pubkey);
     if (val.state != VALIDATOR_STATE.ACTIVE && val.state != VALIDATOR_STATE.EXIT_REQUESTED) {
       return false;
     }
@@ -312,10 +309,10 @@ library WithdrawalModuleLib {
    * @param size specified gETH amount
    */
   function _vote(PooledWithdrawal storage self, bytes calldata pubkey, uint256 size) internal {
-    SML.Validator memory val = self.PORTAL.getValidator(pubkey);
+    Validator memory val = self.PORTAL.getValidator(pubkey);
 
-    require(val.poolId == self.POOL_ID, "SML:vote for an unknown pool");
-    require(val.state == VALIDATOR_STATE.ACTIVE, "SML:voted for inactive validator");
+    require(val.poolId == self.POOL_ID, "WML:vote for an unknown pool");
+    require(val.state == VALIDATOR_STATE.ACTIVE, "WML:voted for inactive validator");
 
     self.validators[pubkey].poll += size;
   }
@@ -663,7 +660,7 @@ library WithdrawalModuleLib {
   ) internal returns (uint256 extra) {
     if (reportedWithdrawn > processedWithdrawn) {
       uint256 profit = reportedWithdrawn - processedWithdrawn;
-      SML.Validator memory val = self.PORTAL.getValidator(pubkey);
+      Validator memory val = self.PORTAL.getValidator(pubkey);
 
       uint256 poolProfit = (profit * val.poolFee) / PERCENTAGE_DENOMINATOR;
       uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;

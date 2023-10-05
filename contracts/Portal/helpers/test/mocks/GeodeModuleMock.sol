@@ -2,10 +2,10 @@
 pragma solidity =0.8.7;
 
 import {GeodeModule} from "../../../modules/GeodeModule/GeodeModule.sol";
-import {GeodeModuleLib} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLib, DualGovernance} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
 
 contract GeodeModuleMock is GeodeModule {
-  using GeodeModuleLib for GeodeModuleLib.DualGovernance;
+  using GeodeModuleLib for DualGovernance;
 
   event return$propose(uint256 id);
   event return$approveProposal(address controller, uint256 _type, bytes name);

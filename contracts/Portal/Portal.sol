@@ -16,9 +16,9 @@ import {IGeodeModule} from "./interfaces/modules/IGeodeModule.sol";
 import {IPortal} from "./interfaces/IPortal.sol";
 import {IStakeModule} from "./interfaces/modules/IStakeModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
-import {GeodeModuleLib as GML} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
-import {StakeModuleLib as SML} from "./modules/StakeModule/libs/StakeModuleLib.sol";
+import {DataStoreModuleLib as DSML, IsolatedStorage} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {GeodeModuleLib as GML, DualGovernance} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {StakeModuleLib as SML, PooledStaking} from "./modules/StakeModule/libs/StakeModuleLib.sol";
 // contracts
 import {GeodeModule} from "./modules/GeodeModule/GeodeModule.sol";
 import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
@@ -56,8 +56,9 @@ import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
  * @author Ice Bear & Crash Bandicoot
  */
 contract Portal is IPortal, StakeModule, GeodeModule {
-  using DSML for DSML.IsolatedStorage;
-  using GML for GML.DualGovernance;
+  using DSML for IsolatedStorage;
+  using GML for DualGovernance;
+  using SML for PooledStaking;
 
   /**
    * @custom:section                           ** EVENTS **

@@ -2,10 +2,10 @@
 pragma solidity =0.8.7;
 
 import {GeodeModuleMock} from "./GeodeModuleMock.sol";
-import {GeodeModuleLib} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLib, DualGovernance} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
 
 contract GeodeUpgradedMock is GeodeModuleMock {
-  using GeodeModuleLib for GeodeModuleLib.DualGovernance;
+  using GeodeModuleLib for DualGovernance;
 
   uint256 dumbStorageSlot;
 
