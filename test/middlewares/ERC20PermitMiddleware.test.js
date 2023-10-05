@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { constants, expectRevert, time, BN } = require("@openzeppelin/test-helpers");
 const { MAX_UINT256 } = constants;
-const { silenceWarnings } = require("@openzeppelin/truffle-upgrades");
+const { silenceWarnings } = require("@openzeppelin/upgrades-core");
 
 const { strToBytes, intToBytes32 } = require("../utils");
 
@@ -61,8 +61,8 @@ contract("ERC20PermitMiddleware", function (accounts) {
         unsafeAllow: ["state-variable-assignment"],
       }
     );
-    await contract.deployed();
-    return await ERC20PermitMiddleware.at(contract.address);
+    await contract.waitForDeployment();
+    return await ERC20PermitMiddleware.at(contract.target);
   };
 
   before(async function () {

@@ -229,10 +229,10 @@ contract("WithdrawalModuleLib", function (accounts) {
   context("_enqueue", function () {
     const mockEnqueueTrigger = new BN(String(2e18));
     const mockEnqueueSize = new BN(String(1e18));
-    it("reverts if size less than MIN_REQUEST_SIZE (0.01 gETH)", async function () {
+    it("reverts if size less than MIN_REQUEST_SIZE (0.05 gETH)", async function () {
       await expectRevert(
-        this.contract.$_enqueue(mockEnqueueTrigger, new BN(String(1e15)), staker),
-        "WML:min 0.01 gETH"
+        this.contract.$_enqueue(mockEnqueueTrigger, new BN(String(4e16)), staker),
+        "WML:min 0.05 gETH"
       );
     });
     it("reverts if owner is zero address", async function () {
@@ -571,7 +571,7 @@ contract("WithdrawalModuleLib", function (accounts) {
       const [deployer] = await ethers.getSigners();
       await deployer.sendTransaction({
         to: this.contract.address,
-        value: ethers.utils.parseEther("10.0"), // sends 10.0 ether
+        value: ethers.parseEther("10").toString(), // sends 10.0 ether
       });
 
       const beforeContractBalance = await ethers.provider.getBalance(this.contract.address);
@@ -656,7 +656,7 @@ contract("WithdrawalModuleLib", function (accounts) {
       const [deployer] = await ethers.getSigners();
       await deployer.sendTransaction({
         to: this.contract.address,
-        value: ethers.utils.parseEther("10.0"), // sends 10.0 ether
+        value: ethers.parseEther("10.0").toString(), // sends 10.0 ether
       });
 
       const beforeContractBalance = await ethers.provider.getBalance(this.contract.address);
@@ -959,13 +959,13 @@ contract("WithdrawalModuleLib", function (accounts) {
       it("reverts if validator not belong to pool", async function () {
         await expectRevert(
           this.contract.$_vote(pubkeyNotExists, mockVoteSize),
-          "SML:vote for an unknown pool"
+          "WML:vote for an unknown pool"
         );
       });
       it("reverts if validator not active", async function () {
         await expectRevert(
           this.contract.$_vote(pubkey0, mockVoteSize),
-          "SML:voted for inactive validator"
+          "WML:voted for inactive validator"
         );
       });
       it("success", async function () {
