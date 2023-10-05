@@ -11,14 +11,15 @@ module.exports.strToBytes = function (key) {
 
 module.exports.strToBytes32 = function (key) {
   // string to bytes32
-  // Note: formatBytes32String becomes encodeBytes32String in v6, currently using v5 of ethers package
-  return ethers.utils.formatBytes32String(key);
+  // Note 1: formatBytes32String becomes encodeBytes32String in v6, currently using v5 of ethers package
+  // Note 2: Fixed since we bumped to v6.
+  return ethers.encodeBytes32String(key);
 };
 
 module.exports.intToBytes32 = function (x) {
   // integer to bytes32
   // Note: The biggest number that hexlify can get is 2^53-2,
-  return ethers.utils.hexZeroPad(ethers.utils.hexlify(x), 32);
+  return ethers.zeroPadValue(ethers.toBeHex(x), 32);
 };
 
 module.exports.generateId = function (_name, _type) {
