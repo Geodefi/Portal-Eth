@@ -904,7 +904,7 @@ library StakeModuleLib {
     uint256 lastupdate = self.gETH.priceUpdateTimestamp(poolId);
     unchecked {
       isValid =
-        lastupdate + PRICE_EXPIRY >= block.timestamp ||
+        lastupdate + PRICE_EXPIRY >= block.timestamp &&
         lastupdate >= self.ORACLE_UPDATE_TIMESTAMP;
     }
   }
