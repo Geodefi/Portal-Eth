@@ -370,9 +370,16 @@ contract("WithdrawalModuleLib", function (accounts) {
         0
       );
       await this.contract.$_enqueue(mockEnqueueTrigger, mockEnqueueSize, staker);
+
+      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+
       await this.contract.$fulfill(
         new BN(String(0)) // index
       );
+
+      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(mockEnqueueSize));
+
       const req = await this.contract.$getRequestFromLastIndex(0);
       expect(req.fulfilled).to.be.bignumber.equal(mockEnqueueSize);
       expect(req.claimableEther).to.be.bignumber.equal(
@@ -425,9 +432,18 @@ contract("WithdrawalModuleLib", function (accounts) {
       );
       await this.contract.$_enqueue(mockEnqueueTrigger0, mockEnqueueSize0, staker);
       await this.contract.$_enqueue(mockEnqueueTrigger1, mockEnqueueSize1, staker);
+
+      const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+
       await this.contract.$fulfillBatch(
         [new BN(String(0)), new BN(String(1))] // index
       );
+
+      const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
+      expect(aftergETHBalance).to.be.bignumber.equal(
+        beforegETHBalance.sub(mockEnqueueSize0.add(new BN(String(3e18)))) // 3e18 since it can be at most it
+      );
+
       const req0 = await this.contract.$getRequestFromLastIndex(1);
       const req1 = await this.contract.$getRequestFromLastIndex(0);
       expect(req0.fulfilled).to.be.bignumber.equal(mockEnqueueSize0);
@@ -707,11 +723,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     });
 
     it("sets realizedPrice to pps if internalPrice is 0", async function () {
-      // TODO: delete these and put into fulfill
-      // const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
       await this.contract.$_realizeProcessedEther(mockProcessedBalance);
-      // const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
-      // expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
 
       const queueData = await this.contract.$getQueueData();
       expect(queueData.realizedPrice).to.be.bignumber.equal(mockPricePerShare);
@@ -727,11 +739,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         mockRealizedPrice,
         0
       );
-      // TODO: delete these and put into fulfill
-      // const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
       await this.contract.$_realizeProcessedEther(mockProcessedBalance);
-      // const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
-      // expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
 
       const queueData = await this.contract.$getQueueData();
       expect(queueData.realizedPrice).to.be.bignumber.equal(mockPricePerShare);
@@ -747,11 +755,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         mockRealizedPrice,
         0
       );
-      // TODO: delete these and put into fulfill
-      // const beforegETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
       await this.contract.$_realizeProcessedEther(mockProcessedBalance);
-      // const aftergETHBalance = await this.gETH.balanceOf(this.contract.address, this.poolId);
-      // expect(aftergETHBalance).to.be.bignumber.equal(beforegETHBalance.sub(processedgEth));
 
       const queueData = await this.contract.$getQueueData();
       expect(queueData.realizedPrice).to.be.bignumber.equal(
@@ -930,7 +934,27 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockCommonPoll.add(mockValidatorPoll.sub(beaconBalancePriced))
         );
       });
-      // TODO: add middle case test
+      it("validator state changes to EXIT_REQUESTED and commonPoll stays same if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than validatorThreshold and smaller than beaconBalancePriced", async function () {
+        const mockValidatorPoll = new BN(String(65e17));
+        await this.contract.$setMockValidatorData(
+          pubkey0,
+          mockBeaconBalance,
+          mockWithdrawnBalance,
+          mockValidatorPoll
+        );
+
+        const { threshold } = await this.contract.$getValidatorThreshold(pubkey0);
+
+        const newCommonPoll = await this.contract.$checkAndRequestExit.call(
+          pubkey0,
+          mockCommonPoll
+        );
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
+
+        const val = await this.SMLM.getValidator(pubkey0);
+        expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
+        expect(newCommonPoll).to.be.bignumber.equal(mockCommonPoll);
+      });
       it("validator state changes to EXIT_REQUESTED and commonPoll decreases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is smaller than validatorThreshold", async function () {
         const mockValidatorPoll = new BN(String(3e18));
         await this.contract.$setMockValidatorData(
