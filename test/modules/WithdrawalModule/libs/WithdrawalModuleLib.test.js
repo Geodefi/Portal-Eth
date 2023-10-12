@@ -3,7 +3,7 @@ const { expect } = require("chai");
 const { StandardMerkleTree } = require("@openzeppelin/merkle-tree");
 const { expectRevert, constants, BN } = require("@openzeppelin/test-helpers");
 const { ZERO_ADDRESS, MAX_UINT256 } = constants;
-const { strToBytes, strToBytes32, PERCENTAGE_DENOMINATOR, DAY } = require("../../../utils");
+const { strToBytes, strToBytes32, PERCENTAGE_DENOMINATOR, DAY } = require("../../../../utils");
 const { artifacts } = require("hardhat");
 
 const StakeModuleLib = artifacts.require("StakeModuleLib");

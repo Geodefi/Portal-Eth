@@ -3,7 +3,7 @@ const { constants, expectRevert, time, BN } = require("@openzeppelin/test-helper
 const { MAX_UINT256 } = constants;
 const { silenceWarnings } = require("@openzeppelin/upgrades-core");
 
-const { strToBytes, intToBytes32 } = require("../utils");
+const { strToBytes, intToBytes32 } = require("../../utils");
 
 const ERC20PermitMiddleware = artifacts.require("$ERC20PermitMiddleware");
 const gETH = artifacts.require("gETH");

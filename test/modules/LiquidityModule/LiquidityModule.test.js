@@ -7,7 +7,7 @@ const {
   PERCENTAGE_DENOMINATOR,
   ETHER_STR,
   DAY,
-} = require("../../utils");
+} = require("../../../utils");
 
 const { ZERO_ADDRESS, MAX_UINT256, ZERO_BYTES32 } = constants;
 

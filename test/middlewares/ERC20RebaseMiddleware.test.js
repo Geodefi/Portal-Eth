@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { BN, expectRevert, expectEvent } = require("@openzeppelin/test-helpers");
 const { silenceWarnings } = require("@openzeppelin/upgrades-core");
 
-const { strToBytes, intToBytes32 } = require("../utils");
+const { strToBytes, intToBytes32 } = require("../../utils");
 
 const ERC20RebaseMiddleware = artifacts.require("$ERC20RebaseMiddleware");
 const gETH = artifacts.require("gETH");
