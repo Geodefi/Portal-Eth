@@ -15,7 +15,7 @@ import {WithdrawalModuleLib as WML, PooledWithdrawal} from "../modules/Withdrawa
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
-contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModule {
+contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModule {
   using WML for PooledWithdrawal;
   /**
    * TODO: this can be renamed to withdrawalQueue or ValidatorCustodian

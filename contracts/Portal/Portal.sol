@@ -55,7 +55,7 @@ import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract Portal is IPortal, StakeModule, GeodeModule {
+contract Portal is IPortal, GeodeModule, StakeModule {
   using DSML for IsolatedStorage;
   using GML for DualGovernance;
   using SML for PooledStaking;

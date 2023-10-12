@@ -45,10 +45,10 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
  */
 abstract contract StakeModule is
   IStakeModule,
-  DataStoreModule,
   ERC1155HolderUpgradeable,
+  ReentrancyGuardUpgradeable,
   PausableUpgradeable,
-  ReentrancyGuardUpgradeable
+  DataStoreModule
 {
   using SML for PooledStaking;
   using IEL for PooledStaking;

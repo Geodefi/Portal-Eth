@@ -41,8 +41,8 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 abstract contract WithdrawalModule is
   IWithdrawalModule,
   ERC1155HolderUpgradeable,
-  PausableUpgradeable,
-  ReentrancyGuardUpgradeable
+  ReentrancyGuardUpgradeable,
+  PausableUpgradeable
 {
   using WML for PooledWithdrawal;
   /**

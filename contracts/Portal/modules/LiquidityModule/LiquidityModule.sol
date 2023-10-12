@@ -47,8 +47,8 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 abstract contract LiquidityModule is
   ILiquidityModule,
   ERC1155HolderUpgradeable,
-  PausableUpgradeable,
-  ReentrancyGuardUpgradeable
+  ReentrancyGuardUpgradeable,
+  PausableUpgradeable
 {
   using LML for Swap;
   using AL for Swap;
