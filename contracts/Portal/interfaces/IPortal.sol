@@ -3,7 +3,7 @@ pragma solidity =0.8.19;
 import {IGeodeModule} from "./modules/IGeodeModule.sol";
 import {IStakeModule} from "./modules/IStakeModule.sol";
 
-interface IPortal is IStakeModule, IGeodeModule {
+interface IPortal is IGeodeModule, IStakeModule {
   function pausegETH() external;
 
   function unpausegETH() external;
