@@ -24,9 +24,7 @@ gETH, PORTAL, Modules, packages.
 - new module to rightmost.
 - Inheritance must be ordered from “most base-like” to “most derived”.
 
-1. bütün package ve modullerin inheritence orderlarının beklenildiği gibi olduğunu web3 ile test et: inheritance.test.je
-
-2. renaming a storage variable (or storage struct) is done with      * @custom:oz-renamed-from _PERMIT_TYPEHASH
+1. renaming a storage variable (or storage struct) is done with      * @custom:oz-renamed-from _PERMIT_TYPEHASH
    1. [example](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/5bc59992591b84bba18dc1ac46942f1886b30ccd/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol#L37)
 
 // context(LP),
