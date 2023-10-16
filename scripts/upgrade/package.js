@@ -5,7 +5,7 @@ const TYPE_PACKAGE_WITHDRAWAL_CONTRACT = 10011;
 const MAX_PROPOSAL_DURATION = 2419200;
 const DELAY_SECONDS = 100;
 
-module.exports.upgradePackage = async function (hre, portal, poolWC, version = "V1_0") {
+module.exports.upgradePackage = async function (hre, portal, version = "V1_0") {
   try {
     const { ethers, upgrades, deployments } = hre;
     const { get } = deployments;
@@ -58,14 +58,15 @@ module.exports.upgradePackage = async function (hre, portal, poolWC, version = "
     await portal.approveProposal(_id);
     await delay(DELAY_SECONDS);
 
-    await delay(DELAY_SECONDS);
+    // await poolWC.connect(signer).pullUpgrade();
+    // await delay(DELAY_SECONDS);
 
-    const upgradedWithdrawalContract = await ethers.getContractAt(
-      "WithdrawalContract" + version,
-      currentWC.target
-    );
+    // const upgradedWithdrawalContract = await ethers.getContractAt(
+    //   "WithdrawalContract" + version,
+    //   currentWC.target
+    // );
 
-    return upgradedWithdrawalContract;
+    // return upgradedWithdrawalContract;
   } catch (error) {
     console.log(error);
     console.log("Unsuccesful upgrade...");

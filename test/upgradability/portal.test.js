@@ -25,7 +25,6 @@ contract("UpgradePortal", function (accounts) {
 
     it("_handleUpgrades works correctly: portal version = V2_0_Mock", async function () {
       const version = await upgradedPortal.getContractVersion();
-      console.log("version: ", await generateId(strToBytes("V2_0_Mock"), 10001));
       expect(version.toString()).to.equal(
         (await generateId(strToBytes("V2_0_Mock"), 10001)).toString()
       );
