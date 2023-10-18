@@ -9,8 +9,30 @@ contract("UpgradePortal", function (accounts) {
   let upgradedPortal;
 
   const setupTest = deployments.createFixture(async (hre) => {
+    const { get } = deployments;
+
+    const version = "V2_0_Mock";
+
     await deployments.fixture(["Portal"]);
-    upgradedPortal = await upgradePortal(hre, "V2_0_Mock");
+
+    const oldPortalFactory = await ethers.getContractFactory("Portal", {
+      libraries: {
+        GeodeModuleLib: (await get("GeodeModuleLib")).address,
+        StakeModuleLib: (await get("StakeModuleLib")).address,
+        InitiatorExtensionLib: (await get("InitiatorExtensionLib")).address,
+        OracleExtensionLib: (await get("OracleExtensionLib")).address,
+      },
+    });
+    const PortalFactory = await ethers.getContractFactory("Portal" + version, {
+      libraries: {
+        GeodeModuleLib: (await get("GeodeModuleLib")).address,
+        StakeModuleLib: (await get("StakeModuleLib")).address,
+        InitiatorExtensionLib: (await get("InitiatorExtensionLib")).address,
+        OracleExtensionLib: (await get("OracleExtensionLib")).address,
+      },
+    });
+
+    upgradedPortal = await upgradePortal(hre, oldPortalFactory, PortalFactory, version);
     await upgradedPortal.initializeV2_0_Mock(8);
   });
 

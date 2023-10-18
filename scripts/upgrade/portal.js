@@ -8,29 +8,34 @@ const DELAY_SECONDS = 100;
 /**
  * @dev Use this script: When ONLY the Portal.sol contract is mutated.
  */
-module.exports.upgradePortal = async function (hre, version = "V1_0") {
+module.exports.upgradePortal = async function (
+  hre,
+  oldPortalFactory,
+  PortalFactory,
+  version = "V1_0"
+) {
   try {
     const { ethers, upgrades, deployments } = hre;
     const { get, read } = deployments;
     const prevContractVersion = await read("Portal", "getContractVersion");
 
-    // deploy implementation
-    const oldPortalFactory = await ethers.getContractFactory("Portal", {
-      libraries: {
-        GeodeModuleLib: (await get("GeodeModuleLib")).address,
-        StakeModuleLib: (await get("StakeModuleLib")).address,
-        InitiatorExtensionLib: (await get("InitiatorExtensionLib")).address,
-        OracleExtensionLib: (await get("OracleExtensionLib")).address,
-      },
-    });
-    const PortalFactory = await ethers.getContractFactory("Portal" + version, {
-      libraries: {
-        GeodeModuleLib: (await get("GeodeModuleLib")).address,
-        StakeModuleLib: (await get("StakeModuleLib")).address,
-        InitiatorExtensionLib: (await get("InitiatorExtensionLib")).address,
-        OracleExtensionLib: (await get("OracleExtensionLib")).address,
-      },
-    });
+    // // deploy implementation
+    // const oldPortalFactory = await ethers.getContractFactory("Portal", {
+    //   libraries: {
+    //     GeodeModuleLib: (await get("GeodeModuleLib")).address,
+    //     StakeModuleLib: (await get("StakeModuleLib")).address,
+    //     InitiatorExtensionLib: (await get("InitiatorExtensionLib")).address,
+    //     OracleExtensionLib: (await get("OracleExtensionLib")).address,
+    //   },
+    // });
+    // const PortalFactory = await ethers.getContractFactory("Portal" + version, {
+    //   libraries: {
+    //     GeodeModuleLib: (await get("GeodeModuleLib")).address,
+    //     StakeModuleLib: (await get("StakeModuleLib")).address,
+    //     InitiatorExtensionLib: (await get("InitiatorExtensionLib")).address,
+    //     OracleExtensionLib: (await get("OracleExtensionLib")).address,
+    //   },
+    // });
 
     // const currentPortal = await ethers.getContractAt("Portal", (await get("Portal")).address);
 
