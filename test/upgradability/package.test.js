@@ -106,7 +106,6 @@ contract("UpgradePackages", function (accounts) {
 
     it("Upgrade works correctly: WC version = V2_0_Mock", async function () {
       const version = await upgradedPoolWC.getContractVersion();
-      console.log("version: ", await generateId(strToBytes("V2_0_Mock"), 10011));
       expect(version.toString()).to.equal(
         (await generateId(strToBytes("V2_0_Mock"), 10011)).toString()
       );
