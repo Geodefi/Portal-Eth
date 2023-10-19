@@ -9,8 +9,7 @@ import {IGeodeModuleV3_0_Mock} from "./interfaces/IGeodeModuleV3_0_Mock.sol";
 import {IStakeModule} from "../../../interfaces/modules/IStakeModule.sol";
 // libraries
 import {DataStoreModuleLib as DSML, IsolatedStorage} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
-import {GeodeModuleLib as GML, DualGovernance} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
-// import {GeodeModuleLibV3_0_Mock as GML, DualGovernance} from "./GeodeModuleLibV3_0_Mock.sol";
+import {GeodeModuleLibV3_0_Mock as GML, DualGovernanceV3_0_Mock} from "./GeodeModuleLibV3_0_Mock.sol";
 import {StakeModuleLib as SML, PooledStaking} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 // contracts
 import {GeodeModuleV3_0_Mock} from "./GeodeModuleV3_0_Mock.sol";
@@ -18,7 +17,7 @@ import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 
 contract PortalV3_0_Mock is IPortalV3_0_Mock, GeodeModuleV3_0_Mock, StakeModule {
   using DSML for IsolatedStorage;
-  using GML for DualGovernance;
+  using GML for DualGovernanceV3_0_Mock;
   using SML for PooledStaking;
 
   /**
@@ -208,5 +207,5 @@ contract PortalV3_0_Mock is IPortalV3_0_Mock, GeodeModuleV3_0_Mock, StakeModule 
   /**
    * @notice keep the total number of variables at 50
    */
-  uint256[49] private __gap;
+  uint256[50] private __gap;
 }

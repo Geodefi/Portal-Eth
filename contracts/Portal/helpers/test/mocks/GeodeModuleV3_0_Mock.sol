@@ -6,8 +6,8 @@ import {ID_TYPE} from "../../../globals/id_type.sol";
 // interfaces
 import {IGeodeModuleV3_0_Mock} from "./interfaces/IGeodeModuleV3_0_Mock.sol";
 // libraries
-import {GeodeModuleLib as GML, DualGovernance, Proposal} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
-// import {GeodeModuleLibV3_0_Mock as GML, FreshSlotStruct} from "./GeodeModuleLibV3_0_Mock.sol";
+import {Proposal} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLibV3_0_Mock as GML, DualGovernanceV3_0_Mock} from "./GeodeModuleLibV3_0_Mock.sol";
 import {DataStoreModuleLib as DSML} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 // contracts
 import {DataStoreModule} from "../../../modules/DataStoreModule/DataStoreModule.sol";
@@ -44,7 +44,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * @author Ice Bear & Crash Bandicoot
  */
 abstract contract GeodeModuleV3_0_Mock is IGeodeModuleV3_0_Mock, UUPSUpgradeable, DataStoreModule {
-  using GML for DualGovernance;
+  using GML for DualGovernanceV3_0_Mock;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -52,9 +52,7 @@ abstract contract GeodeModuleV3_0_Mock is IGeodeModuleV3_0_Mock, UUPSUpgradeable
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  DualGovernance internal GEODE;
-
-  uint256 freshSlot;
+  DualGovernanceV3_0_Mock internal GEODE;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -130,15 +128,15 @@ abstract contract GeodeModuleV3_0_Mock is IGeodeModuleV3_0_Mock, UUPSUpgradeable
   }
 
   function __GeodeModule_initV3_0_Mock(uint256 value) internal onlyInitializing {
-    setFreshSlot(value);
+    GEODE.setFreshSlot(value);
   }
 
   function setFreshSlot(uint256 value) public virtual override {
-    freshSlot = value;
+    GEODE.setFreshSlot(value);
   }
 
   function getFreshSlot() external view virtual override returns (uint256) {
-    return freshSlot;
+    return GEODE.getFreshSlot();
   }
 
   /**
