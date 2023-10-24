@@ -3,7 +3,7 @@ pragma solidity =0.8.19;
 
 struct FreshSlotStruct {
   uint256 freshSlot;
-  uint256[15] __gap;
+  uint256[9] __gap;
 }
 
 library FreshSlotModuleLib {

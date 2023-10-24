@@ -210,8 +210,9 @@ contract PortalV4_0_Mock is IPortalV4_0_Mock, GeodeModule, StakeModule, FreshSlo
 
   /**
    * @notice keep the total number of variables at 50
+   * @dev structs are storage sluts :)
    */
-  uint256[34] private __gap;
+  uint256[40] private __gap;
   // IMPORTANT NOTE: For upgrade to work need to rearrange the gap variable.
   // It may be possible that we are using wrong gap initially
 }
