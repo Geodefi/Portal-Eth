@@ -204,16 +204,20 @@ abstract contract WithdrawalModule is
    * @custom:visibility -> external
    */
 
-  function enqueue(uint256 size, bytes calldata pubkey, address owner) external virtual override {
-    WITHDRAWAL.enqueue(size, pubkey, owner);
+  function enqueue(
+    uint256 size,
+    bytes calldata pubkey,
+    address owner
+  ) external virtual override returns (uint256 index) {
+    index = WITHDRAWAL.enqueue(size, pubkey, owner);
   }
 
   function enqueueBatch(
     uint256[] calldata sizes,
     bytes[] calldata pubkeys,
     address owner
-  ) external virtual override {
-    WITHDRAWAL.enqueueBatch(sizes, pubkeys, owner);
+  ) external virtual override returns (uint256[] memory indexes) {
+    indexes = WITHDRAWAL.enqueueBatch(sizes, pubkeys, owner);
   }
 
   function transferRequest(uint256 index, address newOwner) external virtual override {

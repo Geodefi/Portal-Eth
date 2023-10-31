@@ -337,7 +337,7 @@ library WithdrawalModuleLib {
     uint256 trigger,
     uint256 size,
     address owner
-  ) internal {
+  ) internal returns (uint256 index) {
     require(size >= MIN_REQUEST_SIZE, "WML:min 0.05 gETH");
     require(owner != address(0), "WML:owner can not be zero address");
 
@@ -345,7 +345,9 @@ library WithdrawalModuleLib {
       Request({owner: owner, trigger: trigger, size: size, fulfilled: 0, claimableEther: 0})
     );
 
-    emit Enqueue(self.requests.length - 1, owner);
+    index = self.requests.length - 1;
+
+    emit Enqueue(index, owner);
   }
 
   /**
@@ -362,9 +364,9 @@ library WithdrawalModuleLib {
     uint256 size,
     bytes calldata pubkey,
     address owner
-  ) external {
+  ) external returns (uint256 index) {
     uint256 requestedgETH = self.queue.requested;
-    _enqueue(self, requestedgETH, size, owner);
+    index = _enqueue(self, requestedgETH, size, owner);
 
     if (pubkey.length == 0) {
       self.queue.commonPoll += size;
@@ -389,7 +391,7 @@ library WithdrawalModuleLib {
     uint256[] calldata sizes,
     bytes[] calldata pubkeys,
     address owner
-  ) external {
+  ) external returns (uint256[] memory indexes) {
     uint256 len = sizes.length;
     require(len == pubkeys.length, "WML:invalid input length");
 
@@ -398,7 +400,7 @@ library WithdrawalModuleLib {
     uint256 totalSize;
 
     for (uint256 i; i < len; ) {
-      _enqueue(self, requestedgETH, sizes[i], owner);
+      indexes[i] = _enqueue(self, requestedgETH, sizes[i], owner);
 
       if (pubkeys[i].length == 0) {
         commonPoll += sizes[i];
