@@ -1324,6 +1324,10 @@ library StakeModuleLib {
     bytes calldata pk
   ) external {
     require(
+      block.timestamp > self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD,
+      "SML: early exit not allowed"
+    );
+    require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
       "SML:sender is NOT withdrawal contract"
     );
