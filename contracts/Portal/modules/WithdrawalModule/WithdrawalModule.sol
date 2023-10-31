@@ -228,12 +228,8 @@ abstract contract WithdrawalModule is
    * @custom:visibility -> view
    */
 
-  function fulfillable(
-    uint256 index,
-    uint256 Qrealized,
-    uint256 Qfulfilled
-  ) external view virtual override returns (uint256) {
-    return WITHDRAWAL.fulfillable(index, Qrealized, Qfulfilled);
+  function fulfillable(uint256 index) external view virtual override returns (uint256) {
+    return WITHDRAWAL.fulfillable(index, WITHDRAWAL.queue.realized, WITHDRAWAL.queue.fulfilled);
   }
 
   /**
