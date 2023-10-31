@@ -433,6 +433,10 @@ library WithdrawalModuleLib {
     address oldOwner = self.requests[index].owner;
     require(msg.sender == oldOwner, "WML:not owner");
     require(newOwner != address(0), "WML:cannot transfer to zero address");
+    require(
+      self.requests[index].fulfilled < self.requests[index].size,
+      "WML:cannot transfer fulfilled"
+    );
 
     self.requests[index].owner = newOwner;
 
