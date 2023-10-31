@@ -370,7 +370,6 @@ library WithdrawalModuleLib {
       self.queue.commonPoll += size;
     } else {
       _vote(self, pubkey, size);
-      self.queue.commonPoll = checkAndRequestExit(self, pubkey, self.queue.commonPoll);
     }
 
     self.queue.requested = requestedgETH + size;
@@ -405,7 +404,6 @@ library WithdrawalModuleLib {
         commonPoll += sizes[i];
       } else {
         _vote(self, pubkeys[i], sizes[i]);
-        commonPoll = checkAndRequestExit(self, pubkeys[i], commonPoll);
       }
       requestedgETH = requestedgETH + sizes[i];
       totalSize += sizes[i];

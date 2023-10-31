@@ -196,13 +196,6 @@ abstract contract WithdrawalModule is
   }
 
   /**
-   * @custom:visibility -> external
-   */
-  function checkAndRequestExit(bytes memory pubkey) external virtual override returns (uint256) {
-    return WITHDRAWAL.checkAndRequestExit(pubkey, WITHDRAWAL.queue.commonPoll);
-  }
-
-  /**
    * @custom:section                           ** REQUESTS QUEUE **
    */
   /**
