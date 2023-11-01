@@ -754,12 +754,18 @@ library WithdrawalModuleLib {
 
       if (beaconBalances[j] == 0) {
         // exit
-        processed += _distributeFees(
-          self,
-          pubkeys[j],
-          withdrawnBalances[j],
-          oldWitBal + DCL.DEPOSIT_AMOUNT
-        );
+        if (withdrawnBalances[j] > oldWitBal + DCL.DEPOSIT_AMOUNT) {
+          processed +=
+            _distributeFees(
+              self,
+              pubkeys[j],
+              withdrawnBalances[j],
+              oldWitBal + DCL.DEPOSIT_AMOUNT
+            ) +
+            DCL.DEPOSIT_AMOUNT;
+        } else {
+          processed += withdrawnBalances[j] - oldWitBal;
+        }
         _finalizeExit(self, pubkeys[j]);
       } else {
         // check if should request exit
