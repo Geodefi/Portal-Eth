@@ -744,6 +744,12 @@ library WithdrawalModuleLib {
       }
     }
 
+    // check all pubkeys are for this pool
+    for (uint256 k; k < pkLen; ) {
+      Validator memory val = self.PORTAL.getValidator(pubkeys[k]);
+      require(val.poolId == self.POOL_ID, "WML:validator for an unknown pool");
+    }
+
     uint256 commonPoll = self.queue.commonPoll;
     uint256 processed;
     for (uint256 j; j < pkLen; ) {
