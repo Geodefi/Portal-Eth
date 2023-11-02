@@ -399,6 +399,7 @@ library WithdrawalModuleLib {
     uint256 requestedgETH = self.queue.requested;
     uint256 totalSize;
 
+    indexes = new uint256[](len);
     for (uint256 i; i < len; ) {
       indexes[i] = _enqueue(self, requestedgETH, sizes[i], owner);
 
@@ -746,8 +747,12 @@ library WithdrawalModuleLib {
 
     // check all pubkeys are for this pool
     for (uint256 k; k < pkLen; ) {
-      Validator memory val = self.PORTAL.getValidator(pubkeys[k]);
-      require(val.poolId == self.POOL_ID, "WML:validator for an unknown pool");
+      uint256 poolId = self.PORTAL.getValidator(pubkeys[k]).poolId;
+      require(poolId == self.POOL_ID, "WML:validator for an unknown pool");
+
+      unchecked {
+        k += 1;
+      }
     }
 
     uint256 commonPoll = self.queue.commonPoll;
@@ -761,15 +766,14 @@ library WithdrawalModuleLib {
       if (beaconBalances[j] == 0) {
         // exit
         if (withdrawnBalances[j] > oldWitBal + DCL.DEPOSIT_AMOUNT) {
-          processed +=
-            _distributeFees(
-              self,
-              pubkeys[j],
-              withdrawnBalances[j],
-              oldWitBal + DCL.DEPOSIT_AMOUNT
-            ) +
-            DCL.DEPOSIT_AMOUNT;
-        } else {
+          processed += _distributeFees(
+            self,
+            pubkeys[j],
+            withdrawnBalances[j],
+            oldWitBal + DCL.DEPOSIT_AMOUNT
+          );
+          processed += DCL.DEPOSIT_AMOUNT;
+        } else if (withdrawnBalances[j] > oldWitBal) {
           processed += withdrawnBalances[j] - oldWitBal;
         }
         _finalizeExit(self, pubkeys[j]);
