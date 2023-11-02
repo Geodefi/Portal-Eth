@@ -255,10 +255,31 @@ contract("WithdrawalModuleLib", function (accounts) {
   });
 
   context("transferRequest", function () {
+    const mockPricePerShare = new BN(String(2e18)); // pricePerShare
+    const mockProcessedBalance = new BN(String(20e18)); // processedBalance
+    const denominator = new BN(String(1e18)); // denominator
+    const processedgEth = mockProcessedBalance.mul(denominator).div(mockPricePerShare); // processedgEth
+
     const mockEnqueueTrigger = new BN(String(2e18));
     const mockEnqueueSize = new BN(String(1e18));
 
     beforeEach(async function () {
+      // for mocking enqueue and put gETH to the contract
+      await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
+        from: poolOwner,
+        value: new BN(String(1e18)).muln(64),
+      });
+      await this.gETH.safeTransferFrom(
+        staker,
+        this.contract.address,
+        this.poolId,
+        processedgEth,
+        strToBytes(""),
+        { from: staker }
+      );
+      // set price per share
+      await this.SMLM.$set_PricePerShare(mockPricePerShare, this.poolId);
+
       await this.contract.$_enqueue(mockEnqueueTrigger, mockEnqueueSize, staker);
     });
 
@@ -271,6 +292,26 @@ contract("WithdrawalModuleLib", function (accounts) {
         "WML:cannot transfer to zero address"
       );
     });
+    it("reverts if request is fulfilled", async function () {
+      const mockRealizedPrice = new BN(String(2e18)); // realizedPrice
+      await this.contract.$setMockQueueData(
+        0,
+        new BN(String(8e18)), // Qrealized
+        new BN(String(3e18)), // Qfulfilled
+        0,
+        mockRealizedPrice,
+        0
+      );
+      await this.contract.$fulfill(
+        new BN(String(0)) // index
+      );
+
+      await expectRevert(
+        this.contract.$transferRequest(0, randomAddress, { from: staker }),
+        "WML:cannot transfer fulfilled"
+      );
+    });
+
     it("success", async function () {
       await this.contract.$transferRequest(0, randomAddress, { from: staker });
       expect((await this.contract.$getRequestFromLastIndex(0)).owner).to.be.equal(randomAddress);
