@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/extensions/draft-ERC20Permit.sol)
 
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
 import {IERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-IERC20PermitUpgradeable.sol";
@@ -16,7 +16,7 @@ import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cou
 
 /**
  * @dev differences between ERC20PermitMiddleware and Openzeppelin's implementation of ERC20PermitUpgradable is:
- * -> pragma set to =0.8.7;
+ * -> pragma set to =0.8.7 and then =0.8.19;
  * -> using ERC20Middleware instead of ERC20Upgradeable
  * -> added initialize
  *
@@ -41,7 +41,7 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
   mapping(address => CountersUpgradeable.Counter) private _nonces;
 
   // solhint-disable-next-line var-name-mixedcase
-  bytes32 private immutable _PERMIT_TYPEHASH =
+  bytes32 private constant _PERMIT_TYPEHASH =
     keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
   /**
@@ -92,8 +92,8 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
-    __EIP712_init(name_, "1");
-    __ERC20Middleware_init(id_, gETH_, name_, symbol_);
+    __EIP712_init_unchained(name_, "1");
+    __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
     __ERC20MiddlewarePermit_init_unchained();
   }
 
@@ -156,8 +156,8 @@ contract ERC20PermitMiddleware is ERC20Middleware, IERC20PermitUpgradeable, EIP7
    * variables without shifting down storage in the inheritance chain.
    * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
    *
-   * @dev GEODE: middlewares are de-facto not upgrdable, just here to be cloned.
-   * * So, we don't need this gap.
+   * @dev GEODE: middlewares are de-facto immutable, just here to be cloned.
+   * So, we don't need this gap.
    */
   // uint256[] private __gap;
 }

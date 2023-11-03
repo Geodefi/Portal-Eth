@@ -4,7 +4,7 @@ const func = async (taskArgs, hre) => {
     senate: 1,
     upgrade: 2,
     operator: 4,
-    pool: 5,
+    middleware: 20011,
   };
   const { deployer } = await getNamedAccounts();
   const { deployments } = hre;

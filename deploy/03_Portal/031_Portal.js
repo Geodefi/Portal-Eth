@@ -1,4 +1,4 @@
-const { strToBytes } = require("../../test/utils");
+const { strToBytes } = require("../../utils");
 
 const func = async function (hre) {
   const { deployments, getNamedAccounts } = hre;
@@ -11,6 +11,7 @@ const func = async function (hre) {
     libraries: {
       GeodeModuleLib: (await get("GeodeModuleLib")).address,
       StakeModuleLib: (await get("StakeModuleLib")).address,
+      InitiatorExtensionLib: (await get("InitiatorExtensionLib")).address,
       OracleExtensionLib: (await get("OracleExtensionLib")).address,
     },
     proxy: {
@@ -28,10 +29,16 @@ const func = async function (hre) {
       await get("gETH")
     ).address,
     deployer,
-    strToBytes("v1.0")
+    strToBytes("v1_0")
   );
 };
 
 module.exports = func;
 module.exports.tags = ["Portal"];
-module.exports.dependencies = ["GeodeModuleLib", "StakeModuleLib", "OracleExtensionLib", "gETH"];
+module.exports.dependencies = [
+  "GeodeModuleLib",
+  "StakeModuleLib",
+  "InitiatorExtensionLib",
+  "OracleExtensionLib",
+  "gETH",
+];

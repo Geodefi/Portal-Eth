@@ -10,13 +10,15 @@ const {
   DAY,
   strToBytes,
   strToBytes32,
-} = require("../../../utils");
+} = require("../../../../utils");
 
 const gETH = artifacts.require("gETH");
 const StakeModuleLib = artifacts.require("StakeModuleLib");
 const OracleExtensionLib = artifacts.require("OracleExtensionLib");
 const OracleExtensionLibMock = artifacts.require("$OracleExtensionLibMock");
 const GeodeModuleLib = artifacts.require("GeodeModuleLib");
+const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
+const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
 const WithdrawalContract = artifacts.require("WithdrawalContract");
 
 const pubkeys = [
@@ -145,13 +147,19 @@ contract("OracleExtensionLib", function (accounts) {
 
   before(async function () {
     const SML = await StakeModuleLib.new();
-    const OEL = await OracleExtensionLib.new();
+    // this should be before --> await InitiatorExtensionLib.new();
+    await InitiatorExtensionLib.link(SML);
     const GML = await GeodeModuleLib.new();
+    const IEL = await InitiatorExtensionLib.new();
+    const OEL = await OracleExtensionLib.new();
+    const WML = await WithdrawalModuleLib.new();
 
     await OracleExtensionLibMock.link(SML);
     await OracleExtensionLibMock.link(OEL);
+    await OracleExtensionLibMock.link(IEL);
 
     await WithdrawalContract.link(GML);
+    await WithdrawalContract.link(WML);
 
     this.setWithdrawalPackage = setWithdrawalPackage;
     this.createOperator = createOperator;
@@ -319,7 +327,7 @@ contract("OracleExtensionLib", function (accounts) {
         "OEL:sender NOT ORACLE"
       );
     });
-    it("reverts if lengths doesn't match", async function () {
+    it("reverts if lengths don't match", async function () {
       await expectRevert(
         this.contract.regulateOperators([operatorIds[0]], [], { from: oracle }),
         "OEL:invalid proofs"

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
+// globals
+import {gETH_DENOMINATOR} from "./globals/macros.sol";
 // interfaces
 import {IgETH} from "./interfaces/IgETH.sol";
+import {IERC1155} from "./interfaces/helpers/IERC1155PausableBurnableSupply.sol";
 // libraries
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // contracts
-import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
+import {ERC1155, ERC1155PausableBurnableSupply, ERC1155Burnable, IERC1155Burnable} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
  * @title gETH : Geode Finance Liquid Staking Derivatives
@@ -45,11 +48,10 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-
+  uint256 private immutable DENOMINATOR = gETH_DENOMINATOR;
   bytes32 public immutable MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
   bytes32 public immutable ORACLE_ROLE = keccak256("ORACLE_ROLE");
-  uint256 internal constant DENOMINATOR = 1 ether;
-  
+
   /**
    * @custom:section                           ** VARIABLES **
    */
@@ -118,7 +120,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev ERC1155 does not have a decimals, and it is not wise to use the same name
    * @dev ADDED for gETH
    */
-  function denominator() external view virtual override returns (uint256) {
+  function denominator() public view virtual override returns (uint256) {
     return DENOMINATOR;
   }
 
@@ -272,7 +274,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev URI_SETTER is basically a superuser, there can be only 1 at a given time,
    * @dev intended as "Governance/DAO"
    */
-  function transferUriSetterRole(address newUriSetter) external virtual override onlyRole(URI_SETTER_ROLE) {
+  function transferUriSetterRole(
+    address newUriSetter
+  ) external virtual override onlyRole(URI_SETTER_ROLE) {
     _grantRole(URI_SETTER_ROLE, newUriSetter);
     renounceRole(URI_SETTER_ROLE, _msgSender());
   }
@@ -312,7 +316,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev MIDDLEWARE MANAGER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
+  function transferMiddlewareManagerRole(
+    address newMiddlewareManager
+  ) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
     _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
     renounceRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
   }
@@ -374,7 +380,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 id,
     uint256 amount,
     bytes memory data
-  ) public virtual override {
+  ) public virtual override(ERC1155, IERC1155) {
     require(
       (from == _msgSender()) ||
         (isApprovedForAll(from, _msgSender())) ||
@@ -390,7 +396,11 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev See ERC1155Burnable burn:
    * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Burnable.sol#L15
    */
-  function burn(address account, uint256 id, uint256 value) public virtual override {
+  function burn(
+    address account,
+    uint256 id,
+    uint256 value
+  ) public virtual override(ERC1155Burnable, IERC1155Burnable) {
     require(
       (account == _msgSender()) ||
         (isApprovedForAll(account, _msgSender())) ||

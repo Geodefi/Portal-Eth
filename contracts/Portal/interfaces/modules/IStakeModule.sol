@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {IDataStoreModule} from "./IDataStoreModule.sol";
-import {StakeModuleLib as SML} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {Validator} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
 
 interface IStakeModule is IDataStoreModule {
   function pause() external;
@@ -26,9 +26,11 @@ interface IStakeModule is IDataStoreModule {
       bytes32 balanceMerkleRoot
     );
 
-  function getValidator(bytes calldata pubkey) external view returns (SML.Validator memory);
+  function getValidator(bytes calldata pubkey) external view returns (Validator memory);
 
   function getPackageVersion(uint256 _type) external view returns (uint256);
+
+  function getBalancesMerkleRoot() external view returns (bytes32);
 
   function isMiddleware(uint256 _type, uint256 _version) external view returns (bool);
 
@@ -56,7 +58,7 @@ interface IStakeModule is IDataStoreModule {
 
   function setYieldReceiver(uint256 poolId, address yieldReceiver) external;
 
-  function changeMaintainer(uint256 poolId, address newMaintainer) external;
+  function changeMaintainer(uint256 id, address newMaintainer) external;
 
   function getMaintenanceFee(uint256 id) external view returns (uint256);
 
@@ -116,6 +118,10 @@ interface IStakeModule is IDataStoreModule {
   ) external;
 
   function stake(uint256 operatorId, bytes[] calldata pubkeys) external;
+
+  function requestExit(uint256 poolId, bytes memory pk) external;
+
+  function finalizeExit(uint256 poolId, bytes memory pk) external;
 
   function updateVerificationIndex(
     uint256 validatorVerificationIndex,

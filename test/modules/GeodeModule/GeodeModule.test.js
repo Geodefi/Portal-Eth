@@ -13,7 +13,7 @@ const {
   getReceiptTimestamp,
   setTimestamp,
   strToBytes32,
-} = require("../../utils");
+} = require("../../../utils");
 
 const ERC1967Proxy = artifacts.require("ERC1967Proxy");
 
