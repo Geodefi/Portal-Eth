@@ -350,9 +350,19 @@ library StakeModuleLib {
     }
 
     address whitelist = DATASTORE.readAddress(poolId, rks.whitelist);
-    require(whitelist != address(0), "SML:no whitelist");
+    if (whitelist == address(0)) {
+      return false;
+    }
 
-    return IWhitelist(whitelist).isAllowed(staker);
+    if (whitelist.code.length > 0) {
+      try IWhitelist(whitelist).isAllowed(staker) returns (bool _isAllowed) {
+        return _isAllowed;
+      } catch {
+        return false;
+      }
+    } else {
+      return false;
+    }
   }
 
   /**
