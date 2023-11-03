@@ -787,11 +787,8 @@ contract("StakeModuleLib", function (accounts) {
         it("return true if the pool controller", async function () {
           expect(await this.contract.isWhitelisted(privatePoolId, poolOwner)).to.be.equal(true);
         });
-        it("revert if no whitelist set", async function () {
-          await expectRevert(
-            this.contract.isWhitelisted(privatePoolId, staker),
-            "SML:no whitelist"
-          );
+        it("return false if no whitelist set", async function () {
+          expect(await this.contract.isWhitelisted(privatePoolId, staker)).to.be.equal(false);
         });
         it("return true if whitelist says ok", async function () {
           await this.contract.setWhitelist(privatePoolId, this.whitelist.address, {
