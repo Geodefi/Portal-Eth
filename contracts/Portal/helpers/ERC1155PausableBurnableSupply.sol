@@ -656,10 +656,8 @@ contract ERC1155PausableBurnableSupply is
   bytes32 public immutable PAUSER_ROLE = keccak256("PAUSER_ROLE");
   bytes32 public immutable MINTER_ROLE = keccak256("MINTER_ROLE");
 
-  /**
-   * @dev DEFAULT_ADMIN_ROLE is not set, no more role management here.
-   */
   constructor(string memory uri_) ERC1155(uri_) {
+    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     _grantRole(keccak256("URI_SETTER_ROLE"), msg.sender);
     _grantRole(keccak256("PAUSER_ROLE"), msg.sender);
     _grantRole(keccak256("MINTER_ROLE"), msg.sender);
