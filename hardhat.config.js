@@ -31,9 +31,15 @@ const config = {
       {
         version: "0.8.19",
         settings: {
+          // viaIR: false,
           optimizer: {
-            runs: 200,
             enabled: true,
+            runs: 200,
+            // details: {
+            //   yulDetails: {
+            //     optimizerSteps: "u",
+            //   },
+            // },
           },
         },
       },

@@ -659,13 +659,12 @@ library WithdrawalModuleLib {
    */
   function _distributeFees(
     PooledWithdrawal storage self,
-    bytes memory pubkey,
+    Validator memory val,
     uint256 reportedWithdrawn,
     uint256 processedWithdrawn
   ) internal returns (uint256 extra) {
     // reportedWithdrawn > processedWithdrawn checks are done as it should be before calling this function
     uint256 profit = reportedWithdrawn - processedWithdrawn;
-    Validator memory val = self.PORTAL.getValidator(pubkey);
 
     uint256 poolProfit = (profit * val.poolFee) / PERCENTAGE_DENOMINATOR;
     uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;
@@ -728,23 +727,29 @@ library WithdrawalModuleLib {
       "WML:invalid lengths"
     );
 
-    bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
-    for (uint256 i; i < pkLen; ) {
-      // check pubkey belong to this pool
-      uint256 poolId = self.PORTAL.getValidator(pubkeys[i]).poolId;
-      require(poolId == self.POOL_ID, "WML:validator for an unknown pool");
+    Validator[] memory validators = new Validator[](pkLen);
 
-      // verify balances
-      bytes32 leaf = keccak256(
-        bytes.concat(keccak256(abi.encode(pubkeys[i], beaconBalances[i], withdrawnBalances[i])))
-      );
-      require(
-        MerkleProof.verify(balanceProofs[i], balanceMerkleRoot, leaf),
-        "WML:NOT all proofs are valid"
-      );
+    {
+      bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
+      for (uint256 i; i < pkLen; ) {
+        // fill the validators array while checking the pool id
+        validators[i] = self.PORTAL.getValidator(pubkeys[i]);
 
-      unchecked {
-        i += 1;
+        // check pubkey belong to this pool
+        require(validators[i].poolId == self.POOL_ID, "WML:validator for an unknown pool");
+
+        // verify balances
+        bytes32 leaf = keccak256(
+          bytes.concat(keccak256(abi.encode(pubkeys[i], beaconBalances[i], withdrawnBalances[i])))
+        );
+        require(
+          MerkleProof.verify(balanceProofs[i], balanceMerkleRoot, leaf),
+          "WML:NOT all proofs are valid"
+        );
+
+        unchecked {
+          i += 1;
+        }
       }
     }
 
@@ -761,7 +766,7 @@ library WithdrawalModuleLib {
         if (withdrawnBalances[j] > oldWitBal + DCL.DEPOSIT_AMOUNT) {
           processed += _distributeFees(
             self,
-            pubkeys[j],
+            validators[j],
             withdrawnBalances[j],
             oldWitBal + DCL.DEPOSIT_AMOUNT
           );
@@ -769,13 +774,13 @@ library WithdrawalModuleLib {
         } else if (withdrawnBalances[j] >= oldWitBal) {
           processed += withdrawnBalances[j] - oldWitBal;
         } else {
-          revert("WML:oldWitBal should not be smaller");
+          revert("WML:invalid withdrawn balance");
         }
         _finalizeExit(self, pubkeys[j]);
       } else {
         // check if should request exit
         if (withdrawnBalances[j] > oldWitBal) {
-          processed += _distributeFees(self, pubkeys[j], withdrawnBalances[j], oldWitBal);
+          processed += _distributeFees(self, validators[j], withdrawnBalances[j], oldWitBal);
         }
         commonPoll = checkAndRequestExit(self, pubkeys[j], commonPoll);
       }

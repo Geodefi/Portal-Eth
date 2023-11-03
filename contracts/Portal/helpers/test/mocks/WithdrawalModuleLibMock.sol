@@ -201,7 +201,11 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     uint256 reportedWithdrawn,
     uint256 processedWithdrawn
   ) external returns (uint256 extra) {
-    extra = WITHDRAWAL._distributeFees(pubkey, reportedWithdrawn, processedWithdrawn);
+    extra = WITHDRAWAL._distributeFees(
+      WITHDRAWAL.PORTAL.getValidator(pubkey),
+      reportedWithdrawn,
+      processedWithdrawn
+    );
   }
 
   function $processValidators(
