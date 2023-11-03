@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { expectRevert, constants, BN } = require("@openzeppelin/test-helpers");
 
-const { strToBytes, strToBytes32, generateAddress } = require("../../utils");
+const { strToBytes, strToBytes32, generateAddress } = require("../../../utils");
 const { web3 } = require("hardhat");
 const { ZERO_BYTES32, ZERO_ADDRESS, MAX_UINT256 } = constants;
 

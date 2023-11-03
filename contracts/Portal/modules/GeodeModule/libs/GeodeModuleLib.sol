@@ -1,11 +1,53 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML, IsolatedStorage} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
+
+/**
+ * @notice Giving the control of a specific ID to proposed CONTROLLER.
+ *
+ * @param TYPE: refer to globals/id_type.sol
+ * @param CONTROLLER: the address that refers to the change that is proposed by given proposal.
+ * * This slot can refer to the controller of an id, a new implementation contract, a new Senate etc.
+ * @param NAME: DataStore generates ID by keccak(name, type)
+ * @param deadline: refers to last timestamp until a proposal expires, limited by MAX_PROPOSAL_DURATION
+ * * Expired proposals can not be approved by Senate
+ * * Expired proposals can not be overriden by new proposals
+ **/
+struct Proposal {
+  address CONTROLLER;
+  uint256 TYPE;
+  bytes NAME;
+  uint256 deadline;
+}
+
+/**
+ * @notice Storage struct for the Dual Governance logic
+ * @dev Dual Governance allows 2 parties to manage a package with proposals and approvals.
+ * @param GOVERNANCE a community that works to improve the core product and ensures its adoption in the DeFi ecosystem
+ * Suggests updates, such as new operators, contract/package upgrades, a new Senate (without any permission to force them)
+ * @param SENATE An address that protects the users by controlling the state of governance, contract updates and other crucial changes
+ * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
+ * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
+ * @param PACKAGE_TYPE every package has a specific TYPE. Defined in globals/id_type.sol
+ * @param CONTRACT_VERSION always refers to the upgrade proposal ID. Does NOT increase uniformly like one might expect.
+ * @param proposals till approved, proposals are kept separated from the Isolated Storage
+ * @param __gap keep the struct size at 16
+ **/
+struct DualGovernance {
+  address GOVERNANCE;
+  address SENATE;
+  address APPROVED_UPGRADE;
+  uint256 SENATE_EXPIRY;
+  uint256 PACKAGE_TYPE;
+  uint256 CONTRACT_VERSION;
+  mapping(uint256 => Proposal) proposals;
+  uint256[9] __gap;
+}
 
 /**
  * @title GML: Geode Module Library
@@ -32,52 +74,7 @@ import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreMo
  * @author Ice Bear & Crash Bandicoot
  */
 library GeodeModuleLib {
-  using DSML for DSML.IsolatedStorage;
-
-  /**
-   * @custom:section                           ** STRUCTS **
-   */
-
-  /**
-   * @notice Giving the control of a specific ID to proposed CONTROLLER.
-   *
-   * @param TYPE: refer to globals/id_type.sol
-   * @param CONTROLLER: the address that refers to the change that is proposed by given proposal.
-   * * This slot can refer to the controller of an id, a new implementation contract, a new Senate etc.
-   * @param NAME: DataStore generates ID by keccak(name, type)
-   * @param deadline: refers to last timestamp until a proposal expires, limited by MAX_PROPOSAL_DURATION
-   * * Expired proposals can not be approved by Senate
-   * * Expired proposals can not be overriden by new proposals
-   **/
-  struct Proposal {
-    address CONTROLLER;
-    uint256 TYPE;
-    bytes NAME;
-    uint256 deadline;
-  }
-
-  /**
-   * @notice Dual Governance allows 2 parties to manage a package with proposals and approvals.
-   * @param GOVERNANCE a community that works to improve the core product and ensures its adoption in the DeFi ecosystem
-   * Suggests updates, such as new operators, contract/package upgrades, a new Senate (without any permission to force them)
-   * @param SENATE An address that protects the users by controlling the state of governance, contract updates and other crucial changes
-   * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
-   * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
-   * @param PACKAGE_TYPE every package has a specific TYPE. Defined in globals/id_type.sol
-   * @param CONTRACT_VERSION always refers to the upgrade proposal ID. Does NOT increase uniformly like one might expect.
-   * @param proposals till approved, proposals are kept separated from the Isolated Storage
-   * @param __gap keep the struct size at 16
-   **/
-  struct DualGovernance {
-    address GOVERNANCE;
-    address SENATE;
-    address APPROVED_UPGRADE;
-    uint256 SENATE_EXPIRY;
-    uint256 PACKAGE_TYPE;
-    uint256 CONTRACT_VERSION;
-    mapping(uint256 => Proposal) proposals;
-    uint256[9] __gap;
-  }
+  using DSML for IsolatedStorage;
 
   /**
    * @custom:section                           ** CONSTANTS **
@@ -113,7 +110,7 @@ library GeodeModuleLib {
     _;
   }
 
-  modifier onlyController(DSML.IsolatedStorage storage DATASTORE, uint256 id) {
+  modifier onlyController(IsolatedStorage storage DATASTORE, uint256 id) {
     require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "GML:CONTROLLER role needed");
     _;
   }
@@ -184,7 +181,7 @@ library GeodeModuleLib {
    */
   function propose(
     DualGovernance storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
@@ -249,7 +246,7 @@ library GeodeModuleLib {
    */
   function approveProposal(
     DualGovernance storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id
   ) external onlySenate(self) returns (address _controller, uint256 _type, bytes memory _name) {
     require(self.proposals[id].deadline > block.timestamp, "GML:NOT an active proposal");
@@ -295,7 +292,7 @@ library GeodeModuleLib {
    * @dev can not provide address(0), try 0x000000000000000000000000000000000000dEaD
    */
   function changeIdCONTROLLER(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id,
     address newCONTROLLER
   ) external onlyController(DATASTORE, id) {

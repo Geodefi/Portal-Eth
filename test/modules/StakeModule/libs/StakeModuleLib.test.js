@@ -13,7 +13,7 @@ const {
   ETHER_STR,
   setTimestamp,
   generateAddress,
-} = require("../../../utils");
+} = require("../../../../utils");
 const { artifacts } = require("hardhat");
 
 const StakeModuleLib = artifacts.require("StakeModuleLib");

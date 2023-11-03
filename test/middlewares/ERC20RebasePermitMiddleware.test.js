@@ -1,9 +1,9 @@
 const { expect } = require("chai");
 const { constants, expectRevert, time, BN } = require("@openzeppelin/test-helpers");
 const { MAX_UINT256 } = constants;
-const { silenceWarnings } = require("@openzeppelin/truffle-upgrades");
+const { silenceWarnings } = require("@openzeppelin/upgrades-core");
 
-const { strToBytes, intToBytes32 } = require("../utils");
+const { strToBytes, intToBytes32 } = require("../../utils");
 
 const ERC20RebasePermitMiddleware = artifacts.require("$ERC20RebasePermitMiddleware");
 const gETH = artifacts.require("gETH");
@@ -61,8 +61,8 @@ contract("ERC20RebasePermitMiddleware", function (accounts) {
         unsafeAllow: ["state-variable-assignment"],
       }
     );
-    await contract.deployed();
-    return await ERC20RebasePermitMiddleware.at(contract.address);
+    await contract.waitForDeployment();
+    return await ERC20RebasePermitMiddleware.at(contract.target);
   };
 
   before(async function () {

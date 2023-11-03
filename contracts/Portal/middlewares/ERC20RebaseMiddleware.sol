@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {gETH_DENOMINATOR} from "../globals/macros.sol";
@@ -17,7 +17,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 /**
  * @dev differences between ERC20RebaseMiddleware and Openzeppelin's implementation of ERC20Upgradeable is:
- * -> pragma set to =0.8.7;
+ * -> pragma set to =0.8.7 and then =0.8.19;
  * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
  * -> unique id of ERC1155 is used
  * -> there is no mint or burn functionality implemented here.

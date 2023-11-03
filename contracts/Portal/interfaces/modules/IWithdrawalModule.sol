@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 interface IWithdrawalModule {
   function pause() external;
@@ -47,19 +47,21 @@ interface IWithdrawalModule {
 
   function validatorThreshold(bytes memory pubkey) external view returns (uint256 threshold);
 
-  function checkAndRequestExit(bytes memory pubkey) external returns (uint256);
+  function enqueue(
+    uint256 size,
+    bytes calldata pubkey,
+    address owner
+  ) external returns (uint256 index);
 
-  function enqueue(uint256 size, bytes calldata pubkey, address owner) external;
-
-  function enqueueBatch(uint256[] calldata sizes, bytes[] calldata pubkeys, address owner) external;
+  function enqueueBatch(
+    uint256[] calldata sizes,
+    bytes[] calldata pubkeys,
+    address owner
+  ) external returns (uint256[] memory indexes);
 
   function transferRequest(uint256 index, address newOwner) external;
 
-  function fulfillable(
-    uint256 index,
-    uint256 Qrealized,
-    uint256 Qfulfilled
-  ) external view returns (uint256);
+  function fulfillable(uint256 index) external view returns (uint256);
 
   function fulfill(uint256 index) external;
 

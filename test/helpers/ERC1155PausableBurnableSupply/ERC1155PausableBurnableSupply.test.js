@@ -26,8 +26,8 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
   });
 
   describe("constructor", function () {
-    it("deployer does not have DEFAULT_ADMIN_ROLE", async function () {
-      expect(await this.token.hasRole(DEFAULT_ADMIN_ROLE, deployer)).to.equal(false);
+    it("deployer has DEFAULT_ADMIN_ROLE", async function () {
+      expect(await this.token.hasRole(DEFAULT_ADMIN_ROLE, deployer)).to.equal(true);
     });
     it("deployer has URI_SETTER_ROLE", async function () {
       expect(await this.token.hasRole(URI_SETTER_ROLE, deployer)).to.equal(true);

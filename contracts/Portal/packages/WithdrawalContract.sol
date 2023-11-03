@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {ID_TYPE} from "../globals/id_type.sol";
@@ -10,13 +10,13 @@ import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
 import {IWithdrawalModule} from "../interfaces/modules/IWithdrawalModule.sol";
 // libraries
-import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib as WML, PooledWithdrawal} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
-contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModule {
-  using WML for WML.PooledWithdrawal;
+contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModule {
+  using WML for PooledWithdrawal;
   /**
    * TODO: this can be renamed to withdrawalQueue or ValidatorCustodian
    * @custom:section                           ** VARIABLES **
