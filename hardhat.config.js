@@ -1,16 +1,20 @@
 require("dotenv").config();
 
-require("hardhat-contract-sizer");
-require("hardhat-gas-reporter");
-require("solidity-coverage");
-require("hardhat-deploy");
-
 require("@openzeppelin/hardhat-upgrades");
+
+require("hardhat-deploy");
+require("hardhat-deploy-ethers");
+require("hardhat-exposed");
+require("hardhat-gas-reporter");
+require("hardhat-contract-sizer");
+require("solidity-coverage");
+
 require("@nomiclabs/hardhat-web3");
-require("@nomiclabs/hardhat-etherscan");
-require("@nomiclabs/hardhat-waffle");
-require("@nomiclabs/hardhat-ethers");
-const ethers = require("ethers");
+require("@nomiclabs/hardhat-truffle5");
+require("@nomicfoundation/hardhat-verify");
+require("@nomicfoundation/hardhat-ethers");
+require("ethers");
+
 require("./scripts");
 
 // You need to export an object to set up your config
@@ -25,11 +29,17 @@ const config = {
   solidity: {
     compilers: [
       {
-        version: "0.8.7",
+        version: "0.8.19",
         settings: {
+          // viaIR: false,
           optimizer: {
             enabled: true,
             runs: 200,
+            // details: {
+            //   yulDetails: {
+            //     optimizerSteps: "u",
+            //   },
+            // },
           },
         },
       },
@@ -41,16 +51,19 @@ const config = {
       deploy: ["./deploy"],
       forking: FORK_MAINNET
         ? {
-            url: process.env.FORK_URL,
+            url: process.env.GOERLI_URL,
           }
         : undefined,
-      // allowUnlimitedContractSize: true,
+      accounts: {
+        accountsBalance: "1000000000000000000000000",
+      },
+      allowUnlimitedContractSize: true,
     },
-    prater: {
-      url: process.env.PRATER,
+    goerli: {
+      url: process.env.GOERLI_URL,
       deploy: ["./deploy"],
       chainId: 5,
-      gasPrice: ethers.utils.parseUnits("90", "gwei").toNumber(),
+      gasPrice: 1e10, // 10 gwei
     },
   },
   namedAccounts: {
@@ -58,13 +71,9 @@ const config = {
       default: 0, // here this will by default take the first account as deployer
       1: 0, // similarly on mainnet it will take the first account as deployer.
     },
-    senate: {
+    oracle: {
       default: 1,
       0: 1,
-    },
-    ELECTOR: {
-      default: 2,
-      0: 2,
     },
   },
   paths: {
@@ -75,17 +84,20 @@ const config = {
   gasReporter: {
     currency: "USD",
     gasPrice: 30,
+    coinmarketcap: process.env.COINMARKETCAP,
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      goerli: process.env.ETHERSCAN_API_KEY,
+    },
   },
 };
 if (process.env.ACCOUNT_PRIVATE_KEYS) {
   config.networks = {
     ...config.networks,
-    prater: {
-      ...config.networks?.prater,
-      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(" "),
+    goerli: {
+      ...config.networks?.goerli,
+      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),
     },
   };
 }

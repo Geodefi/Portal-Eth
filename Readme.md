@@ -1,296 +1,138 @@
-# Decentralized & Liquid Staking Pools
+![](docs/images/CoverImage.jpg)
 
-## Documentation
+# The Staking Library, on Ethereum
 
-Functions and Contracts are comprehensively explained with inline comments. However, to understand the logic behind it better:
-> Before starting to review the contracts please take a look at [our docs](https://docs.geode.fi/).
+The Staking Library is a first of its kind on-chain library that allows the creation of Staking Pool "instances", providing customizable functionality for all staking related needs on the Execution Layer.
+
+The usage of `library` should not be confused with the reserved solidity key `library`. Instead, it refers to the `library` defined within the scope of programming languages: A collection of prewritten code that can be used to optimize tasks. This collection of code is usually targeted for specific common problems. This is similar to the Portal's ability of providing multiple functionalities with customizability, and maintaining a set of smart contracts that can be deployed, upgraded and utilized by various types of users, permissionlessly.
+
+In-depth understanding of EVM suggests that Ethereum is just a distributed computer. By that logic, smart contracts are no different than standard packages a python developer utilizes on their script. However, the approach to smart contract development focusing on protocols is so far user-centric. In past, developers discovered tools to distribute packages and maintain them, like git, making common functionalities easily accesible. Can we also distribute packages directly within Ethereum without disrupting the trustlessness, the novel idea of smart contracts?
+
+To achieve this, Portal utilizes a version management pattern, LUP (Limited Upgradability Pattern), which is built on top of UUPS:
+
+* User can deploy an UUPS proxy using a Remote Contract.
+* Newly deployed contract delegates its functionality to the latest implementation contract.
+* Newly deployed contract is used and controlled by the user.
+* Remote Contract points to a referance of the latest version of the implementation contract.
+* Parent can release a new version.
+* Upgrading an instance is not mandatory.
+* Owner can upgrade the code of the contract by pulling the address of the new implementation contract from the Remote Contract.
+* However, Owner can not change the code randomly.
+
+In conclusion, Portal aims to make all functionality related to staking available on demand, easily accessible. Thus, Geode aims to remove the need for centralized or decentralized intermediaries that are surfaced as an undesired outcome of the lack of functionality on the Execution Layer.
+
+> For more information on the functionality of this repository please see [our documentation](https://docs.geode.fi).
 
 ## Contracts
 
-This is the recommanded order to review the contracts:
+A better, cleaner and safer development environment with Modular Architecture.
 
-- gETH
-  - [ERC1155SupplyMinterPauser](contracts/Portal/helpers/ERC1155SupplyMinterPauser.sol)
-  - [gETH](contracts/Portal/gETH.sol)
-    - [ERC20InterfaceUpgradable](contracts/Portal/gETHInterfaces/ERC20InterfaceUpgradable.sol)
-    - [ERC20InterfacePermitUpgradable](contracts/Portal/gETHInterfaces/ERC20InterfacePermitUpgradable.sol)
+The Staking Library utilizes a Modular Architecture. Meaning all functionality is isolated within modules, to be used, inherited and combined by the packages. Modules also do not contain much functionality as they delegate to libraries. Making sure that shared logic among between package are compatible. Because, modules are abstract contracts that can not be deployed and delegated, but libraries are.
 
-- Dynamic Withdrawal Pools
-  - [MathUtils](contracts/Portal/withdrawalPool/utils/MathUtils.sol)
-  - [AmplificationUtils](contracts/Portal/withdrawalPool/utils/AmplificationUtils.sol)
-  - [SwapUtils](contracts/Portal/withdrawalPool/utils/SwapUtils.sol)
-  - [Swap](contracts/Portal/withdrawalPool/Swap.sol)
-  - [LPToken](contracts/Portal/withdrawalPool/LPToken.sol)
+![](./docs/images/contracts.png)
 
-- Portal
-  - [DataStoreUtilsLib](contracts/Portal/utils/DataStoreUtilsLib.sol)
-  - [GeodeUtilsLib](contracts/Portal/utils/GeodeUtilsLib.sol)
-  - [MaintainerUtilsLib](contracts/Portal/utils/MaintainerUtilsLib.sol)
-  - [OracleUtilsLib](contracts/Portal/utils/OracleUtilsLib.sol)
-  - [DepositContractUtilsLib](contracts/Portal/utils/DepositContractUtilsLib.sol)
-  - [StakeUtilsLib](contracts/Portal/utils/StakeUtilsLib.sol)
-  - [Portal](contracts/Portal/Portal.sol)
+**There are currently only 3 packages**: Portal, Liquidity Pool and Withdrawal Contract. However, there can be more modules and packages implemented later.
 
-- MiniGovernance
-  - [MiniGovernance](contracts/Portal/MiniGovernance/MiniGovernance.sol)
+Additionally there are other contracts such as gETH, an ERC1155 contract, and its middlewares allowing every ID to have its own functionality.
 
-## Starter Pack
+> For more information on the architecture of the smart contracts please see [this document](./contracts/Portal/Readme.md).
 
-- Clone the repository:
+## Development
 
-```
+1. Clone this repository:
 
-git clone https://github.com/Geodefi/Portal-Eth.git
-
+```sh
+git clone https://github.com/Geodefi/Portal-Eth
 cd Portal-Eth
-
 ```
 
-2. Create `.env` file, similar to:
+2. Checkout to dev repository
+
+```sh
+git checkout dev
+```
+
+3. Create `.env` file, similar to [this](.env.example)
 
 > If mainnet is not forked, some tests related to ETH2 deposit contract may fail.
 
-```
-
-FORK_MAINNET= "true"
-FORK_URL= "https://eth-mainnet.g.alchemy.com/v2/<YOUR_KEY>"
-PRATER= "https://eth-goerli.g.alchemy.com/v2/<YOUR_KEY>"
-ACCOUNT_PRIVATE_KEYS= "<array of private keys seperated with `space` character, at least 1>"
-
-```
-
-3. Checkout to dev repository
-
-```
-
-git checkout dev
-
-```
-
 4. Build the repository
 
+```sh
+npm install
 ```
 
-npm i
+5. Compile the contracts
 
-```
-
-# Extra Hardhat Tasks
-
-## Dev Tasks
-
-### 0. Accounts
-
-```
-
-npx hardhat accounts
-
-```
-
-- returns local addresses. Mostly, we don't use them :)
-
-### 1. Compile
-
-```
-
+```sh
 npx hardhat compile
-
 ```
 
-### 2. Test
+> For faster compilation use a local compiler:
+>
+> 1. Right click on a smart contract
+> 2. Choose `Solidity: download compiler and set workspace local path`
 
-1. Test everything
+### Testing
 
-```
+All unit tests are implemented within the [test folder](./test/).
 
+To run all tests:
+
+```sh
 npx hardhat test
-
 ```
 
-2. Test a folder
+To run just one test:
 
+```sh
+npx hardhat test path/to/test/file.test.js
 ```
 
-npx hardhat test ./test/Pools/*
+To generate a coverage report:
 
+```sh
+npx hardhat compile --force
+npx hardhat coverage
 ```
 
-3. Test a file
-
-```
-
-npx hardhat test ./test/Pools/lpToken.js
-
-```
-
-### 3. Deploy
-
-1. deploy locally:
-
-```
-
-npx hardhat deploy
-
-```
-
-2. deploy to prater
-
-> You might want to remove `deployments/prater`
-
-```
-
-npx hardhat deploy --network prater
-
-```
-
-### 4. Activate Portal
-
-Portal needs to be set as the minter address for the following scripts to work.
-Please set the Portal as Minter address, by simply:
-
-```
-
-npx hardhat activate-portal --network prater
-
-```
-
-### 5. List all details from a deployment
-
-Lists all the Planets & Operators, with curent information on fee; maintainer & CONTROLLER addresses; Withdrawal Pool, LPtoken, currentInterface addresses.
-
-```
-
-npx hardhat details --network prater
-
-```
-
-## Governance Tasks
-
-### 6. Create a Proposal
-
-> This proposal requires and approval
-Creates a proposal with desired parameters.
-
-- requires governance role on the deployed contract
-
-- `t` : defines type such as senate, upgrade, operator, planet
-
-- `c`: refers to the proposed address as the controller of resulting ID
-
-- `n` : defines id with keccak, unique for every proposal and ID.
-
-- gives max deadline auto: 1 weeks.
-
-```
-
-npx hardhat propose --t planet --c 0xbabababababababababababaabababababa --n myPlanet  --network prater
-
-npx hardhat propose --t operator --c 0xbabababababababababababaabababababa --n myOperator  --network prater
-
-npx hardhat propose --t senate --c 0xbabababababababababababaabababababa --n mySenate  --network prater
-
-```
-
-- prints the id of the proposal
-
-## Senate Tasks
-
-### 7. Approve Proposal
-
-> This approval requires initiation from the controller with correct params in case of a Planet or Operator
-
-Approves a proposal with given id.
-
-- requires senate role on the deployed contract
-
-- `id` : id of the given proposal to approve
-
-```
-
-npx hardhat approve --id 102019998765771090775971083439296966026520537939234501758803308348529554355594  --network prater
-
-```
-
-## User Tasks
-
-> **following tasks might require different tasks to be run first: such as propose, approve with desired type**
-
-### 8. Initiate an Operator
-
-> Should be called from a Controller
-
-- `id` : id of operator
-- `f` : fee (%)
-- `m` : maintainer
-- `p` : validatorPeriod (s)
-
-```
-
-initiate-operator --id 102019998765771090775971083439296966026520537939234501758803308348529554355594 --network prater --f 10 --m 0x5297F1EA60D4b60E85eF323DECEc1A907295B6 --p 50000
-
-```
-
-### 9. Initiate a Planet
-
-> Should be called from a Controller
-
-- `id` : id of operator
-- `f` : fee (%)
-- `m` : maintainer
-- `n` : name of ERC20Interface
-- `s` : symbol for ERC20Interface
-
-```
-
-npx hardhat initiate-planet --id 8438890131190638961805509956978898063010048183498455403055171776782939000754 --network prater --f 10 --m 0x5297F1EA60D4b60E85eF323DECEc1A907295B6E6 --n myPlanetETH --s myETH
-
-```
-
-### 10. Approve a Senate Proposal as a Planet maintainer
-
-- `sid` : id of the given proposal senate
-
-- `pid` : id of the planet to vote
-
-```
-
-npx hardhat elect --sid 11419323355145529570664410446194669483221888198176733050069995917193619618789 --pid 8438890131190638961805509956978898063010048183498455403055171776782939000754  --network prater
-
-```
-
-### 11. set a new CONTROLLER for an ID, as CONTROLLER
-
-- `c`: address of the new controller
-
-```
-
-npx hardhat set-controller --id 01102186b7e3b0dda7f022d922f87d2ae9dffe939440e17d7166b89717e96f4c --c 0xbabababa57D8418cC282e7847cd71a7eB824A30F  --network prater
-
-```
-
-### 12. Change the maintainer for an ID, as CONTROLLER
-
-- `m`: address of the new maintainer
-
-```
-# For Pools:  
-npx hardhat change-pool-maintainer  --m 0x5297F1EA60D4b60E85eF323DECEc1A907295B6E6  --id 8438890131190638961805509956978898063010048183498455403055171776782939000754  --network prater
-
-# For Operators:  
-npx hardhat change-operator-maintainer  --m 0x5297F1EA60D4b60E85eF323DECEc1A907295B6E6  --id 102019998765771090775971083439296966026520537939234501758803308348529554355594  --network prater
-
-```
-
-### 13. approve an Operator as a Planet Maintainer
-
-- `oid` : id of the given operator
-
-- `pid` : id of the planet
-
-- `a` : number of validators to allow
-
-```
-
-npx hardhat approve-operator --pid 01102186b7e3b0dda7f022d922f87d2ae9dffe939440e17d7166b89717e96f4c --oid 91630959199093646211198814960682556727534799142799726216648273052625587106474 --a 300
-
-```
+### Deployments
+
+Deployments for Goerli can be found [here](./releases/5/).
+
+## Contributing
+
+See our [contributing guide](./docs/GUIDELINES/CONTRIBUTING.md).
+
+## Auditing
+
+See our [ChangeLOG](./audits/CHANGELOG.md).
+
+It is advised to audit these smart contracts with the order of:
+
+1. [gETH](./contracts/Portal/gETH.sol)
+2. [Middlewares](./contracts/Portal/middlewares/)
+3. Modules
+   1. DataStore Module
+      1. [DataStoreModuleLib](./contracts/Portal/modules/DataStoreModule/libs/DataStoreModuleLib.sol)
+      2. [DataStoreModule](./contracts/Portal/modules/DataStoreModule/DataStoreModule.sol)
+   2. Geode Module
+      1. [GeodeModuleLib](./contracts/Portal/modules/GeodeModule/libs/GeodeModuleLib.sol)
+      2. [GeodeModule](./contracts/Portal/modules/GeodeModule/GeodeModule.sol)
+   3. Stake Module
+      1. [DepositContractLib](./contracts/Portal/modules/StakeModule/libs/DepositContractLib.sol)
+      2. [StakeModuleLib](./contracts/Portal/modules/StakeModule/libs/StakeModuleLib.sol)
+      3. [OracleExtensionLib](./contracts/Portal/modules/StakeModule/libs/OracleExtensionLib.sol)
+      4. [StakeModule](./contracts/Portal/modules/StakeModule/StakeModule.sol)
+   4. Liquidity Module
+      1. [LiquidityModuleLib](./contracts/Portal/modules/LiquidityModule/libs/LiquidityModuleLib.sol)
+      2. [AmplificationLib](./contracts/Portal/modules/LiquidityModule/libs/AmplificationLib.sol)
+      3. [LiquidityModule](./contracts/Portal/modules/GeodeModule/GeodeModule.sol)
+4. Packages
+   1. [Liquidity Pool Package](./contracts/Portal/packages/LiquidityPool.sol)
+   2. [Withdrawal Contract Package](./contracts/Portal/packages/WithdrawalContract.sol)
+5. [Portal](./contracts/Portal/Portal.sol)
+
+## Licensing
+
+This section will be updated with a proper license.
