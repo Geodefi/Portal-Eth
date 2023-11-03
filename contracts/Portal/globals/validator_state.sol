@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 /**
  * @notice VALIDATOR_STATE: keeping track of validators within The Staking Library.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
 import {IDepositContract} from "../../../interfaces/helpers/IDepositContract.sol";

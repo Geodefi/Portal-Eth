@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { expectRevert, BN } = require("@openzeppelin/test-helpers");
 const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants");
-const { strToBytes, generateId, DAY, setTimestamp, getBlockTimestamp } = require("../utils");
+const { strToBytes, generateId, DAY, setTimestamp, getBlockTimestamp } = require("../../utils");
 
 const ERC1967Proxy = artifacts.require("ERC1967Proxy");
 

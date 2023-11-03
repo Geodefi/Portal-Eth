@@ -1,14 +1,14 @@
 const { expect } = require("chai");
 
 const { expectRevert, expectEvent, constants, BN } = require("@openzeppelin/test-helpers");
-const { ETHER_STR, getReceiptTimestamp, impersonate } = require("./utils");
+const { ETHER_STR, getReceiptTimestamp, impersonate } = require("../utils");
 const { shouldBehaveLikeERC1155 } = require("./utils/ERC1155.behavior");
 
 const { ZERO_BYTES32, ZERO_ADDRESS } = constants;
 
 const gETH = artifacts.require("$gETH");
 const ERC20Middleware = artifacts.require("$ERC20Middleware");
-const nonERC1155Receiver = artifacts.require("$nonERC1155Receiver");
+const nonERC1155Receiver = artifacts.require("nonERC1155Receiver");
 
 contract("gETH", function (accounts) {
   const [deployer, user, ...otherAccounts] = accounts;

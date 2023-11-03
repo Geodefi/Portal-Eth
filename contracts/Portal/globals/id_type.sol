@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 /**
  * @notice ID_TYPE is an internal library that acts like an ENUM.

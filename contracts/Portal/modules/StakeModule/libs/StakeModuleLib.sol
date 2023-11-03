@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
@@ -7,13 +7,91 @@ import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML, IsolatedStorage} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
 // interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {IGeodePackage} from "../../../interfaces/packages/IGeodePackage.sol";
 import {ILiquidityPool} from "../../../interfaces/packages/ILiquidityPool.sol";
 import {IWhitelist} from "../../../interfaces/helpers/IWhitelist.sol";
+
+/**
+ * @notice Helper Struct to pack constant data that does not change per validator on batch proposals
+ * * needed for that famous Solidity feature.
+ */
+struct ConstantValidatorData {
+  uint64 index;
+  uint64 period;
+  uint256 poolFee;
+  uint256 operatorFee;
+  uint256 governanceFee;
+  bytes withdrawalCredential;
+}
+
+/**
+ * @param state state of the validator, refer to globals.sol
+ * @param index representing this validator's placement on the chronological order of the validators proposals
+ * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
+ * @param period the latest point in time the operator is allowed to maintain this validator (createdAt + validatorPeriod).
+ * @param poolId needed for withdrawal_credential
+ * @param operatorId needed for staking after allowance
+ * @param poolFee percentage of the rewards that will go to pool's maintainer, locked when the validator is proposed
+ * @param operatorFee percentage of the rewards that will go to operator's maintainer, locked when the validator is proposed
+ * @param governanceFee although governance fee is zero right now, all fees are crucial for the price calculation by the oracle.
+ * @param signature31 BLS12-381 signature for the validator, used when the remaining 31 ETH is sent on validator activation.
+ **/
+struct Validator {
+  uint64 state;
+  uint64 index;
+  uint64 createdAt;
+  uint64 period;
+  uint256 poolId;
+  uint256 operatorId;
+  uint256 poolFee;
+  uint256 operatorFee;
+  uint256 governanceFee;
+  bytes signature31;
+}
+
+/**
+ * @notice Storage struct for the Pooled Liquid Staking logic
+ * todo: ask if that would be a problem if the interface changes??? like should you update the param too?? Then check other params with IPortal IgETH etc.
+ * @param gETH constant, ERC1155, all Geode Staking Derivatives.
+ * @param ORACLE_POSITION constant, address of the Oracle https://github.com/Geodefi/Telescope-Eth
+ * @param VALIDATORS_INDEX total number of validators that are proposed at any given point.
+ * * Includes all validators: proposed, active, alienated, exited.
+ * @param VERIFICATION_INDEX the highest index of the validators that are verified (as not alien) by the Holy Oracle.
+ * @param MONOPOLY_THRESHOLD max number of validators 1 operator is allowed to operate, updated by the Holy Oracle.
+ * @param ORACLE_UPDATE_TIMESTAMP timestamp of the latest oracle update
+ * @param DAILY_PRICE_DECREASE_LIMIT limiting the price decreases for one oracle period, 24h. Effective for any time interval, per second.
+ * @param DAILY_PRICE_INCREASE_LIMIT limiting the price increases for one oracle period, 24h. Effective for any time interval, per second.
+ * @param PRICE_MERKLE_ROOT merkle root of the prices of every pool, updated by the Holy Oracle.
+ * @param GOVERNANCE_FEE **reserved** Although it is 0 right now, It can be updated in the future.
+ * @param BALANCE_MERKLE_ROOT merkle root of the balances and other validator related data, useful on withdrawals, updated by the Holy Oracle.
+ * @param validators pubkey => Validator, contains all the data about proposed, alienated, active, exit-called and fully exited validators.
+ * @param packages TYPE => version id, pointing to the latest versions of the given package.
+ * * Like default Withdrawal Contract version.
+ * @param middlewares TYPE => version id => isAllowed, useful to check if given version of the middleware can be used.
+ * * Like all the whitelisted gETHMiddlewares.
+ * @param __gap keep the struct size at 16
+ **/
+struct PooledStaking {
+  IgETH gETH;
+  address ORACLE_POSITION;
+  uint256 VALIDATORS_INDEX;
+  uint256 VERIFICATION_INDEX;
+  uint256 MONOPOLY_THRESHOLD;
+  uint256 ORACLE_UPDATE_TIMESTAMP;
+  uint256 DAILY_PRICE_INCREASE_LIMIT;
+  uint256 DAILY_PRICE_DECREASE_LIMIT;
+  uint256 GOVERNANCE_FEE;
+  bytes32 PRICE_MERKLE_ROOT;
+  bytes32 BALANCE_MERKLE_ROOT;
+  mapping(bytes => Validator) validators;
+  mapping(uint256 => uint256) packages;
+  mapping(uint256 => mapping(uint256 => bool)) middlewares;
+  uint256[2] __gap;
+}
 
 /**
  * @title SML: Stake Module Library (The Staking Library)
@@ -95,88 +173,7 @@ import {IWhitelist} from "../../../interfaces/helpers/IWhitelist.sol";
  */
 
 library StakeModuleLib {
-  using DSML for DSML.IsolatedStorage;
-
-  /**
-   * @custom:section                           ** STRUCTS **
-   */
-
-  /**
-   * @notice Helper Struct to pack constant data that does not change per validator on batch proposals
-   * * needed for that famous Solidity feature.
-   */
-  struct ConstantValidatorData {
-    uint64 index;
-    uint64 period;
-    uint256 poolFee;
-    uint256 operatorFee;
-    uint256 governanceFee;
-    bytes withdrawalCredential;
-  }
-
-  /**
-   * @param state state of the validator, refer to globals.sol
-   * @param index representing this validator's placement on the chronological order of the validators proposals
-   * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
-   * @param period the latest point in time the operator is allowed to maintain this validator (createdAt + validatorPeriod).
-   * @param poolId needed for withdrawal_credential
-   * @param operatorId needed for staking after allowance
-   * @param poolFee percentage of the rewards that will go to pool's maintainer, locked when the validator is proposed
-   * @param operatorFee percentage of the rewards that will go to operator's maintainer, locked when the validator is proposed
-   * @param governanceFee although governance fee is zero right now, all fees are crucial for the price calculation by the oracle.
-   * @param signature31 BLS12-381 signature for the validator, used when the remaining 31 ETH is sent on validator activation.
-   **/
-  struct Validator {
-    uint64 state;
-    uint64 index;
-    uint64 createdAt;
-    uint64 period;
-    uint256 poolId;
-    uint256 operatorId;
-    uint256 poolFee;
-    uint256 operatorFee;
-    uint256 governanceFee;
-    bytes signature31;
-  }
-
-  /**
-   * todo: ask if that would be a problem if the interface changes??? like should you update the param too?? Then check other params with IPortal IgETH etc.
-   * @param gETH constant, ERC1155, all Geode Staking Derivatives.
-   * @param ORACLE_POSITION constant, address of the Oracle https://github.com/Geodefi/Telescope-Eth
-   * @param VALIDATORS_INDEX total number of validators that are proposed at any given point.
-   * * Includes all validators: proposed, active, alienated, exited.
-   * @param VERIFICATION_INDEX the highest index of the validators that are verified (as not alien) by the Holy Oracle.
-   * @param MONOPOLY_THRESHOLD max number of validators 1 operator is allowed to operate, updated by the Holy Oracle.
-   * @param ORACLE_UPDATE_TIMESTAMP timestamp of the latest oracle update
-   * @param DAILY_PRICE_DECREASE_LIMIT limiting the price decreases for one oracle period, 24h. Effective for any time interval, per second.
-   * @param DAILY_PRICE_INCREASE_LIMIT limiting the price increases for one oracle period, 24h. Effective for any time interval, per second.
-   * @param PRICE_MERKLE_ROOT merkle root of the prices of every pool, updated by the Holy Oracle.
-   * @param GOVERNANCE_FEE **reserved** Although it is 0 right now, It can be updated in the future.
-   * @param BALANCE_MERKLE_ROOT merkle root of the balances and other validator related data, useful on withdrawals, updated by the Holy Oracle.
-   * @param validators pubkey => Validator, contains all the data about proposed, alienated, active, exit-called and fully exited validators.
-   * @param packages TYPE => version id, pointing to the latest versions of the given package.
-   * * Like default Withdrawal Contract version.
-   * @param middlewares TYPE => version id => isAllowed, useful to check if given version of the middleware can be used.
-   * * Like all the whitelisted gETHMiddlewares.
-   * @param __gap keep the struct size at 16
-   **/
-  struct PooledStaking {
-    IgETH gETH;
-    address ORACLE_POSITION;
-    uint256 VALIDATORS_INDEX;
-    uint256 VERIFICATION_INDEX;
-    uint256 MONOPOLY_THRESHOLD;
-    uint256 ORACLE_UPDATE_TIMESTAMP;
-    uint256 DAILY_PRICE_INCREASE_LIMIT;
-    uint256 DAILY_PRICE_DECREASE_LIMIT;
-    uint256 GOVERNANCE_FEE;
-    bytes32 PRICE_MERKLE_ROOT;
-    bytes32 BALANCE_MERKLE_ROOT;
-    mapping(bytes => Validator) validators;
-    mapping(uint256 => uint256) packages;
-    mapping(uint256 => mapping(uint256 => bool)) middlewares;
-    uint256[2] __gap;
-  }
+  using DSML for IsolatedStorage;
 
   /**
    * @custom:section                           ** CONSTANTS **
@@ -240,7 +237,7 @@ library StakeModuleLib {
    * TODO: divide this into 2 functions to save gas: _authenticateTYPE, _authenticateSENDER
    */
   function _authenticate(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _id,
     bool _expectCONTROLLER,
     bool _expectMaintainer,
@@ -257,7 +254,9 @@ library StakeModuleLib {
       }
     } else if (typeOfId == ID_TYPE.POOL) {
       require(_restrictionMap[1], "SML:TYPE NOT allowed");
-    } else revert("SML:invalid TYPE");
+    } else {
+      revert("SML:invalid TYPE");
+    }
 
     if (_expectMaintainer) {
       require(
@@ -291,7 +290,7 @@ library StakeModuleLib {
    * Note private pools can whitelist addresses with the help of a third party contract.
    */
   function setPoolVisibility(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     bool makePrivate
   ) public {
@@ -312,7 +311,7 @@ library StakeModuleLib {
    * @dev Whitelisting contracts should implement IWhitelist interface.
    */
   function setWhitelist(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     address whitelist
   ) external {
@@ -330,7 +329,7 @@ library StakeModuleLib {
    * @notice returns true if the pool is private
    */
   function isPrivatePool(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId
   ) public view returns (bool) {
     return (DATASTORE.readUint(poolId, rks.privatePool) == 1);
@@ -342,7 +341,7 @@ library StakeModuleLib {
    * @dev Otherwise requires a whitelisting address to be set
    */
   function isWhitelisted(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     address staker
   ) public view returns (bool) {
@@ -378,7 +377,7 @@ library StakeModuleLib {
    * @dev Only CONTROLLER of pool can set yield receier.
    */
   function setYieldReceiver(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     address yieldReceiver
   ) external {
@@ -401,7 +400,7 @@ library StakeModuleLib {
    * @param _newMaintainer address of the new maintainer
    */
   function _setMaintainer(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _id,
     address _newMaintainer
   ) internal {
@@ -423,7 +422,7 @@ library StakeModuleLib {
    * * and prevent them entering here, smh.
    */
   function changeMaintainer(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id,
     address newMaintainer
   ) external {
@@ -451,7 +450,7 @@ library StakeModuleLib {
    * @return fee = percentage * PERCENTAGE_DENOMINATOR / 100
    */
   function getMaintenanceFee(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id
   ) public view returns (uint256 fee) {
     if (DATASTORE.readUint(id, rks.feeSwitch) > block.timestamp) {
@@ -468,7 +467,7 @@ library StakeModuleLib {
    * @notice internal function to set fee with NO DELAY
    */
   function _setMaintenanceFee(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _id,
     uint256 _newFee
   ) internal {
@@ -486,7 +485,7 @@ library StakeModuleLib {
    * @dev advise that 100% == PERCENTAGE_DENOMINATOR
    */
   function switchMaintenanceFee(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id,
     uint256 newFee
   ) external {
@@ -518,7 +517,7 @@ library StakeModuleLib {
    * @param _value Ether (in Wei) amount to increase the wallet balance.
    */
   function _increaseWalletBalance(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _id,
     uint256 _value
   ) internal {
@@ -530,7 +529,7 @@ library StakeModuleLib {
    * @param _value Ether (in Wei) amount to decrease the wallet balance and send back to Maintainer.
    */
   function _decreaseWalletBalance(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _id,
     uint256 _value
   ) internal {
@@ -547,7 +546,7 @@ library StakeModuleLib {
    * @dev anyone can increase the balance directly, useful for withdrawalContracts and fees etc.
    */
   function increaseWalletBalance(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id
   ) external returns (bool success) {
     _authenticate(DATASTORE, id, false, false, [true, true]);
@@ -561,7 +560,7 @@ library StakeModuleLib {
    * @return success if the amount was sent and deducted
    */
   function decreaseWalletBalance(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id,
     uint256 value
   ) external returns (bool success) {
@@ -585,7 +584,7 @@ library StakeModuleLib {
    */
 
   function getValidatorPeriod(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 id
   ) public view returns (uint256 period) {
     if (DATASTORE.readUint(id, rks.periodSwitch) > block.timestamp) {
@@ -602,7 +601,7 @@ library StakeModuleLib {
    * @notice internal function to set validator period with NO DELAY
    */
   function _setValidatorPeriod(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _operatorId,
     uint256 _newPeriod
   ) internal {
@@ -621,7 +620,7 @@ library StakeModuleLib {
    * @dev limited by MIN_VALIDATOR_PERIOD and MAX_VALIDATOR_PERIOD
    */
   function switchValidatorPeriod(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 operatorId,
     uint256 newPeriod
   ) external {
@@ -656,7 +655,7 @@ library StakeModuleLib {
    * @dev rks.release key refers to the end of the last imprisonment, when the limitations of operator is lifted
    */
   function isPrisoned(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 operatorId
   ) public view returns (bool) {
     return (block.timestamp < DATASTORE.readUint(operatorId, rks.release));
@@ -682,7 +681,7 @@ library StakeModuleLib {
    */
   function operatorAllowance(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 operatorId
   ) public view returns (uint256 remValidators) {
@@ -744,7 +743,7 @@ library StakeModuleLib {
    * @return oldAllowance to be used later, nothing is done with it within this function.
    */
   function _approveOperator(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 operatorId,
     uint256 allowance
@@ -771,7 +770,7 @@ library StakeModuleLib {
    * operator can NOT create new validators.
    */
   function delegate(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256[] calldata operatorIds,
     uint256[] calldata allowances
@@ -821,7 +820,7 @@ library StakeModuleLib {
    * * is activated for given Pool. Should not be greater than 100.
    */
   function setFallbackOperator(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 operatorId,
     uint256 fallbackThreshold
@@ -871,7 +870,7 @@ library StakeModuleLib {
    * @dev returns address(0) if no pool or it is under isolation
    */
   function _getLiquidityPool(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _poolId
   ) internal view returns (ILiquidityPool) {
     address liqPool = DATASTORE.readAddress(_poolId, rks.liquidityPool);
@@ -907,7 +906,7 @@ library StakeModuleLib {
     uint256 lastupdate = self.gETH.priceUpdateTimestamp(poolId);
     unchecked {
       isValid =
-        lastupdate + PRICE_EXPIRY >= block.timestamp ||
+        lastupdate + PRICE_EXPIRY >= block.timestamp &&
         lastupdate >= self.ORACLE_UPDATE_TIMESTAMP;
     }
   }
@@ -920,7 +919,7 @@ library StakeModuleLib {
    */
   function isMintingAllowed(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId
   ) public view returns (bool) {
     return
@@ -942,7 +941,7 @@ library StakeModuleLib {
    */
   function _mintgETH(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _poolId,
     uint256 _ethAmount
   ) internal returns (uint256 mintedgETH) {
@@ -965,7 +964,7 @@ library StakeModuleLib {
    * as index 0 is ETH and index 1 is gETH!
    */
   function _buyback(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _poolId,
     uint256 _maxEthToSell,
     uint256 _deadline
@@ -1015,7 +1014,7 @@ library StakeModuleLib {
    */
   function deposit(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 mingETH,
     uint256 deadline,
@@ -1112,7 +1111,7 @@ library StakeModuleLib {
    */
   function proposeStake(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 operatorId,
     bytes[] calldata pubkeys,
@@ -1228,7 +1227,7 @@ library StakeModuleLib {
    */
   function stake(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 operatorId,
     bytes[] calldata pubkeys
   ) external {
@@ -1322,10 +1321,14 @@ library StakeModuleLib {
 
   function requestExit(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     bytes calldata pk
   ) external {
+    require(
+      block.timestamp > self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD,
+      "SML: early exit not allowed"
+    );
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
       "SML:sender is NOT withdrawal contract"
@@ -1340,7 +1343,7 @@ library StakeModuleLib {
 
   function finalizeExit(
     PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     bytes calldata pk
   ) external {

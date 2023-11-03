@@ -7,7 +7,7 @@ const {
   PERCENTAGE_DENOMINATOR,
   ETHER_STR,
   DAY,
-} = require("../../utils");
+} = require("../../../utils");
 
 const { ZERO_ADDRESS, MAX_UINT256, ZERO_BYTES32 } = constants;
 
@@ -272,7 +272,7 @@ contract("LiquidityModule", function (accounts) {
           expect(await this.contract.getAdminBalance(0)).to.be.bignumber.equal("0");
           expect(await this.contract.getAdminBalance(1)).to.be.bignumber.equal("0");
           await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.1"),
+            value: ethers.parseEther("0.1").toString(),
             from: user1,
           });
           expect(await this.contract.getAdminBalance(0)).to.be.bignumber.equal("0");
@@ -282,7 +282,7 @@ contract("LiquidityModule", function (accounts) {
           // Sets adminFee to 1% of the swap fees
           await this.contract.setAdminFee(MAX_SWAP_FEE);
           await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.1"),
+            value: ethers.parseEther("0.1").toString(),
             from: user1,
           });
           expect(await this.contract.getAdminBalance(0)).to.be.bignumber.equal(new BN("0"));
@@ -312,7 +312,7 @@ contract("LiquidityModule", function (accounts) {
         it("Returns expected values after swaps", async function () {
           // With each swap, virtual price will increase due to the fees
           await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.1"),
+            value: ethers.parseEther("0.1").toString(),
             from: user1,
           });
           expect(await this.contract.getVirtualPrice()).to.be.bignumber.equal(
@@ -325,11 +325,11 @@ contract("LiquidityModule", function (accounts) {
         });
         it("Returns expected values after imbalanced withdrawal", async function () {
           await this.contract.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
             from: user1,
           });
           await this.contract.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
             from: user2,
           });
           expect(await this.contract.getVirtualPrice()).to.be.bignumber.equal(String(1e18));
@@ -360,13 +360,13 @@ contract("LiquidityModule", function (accounts) {
           // pool is 1:1:1 ratio
           expect(await this.contract.getVirtualPrice()).to.be.bignumber.equal(String(1e18));
           await this.contract.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
             from: user1,
           });
           expect(await this.contract.getVirtualPrice()).to.be.bignumber.equal(String(1e18));
           // pool changes to 1:2:1 ratio, thus changing the virtual price
           await this.contract.addLiquidity([String(2e18), String(0)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("2"),
+            value: ethers.parseEther("2").toString(),
             from: user2,
           });
           expect(await this.contract.getVirtualPrice()).to.be.bignumber.equal(
@@ -374,7 +374,7 @@ contract("LiquidityModule", function (accounts) {
           );
           // User 2 makes balanced deposit, keeping the ratio 2:1
           await this.contract.addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("2"),
+            value: ethers.parseEther("2").toString(),
             from: user2,
           });
           expect(await this.contract.getVirtualPrice()).to.be.bignumber.equal(
@@ -384,7 +384,7 @@ contract("LiquidityModule", function (accounts) {
         it("Value is unchanged after balanced withdrawals", async function () {
           await this.contract.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
             from: user1,
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
           });
           await this.contract.removeLiquidity(String(1e18), [0, 0], MAX_UINT256, {
             from: user1,
@@ -399,14 +399,14 @@ contract("LiquidityModule", function (accounts) {
           });
           it("Debt must be zero when Ether > gEther", async function () {
             await this.contract.addLiquidity([String(2e18), String(1e18)], "0", MAX_UINT256, {
-              value: ethers.utils.parseEther("2"),
+              value: ethers.parseEther("2").toString(),
               from: user1,
             });
             expect(await this.contract.getDebt()).to.be.bignumber.equal(new BN("0"));
           });
           it("Debt must be non-zero when Ether < gEther", async function () {
             await this.contract.addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
-              value: ethers.utils.parseEther("1"),
+              value: ethers.parseEther("1").toString(),
               from: user1,
             });
             expect(await this.contract.getDebt()).to.be.bignumber.equal("499147041342998336");
@@ -414,7 +414,7 @@ contract("LiquidityModule", function (accounts) {
           describe("Pool should be balanced after the debt was paid", async function () {
             beforeEach(async function () {
               await this.contract.addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
-                value: ethers.utils.parseEther("1"),
+                value: ethers.parseEther("1").toString(),
               });
             });
             it("price=1", async function () {
@@ -481,14 +481,14 @@ contract("LiquidityModule", function (accounts) {
         describe("When swap fee is 4e6", async function () {
           it("Debt must be zero when Ether > gEther", async function () {
             await this.contract.addLiquidity([String(2e18), String(1e18)], 0, MAX_UINT256, {
-              value: ethers.utils.parseEther("2"),
+              value: ethers.parseEther("2").toString(),
               from: user1,
             });
             expect(await this.contract.getDebt()).to.be.bignumber.equal(new BN("0"));
           });
           it("Debt must be non-zero when Ether < gEther", async function () {
             await this.contract.addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
-              value: ethers.utils.parseEther("1"),
+              value: ethers.parseEther("1").toString(),
               from: user1,
             });
             const debt = await this.contract.getDebt();
@@ -498,7 +498,7 @@ contract("LiquidityModule", function (accounts) {
           describe("Pool debt be < 1e15 after the debt was paid.", async function () {
             beforeEach(async function () {
               await this.contract.addLiquidity([String(1e18), String(2e18)], 0, MAX_UINT256, {
-                value: ethers.utils.parseEther("1"),
+                value: ethers.parseEther("1").toString(),
               });
             });
             it("price=1", async function () {
@@ -630,7 +630,7 @@ contract("LiquidityModule", function (accounts) {
           // Sets adminFee to 1% of the swap fees
           await this.contract.setAdminFee(String(1e8));
           await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.1"),
+            value: ethers.parseEther("0.1").toString(),
             from: user2,
           });
           await this.contract.swap(1, 0, String(1e17), 0, MAX_UINT256, {
@@ -660,13 +660,13 @@ contract("LiquidityModule", function (accounts) {
           // Sets adminFee to 1% of the swap fees
           await this.contract.setAdminFee(String(1e8));
           await this.contract.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
             from: user1,
           });
 
           for (let i = 0; i < 10; i++) {
             await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
-              value: ethers.utils.parseEther("0.1"),
+              value: ethers.parseEther("0.1").toString(),
               from: user2,
             });
             await this.contract.swap(1, 0, String(1e17), 0, MAX_UINT256, {
@@ -718,7 +718,7 @@ contract("LiquidityModule", function (accounts) {
           // Create imbalanced pool to measure virtual price change
           // We expect virtual price to increase as A decreases
           await this.contract.addLiquidity([String(1e18), 0], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
           });
 
           // call rampA(), changing A to 100 within a span of 14 days
@@ -753,7 +753,7 @@ contract("LiquidityModule", function (accounts) {
           // Create imbalanced pool to measure virtual price change
           // We expect virtual price to decrease as A decreases
           await this.contract.addLiquidity([String(1e18), 0], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
           });
 
           // call rampA()
@@ -867,7 +867,7 @@ contract("LiquidityModule", function (accounts) {
         await this.contract.pause();
         await expectRevert(
           this.contract.addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
             from: user1,
           }),
           "Pausable: paused"
@@ -879,7 +879,7 @@ contract("LiquidityModule", function (accounts) {
         await this.contract.unpause();
 
         await this.contract.addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
+          value: ethers.parseEther("1").toString(),
           from: user1,
         });
 
@@ -893,7 +893,7 @@ contract("LiquidityModule", function (accounts) {
         await expectRevert(
           this.contract.addLiquidity([String(2e18), String(0)], 0, MAX_UINT256, {
             from: user1,
-            value: ethers.utils.parseEther("2.001"),
+            value: ethers.parseEther("2.001").toString(),
           }),
           "LML:received less or more ETH than expected"
         );
@@ -912,7 +912,7 @@ contract("LiquidityModule", function (accounts) {
         await expectRevert(
           this.contract.addLiquidity([String(2e18), String(0)], 0, MAX_UINT256, {
             from: user1,
-            value: ethers.utils.parseEther("2"),
+            value: ethers.parseEther("2").toString(),
           }),
           "LML:Must supply all tokens in pool"
         );
@@ -933,7 +933,7 @@ contract("LiquidityModule", function (accounts) {
           [String(1e18), String(3e18)],
           calculatedPoolTokenAmountWithSlippage,
           MAX_UINT256,
-          { value: ethers.utils.parseEther("1"), from: user1 }
+          { value: ethers.parseEther("1").toString(), from: user1 }
         );
 
         const actualPoolTokenAmount = await this.lpToken.balanceOf(user1);
@@ -961,7 +961,7 @@ contract("LiquidityModule", function (accounts) {
           [String(1e18), String(3e18)],
           calculatedPoolTokenAmountWithNegativeSlippage,
           MAX_UINT256,
-          { value: ethers.utils.parseEther("1"), from: user1 }
+          { value: ethers.parseEther("1").toString(), from: user1 }
         );
 
         const actualPoolTokenAmount = await this.lpToken.balanceOf(user1);
@@ -977,7 +977,7 @@ contract("LiquidityModule", function (accounts) {
 
       it("Succeeds with correctly updated tokenBalance after imbalanced deposit", async function () {
         await this.contract.addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
+          value: ethers.parseEther("1").toString(),
           from: user1,
         });
 
@@ -996,7 +996,7 @@ contract("LiquidityModule", function (accounts) {
           0,
           MAX_UINT256,
           {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.parseEther("1").toString(),
             from: user1,
           }
         );
@@ -1016,7 +1016,7 @@ contract("LiquidityModule", function (accounts) {
 
         // Someone else deposits thus front running user 1's deposit
         await this.contract.addLiquidity([String(1e19), String(3e19)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("10"),
+          value: ethers.parseEther("10").toString(),
         });
 
         await expectRevert(
@@ -1024,7 +1024,7 @@ contract("LiquidityModule", function (accounts) {
             [String(1e18), String(3e18)],
             calculatedLPTokenAmountWithSlippage,
             MAX_UINT256,
-            { value: ethers.utils.parseEther("1"), from: user1 }
+            { value: ethers.parseEther("1").toString(), from: user1 }
           ),
           "LML:Could not mint min requested"
         );
@@ -1041,7 +1041,7 @@ contract("LiquidityModule", function (accounts) {
             0,
             currentTimestamp.addn(599).toNumber(),
             {
-              value: ethers.utils.parseEther("0.01"),
+              value: ethers.parseEther("0.01").toString(),
               from: user1,
             }
           ),
@@ -1065,7 +1065,7 @@ contract("LiquidityModule", function (accounts) {
             [String(1e16), String(1e16)],
             calculatedLPTokenAmountWithSlippage,
             MAX_UINT256,
-            { value: ethers.utils.parseEther("0.01"), from: user1 }
+            { value: ethers.parseEther("0.01").toString(), from: user1 }
           ),
           "AddLiquidity"
         );
@@ -1078,11 +1078,11 @@ contract("LiquidityModule", function (accounts) {
       beforeEach(async function () {
         await this.contract.addLiquidity([String(9e18), String(9e18)], 0, MAX_UINT256, {
           from: deployer,
-          value: ethers.utils.parseEther("9"),
+          value: ethers.parseEther("9").toString(),
         });
 
         await this.contract.addLiquidity([String(2e18), String(1e16)], 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("2"),
+          value: ethers.parseEther("2").toString(),
           from: user1,
         });
         currentUser1Balance = await this.lpToken.balanceOf(user1);
@@ -1130,7 +1130,7 @@ contract("LiquidityModule", function (accounts) {
 
           // User 2 adds liquidity, which leads to change in balance of underlying tokens
           await this.contract.addLiquidity([String(1e16), String(2e18)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.01"),
+            value: ethers.parseEther("0.01").toString(),
             from: user2,
           });
 
@@ -1314,7 +1314,7 @@ contract("LiquidityModule", function (accounts) {
 
           // User 2 adds liquidity, which leads to change in balance of underlying tokens
           await this.contract.addLiquidity([String(1e16), String(1e20)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.01"),
+            value: ethers.parseEther("0.01").toString(),
             from: user1,
           });
 
@@ -1491,7 +1491,7 @@ contract("LiquidityModule", function (accounts) {
 
           // User 2 adds liquidity before User 1 initiates withdrawal
           await this.contract.addLiquidity([String(1e16), String(1e20)], 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.01"),
+            value: ethers.parseEther("0.01").toString(),
             from: user2,
           });
 
@@ -1544,7 +1544,7 @@ contract("LiquidityModule", function (accounts) {
         await this.contract.pause();
         await expectRevert(
           this.contract.swap(0, 1, String(1e16), 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.01"),
+            value: ethers.parseEther("0.01").toString(),
             from: user1,
           }),
           "Pausable: paused"
@@ -1561,7 +1561,7 @@ contract("LiquidityModule", function (accounts) {
       it("Reverts with 'Cannot swap more/less than you sent'", async function () {
         await expectRevert(
           this.contract.swap(1, 0, MAX_UINT256, 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.01"),
+            value: ethers.parseEther("0.01").toString(),
             from: user1,
           }),
           "LML:Cannot swap > you own"
@@ -1570,7 +1570,7 @@ contract("LiquidityModule", function (accounts) {
       it("Reverts with 'Cannot swap != eth sent'", async function () {
         await expectRevert(
           this.contract.swap(0, 1, MAX_UINT256, 0, MAX_UINT256, {
-            value: ethers.utils.parseEther("0.01"),
+            value: ethers.parseEther("0.01").toString(),
             from: user1,
           }),
           "LML:Cannot swap != eth sent"
@@ -1587,7 +1587,7 @@ contract("LiquidityModule", function (accounts) {
         // User 1 successfully initiates swap
         const tx = await this.contract.swap(0, 1, String(1e17), calculatedSwapReturn, MAX_UINT256, {
           from: user1,
-          value: ethers.utils.parseEther("0.1"),
+          value: ethers.parseEther("0.1").toString(),
         });
         const gasUsed = new BN(tx.receipt.cumulativeGasUsed.toString()).mul(
           new BN(tx.receipt.effectiveGasPrice.toString())
@@ -1648,7 +1648,7 @@ contract("LiquidityModule", function (accounts) {
         // User2 swaps before User1
         await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
           from: user2,
-          value: ethers.utils.parseEther("0.1"),
+          value: ethers.parseEther("0.1").toString(),
         });
 
         // User 1 successfully initiates swap with 1% slippage from initial calculated amount
@@ -1660,7 +1660,7 @@ contract("LiquidityModule", function (accounts) {
           MAX_UINT256,
           {
             from: user1,
-            value: ethers.utils.parseEther("0.1"),
+            value: ethers.parseEther("0.1").toString(),
           }
         );
         const gasUsed = new BN(tx.receipt.cumulativeGasUsed.toString()).mul(
@@ -1735,14 +1735,14 @@ contract("LiquidityModule", function (accounts) {
         // User 2 swaps before User 1 does
         await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
           from: user2,
-          value: ethers.utils.parseEther("0.1"),
+          value: ethers.parseEther("0.1").toString(),
         });
 
         // User 1 initiates swap
         await expectRevert(
           this.contract.swap(0, 1, String(1e17), calculatedSwapReturn, MAX_UINT256, {
             from: user1,
-            value: ethers.utils.parseEther("0.1"),
+            value: ethers.parseEther("0.1").toString(),
           }),
           "LML:Swap didnot result in min tokens"
         );
@@ -1750,7 +1750,7 @@ contract("LiquidityModule", function (accounts) {
 
       it("Returns correct amount of received token Ether => gEther", async function () {
         const receipt = await this.contract.swap(0, 1, String(1e18), 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
+          value: ethers.parseEther("1").toString(),
         });
         expectEvent(receipt, "return$swap", {
           ret0: new BN("916300000000000000"),
@@ -1759,7 +1759,7 @@ contract("LiquidityModule", function (accounts) {
 
       it("Returns correct amount of received token gEther => Ether", async function () {
         const receipt = await this.contract.swap(1, 0, String(1e18), 0, MAX_UINT256, {
-          value: ethers.utils.parseEther("1"),
+          value: ethers.parseEther("1").toString(),
         });
         expectEvent(receipt, "return$swap", {
           ret0: new BN("916300000000000000"),
@@ -1782,7 +1782,7 @@ contract("LiquidityModule", function (accounts) {
         expectEvent(
           await this.contract.swap(0, 1, String(1e17), 0, MAX_UINT256, {
             from: user1,
-            value: ethers.utils.parseEther("0.1"),
+            value: ethers.parseEther("0.1").toString(),
           }),
           "TokenSwap"
         );

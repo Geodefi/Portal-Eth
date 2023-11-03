@@ -10,7 +10,7 @@ const {
   DAY,
   strToBytes,
   strToBytes32,
-} = require("../../../utils");
+} = require("../../../../utils");
 
 const gETH = artifacts.require("gETH");
 const StakeModuleLib = artifacts.require("StakeModuleLib");

@@ -11,5 +11,7 @@ const func = async function (hre) {
   });
 };
 
+// TODO : on mainnet DEFAULT_ADMIN_ROLE should be either revoked or transferred to a multisig etc.
+
 module.exports = func;
 module.exports.tags = ["gETH"];

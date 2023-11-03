@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {ID_TYPE} from "../globals/id_type.sol";
 import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
 // interfaces
-import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
+import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
+import {IWithdrawalModule} from "../interfaces/modules/IWithdrawalModule.sol";
 // libraries
-import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib as WML, PooledWithdrawal} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
-contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModule {
-  using WML for WML.PooledWithdrawal;
+contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModule {
+  using WML for PooledWithdrawal;
   /**
    * TODO: this can be renamed to withdrawalQueue or ValidatorCustodian
    * @custom:section                           ** VARIABLES **
@@ -163,14 +164,14 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
   /**
    * @notice pausing the contract activates the isolationMode
    */
-  function pause() external virtual override(WithdrawalModule) onlyOwner {
+  function pause() external virtual override(WithdrawalModule, IWithdrawalModule) onlyOwner {
     _pause();
   }
 
   /**
    * @notice unpausing the contract deactivates the isolationMode
    */
-  function unpause() external virtual override(WithdrawalModule) onlyOwner {
+  function unpause() external virtual override(WithdrawalModule, IWithdrawalModule) onlyOwner {
     _unpause();
   }
 
@@ -181,7 +182,7 @@ contract WithdrawalContract is IWithdrawalContract, WithdrawalModule, GeodeModul
    */
   function setExitThreshold(
     uint256 newThreshold
-  ) external virtual override(WithdrawalModule) onlyOwner {
+  ) external virtual override(WithdrawalModule, IWithdrawalModule) onlyOwner {
     WITHDRAWAL.setExitThreshold(newThreshold);
   }
 

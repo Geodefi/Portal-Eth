@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {WithdrawalModule} from "../../../modules/WithdrawalModule/WithdrawalModule.sol";
-import {WithdrawalModuleLib} from "../../../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib, PooledWithdrawal} from "../../../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract WithdrawalModuleLibMock is WithdrawalModule {
-  using WithdrawalModuleLib for WithdrawalModuleLib.PooledWithdrawal;
+  using WithdrawalModuleLib for PooledWithdrawal;
 
   function initialize(
     address _gETH_position,
@@ -57,17 +57,19 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     returns (
       uint256 requested,
       uint256 realized,
-      uint256 fulfilled,
-      uint256 realizedBalance,
+      uint256 realizedEtherBalance,
       uint256 realizedPrice,
+      uint256 fulfilled,
+      uint256 fulfilledEtherBalance,
       uint256 commonPoll
     )
   {
     requested = WITHDRAWAL.queue.requested;
     realized = WITHDRAWAL.queue.realized;
-    fulfilled = WITHDRAWAL.queue.fulfilled;
-    realizedBalance = WITHDRAWAL.queue.realizedBalance;
+    realizedEtherBalance = WITHDRAWAL.queue.realizedEtherBalance;
     realizedPrice = WITHDRAWAL.queue.realizedPrice;
+    fulfilled = WITHDRAWAL.queue.fulfilled;
+    fulfilledEtherBalance = WITHDRAWAL.queue.fulfilledEtherBalance;
     commonPoll = WITHDRAWAL.queue.commonPoll;
   }
 
@@ -82,7 +84,7 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
       uint256 trigger,
       uint256 size,
       uint256 fulfilled,
-      uint256 claimableETH
+      uint256 claimableEther
     )
   {
     require(index < WITHDRAWAL.requests.length, "WMLM: index exceeds length");
@@ -91,11 +93,13 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     trigger = WITHDRAWAL.requests[realIndex].trigger;
     size = WITHDRAWAL.requests[realIndex].size;
     fulfilled = WITHDRAWAL.requests[realIndex].fulfilled;
-    claimableETH = WITHDRAWAL.requests[realIndex].claimableETH;
+    claimableEther = WITHDRAWAL.requests[realIndex].claimableEther;
   }
 
-  function $validatorThreshold(bytes memory pubkey) external view returns (uint256) {
-    return WITHDRAWAL.getValidatorThreshold(pubkey);
+  function $getValidatorThreshold(
+    bytes memory pubkey
+  ) external view returns (uint256 threshold, uint256 beaconBalancePriced) {
+    (threshold, beaconBalancePriced) = WITHDRAWAL.getValidatorThreshold(pubkey);
   }
 
   function $setMockValidatorData(
@@ -113,14 +117,14 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     uint256 requested,
     uint256 realized,
     uint256 fulfilled,
-    uint256 realizedBalance,
+    uint256 realizedEtherBalance,
     uint256 realizedPrice,
     uint256 commonPoll
   ) external {
     WITHDRAWAL.queue.requested = requested;
     WITHDRAWAL.queue.realized = realized;
     WITHDRAWAL.queue.fulfilled = fulfilled;
-    WITHDRAWAL.queue.realizedBalance = realizedBalance;
+    WITHDRAWAL.queue.realizedEtherBalance = realizedEtherBalance;
     WITHDRAWAL.queue.realizedPrice = realizedPrice;
     WITHDRAWAL.queue.commonPoll = commonPoll;
   }
@@ -129,11 +133,11 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     return WITHDRAWAL.canFinalizeExit(pubkey);
   }
 
-  function $_checkAndRequestExit(
+  function $checkAndRequestExit(
     bytes calldata pubkey,
     uint256 commonPoll
   ) external returns (uint256) {
-    return WITHDRAWAL._checkAndRequestExit(pubkey, commonPoll);
+    return WITHDRAWAL.checkAndRequestExit(pubkey, commonPoll);
   }
 
   function $_vote(bytes calldata pubkey, uint256 size) external {
@@ -197,7 +201,11 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     uint256 reportedWithdrawn,
     uint256 processedWithdrawn
   ) external returns (uint256 extra) {
-    extra = WITHDRAWAL._distributeFees(pubkey, reportedWithdrawn, processedWithdrawn);
+    extra = WITHDRAWAL._distributeFees(
+      WITHDRAWAL.PORTAL.getValidator(pubkey),
+      reportedWithdrawn,
+      processedWithdrawn
+    );
   }
 
   function $processValidators(
