@@ -41,8 +41,8 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 abstract contract WithdrawalModule is
   IWithdrawalModule,
   ERC1155HolderUpgradeable,
-  PausableUpgradeable,
-  ReentrancyGuardUpgradeable
+  ReentrancyGuardUpgradeable,
+  PausableUpgradeable
 {
   using WML for PooledWithdrawal;
   /**
@@ -196,13 +196,6 @@ abstract contract WithdrawalModule is
   }
 
   /**
-   * @custom:visibility -> external
-   */
-  function checkAndRequestExit(bytes memory pubkey) external virtual override returns (uint256) {
-    return WITHDRAWAL.checkAndRequestExit(pubkey, WITHDRAWAL.queue.commonPoll);
-  }
-
-  /**
    * @custom:section                           ** REQUESTS QUEUE **
    */
   /**
@@ -211,16 +204,20 @@ abstract contract WithdrawalModule is
    * @custom:visibility -> external
    */
 
-  function enqueue(uint256 size, bytes calldata pubkey, address owner) external virtual override {
-    WITHDRAWAL.enqueue(size, pubkey, owner);
+  function enqueue(
+    uint256 size,
+    bytes calldata pubkey,
+    address owner
+  ) external virtual override returns (uint256 index) {
+    index = WITHDRAWAL.enqueue(size, pubkey, owner);
   }
 
   function enqueueBatch(
     uint256[] calldata sizes,
     bytes[] calldata pubkeys,
     address owner
-  ) external virtual override {
-    WITHDRAWAL.enqueueBatch(sizes, pubkeys, owner);
+  ) external virtual override returns (uint256[] memory indexes) {
+    indexes = WITHDRAWAL.enqueueBatch(sizes, pubkeys, owner);
   }
 
   function transferRequest(uint256 index, address newOwner) external virtual override {
@@ -235,12 +232,8 @@ abstract contract WithdrawalModule is
    * @custom:visibility -> view
    */
 
-  function fulfillable(
-    uint256 index,
-    uint256 Qrealized,
-    uint256 Qfulfilled
-  ) external view virtual override returns (uint256) {
-    return WITHDRAWAL.fulfillable(index, Qrealized, Qfulfilled);
+  function fulfillable(uint256 index) external view virtual override returns (uint256) {
+    return WITHDRAWAL.fulfillable(index, WITHDRAWAL.queue.realized, WITHDRAWAL.queue.fulfilled);
   }
 
   /**

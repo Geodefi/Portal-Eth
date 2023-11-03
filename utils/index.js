@@ -80,6 +80,10 @@ module.exports.impersonate = async function (address, balance) {
   });
 };
 
+module.exports.delay = function (time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+};
+
 // constants
 const DAY = new BN("24").mul(new BN("60")).mul(new BN("60"));
 module.exports.DAY = DAY;

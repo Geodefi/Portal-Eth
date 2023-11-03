@@ -337,7 +337,7 @@ library WithdrawalModuleLib {
     uint256 trigger,
     uint256 size,
     address owner
-  ) internal {
+  ) internal returns (uint256 index) {
     require(size >= MIN_REQUEST_SIZE, "WML:min 0.05 gETH");
     require(owner != address(0), "WML:owner can not be zero address");
 
@@ -345,7 +345,9 @@ library WithdrawalModuleLib {
       Request({owner: owner, trigger: trigger, size: size, fulfilled: 0, claimableEther: 0})
     );
 
-    emit Enqueue(self.requests.length - 1, owner);
+    index = self.requests.length - 1;
+
+    emit Enqueue(index, owner);
   }
 
   /**
@@ -362,15 +364,14 @@ library WithdrawalModuleLib {
     uint256 size,
     bytes calldata pubkey,
     address owner
-  ) external {
+  ) external returns (uint256 index) {
     uint256 requestedgETH = self.queue.requested;
-    _enqueue(self, requestedgETH, size, owner);
+    index = _enqueue(self, requestedgETH, size, owner);
 
     if (pubkey.length == 0) {
       self.queue.commonPoll += size;
     } else {
       _vote(self, pubkey, size);
-      self.queue.commonPoll = checkAndRequestExit(self, pubkey, self.queue.commonPoll);
     }
 
     self.queue.requested = requestedgETH + size;
@@ -390,7 +391,7 @@ library WithdrawalModuleLib {
     uint256[] calldata sizes,
     bytes[] calldata pubkeys,
     address owner
-  ) external {
+  ) external returns (uint256[] memory indexes) {
     uint256 len = sizes.length;
     require(len == pubkeys.length, "WML:invalid input length");
 
@@ -398,14 +399,14 @@ library WithdrawalModuleLib {
     uint256 requestedgETH = self.queue.requested;
     uint256 totalSize;
 
+    indexes = new uint256[](len);
     for (uint256 i; i < len; ) {
-      _enqueue(self, requestedgETH, sizes[i], owner);
+      indexes[i] = _enqueue(self, requestedgETH, sizes[i], owner);
 
       if (pubkeys[i].length == 0) {
         commonPoll += sizes[i];
       } else {
         _vote(self, pubkeys[i], sizes[i]);
-        commonPoll = checkAndRequestExit(self, pubkeys[i], commonPoll);
       }
       requestedgETH = requestedgETH + sizes[i];
       totalSize += sizes[i];
@@ -435,6 +436,10 @@ library WithdrawalModuleLib {
     address oldOwner = self.requests[index].owner;
     require(msg.sender == oldOwner, "WML:not owner");
     require(newOwner != address(0), "WML:cannot transfer to zero address");
+    require(
+      self.requests[index].fulfilled < self.requests[index].size,
+      "WML:cannot transfer fulfilled"
+    );
 
     self.requests[index].owner = newOwner;
 
@@ -654,21 +659,19 @@ library WithdrawalModuleLib {
    */
   function _distributeFees(
     PooledWithdrawal storage self,
-    bytes memory pubkey,
+    Validator memory val,
     uint256 reportedWithdrawn,
     uint256 processedWithdrawn
   ) internal returns (uint256 extra) {
-    if (reportedWithdrawn > processedWithdrawn) {
-      uint256 profit = reportedWithdrawn - processedWithdrawn;
-      Validator memory val = self.PORTAL.getValidator(pubkey);
+    // reportedWithdrawn > processedWithdrawn checks are done as it should be before calling this function
+    uint256 profit = reportedWithdrawn - processedWithdrawn;
 
-      uint256 poolProfit = (profit * val.poolFee) / PERCENTAGE_DENOMINATOR;
-      uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;
-      extra = (profit - poolProfit) - operatorProfit;
+    uint256 poolProfit = (profit * val.poolFee) / PERCENTAGE_DENOMINATOR;
+    uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;
+    extra = (profit - poolProfit) - operatorProfit;
 
-      self.PORTAL.increaseWalletBalance{value: poolProfit}(val.poolId);
-      self.PORTAL.increaseWalletBalance{value: operatorProfit}(val.operatorId);
-    }
+    self.PORTAL.increaseWalletBalance{value: poolProfit}(val.poolId);
+    self.PORTAL.increaseWalletBalance{value: operatorProfit}(val.operatorId);
   }
 
   /**
@@ -724,19 +727,29 @@ library WithdrawalModuleLib {
       "WML:invalid lengths"
     );
 
-    bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
-    for (uint256 i; i < pkLen; ) {
-      // verify balances
-      bytes32 leaf = keccak256(
-        bytes.concat(keccak256(abi.encode(pubkeys[i], beaconBalances[i], withdrawnBalances[i])))
-      );
-      require(
-        MerkleProof.verify(balanceProofs[i], balanceMerkleRoot, leaf),
-        "WML:NOT all proofs are valid"
-      );
+    Validator[] memory validators = new Validator[](pkLen);
 
-      unchecked {
-        i += 1;
+    {
+      bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
+      for (uint256 i; i < pkLen; ) {
+        // fill the validators array while checking the pool id
+        validators[i] = self.PORTAL.getValidator(pubkeys[i]);
+
+        // check pubkey belong to this pool
+        require(validators[i].poolId == self.POOL_ID, "WML:validator for an unknown pool");
+
+        // verify balances
+        bytes32 leaf = keccak256(
+          bytes.concat(keccak256(abi.encode(pubkeys[i], beaconBalances[i], withdrawnBalances[i])))
+        );
+        require(
+          MerkleProof.verify(balanceProofs[i], balanceMerkleRoot, leaf),
+          "WML:NOT all proofs are valid"
+        );
+
+        unchecked {
+          i += 1;
+        }
       }
     }
 
@@ -750,16 +763,25 @@ library WithdrawalModuleLib {
 
       if (beaconBalances[j] == 0) {
         // exit
-        processed += _distributeFees(
-          self,
-          pubkeys[j],
-          withdrawnBalances[j],
-          oldWitBal + DCL.DEPOSIT_AMOUNT
-        );
+        if (withdrawnBalances[j] > oldWitBal + DCL.DEPOSIT_AMOUNT) {
+          processed += _distributeFees(
+            self,
+            validators[j],
+            withdrawnBalances[j],
+            oldWitBal + DCL.DEPOSIT_AMOUNT
+          );
+          processed += DCL.DEPOSIT_AMOUNT;
+        } else if (withdrawnBalances[j] >= oldWitBal) {
+          processed += withdrawnBalances[j] - oldWitBal;
+        } else {
+          revert("WML:invalid withdrawn balance");
+        }
         _finalizeExit(self, pubkeys[j]);
       } else {
         // check if should request exit
-        processed += _distributeFees(self, pubkeys[j], withdrawnBalances[j], oldWitBal);
+        if (withdrawnBalances[j] > oldWitBal) {
+          processed += _distributeFees(self, validators[j], withdrawnBalances[j], oldWitBal);
+        }
         commonPoll = checkAndRequestExit(self, pubkeys[j], commonPoll);
       }
 

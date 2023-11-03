@@ -42,7 +42,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *
  * @author Ice Bear & Crash Bandicoot
  */
-abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
+abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule {
   using GML for DualGovernance;
 
   /**

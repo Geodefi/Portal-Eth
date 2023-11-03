@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { expectRevert, BN } = require("@openzeppelin/test-helpers");
-const { generateAddress } = require("../../../utils");
+const { generateAddress } = require("../../../../utils");
 
 const DepositContractLib = artifacts.require("$DepositContractLib");
 

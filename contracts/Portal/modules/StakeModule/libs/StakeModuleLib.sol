@@ -254,7 +254,9 @@ library StakeModuleLib {
       }
     } else if (typeOfId == ID_TYPE.POOL) {
       require(_restrictionMap[1], "SML:TYPE NOT allowed");
-    } else revert("SML:invalid TYPE");
+    } else {
+      revert("SML:invalid TYPE");
+    }
 
     if (_expectMaintainer) {
       require(
@@ -1323,6 +1325,10 @@ library StakeModuleLib {
     uint256 poolId,
     bytes calldata pk
   ) external {
+    require(
+      block.timestamp > self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD,
+      "SML: early exit not allowed"
+    );
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
       "SML:sender is NOT withdrawal contract"

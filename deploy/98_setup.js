@@ -1,4 +1,4 @@
-const { strToBytes, generateId } = require("../test/utils/index.js");
+const { strToBytes, generateId } = require("../utils");
 // TODO : use generateId instead generateId
 
 const func = async (hre) => {

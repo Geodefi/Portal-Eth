@@ -41,7 +41,7 @@ import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
+contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
   using GML for DualGovernance;
   using AL for Swap;
   using LML for Swap;

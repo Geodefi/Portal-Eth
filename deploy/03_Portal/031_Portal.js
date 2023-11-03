@@ -1,4 +1,4 @@
-const { strToBytes } = require("../../test/utils");
+const { strToBytes } = require("../../utils");
 
 const func = async function (hre) {
   const { deployments, getNamedAccounts } = hre;
@@ -29,7 +29,7 @@ const func = async function (hre) {
       await get("gETH")
     ).address,
     deployer,
-    strToBytes("v1.0")
+    strToBytes("v1_0")
   );
 };
 
