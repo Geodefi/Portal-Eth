@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
 import {IDataStoreModule} from "../../interfaces/modules/IDataStoreModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML, IsolatedStorage} from "./libs/DataStoreModuleLib.sol";
 // external
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -12,12 +12,12 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @title DSM: DataStore Module
  *
  * @notice A storage management tool designed to create a safe and scalable storage layout
- * for upgradable contracts with various types of data classes (users,packages,definitions).
+ * for upgradable contracts with various types of data classes (users, packages, definitions).
  *
  * @dev review: this module delegates its functionality to DSML (DataStoreModuleLib).
  * DSM or DSML has NO access control.
  *
- * @dev There are no additional functionalities implemented seperately from the library.
+ * @dev There are no additional functionalities implemented apart from the library.
  *
  * @dev NO function needs to be overriden when inherited.
  *
@@ -28,7 +28,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @author Ice Bear & Crash Bandicoot
  */
 abstract contract DataStoreModule is IDataStoreModule, Initializable {
-  using DSML for DSML.IsolatedStorage;
+  using DSML for IsolatedStorage;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -36,7 +36,7 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  DSML.IsolatedStorage internal DATASTORE;
+  IsolatedStorage internal DATASTORE;
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -60,7 +60,7 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
     string calldata _name,
     uint256 _type
   ) external pure virtual override returns (uint256 id) {
-    id = uint256(keccak256(abi.encodePacked(_name, _type)));
+    id = uint256(keccak256(abi.encode(_name, _type)));
   }
 
   /**

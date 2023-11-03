@@ -6,12 +6,7 @@ const func = async (taskArgs, hre) => {
     id = taskArgs.id;
     console.log("Tx sent...");
 
-    await execute(
-      "Portal",
-      { from: deployer, log: true },
-      "approveProposal",
-      id
-    );
+    await execute("Portal", { from: deployer, log: true }, "approveProposal", id);
     console.log(`created: ${id}`);
   } catch (error) {
     console.log(error);

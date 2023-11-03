@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
-import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
-import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {StakeModuleLib, PooledStaking} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
+import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
+import {DataStoreModuleLib, IsolatedStorage} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract StakeModuleLibMock is StakeModule {
-  using StakeModuleLib for StakeModuleLib.PooledStaking;
-  using DataStoreModuleLib for DataStoreModuleLib.IsolatedStorage;
+  using StakeModuleLib for PooledStaking;
+  using OracleExtensionLib for PooledStaking;
+  using InitiatorExtensionLib for PooledStaking;
+  using DataStoreModuleLib for IsolatedStorage;
 
   event return$_buyback(uint256 remETH, uint256 boughtgETH);
 
@@ -40,14 +44,6 @@ contract StakeModuleLibMock is StakeModule {
 
   function $writeAddress(uint256 _id, bytes32 _key, address _data) external {
     DATASTORE.writeAddress(_id, _key, _data);
-  }
-
-  function $set_ORACLE_POSITION(address _data) external {
-    STAKE.ORACLE_POSITION = _data;
-  }
-
-  function $set_VALIDATORS_INDEX(uint256 _data) external {
-    STAKE.VALIDATORS_INDEX = _data;
   }
 
   function $set_VERIFICATION_INDEX(uint256 _data) external {
@@ -134,15 +130,11 @@ contract StakeModuleLibMock is StakeModule {
   }
 
   function $_imprison(uint256 _operatorId, bytes calldata _proof) external {
-    StakeModuleLib._imprison(DATASTORE, _operatorId, _proof);
+    OracleExtensionLib._imprison(DATASTORE, _operatorId, _proof);
   }
 
   function $_setValidatorPeriod(uint256 _operatorId, uint256 _newPeriod) external {
     StakeModuleLib._setValidatorPeriod(DATASTORE, _operatorId, _newPeriod);
-  }
-
-  function $_setFallbackOperator(uint256 poolId, uint256 operatorId) external {
-    StakeModuleLib._setFallbackOperator(DATASTORE, poolId, operatorId);
   }
 
   function $_approveOperator(
@@ -208,8 +200,8 @@ contract StakeModuleLibMock is StakeModule {
     payable
     virtual
     override
-    whenNotPaused
     nonReentrant
+    whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
     (boughtgETH, mintedgETH) = STAKE.deposit(DATASTORE, poolId, mingETH, deadline, receiver);

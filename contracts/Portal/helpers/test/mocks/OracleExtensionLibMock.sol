@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
-import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {StakeModuleLib, PooledStaking} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
-import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib, IsolatedStorage} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract OracleExtensionLibMock is StakeModule {
-  using StakeModuleLib for StakeModuleLib.PooledStaking;
-  using OracleExtensionLib for StakeModuleLib.PooledStaking;
-  using DataStoreModuleLib for DataStoreModuleLib.IsolatedStorage;
+  using StakeModuleLib for PooledStaking;
+  using OracleExtensionLib for PooledStaking;
+  using DataStoreModuleLib for IsolatedStorage;
 
   function initialize(address _gETH_position, address _oracle_position) external initializer {
     __StakeModule_init(_gETH_position, _oracle_position);
@@ -77,7 +77,7 @@ contract OracleExtensionLibMock is StakeModule {
     return STAKE._alienateValidator(DATASTORE, STAKE.VERIFICATION_INDEX, _pk);
   }
 
-  function $_sanityCheck(uint256 _id, uint256 _newPrice) external {
+  function $_sanityCheck(uint256 _id, uint256 _newPrice) external view {
     return STAKE._sanityCheck(DATASTORE, _id, _newPrice);
   }
 

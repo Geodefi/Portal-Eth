@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
 import {PERCENTAGE_DENOMINATOR} from "../globals/macros.sol";
 import {ID_TYPE} from "../globals/id_type.sol";
 // interfaces
-// import {IgETH} from "../interfaces/IgETH.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
-import {IGeodePackage} from "../interfaces/packages/IGeodePackage.sol";
 import {ILiquidityPool} from "../interfaces/packages/ILiquidityPool.sol";
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
-import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLib as GML, DualGovernance} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
-import {LiquidityModuleLib as LML} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML, Swap} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
@@ -44,10 +41,10 @@ import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
-  using GML for GML.DualGovernance;
-  using AL for LML.Swap;
-  using LML for LML.Swap;
+contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
+  using GML for DualGovernance;
+  using AL for Swap;
+  using LML for Swap;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -171,10 +168,22 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     override(GeodeModule, IGeodeModule)
     returns (bool)
   {
-    if (paused()) return true;
-    if (getContractVersion() != getProposedVersion()) return true;
-    if (GEODE.APPROVED_UPGRADE != _getImplementation()) return true;
-    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) return true;
+    if (paused()) {
+      return true;
+    }
+
+    if (getContractVersion() != getProposedVersion()) {
+      return true;
+    }
+
+    if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
+      return true;
+    }
+
+    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) {
+      return true;
+    }
+
     return false;
   }
 
@@ -195,8 +204,8 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
     require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
 
-    bytes memory versionName = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
-    approveProposal(DSML.generateId(versionName, ID_TYPE.CONTRACT_UPGRADE));
+    uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
+    approveProposal(id);
   }
 
   /**
@@ -248,7 +257,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     LIQUIDITY.rampA(futureA, futureTime);
   }
 
-  function stopRampA() public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
+  function stopRampA() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
     LIQUIDITY.stopRampA();
   }
 
@@ -259,7 +268,7 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   receive() external payable {}
 
   /**
-   * @notice keep the contract size at 50
+   * @notice keep the total number of variables at 50
    */
-  uint256[47] private __gap;
+  uint256[50] private __gap;
 }

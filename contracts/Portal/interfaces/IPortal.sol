@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 import {IGeodeModule} from "./modules/IGeodeModule.sol";
 import {IStakeModule} from "./modules/IStakeModule.sol";
 
-interface IPortal is IStakeModule, IGeodeModule {
+interface IPortal is IGeodeModule, IStakeModule {
   function pausegETH() external;
 
   function unpausegETH() external;
 
-  function pushUpgrade(uint256 packageType) external returns (bytes memory versionName);
+  function pushUpgrade(uint256 packageType) external returns (uint256 id);
 
   function releasePrisoned(uint256 operatorId) external;
 

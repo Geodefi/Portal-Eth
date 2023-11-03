@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 /**
  * @notice VALIDATOR_STATE: keeping track of validators within The Staking Library.
@@ -20,6 +20,6 @@ library VALIDATOR_STATE {
   /// @notice STATE 4: validator is fully exited.
   uint8 internal constant EXITED = 4;
 
-  /// @notice STATE 69: proposal was malicious(alien). Maybe faulty signatures or probably (https://bit.ly/3Tkc6UC)
+  /// @notice STATE 69: proposal was malicious(alien). Maybe faulty signatures or probably frontrunning (https://bit.ly/3Tkc6UC)
   uint8 internal constant ALIENATED = 69;
 }

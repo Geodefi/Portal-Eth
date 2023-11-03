@@ -1,7 +1,8 @@
 const { expect } = require("chai");
 const { expectRevert, constants, BN } = require("@openzeppelin/test-helpers");
 
-const { strToBytes, strToBytes32, generateAddress } = require("../../utils");
+const { strToBytes, strToBytes32, generateAddress } = require("../../../utils");
+const { web3 } = require("hardhat");
 const { ZERO_BYTES32, ZERO_ADDRESS, MAX_UINT256 } = constants;
 
 const DataStoreModule = artifacts.require("$DataStoreModule");
@@ -26,21 +27,18 @@ contract("DataStoreModule", function (accounts) {
 
   context("contract", function () {
     describe("generateId", function () {
-      describe("returns keccak(abi.encodePacked(bytes,uint256))", async function () {
+      describe("returns keccak(abi.encode(bytes,uint256))", async function () {
         it("(0,0)", async function () {
           const id = await this.contract.generateId("", 0);
           const expId = web3.utils.soliditySha3(
-            web3.utils.encodePacked({ value: "", type: "string" }, { value: 0, type: "uint256" })
+            web3.eth.abi.encodeParameters(["string", "uint256"], ["", 0])
           );
           await expect(id).to.be.bignumber.equal(expId);
         });
         it("(random,random)", async function () {
           const id = await this.contract.generateId(randomStr, randomInt);
           const expId = web3.utils.soliditySha3(
-            web3.utils.encodePacked(
-              { value: randomStr, type: "string" },
-              { value: randomInt, type: "uint256" }
-            )
+            web3.eth.abi.encodeParameters(["string", "uint256"], [randomStr, randomInt])
           );
           await expect(id).to.be.bignumber.equal(expId);
         });
@@ -62,21 +60,18 @@ contract("DataStoreModule", function (accounts) {
 
   context("library", function () {
     describe("getKey", function () {
-      describe("returns keccak(abi.encodePacked(uint256,bytes32))", async function () {
+      describe("returns keccak(abi.encode(uint256,bytes32))", async function () {
         it("(0,0)", async function () {
           const key = await this.library.$getKey(0, "0x");
           const expKey = web3.utils.soliditySha3(
-            web3.utils.encodePacked({ value: 0, type: "uint256" }, { value: "", type: "bytes32" })
+            web3.eth.abi.encodeParameters(["uint256", "bytes32"], [0, strToBytes32("")])
           );
           await expect(key).to.be.bignumber.equal(expKey);
         });
         it("(random,random)", async function () {
           const key = await this.library.$getKey(randomInt, randomBytes32);
           const expKey = web3.utils.soliditySha3(
-            web3.utils.encodePacked(
-              { value: randomInt, type: "uint256" },
-              { value: randomBytes32, type: "bytes32" }
-            )
+            web3.eth.abi.encodeParameters(["uint256", "bytes32"], [randomInt, randomBytes32])
           );
           await expect(key).to.be.bignumber.equal(expKey);
         });

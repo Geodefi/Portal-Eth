@@ -10,13 +10,15 @@ const {
   DAY,
   strToBytes,
   strToBytes32,
-} = require("../../../utils");
+} = require("../../../../utils");
 
 const gETH = artifacts.require("gETH");
 const StakeModuleLib = artifacts.require("StakeModuleLib");
 const OracleExtensionLib = artifacts.require("OracleExtensionLib");
 const OracleExtensionLibMock = artifacts.require("$OracleExtensionLibMock");
 const GeodeModuleLib = artifacts.require("GeodeModuleLib");
+const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
+const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
 const WithdrawalContract = artifacts.require("WithdrawalContract");
 
 const pubkeys = [
@@ -40,12 +42,29 @@ const signature31 =
   "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
 
 contract("OracleExtensionLib", function (accounts) {
-  const [deployer, oracle, poolOwner, operatorOwner] = accounts;
+  const [
+    deployer,
+    oracle,
+    poolOwner,
+    operatorOwner,
+    yieldReceiver1,
+    yieldReceiver2,
+    yieldReceiver3,
+    yieldReceiver4,
+    yieldReceiver5,
+  ] = accounts;
 
   const MIN_VALIDATOR_PERIOD = DAY.muln(90);
 
   const operatorNames = ["goodOperator", "badOperator"];
   const poolNames = ["myPool", "otherPool", "somePool", "bigPool", "smallPool"];
+  const yieldReceivers = [
+    yieldReceiver1,
+    yieldReceiver2,
+    yieldReceiver3,
+    yieldReceiver4,
+    yieldReceiver5,
+  ];
 
   // eslint-disable-next-line prefer-const
   let operatorIds = [];
@@ -103,7 +122,7 @@ contract("OracleExtensionLib", function (accounts) {
   };
 
   const proposeValidators = async function (poolId, operatorId, pubkeys) {
-    await this.contract.delegate(poolId, [operatorId], [100], 0, {
+    await this.contract.delegate(poolId, [operatorId], [100], {
       from: poolOwner,
     });
 
@@ -128,13 +147,19 @@ contract("OracleExtensionLib", function (accounts) {
 
   before(async function () {
     const SML = await StakeModuleLib.new();
-    const OEL = await OracleExtensionLib.new();
+    // this should be before --> await InitiatorExtensionLib.new();
+    await InitiatorExtensionLib.link(SML);
     const GML = await GeodeModuleLib.new();
+    const IEL = await InitiatorExtensionLib.new();
+    const OEL = await OracleExtensionLib.new();
+    const WML = await WithdrawalModuleLib.new();
 
     await OracleExtensionLibMock.link(SML);
     await OracleExtensionLibMock.link(OEL);
+    await OracleExtensionLibMock.link(IEL);
 
     await WithdrawalContract.link(GML);
+    await WithdrawalContract.link(WML);
 
     this.setWithdrawalPackage = setWithdrawalPackage;
     this.createOperator = createOperator;
@@ -302,7 +327,7 @@ contract("OracleExtensionLib", function (accounts) {
         "OEL:sender NOT ORACLE"
       );
     });
-    it("reverts if lengths doesn't match", async function () {
+    it("reverts if lengths don't match", async function () {
       await expectRevert(
         this.contract.regulateOperators([operatorIds[0]], [], { from: oracle }),
         "OEL:invalid proofs"
@@ -471,45 +496,140 @@ contract("OracleExtensionLib", function (accounts) {
         ];
         tree = StandardMerkleTree.of(values, ["uint256", "uint256"]);
       });
-      it("reverts if no price change since the last update", async function () {
-        await expectRevert(
-          this.contract.priceSync(poolIds[1], prices[1], tree.getProof(1)),
-          "OEL:no price change"
-        );
+      context("priceSync without yield separation", function () {
+        it("reverts if no price change since the last update", async function () {
+          await expectRevert(
+            this.contract.priceSync(poolIds[1], prices[1], tree.getProof(1)),
+            "OEL:no price change"
+          );
+        });
+        it("reverts if proofs are faulty", async function () {
+          const tx = await this.contract.reportBeacon(
+            tree.root,
+            strToBytes32("not important"),
+            50001,
+            {
+              from: oracle,
+            }
+          );
+          ts = new BN((await getReceiptTimestamp(tx)).toString());
+          await setTimestamp(ts.add(DAY).toNumber());
+          await expectRevert(
+            this.contract.priceSync(poolIds[1], prices[1], tree.getProof(2)),
+            "OEL:NOT all proofs are valid"
+          );
+        });
+        it("success: sets PricePerShare", async function () {
+          const tx = await this.contract.reportBeacon(
+            tree.root,
+            strToBytes32("not important"),
+            50001,
+            {
+              from: oracle,
+            }
+          );
+          ts = new BN((await getReceiptTimestamp(tx)).toString());
+          await setTimestamp(ts.add(DAY).toNumber());
+          await this.contract.priceSync(poolIds[1], prices[1], tree.getProof(1));
+          expect(await this.gETH.pricePerShare(poolIds[1])).to.be.bignumber.eq(prices[1]);
+        });
       });
-      it("reverts if proofs are faulty", async function () {
-        const tx = await this.contract.reportBeacon(
-          tree.root,
-          strToBytes32("not important"),
-          50001,
-          {
-            from: oracle,
+      context("priceSync with yield separation", function () {
+        beforeEach(async function () {
+          for (let i = 0; i < poolIds.length; i++) {
+            await this.contract.setYieldReceiver(poolIds[i], yieldReceivers[i], {
+              from: poolOwner,
+            });
           }
-        );
-        ts = new BN((await getReceiptTimestamp(tx)).toString());
-        await setTimestamp(ts.add(DAY).toNumber());
-        await expectRevert(
-          this.contract.priceSync(poolIds[1], prices[1], tree.getProof(2)),
-          "OEL:NOT all proofs are valid"
-        );
-      });
-      it("success: sets PricePerShare", async function () {
-        const tx = await this.contract.reportBeacon(
-          tree.root,
-          strToBytes32("not important"),
-          50001,
-          {
-            from: oracle,
-          }
-        );
-        ts = new BN((await getReceiptTimestamp(tx)).toString());
-        await setTimestamp(ts.add(DAY).toNumber());
-        await this.contract.priceSync(poolIds[1], prices[1], tree.getProof(1));
-        expect(await this.gETH.pricePerShare(poolIds[1])).to.be.bignumber.eq(prices[1]);
+        });
+
+        it("success: sets PricePerShare for 0, 1 and mints and sends gETH for 2, 3 ,4", async function () {
+          let prevPricePerShare;
+          let prevgETHBalance;
+          let requiredBalanceDiff;
+
+          const tx = await this.contract.reportBeacon(
+            tree.root,
+            strToBytes32("not important"),
+            50001,
+            {
+              from: oracle,
+            }
+          );
+          ts = new BN((await getReceiptTimestamp(tx)).toString());
+          await setTimestamp(ts.add(DAY).toNumber());
+
+          // pool 0
+          await this.contract.priceSync(poolIds[0], prices[0], tree.getProof(0));
+          expect(await this.gETH.pricePerShare(poolIds[0])).to.be.bignumber.eq(prices[0]);
+
+          // pool 1
+          await this.contract.priceSync(poolIds[1], prices[1], tree.getProof(1));
+          expect(await this.gETH.pricePerShare(poolIds[1])).to.be.bignumber.eq(prices[1]);
+
+          // pool 2
+          prevPricePerShare = await this.gETH.pricePerShare(poolIds[2]);
+          prevgETHBalance = await this.gETH.balanceOf(yieldReceivers[2], poolIds[2]);
+          requiredBalanceDiff =
+            ((await this.gETH.totalSupply(poolIds[2])) * (prices[2] - prevPricePerShare)) /
+            (await this.gETH.denominator()).subn(prevgETHBalance.toNumber());
+          await this.contract.priceSync(poolIds[2], prices[2], tree.getProof(2));
+          expect(await this.gETH.pricePerShare(poolIds[2])).to.be.bignumber.eq(prevPricePerShare);
+          expect(await this.gETH.balanceOf(yieldReceivers[2], poolIds[2])).to.be.bignumber.eq(
+            requiredBalanceDiff.toString()
+          );
+          console.log(
+            "old",
+            prevgETHBalance.toString(),
+            "new",
+            (await this.gETH.balanceOf(yieldReceivers[2], poolIds[2])).toString(),
+            "diff found",
+            requiredBalanceDiff.toString()
+          );
+
+          // pool 3
+          prevPricePerShare = await this.gETH.pricePerShare(poolIds[3]);
+          prevgETHBalance = await this.gETH.balanceOf(yieldReceivers[3], poolIds[3]);
+          requiredBalanceDiff =
+            ((await this.gETH.totalSupply(poolIds[3])) * (prices[3] - prevPricePerShare)) /
+            (await this.gETH.denominator()).subn(prevgETHBalance.toNumber());
+          await this.contract.priceSync(poolIds[3], prices[3], tree.getProof(3));
+          expect(await this.gETH.pricePerShare(poolIds[3])).to.be.bignumber.eq(prevPricePerShare);
+          expect(await this.gETH.balanceOf(yieldReceivers[3], poolIds[3])).to.be.bignumber.eq(
+            requiredBalanceDiff.toString()
+          );
+          console.log(
+            "old",
+            prevgETHBalance.toString(),
+            "new",
+            (await this.gETH.balanceOf(yieldReceivers[3], poolIds[3])).toString(),
+            "diff found",
+            requiredBalanceDiff.toString()
+          );
+
+          // pool 4
+          prevPricePerShare = await this.gETH.pricePerShare(poolIds[4]);
+          prevgETHBalance = await this.gETH.balanceOf(yieldReceivers[4], poolIds[4]);
+          requiredBalanceDiff =
+            ((await this.gETH.totalSupply(poolIds[4])) * (prices[4] - prevPricePerShare)) /
+            (await this.gETH.denominator()).subn(prevgETHBalance.toNumber());
+          await this.contract.priceSync(poolIds[4], prices[4], tree.getProof(4));
+          expect(await this.gETH.pricePerShare(poolIds[4])).to.be.bignumber.eq(prevPricePerShare);
+          expect(await this.gETH.balanceOf(yieldReceivers[4], poolIds[4])).to.be.bignumber.eq(
+            requiredBalanceDiff.toString()
+          );
+          console.log(
+            "old",
+            prevgETHBalance.toString(),
+            "new",
+            (await this.gETH.balanceOf(yieldReceivers[4], poolIds[4])).toString(),
+            "diff found",
+            requiredBalanceDiff.toString()
+          );
+        });
       });
       context("priceSyncBatch", function () {
         // eslint-disable-next-line prefer-const
-
         beforeEach(async function () {
           const tx = await this.contract.reportBeacon(
             tree.root,
@@ -523,10 +643,16 @@ contract("OracleExtensionLib", function (accounts) {
           await setTimestamp(ts.add(DAY).toNumber());
         });
         it("reverts if poolIds.length != prices.length", async function () {
-          await expectRevert.unspecified(this.contract.priceSyncBatch(poolIds, [], []));
+          await expectRevert(
+            this.contract.priceSyncBatch(poolIds, [], []),
+            "OEL:array lengths not equal"
+          );
         });
         it("reverts if poolIds.length != priceProofs.length", async function () {
-          await expectRevert.unspecified(this.contract.priceSyncBatch(poolIds, prices, []));
+          await expectRevert(
+            this.contract.priceSyncBatch(poolIds, prices, []),
+            "OEL:array lengths not equal"
+          );
         });
         it("success", async function () {
           const ids = poolIds.map(function (e) {

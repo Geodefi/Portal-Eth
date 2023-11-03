@@ -1,14 +1,14 @@
 const { expect } = require("chai");
 
 const { expectRevert, expectEvent, constants, BN } = require("@openzeppelin/test-helpers");
-const { ETHER_STR, getReceiptTimestamp, impersonate } = require("./utils");
+const { ETHER_STR, getReceiptTimestamp, impersonate } = require("../utils");
 const { shouldBehaveLikeERC1155 } = require("./utils/ERC1155.behavior");
 
 const { ZERO_BYTES32, ZERO_ADDRESS } = constants;
 
 const gETH = artifacts.require("$gETH");
 const ERC20Middleware = artifacts.require("$ERC20Middleware");
-const nonERC1155Receiver = artifacts.require("$nonERC1155Receiver");
+const nonERC1155Receiver = artifacts.require("nonERC1155Receiver");
 
 contract("gETH", function (accounts) {
   const [deployer, user, ...otherAccounts] = accounts;
@@ -252,6 +252,34 @@ contract("gETH", function (accounts) {
   });
 
   context("Roles", function () {
+    describe("reverts if transfer functions called with address not have the role", function () {
+      it("reverts transferUriSetterRole", async function () {
+        await expectRevert(
+          this.token.transferUriSetterRole(user, { from: user }),
+          "is missing role"
+        );
+      });
+
+      it("reverts transferPauserRole", async function () {
+        await expectRevert(this.token.transferPauserRole(user, { from: user }), "is missing role");
+      });
+
+      it("reverts transferMinterRole", async function () {
+        await expectRevert(this.token.transferMinterRole(user, { from: user }), "is missing role");
+      });
+
+      it("reverts transferOracleRole", async function () {
+        await expectRevert(this.token.transferOracleRole(user, { from: user }), "is missing role");
+      });
+
+      it("reverts transferMiddlewareManagerRole", async function () {
+        await expectRevert(
+          this.token.transferMiddlewareManagerRole(user, { from: user }),
+          "is missing role"
+        );
+      });
+    });
+
     describe("transferUriSetterRole", function () {
       beforeEach(async function () {
         await this.token.transferUriSetterRole(user, { from: deployer });

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 /**
  * @notice ID_TYPE is an internal library that acts like an ENUM.
@@ -10,7 +10,7 @@ pragma solidity =0.8.7;
  *
  * Dual Governance:
  * * SENATE: points to a proposal that will update the current SENATE address of a package(or Portal).
- * * CONTRACT_UPGRADE: proposal to change the given contract's implementation.
+ * * CONTRACT UPGRADE: proposal to change the given contract's implementation. TYPE should be package's TYPE.
  *
  * Users:
  * * OPERATOR: permissionned Node Operators (hosted on Portal).
@@ -42,13 +42,10 @@ library ID_TYPE {
   /// @notice TYPE 1: Senate
   uint256 internal constant SENATE = 1;
 
-  /// @notice TYPE 2: Contract Upgrade
-  uint256 internal constant CONTRACT_UPGRADE = 2;
-
-  /// @notice TYPE 3: *gap*: formally represented the admin contract. reserved to be never used.
-  uint256 internal constant __GAP__ = 3;
-
   /// --
+
+  /// @notice TYPE 3: Limit: exclusive, minimum TYPE that will be percieved as a user
+  uint256 internal constant LIMIT_MIN_USER = 3;
 
   /// @notice TYPE 4: USER: Permissionned Node Operator
   uint256 internal constant OPERATOR = 4;
@@ -56,12 +53,15 @@ library ID_TYPE {
   /// @notice TYPE 5: USER: Staking Pool
   uint256 internal constant POOL = 5;
 
+  /// @notice TYPE 9999: Limit: exclusive, maximum TYPE that will be percieved as a user
+  uint256 internal constant LIMIT_MAX_USER = 9999;
+
   /// --
 
   /// @notice TYPE 10000: Limit: exclusive, minimum TYPE that will be percieved as a package
   uint256 internal constant LIMIT_MIN_PACKAGE = 10000;
 
-  /// @notice TYPE 10011: Package: Portal is also a package
+  /// @notice TYPE 10001: Package: Portal is also a package
   uint256 internal constant PACKAGE_PORTAL = 10001;
 
   /// @notice TYPE 10011: Package: The Withdrawal Credential Contract
@@ -78,7 +78,7 @@ library ID_TYPE {
   /// @notice TYPE 20000: Limit: exclusive, minimum TYPE that will be percieved as a middleware
   uint256 internal constant LIMIT_MIN_MIDDLEWARE = 20000;
 
-  /// @notice TYPE 20031: Middleware: A new gETH interface
+  /// @notice TYPE 20011: Middleware: A new gETH interface
   uint256 internal constant MIDDLEWARE_GETH = 20011;
 
   /// @notice TYPE 29999: Limit: exclusive, maximum TYPE that will be percieved as a middleware

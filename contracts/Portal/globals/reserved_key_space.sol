@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 /**
  * @notice Reserved Key Space for DataStoreModule
@@ -59,6 +59,12 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint
+   * @custom:definition treshold calculated with given percentage value for fallback operator to be activated
+   */
+  bytes32 internal constant fallbackThreshold = "fallbackThreshold";
+
+  /**
+   * @custom:type uint
    * @custom:definition fee of the pool or operator, will be shadowed by priorFee if switching
    */
   bytes32 internal constant fee = "fee";
@@ -71,7 +77,7 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint
-   * @custom:definition the timestamp of an "user" TYPE id
+   * @custom:definition the initiation timestamp of a "user" TYPE id
    */
   bytes32 internal constant initiated = "initiated";
 
@@ -80,6 +86,13 @@ library RESERVED_KEY_SPACE {
    * @custom:definition bound liquidity pool of a pool
    */
   bytes32 internal constant liquidityPool = "liquidityPool";
+
+  /**
+   * @custom:type address
+   * @custom:definition receiver address for yield seperation functionality
+   * * will receive minted gETH to given receiver instead of increasing pricePerShare
+   */
+  bytes32 internal constant yieldReceiver = "yieldReceiver";
 
   /**
    * @custom:type address
@@ -106,8 +119,8 @@ library RESERVED_KEY_SPACE {
   bytes32 internal constant priorFee = "priorFee";
 
   /**
-   * @custom:type address
-   * @custom:definition fee that will be effective if validatorPeriod is currently switching
+   * @custom:type uint
+   * @custom:definition period that will be effective if validatorPeriod is currently switching
    */
   bytes32 internal constant priorPeriod = "priorPeriod";
 
@@ -119,7 +132,7 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type uint, relational, pool[operator]
-   * @custom:definition proposed validator count for
+   * @custom:definition proposed validator count for pool-operator pair.
    */
   bytes32 internal constant proposedValidators = "proposedValidators";
 

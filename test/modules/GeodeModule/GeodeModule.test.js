@@ -13,7 +13,7 @@ const {
   getReceiptTimestamp,
   setTimestamp,
   strToBytes32,
-} = require("../../utils");
+} = require("../../../utils");
 
 const ERC1967Proxy = artifacts.require("ERC1967Proxy");
 
@@ -210,24 +210,18 @@ contract("GeodeModule", function (accounts) {
           "GML:invalid proposal duration"
         );
       });
-      it("reverts if type is 0, 3, 5", async function () {
+      it("reverts if type is 0 or 5", async function () {
         await expectRevert(
           this.contract.propose(user, 0, _name, MIN_PROPOSAL_DURATION, {
             from: governance,
           }),
-          "GML:TYPE is NONE, GAP or POOL"
-        );
-        await expectRevert(
-          this.contract.propose(user, 3, _name, MIN_PROPOSAL_DURATION, {
-            from: governance,
-          }),
-          "GML:TYPE is NONE, GAP or POOL"
+          "GML:TYPE is NONE or POOL"
         );
         await expectRevert(
           this.contract.propose(user, 5, _name, MIN_PROPOSAL_DURATION, {
             from: governance,
           }),
-          "GML:TYPE is NONE, GAP or POOL"
+          "GML:TYPE is NONE or POOL"
         );
       });
       context("success", function () {
@@ -363,6 +357,14 @@ contract("GeodeModule", function (accounts) {
       it("reverts if not senate", async function () {
         await expectRevert(this.contract.changeSenate(user), "GML:SENATE role needed");
       });
+
+      it("reverts if new senate is zero address", async function () {
+        await expectRevert(
+          this.contract.changeSenate(ZERO_ADDRESS, { from: senate }),
+          "GML:Senate cannot be zero address"
+        );
+      });
+
       describe("success", function () {
         beforeEach(async function () {
           await this.contract.changeSenate(user, { from: senate });
@@ -388,6 +390,14 @@ contract("GeodeModule", function (accounts) {
         await expectRevert(
           this.contract.rescueSenate(user, { from: governance }),
           "GML:cannot rescue yet"
+        );
+      });
+
+      it("reverts if new senate is zero address", async function () {
+        await setTimestamp(initTs.add(MAX_SENATE_PERIOD).addn(10).toNumber());
+        await expectRevert(
+          this.contract.rescueSenate(ZERO_ADDRESS, { from: governance }),
+          "GML:Senate cannot be zero address"
         );
       });
 
@@ -446,7 +456,6 @@ contract("GeodeModule", function (accounts) {
 
     context("Limited UUPS (TYPE 2 proposal)", function () {
       let newImplementation;
-      const _type = new BN("2");
 
       before(async function () {
         // make sure it is not upgraded yet!
@@ -458,7 +467,7 @@ contract("GeodeModule", function (accounts) {
         newImplementation = await GeodeUpgradedMock.new();
         await this.contract.propose(
           newImplementation.address,
-          _type,
+          packageType,
           _name,
           MIN_PROPOSAL_DURATION,
           {
@@ -466,7 +475,7 @@ contract("GeodeModule", function (accounts) {
           }
         );
 
-        await this.contract.approveProposal(await generateId(_name, _type), {
+        await this.contract.approveProposal(await generateId(_name, packageType), {
           from: senate,
         });
 

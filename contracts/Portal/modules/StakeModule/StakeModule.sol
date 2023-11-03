@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
@@ -7,7 +7,8 @@ import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IStakeModule} from "../../interfaces/modules/IStakeModule.sol";
 // libraries
-import {StakeModuleLib as SML} from "./libs/StakeModuleLib.sol";
+import {StakeModuleLib as SML, Validator, PooledStaking} from "./libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib as IEL} from "./libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib as OEL} from "./libs/OracleExtensionLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
@@ -29,7 +30,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
  * @dev review: OEL (OracleExtensionLib) is an extension for oracle operations.
  * @dev review: DCL (DepositContractLib) is an helper for validator creation.
  *
- * @dev There are 1 additional functionality implemented seperately from the library:
+ * @dev There is 1 additional functionality implemented apart from the library:
  * * check price validity and accept proofs for updating the price (refer to deposit function).
  * * However, this module inherits and implements nonReentrant & whenNotPaused modifiers.
  * * SM has pausability and expects inheriting contract to provide the access control mechanism.
@@ -44,13 +45,14 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
  */
 abstract contract StakeModule is
   IStakeModule,
-  DataStoreModule,
   ERC1155HolderUpgradeable,
+  ReentrancyGuardUpgradeable,
   PausableUpgradeable,
-  ReentrancyGuardUpgradeable
+  DataStoreModule
 {
-  using SML for SML.PooledStaking;
-  using OEL for SML.PooledStaking;
+  using SML for PooledStaking;
+  using IEL for PooledStaking;
+  using OEL for PooledStaking;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -58,18 +60,21 @@ abstract contract StakeModule is
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  SML.PooledStaking internal STAKE;
+  PooledStaking internal STAKE;
 
   /**
    * @custom:section                           ** EVENTS **
    */
   event IdInitiated(uint256 id, uint256 indexed TYPE);
+  event MiddlewareDeployed(uint256 poolId, uint256 version);
+  event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
   event VisibilitySet(uint256 id, bool isPrivate);
+  event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
   event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
   event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
-  event FallbackOperator(uint256 poolId, uint256 indexed operatorId);
+  event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 threshold);
   event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
   event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
@@ -106,8 +111,8 @@ abstract contract StakeModule is
     address _gETH,
     address _oracle_position
   ) internal onlyInitializing {
-    require(_gETH != address(0));
-    require(_oracle_position != address(0));
+    require(_gETH != address(0), "SM:gETH cannot be zero address");
+    require(_oracle_position != address(0), "SM:oracle cannot be zero address");
     STAKE.gETH = IgETH(_gETH);
     STAKE.ORACLE_POSITION = _oracle_position;
     STAKE.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
@@ -154,12 +159,16 @@ abstract contract StakeModule is
 
   function getValidator(
     bytes calldata pubkey
-  ) external view virtual override returns (SML.Validator memory) {
+  ) external view virtual override returns (Validator memory) {
     return STAKE.validators[pubkey];
   }
 
   function getPackageVersion(uint256 _type) external view virtual override returns (uint256) {
     return STAKE.packages[_type];
+  }
+
+  function getBalancesMerkleRoot() external view virtual override returns (bytes32) {
+    return STAKE.BALANCE_MERKLE_ROOT;
   }
 
   function isMiddleware(
@@ -170,7 +179,7 @@ abstract contract StakeModule is
   }
 
   /**
-   * @custom:section                           ** OPERATOR INITIATORS **
+   * @custom:section                           ** OPERATOR INITIATOR **
    *
    * @custom:visibility -> external
    */
@@ -179,8 +188,8 @@ abstract contract StakeModule is
     uint256 fee,
     uint256 validatorPeriod,
     address maintainer
-  ) external payable virtual override whenNotPaused nonReentrant {
-    SML.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
+  ) external payable virtual override nonReentrant whenNotPaused {
+    IEL.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
   }
 
   /**
@@ -243,6 +252,17 @@ abstract contract StakeModule is
   }
 
   /**
+   * @custom:subsection                           ** YIELD SEPARATION **
+   */
+
+  function setYieldReceiver(
+    uint256 poolId,
+    address yieldReceiver
+  ) external virtual override whenNotPaused {
+    SML.setYieldReceiver(DATASTORE, poolId, yieldReceiver);
+  }
+
+  /**
    * @custom:section                           ** ID MANAGEMENT **
    *
    * @custom:visibility -> external
@@ -253,10 +273,10 @@ abstract contract StakeModule is
    */
 
   function changeMaintainer(
-    uint256 poolId,
+    uint256 id,
     address newMaintainer
   ) external virtual override whenNotPaused {
-    SML.changeMaintainer(DATASTORE, poolId, newMaintainer);
+    SML.changeMaintainer(DATASTORE, id, newMaintainer);
   }
 
   /**
@@ -283,7 +303,7 @@ abstract contract StakeModule is
 
   function increaseWalletBalance(
     uint256 id
-  ) external payable virtual override whenNotPaused nonReentrant returns (bool) {
+  ) external payable virtual override nonReentrant whenNotPaused returns (bool) {
     return SML.increaseWalletBalance(DATASTORE, id);
   }
 
@@ -339,10 +359,17 @@ abstract contract StakeModule is
   function delegate(
     uint256 poolId,
     uint256[] calldata operatorIds,
-    uint256[] calldata allowances,
-    uint256 fallbackOperator
+    uint256[] calldata allowances
   ) external virtual override whenNotPaused {
-    SML.delegate(DATASTORE, poolId, operatorIds, allowances, fallbackOperator);
+    SML.delegate(DATASTORE, poolId, operatorIds, allowances);
+  }
+
+  function setFallbackOperator(
+    uint256 poolId,
+    uint256 operatorId,
+    uint256 fallbackThreshold
+  ) external virtual override whenNotPaused {
+    SML.setFallbackOperator(DATASTORE, poolId, operatorId, fallbackThreshold);
   }
 
   /**
@@ -386,8 +413,8 @@ abstract contract StakeModule is
     payable
     virtual
     override
-    whenNotPaused
     nonReentrant
+    whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
     if (!STAKE.isPriceValid(poolId)) {
@@ -424,6 +451,26 @@ abstract contract StakeModule is
    */
   function canStake(bytes calldata pubkey) external view virtual override returns (bool) {
     return STAKE.canStake(pubkey);
+  }
+
+  /**
+   * @custom:section                           ** VALIDATOR EXITS **
+   *
+   * @custom:visibility -> external
+   */
+
+  function requestExit(
+    uint256 poolId,
+    bytes memory pk
+  ) external virtual override nonReentrant whenNotPaused {
+    STAKE.requestExit(DATASTORE, poolId, pk);
+  }
+
+  function finalizeExit(
+    uint256 poolId,
+    bytes memory pk
+  ) external virtual override nonReentrant whenNotPaused {
+    STAKE.finalizeExit(DATASTORE, poolId, pk);
   }
 
   /**
