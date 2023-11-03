@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {ILiquidityModule} from "../../interfaces/modules/ILiquidityModule.sol";
 // libraries
-import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML, Swap} from "./libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
 // contracts
 import {ILPToken} from "../../interfaces/helpers/ILPToken.sol";
@@ -47,11 +47,11 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 abstract contract LiquidityModule is
   ILiquidityModule,
   ERC1155HolderUpgradeable,
-  PausableUpgradeable,
-  ReentrancyGuardUpgradeable
+  ReentrancyGuardUpgradeable,
+  PausableUpgradeable
 {
-  using LML for LML.Swap;
-  using AL for LML.Swap;
+  using LML for Swap;
+  using AL for Swap;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -59,7 +59,7 @@ abstract contract LiquidityModule is
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  LML.Swap internal LIQUIDITY;
+  Swap internal LIQUIDITY;
 
   /**
    * @custom:section                           ** EVENTS **

@@ -1,14 +1,69 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
-import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {gETH_DENOMINATOR, PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
 // interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 // libraries
 import {AmplificationLib as AL} from "./AmplificationLib.sol";
 // contracts
 import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
+
+/**
+ * @notice Helper Struct storing variables used in calculations in the
+ * calculateWithdrawOneTokenDY function to avoid stack too deep errors
+ */
+struct CalculateWithdrawOneTokenDYInfo {
+  uint256 d0;
+  uint256 d1;
+  uint256 newY;
+  uint256 feePerToken;
+  uint256 preciseA;
+}
+
+/**
+ * @notice Helper Struct storing variables used in calculations in the
+ * {add,remove} Liquidity functions to avoid stack too deep errors
+ */
+struct ManageLiquidityInfo {
+  ILPToken lpToken;
+  uint256 d0;
+  uint256 d1;
+  uint256 d2;
+  uint256 preciseA;
+  uint256 totalSupply;
+  uint256[2] balances;
+}
+
+/**
+ * @notice Storage struct for the liquidity pool logic, should be correctly initialized.
+ *
+ * @param gETH ERC1155 contract
+ * @param lpToken address of the LP Token
+ * @param pooledTokenId gETH ID of the pooled staking derivative
+ * @param initialA the amplification coefficient * n * (n - 1)
+ * @param futureA the amplification coef that will be effective after futureATime
+ * @param initialATime variable around the ramp management of A
+ * @param futureATime variable around the ramp management of A
+ * @param swapFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from resulting tokens of a swap
+ * @param adminFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from swapFee
+ * @param balances the pool balance as [ETH, gETH]; the contract's actual token balance might differ
+ * @param __gap keep the contract size at 16
+ */
+struct Swap {
+  IgETH gETH;
+  ILPToken lpToken;
+  uint256 pooledTokenId;
+  uint256 initialA;
+  uint256 futureA;
+  uint256 initialATime;
+  uint256 futureATime;
+  uint256 swapFee;
+  uint256 adminFee;
+  uint256[2] balances;
+  uint256[5] __gap;
+}
 
 /**
  * @title LiquidityModule Library - LML
@@ -30,65 +85,6 @@ import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
  * @author Ice Bear & Crash Bandicoot
  */
 library LiquidityModuleLib {
-  /**
-   * @custom:section                           ** STRUCTS **
-   */
-
-  /**
-   * @notice Storage struct for the liquidity pool logic, should be correctly initialized.
-   *
-   * @param gETH ERC1155 contract
-   * @param lpToken address of the LP Token
-   * @param pooledTokenId gETH ID of the pooled staking derivative
-   * @param initialA the amplification coefficient * n * (n - 1)
-   * @param futureA the amplification coef that will be effective after futureATime
-   * @param initialATime variable around the ramp management of A
-   * @param futureATime variable around the ramp management of A
-   * @param swapFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from resulting tokens of a swap
-   * @param adminFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from swapFee
-   * @param balances the pool balance as [ETH, gETH]; the contract's actual token balance might differ
-   * @param __gap keep the contract size at 16
-   */
-  struct Swap {
-    IgETH gETH;
-    ILPToken lpToken;
-    uint256 pooledTokenId;
-    uint256 initialA;
-    uint256 futureA;
-    uint256 initialATime;
-    uint256 futureATime;
-    uint256 swapFee;
-    uint256 adminFee;
-    uint256[2] balances;
-    uint256[5] __gap;
-  }
-
-  /**
-   * @notice Struct storing variables used in calculations in the
-   * calculateWithdrawOneTokenDY function to avoid stack too deep errors
-   */
-  struct CalculateWithdrawOneTokenDYInfo {
-    uint256 d0;
-    uint256 d1;
-    uint256 newY;
-    uint256 feePerToken;
-    uint256 preciseA;
-  }
-
-  /**
-   * @notice  Struct storing variables used in calculations in the
-   * {add,remove} Liquidity functions to avoid stack too deep errors
-   */
-  struct ManageLiquidityInfo {
-    ILPToken lpToken;
-    uint256 d0;
-    uint256 d1;
-    uint256 d2;
-    uint256 preciseA;
-    uint256 totalSupply;
-    uint256[2] balances;
-  }
-
   /**
    * @custom:section                           ** CONSTANTS **
    */
@@ -209,7 +205,7 @@ library LiquidityModuleLib {
     uint256 s;
     uint256 nA = a * numTokens;
 
-    for (uint256 i; i < numTokens; ++i) {
+    for (uint256 i; i < numTokens; ) {
       if (i != tokenIndex) {
         s = s + xp[i];
         c = (c * d) / (xp[i] * (numTokens));
@@ -217,18 +213,27 @@ library LiquidityModuleLib {
         // and divide at the end. However this leads to overflow with large numTokens or/and D.
         // c = c * D * D * D * ... overflow!
       }
+
+      unchecked {
+        i += 1;
+      }
     }
+
     c = (c * d * AL.A_PRECISION) / (nA * numTokens);
 
     uint256 b = s + ((d * AL.A_PRECISION) / nA);
     uint256 yPrev;
     uint256 y = d;
 
-    for (uint256 i = 0; i < MAX_LOOP_LIMIT; ++i) {
+    for (uint256 i; i < MAX_LOOP_LIMIT; ) {
       yPrev = y;
       y = ((y * y) + c) / (2 * y + b - d);
       if (within1(y, yPrev)) {
         return y;
+      }
+
+      unchecked {
+        i += 1;
       }
     }
     revert("Approximation did not converge");
@@ -253,7 +258,7 @@ library LiquidityModuleLib {
     uint256 d = s;
     uint256 nA = a * numTokens;
 
-    for (uint256 i; i < MAX_LOOP_LIMIT; ++i) {
+    for (uint256 i; i < MAX_LOOP_LIMIT; ) {
       uint256 dP = (d ** (numTokens + 1)) / (numTokens ** numTokens * xp[0] * xp[1]);
       prevD = d;
       d =
@@ -262,6 +267,10 @@ library LiquidityModuleLib {
 
       if (within1(d, prevD)) {
         return d;
+      }
+
+      unchecked {
+        i += 1;
       }
     }
 
@@ -307,11 +316,15 @@ library LiquidityModuleLib {
     uint256 yPrev;
     uint256 y = d;
 
-    for (uint256 i; i < MAX_LOOP_LIMIT; ++i) {
+    for (uint256 i; i < MAX_LOOP_LIMIT; ) {
       yPrev = y;
       y = ((y * y) + c) / (2 * y + b - d);
       if (within1(y, yPrev)) {
         return y;
+      }
+
+      unchecked {
+        i += 1;
       }
     }
     revert("Approximation did not converge");
@@ -336,9 +349,7 @@ library LiquidityModuleLib {
     uint256 i
   ) internal view returns (uint256) {
     return
-      i == 1
-        ? (balance * self.gETH.pricePerShare(self.pooledTokenId)) / self.gETH.denominator()
-        : balance;
+      i == 1 ? (balance * self.gETH.pricePerShare(self.pooledTokenId)) / gETH_DENOMINATOR : balance;
   }
 
   /**
@@ -354,9 +365,7 @@ library LiquidityModuleLib {
     uint256 i
   ) internal view returns (uint256) {
     return
-      i == 1
-        ? (balance * self.gETH.denominator()) / self.gETH.pricePerShare(self.pooledTokenId)
-        : balance;
+      i == 1 ? (balance * gETH_DENOMINATOR) / self.gETH.pricePerShare(self.pooledTokenId) : balance;
   }
 
   /**
@@ -370,7 +379,7 @@ library LiquidityModuleLib {
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
-    _p[1] = (balances[1] * self.gETH.pricePerShare(self.pooledTokenId)) / self.gETH.denominator();
+    _p[1] = (balances[1] * self.gETH.pricePerShare(self.pooledTokenId)) / gETH_DENOMINATOR;
     return _p;
   }
 
@@ -385,7 +394,7 @@ library LiquidityModuleLib {
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
-    _p[1] = (balances[1] * self.gETH.denominator()) / self.gETH.pricePerShare(self.pooledTokenId);
+    _p[1] = (balances[1] * gETH_DENOMINATOR) / self.gETH.pricePerShare(self.pooledTokenId);
     return _p;
   }
 
@@ -579,12 +588,16 @@ library LiquidityModuleLib {
     uint256[2] memory xpReduced;
 
     v.feePerToken = self.swapFee >> 1;
-    for (uint256 i; i < 2; ++i) {
+    for (uint256 i; i < 2; ) {
       uint256 xpi = self.balances[i];
       xpReduced[i] =
         xpi -
         ((((i == tokenIndex) ? (xpi * v.d1) / v.d0 - v.newY : xpi - ((xpi * v.d1) / (v.d0))) *
           (v.feePerToken)) / (PERCENTAGE_DENOMINATOR));
+
+      unchecked {
+        i += 1;
+      }
     }
 
     uint256 dy = xpReduced[tokenIndex] -
@@ -677,14 +690,19 @@ library LiquidityModuleLib {
     uint256[2] memory balances = self.balances;
 
     uint256 d0 = getD(_pricedInBatch(self, balances), a);
-    for (uint256 i; i < 2; ++i) {
+    for (uint256 i; i < 2; ) {
       if (deposit) {
         balances[i] = balances[i] + amounts[i];
       } else {
         require(amounts[i] <= balances[i], "LML:Cannot withdraw > available");
         balances[i] = balances[i] - amounts[i];
       }
+
+      unchecked {
+        i += 1;
+      }
     }
+
     uint256 d1 = getD(_pricedInBatch(self, balances), a);
     uint256 totalSupply = self.lpToken.totalSupply();
 
@@ -747,6 +765,7 @@ library LiquidityModuleLib {
       require(dx == msg.value, "LML:Cannot swap != eth sent");
     }
     if (tokenIndexFrom == 1) {
+      // TODO: ask if this is necessary to the auditors...
       // Means user is selling some gETH to the pool to get some ETH.
 
       require(dx <= gETHRef.balanceOf(msg.sender, self.pooledTokenId), "LML:Cannot swap > you own");
@@ -823,8 +842,12 @@ library LiquidityModuleLib {
     uint256[2] memory newBalances;
     newBalances[0] = v.balances[0] + msg.value;
 
-    for (uint256 i; i < 2; ++i) {
+    for (uint256 i; i < 2; ) {
       require(v.totalSupply != 0 || amounts[i] > 0, "LML:Must supply all tokens in pool");
+
+      unchecked {
+        i += 1;
+      }
     }
 
     {
@@ -848,8 +871,10 @@ library LiquidityModuleLib {
 
     if (v.totalSupply != 0) {
       uint256 feePerToken = self.swapFee >> 1;
-      for (uint256 i = 0; i < 2; ++i) {
+
+      for (uint256 i; i < 2; ) {
         uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
+
         fees[i] =
           (feePerToken * (difference(idealBalance, newBalances[i]))) /
           (PERCENTAGE_DENOMINATOR);
@@ -857,7 +882,12 @@ library LiquidityModuleLib {
           newBalances[i] -
           ((fees[i] * (self.adminFee)) / (PERCENTAGE_DENOMINATOR));
         newBalances[i] = newBalances[i] - (fees[i]);
+
+        unchecked {
+          i += 1;
+        }
       }
+
       v.d2 = getD(_pricedInBatch(self, newBalances), v.preciseA);
     } else {
       // the initial depositor doesn't pay fees
@@ -905,9 +935,13 @@ library LiquidityModuleLib {
       _calculateRemoveLiquidity(_pricedInBatch(self, balances), amount, totalSupply)
     );
 
-    for (uint256 i; i < amounts.length; ++i) {
+    for (uint256 i; i < amounts.length; ) {
       require(amounts[i] >= minAmounts[i], "LML:amounts[i] < minAmounts[i]");
       self.balances[i] = balances[i] - amounts[i];
+
+      unchecked {
+        i += 1;
+      }
     }
 
     // To prevent any Reentrancy, LP tokens are burned before transfering the tokens.
@@ -1012,13 +1046,17 @@ library LiquidityModuleLib {
       uint256[2] memory balances1;
 
       v.d0 = getD(_pricedInBatch(self, v.balances), v.preciseA);
-      for (uint256 i; i < 2; ++i) {
+      for (uint256 i; i < 2; ) {
         require(amounts[i] <= v.balances[i], "LML:Cannot withdraw > available");
         balances1[i] = v.balances[i] - amounts[i];
+
+        unchecked {
+          i += 1;
+        }
       }
       v.d1 = getD(_pricedInBatch(self, balances1), v.preciseA);
 
-      for (uint256 i = 0; i < 2; ++i) {
+      for (uint256 i; i < 2; ) {
         uint256 idealBalance = (v.d1 * v.balances[i]) / v.d0;
         uint256 _diff = difference(idealBalance, balances1[i]);
         fees[i] = (feePerToken * _diff) / PERCENTAGE_DENOMINATOR;
@@ -1027,6 +1065,10 @@ library LiquidityModuleLib {
           self.balances[i] = balances1[i] - ((fees[i] * adminFee) / PERCENTAGE_DENOMINATOR);
         }
         balances1[i] = balances1[i] - fees[i];
+
+        unchecked {
+          i += 1;
+        }
       }
 
       v.d2 = getD(_pricedInBatch(self, balances1), v.preciseA);

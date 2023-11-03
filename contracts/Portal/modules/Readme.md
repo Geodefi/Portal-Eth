@@ -56,7 +56,7 @@ Any Contract that requires a Dual Governance for it's management should inherit 
 
 The first use case of Dual Governance is upgrading the code of a package.
 
-With another contract that acts like a version manager (as Governance), which is Portal (Except for the Portal which manages its own version with an external Senate), we can release new versions for the Packages without distrupting the owner's control.
+With another contract that acts like a version manager (as Governance), which is Portal (Except for the Portal which manages its own version with an external Senate), we can release new versions for the Packages without disrupting the owner's control.
 
 ![limited upgradability](../../../docs/images/limited%20upgradability.png)
 
@@ -177,8 +177,49 @@ If a validator proposal is approved by the Oracle, it can be activated by using 
      6. Minting is allowed within PRICE_EXPIRY (24H) after the last price update.
      7. Updates the regulation around Monopolies and provides BALANCE_MERKLE_ROOT to be used within withdrawal process.
 
--
-
 ## **Withdrawal Module**
 
-To be implemented.
+### Queueing Withdrawal Requests
+
+Users can request a withdrawal by forfeiting their gETH tokens with `enqueue` function with minimum 0.05 gETH. Requests would be put in a queue (First-In-First-Fulfilled). While requesting, requester can choose any address as the owner of the request, which means it can be handed over during enqueuing. It can also be changed later by using `transferRequest` function.
+
+### Processing the Withdrawals (partial and exits)
+
+`processValidators` function handles any balance changes that is reflected from the Beacon Chain. If a validator's balance on the Beacon Chain is 0 (zero), it means that it exited (forced or voluntary). Pool and Operator fees are distributed whenever the validator is processed. Note that if the validator is slashed before being processed, fees can be lost along with the stakers' profit. As the validators are processed, requests become claimable.
+
+### Fulfilling
+
+A request can be fulfilled if there is claimable ETH, it can be fulfilled partiall or up to the size of the request depending the amount of claimable ETH. It is calculated by `realizedPrice` which is an internal price, stating the ratio of the claimable ETH and processed gETH. Requests can be fulfilled **_by anyone_** at any point after the conditions met.
+
+### Elections on Which Validators to Exit
+
+While getting into the queue, caller can vote on a validator, increasing it's `poll`. If a validator is not specified, vote goes to `commonPoll`. It can be used for any validator to top-up the `EXIT_THRESHOLD` which is the threshold that can be set as percentage to decide the minimum gETH amount over beacon balance of the validator for withdrawal contract to call `requestExit` function from Portal to make operator to know that validator is selected for the exit and it should be exited as soon as possible. If a validator is called for exit but there are remaining votes in it, it is transferred to the commonPoll.
+
+- Note that, elections are basically just stating a preference, exit of the voted validator does not change the voter's priority in the queue.
+
+### Dequeue
+
+Fulfilled requests, including partially fulfilled ones, can be dequeued (claimed) and can only be dequeued by the **_owner_**.
+A request can be dequeued if not fulfilled but fulfillable. `dequeue` function fulfills it in that case. While dequeuing owner can mention a non-zero address as receiver to send the withdrawn ETH.
+
+### Batch Functions
+
+`enqueue`, `fulfill` and `dequeue` functions, all have batch version to save gas which are `enqueueBatch`, `fulfillBatch` and `dequeueBatch`.
+
+### When Derisked?
+
+We derisk the Request when validators are processed, with the latest price for the derivative. This is the correct approach since we `realize` the price at this exact point by increasing the cumulative claimable gETH. However, we would need to insert an unbound for loop through `realized` requests, when a `processValidators` operation is finalized which we cannot, nor should. So we have came up with a logic that will allow stakers to maintain their profitability without disrupting the 'derisk' moment.
+
+- We keep track `realizedPrice`.
+- We derisk the queue on `processValidators` by increasing the cumulative gETH that can be claimed.
+- We adjust the `realizedPrice` considering the `pricePerShare` of the currently derisked asset amount.
+
+### Why Using an Internal Price, Instead of Enforcing the PricePerShare Makes Sense
+
+All Requests, without considering their index, are in the same pool until they are derisked through price processing. If all of the claimable requests are fulfilled periodically (via a script etc.), we would expect internal price to be equal to `PricePerShare`. This way, a well-maintained pool can prevent APR hijacking by fulfilling neglected Requests, while it is not enforced for all of the pools.
+
+### Gas Related Concerns
+
+Above process is a gas-heavy process so it might **not be needed** after every `processValidators` operation. Similarly, `processValidators` is expensive as well, we would advise calling it when there is a dequeue opportunity.
+
+As a conclusion, if all requests are fulfilled immediately after the off-chain calculation signals them being claimable, none of these approaches will be expensive, nor will disrupt the internal pricing for the latter requests.

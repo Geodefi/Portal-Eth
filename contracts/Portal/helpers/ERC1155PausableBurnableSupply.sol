@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -116,8 +116,12 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     uint256[] memory batchBalances = new uint256[](accounts.length);
 
-    for (uint256 i = 0; i < accounts.length; ++i) {
+    for (uint256 i; i < accounts.length; ) {
       batchBalances[i] = balanceOf(accounts[i], ids[i]);
+
+      unchecked {
+        i += 1;
+      }
     }
 
     return batchBalances;
@@ -239,7 +243,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     _beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-    for (uint256 i = 0; i < ids.length; ++i) {
+    for (uint256 i; i < ids.length; ) {
       uint256 id = ids[i];
       uint256 amount = amounts[i];
 
@@ -249,6 +253,10 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
         _balances[id][from] = fromBalance - amount;
       }
       _balances[id][to] += amount;
+
+      unchecked {
+        i += 1;
+      }
     }
 
     emit TransferBatch(operator, from, to, ids, amounts);
@@ -333,8 +341,12 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
 
-    for (uint256 i = 0; i < ids.length; i++) {
+    for (uint256 i; i < ids.length; ) {
       _balances[ids[i]][to] += amounts[i];
+
+      unchecked {
+        i += 1;
+      }
     }
 
     emit TransferBatch(operator, address(0), to, ids, amounts);
@@ -395,7 +407,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     _beforeTokenTransfer(operator, from, address(0), ids, amounts, "");
 
-    for (uint256 i = 0; i < ids.length; i++) {
+    for (uint256 i; i < ids.length; ) {
       uint256 id = ids[i];
       uint256 amount = amounts[i];
 
@@ -403,6 +415,10 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
       require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
       unchecked {
         _balances[id][from] = fromBalance - amount;
+      }
+
+      unchecked {
+        i += 1;
       }
     }
 
@@ -603,19 +619,25 @@ abstract contract ERC1155Supply is IERC1155Supply, ERC1155 {
     super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
     if (from == address(0)) {
-      for (uint256 i = 0; i < ids.length; ++i) {
+      for (uint256 i; i < ids.length; ) {
         _totalSupply[ids[i]] += amounts[i];
+
+        unchecked {
+          i += 1;
+        }
       }
     }
 
     if (to == address(0)) {
-      for (uint256 i = 0; i < ids.length; ++i) {
+      for (uint256 i; i < ids.length; ) {
         uint256 id = ids[i];
         uint256 amount = amounts[i];
         uint256 supply = _totalSupply[id];
         require(supply >= amount, "ERC1155: burn amount exceeds totalSupply");
         unchecked {
           _totalSupply[id] = supply - amount;
+
+          i += 1;
         }
       }
     }
@@ -634,10 +656,8 @@ contract ERC1155PausableBurnableSupply is
   bytes32 public immutable PAUSER_ROLE = keccak256("PAUSER_ROLE");
   bytes32 public immutable MINTER_ROLE = keccak256("MINTER_ROLE");
 
-  /**
-   * @dev DEFAULT_ADMIN_ROLE is not set, no more role management here.
-   */
   constructor(string memory uri_) ERC1155(uri_) {
+    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     _grantRole(keccak256("URI_SETTER_ROLE"), msg.sender);
     _grantRole(keccak256("PAUSER_ROLE"), msg.sender);
     _grantRole(keccak256("MINTER_ROLE"), msg.sender);

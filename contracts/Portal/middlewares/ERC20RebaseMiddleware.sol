@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
+// globals
+import {gETH_DENOMINATOR} from "../globals/macros.sol";
 // interfaces
 import {IgETH} from "../interfaces/IgETH.sol";
 import {IgETHMiddleware} from "../interfaces/middlewares/IgETHMiddleware.sol";
@@ -15,7 +17,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 /**
  * @dev differences between ERC20RebaseMiddleware and Openzeppelin's implementation of ERC20Upgradeable is:
- * -> pragma set to =0.8.7;
+ * -> pragma set to =0.8.7 and then =0.8.19;
  * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
  * -> unique id of ERC1155 is used
  * -> there is no mint or burn functionality implemented here.
@@ -174,8 +176,7 @@ contract ERC20RebaseMiddleware is
    * @dev See {gETH-totalSupply}.
    */
   function totalSupply() public view virtual override returns (uint256) {
-    return
-      (ERC1155.totalSupply(ERC1155_ID) * ERC1155.pricePerShare(ERC1155_ID)) / ERC1155.denominator();
+    return (ERC1155.totalSupply(ERC1155_ID) * ERC1155.pricePerShare(ERC1155_ID)) / gETH_DENOMINATOR;
   }
 
   /**
@@ -186,7 +187,7 @@ contract ERC20RebaseMiddleware is
   function balanceOf(address account) public view virtual override returns (uint256) {
     return
       (ERC1155.balanceOf(account, ERC1155_ID) * ERC1155.pricePerShare(ERC1155_ID)) /
-      ERC1155.denominator();
+      gETH_DENOMINATOR;
   }
 
   /**
@@ -335,7 +336,7 @@ contract ERC20RebaseMiddleware is
 
     uint256 fromBalance = balanceOf(from);
     require(fromBalance >= amount, "ERC20R: transfer amount exceeds balance");
-    uint256 transferAmount = (amount * ERC1155.denominator()) / ERC1155.pricePerShare(ERC1155_ID);
+    uint256 transferAmount = (amount * gETH_DENOMINATOR) / ERC1155.pricePerShare(ERC1155_ID);
     ERC1155.safeTransferFrom(from, to, ERC1155_ID, transferAmount, "");
 
     emit Transfer(from, to, amount);

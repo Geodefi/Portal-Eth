@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import "@openzeppelin/contracts/utils/Context.sol";
 import "../../interfaces/IgETH.sol";

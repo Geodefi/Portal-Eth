@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
-import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML, IsolatedStorage} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
-import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
+import {StakeModuleLib as SML, PooledStaking} from "./StakeModuleLib.sol";
 // external
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -62,8 +62,8 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 
 library OracleExtensionLib {
-  using DSML for DSML.IsolatedStorage;
-  using SML for SML.PooledStaking;
+  using DSML for IsolatedStorage;
+  using SML for PooledStaking;
 
   /**
    * @custom:section                           ** CONSTANTS **
@@ -92,7 +92,7 @@ library OracleExtensionLib {
   /**
    * @custom:section                           ** MODIFIERS **
    */
-  modifier onlyOracle(SML.PooledStaking storage STAKE) {
+  modifier onlyOracle(PooledStaking storage STAKE) {
     require(msg.sender == STAKE.ORACLE_POSITION, "OEL:sender NOT ORACLE");
     _;
   }
@@ -112,8 +112,8 @@ library OracleExtensionLib {
    * @dev We should adjust the 'proposedValidators' to fix allowances.
    */
   function _alienateValidator(
-    SML.PooledStaking storage STAKE,
-    DSML.IsolatedStorage storage DATASTORE,
+    PooledStaking storage STAKE,
+    IsolatedStorage storage DATASTORE,
     uint256 verificationIndex,
     bytes calldata _pk
   ) internal {
@@ -147,8 +147,8 @@ library OracleExtensionLib {
    * @param alienatedPubkeys faulty proposals within the range of new and old verification indexes.
    */
   function updateVerificationIndex(
-    SML.PooledStaking storage STAKE,
-    DSML.IsolatedStorage storage DATASTORE,
+    PooledStaking storage STAKE,
+    IsolatedStorage storage DATASTORE,
     uint256 validatorVerificationIndex,
     bytes[] calldata alienatedPubkeys
   ) external onlyOracle(STAKE) {
@@ -156,8 +156,12 @@ library OracleExtensionLib {
     require(validatorVerificationIndex > STAKE.VERIFICATION_INDEX, "OEL:low VERIFICATION_INDEX");
 
     uint256 alienatedPubkeysLen = alienatedPubkeys.length;
-    for (uint256 i; i < alienatedPubkeysLen; ++i) {
+    for (uint256 i; i < alienatedPubkeysLen; ) {
       _alienateValidator(STAKE, DATASTORE, validatorVerificationIndex, alienatedPubkeys[i]);
+
+      unchecked {
+        i += 1;
+      }
     }
 
     STAKE.VERIFICATION_INDEX = validatorVerificationIndex;
@@ -188,7 +192,7 @@ library OracleExtensionLib {
    * @dev rks.release key refers to the end of the last imprisonment, when the limitations of operator is lifted
    */
   function _imprison(
-    DSML.IsolatedStorage storage DATASTORE,
+    IsolatedStorage storage DATASTORE,
     uint256 _operatorId,
     bytes calldata _proof
   ) internal {
@@ -213,8 +217,9 @@ library OracleExtensionLib {
    * 2. while state is EXIT_REQUESTED:  validator requested exit, but it hasn't been executed even tho it has been MAX_BEACON_DELAY
    */
   function blameOperator(
-    SML.PooledStaking storage self,
-    DSML.IsolatedStorage storage DATASTORE,
+    // TODO: this should be blameValidatorProposal, blameValidatorPeriod, blameExitRequest etc.
+    PooledStaking storage self,
+    IsolatedStorage storage DATASTORE,
     bytes calldata pk
   ) external {
     require(
@@ -240,18 +245,22 @@ library OracleExtensionLib {
    * @dev Stuff here result in imprisonment
    */
   function regulateOperators(
-    SML.PooledStaking storage STAKE,
-    DSML.IsolatedStorage storage DATASTORE,
+    PooledStaking storage STAKE,
+    IsolatedStorage storage DATASTORE,
     uint256[] calldata feeThefts,
     bytes[] calldata proofs
   ) external onlyOracle(STAKE) {
     require(feeThefts.length == proofs.length, "OEL:invalid proofs");
 
     uint256 feeTheftsLen = feeThefts.length;
-    for (uint256 i; i < feeTheftsLen; ++i) {
+    for (uint256 i; i < feeTheftsLen; ) {
       _imprison(DATASTORE, feeThefts[i], proofs[i]);
 
       emit FeeTheft(feeThefts[i], proofs[i]);
+
+      unchecked {
+        i += 1;
+      }
     }
   }
 
@@ -270,7 +279,7 @@ library OracleExtensionLib {
    * Prevents monopolies.
    */
   function reportBeacon(
-    SML.PooledStaking storage STAKE,
+    PooledStaking storage STAKE,
     bytes32 priceMerkleRoot,
     bytes32 balanceMerkleRoot,
     uint256 allValidatorsCount
@@ -311,8 +320,8 @@ library OracleExtensionLib {
    * This logic have effects the withdrawal contract logic.
    */
   function _sanityCheck(
-    SML.PooledStaking storage STAKE,
-    DSML.IsolatedStorage storage DATASTORE,
+    PooledStaking storage STAKE,
+    IsolatedStorage storage DATASTORE,
     uint256 _id,
     uint256 _newPrice
   ) internal view {
@@ -346,8 +355,8 @@ library OracleExtensionLib {
    * @param _priceProof merkle proofs
    */
   function _priceSync(
-    SML.PooledStaking storage STAKE,
-    DSML.IsolatedStorage storage DATASTORE,
+    PooledStaking storage STAKE,
+    IsolatedStorage storage DATASTORE,
     uint256 _poolId,
     uint256 _price,
     bytes32[] calldata _priceProof
@@ -373,7 +382,7 @@ library OracleExtensionLib {
       uint256 currentPrice = STAKE.gETH.pricePerShare(_poolId);
       if (_price > currentPrice) {
         uint256 supplyDiff = ((_price - currentPrice) * STAKE.gETH.totalSupply(_poolId)) /
-          STAKE.gETH.denominator();
+          gETH_DENOMINATOR;
         STAKE.gETH.mint(address(this), _poolId, supplyDiff, "");
         STAKE.gETH.safeTransferFrom(address(this), yieldReceiver, _poolId, supplyDiff, "");
       } else {
@@ -390,8 +399,8 @@ library OracleExtensionLib {
    * @param priceProof merkle proofs
    */
   function priceSync(
-    SML.PooledStaking storage STAKE,
-    DSML.IsolatedStorage storage DATASTORE,
+    PooledStaking storage STAKE,
+    IsolatedStorage storage DATASTORE,
     uint256 poolId,
     uint256 price,
     bytes32[] calldata priceProof
@@ -407,8 +416,8 @@ library OracleExtensionLib {
    * @param priceProofs merkle proofs
    */
   function priceSyncBatch(
-    SML.PooledStaking storage STAKE,
-    DSML.IsolatedStorage storage DATASTORE,
+    PooledStaking storage STAKE,
+    IsolatedStorage storage DATASTORE,
     uint256[] calldata poolIds,
     uint256[] calldata prices,
     bytes32[][] calldata priceProofs
@@ -417,8 +426,12 @@ library OracleExtensionLib {
     require(poolIds.length == priceProofs.length, "OEL:array lengths not equal");
 
     uint256 poolIdsLen = poolIds.length;
-    for (uint256 i; i < poolIdsLen; ++i) {
+    for (uint256 i; i < poolIdsLen; ) {
       _priceSync(STAKE, DATASTORE, poolIds[i], prices[i], priceProofs[i]);
+
+      unchecked {
+        i += 1;
+      }
     }
   }
 }
