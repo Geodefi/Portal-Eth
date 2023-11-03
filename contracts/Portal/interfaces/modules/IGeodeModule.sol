@@ -1,19 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {IDataStoreModule} from "./IDataStoreModule.sol";
-import {GeodeModuleLib as GML} from "../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {Proposal} from "../../modules/GeodeModule/libs/GeodeModuleLib.sol";
 
 interface IGeodeModule is IDataStoreModule {
-  function getContractVersion() external view returns (uint256);
-
-  function getProposedVersion() external view returns (uint256);
-
-  function isUpgradeAllowed(address proposedImplementation) external view returns (bool);
-
   function isolationMode() external view returns (bool);
-
-  function pullUpgrade() external;
 
   function GeodeParams()
     external
@@ -22,27 +14,28 @@ interface IGeodeModule is IDataStoreModule {
       address governance,
       address senate,
       address approvedUpgrade,
-      uint256 governanceFee,
       uint256 senateExpiry,
-      uint256 contractVersion
+      uint256 packageType
     );
 
-  function getProposal(uint256 id) external view returns (GML.Proposal memory proposal);
+  function getContractVersion() external view returns (uint256);
 
-  function setGovernanceFee(uint256 newFee) external;
+  function getProposal(uint256 id) external view returns (Proposal memory proposal);
 
-  function newProposal(
+  function propose(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external returns (uint256 id, bool success);
-
-  function approveProposal(uint256 id) external returns (uint256 _type, address _controller);
-
-  function changeSenate(address _newSenate) external;
+  ) external returns (uint256 id);
 
   function rescueSenate(address _newSenate) external;
+
+  function approveProposal(
+    uint256 id
+  ) external returns (address _controller, uint256 _type, bytes memory _name);
+
+  function changeSenate(address _newSenate) external;
 
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external;
 }

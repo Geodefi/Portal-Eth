@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
-import {ILPToken} from "../../interfaces/helpers/ILPToken.sol";
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {ILiquidityModule} from "../../interfaces/modules/ILiquidityModule.sol";
 // libraries
-import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML, Swap} from "./libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
+// contracts
+import {ILPToken} from "../../interfaces/helpers/ILPToken.sol";
 // external
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -15,10 +16,9 @@ import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/toke
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
- * @title Liquidity Module - LM
+ * @title LM: Liquidity Module
  *
- * @notice A StableSwap implementation in solidity.
- * @notice This module implements the underlying logic for custody of closely pegged assets and Automatic market making system.
+ * @notice A StableSwap implementation for ERC1155 staking derivatives, gETH.
  * * Users become an LP (Liquidity Provider) by depositing their tokens
  * * in desired ratios for an exchange of the pool token that represents their share of the pool.
  * * Users can burn pool tokens and withdraw their share of token(s).
@@ -28,17 +28,19 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
  * * stops the ratio of the tokens in the pool from changing.
  * * Users can always withdraw their tokens via multi-asset withdraws.
  *
- * @dev Most of the logic is stored as a library `LiquidityModuleLib` for the sake of reducing contract's
- * deployment size.
+ * @dev There are no additional functionalities implemented apart from the library.
+ * * However, this module inherits and implements nonReentrant & whenNotPaused modifiers.
+ * * LM has pausability and expects inheriting contract to provide the access control mechanism.
  *
- * @dev The main functionality of Liquidity Pools is allowing the depositors to have instant withdrawals
- * relying on the Oracle Price, with the help of Liquidity Providers.
- * It is important to change the focus point (1-1) of the pricing algorithm with PriceIn and PriceOut functions.
- * Because the underlying price of the staked assets are expected to raise in time.
- * One can see this similar to accomplishing a "rebasing" logic, with the help of a trusted price source.
+ * @dev review: this module delegates its functionality to LML (LiquidityModuleLib).
+ *
+ * @dev 7 functions need to be overriden with access control when inherited:
+ * * pause, unpause, setSwapFee, setAdminFee, withdrawAdminFees, rampA, stopRampA.
+ *
+ * @dev __LiquidityModule_init (or _unchained) call is NECESSARY when inherited.
  *
  * note This module utilizes modifiers but does not implement necessary admin checks; or pausability overrides.
- * * If a package inherits LM, should implement it's own logic.
+ * * If a package inherits LM, should implement it's own logic around those.
  *
  * @author Ice Bear & Crash Bandicoot
  */
@@ -48,26 +50,19 @@ abstract contract LiquidityModule is
   ReentrancyGuardUpgradeable,
   PausableUpgradeable
 {
-  using LML for LML.Swap;
-  using AL for LML.Swap;
+  using LML for Swap;
+  using AL for Swap;
 
   /**
    * @custom:section                           ** VARIABLES **
-   */
-
-  /**
-   * @dev Struct storing data responsible for automatic market maker functionalities.
-   * In order to access this data, use LiquidityModuleLib.
    *
-   * @dev note do not add any other vairables, Modules do not have a gap.
-   * Instead library main struct has a gap, providing up to 16 storage slot.
-   * todo add this to internal docs
+   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  LML.Swap internal LIQUIDITY;
+  Swap internal LIQUIDITY;
 
   /**
    * @custom:section                           ** EVENTS **
-   * following events are added from LML to help fellow devs with a better ABI
    */
   event TokenSwap(
     address indexed buyer,
@@ -113,9 +108,53 @@ abstract contract LiquidityModule is
    * @param deadline latest timestamp to accept this transaction
    */
   modifier deadlineCheck(uint256 deadline) {
-    require(block.timestamp <= deadline, "LML:Deadline not met");
+    require(block.timestamp <= deadline, "LM:Deadline not met");
     _;
   }
+
+  /**
+   * @custom:section                           ** ABSTRACT FUNCTIONS **
+   *
+   * @dev these functions MUST be overriden for admin functionality.
+   */
+
+  /**
+   * @dev -> external
+   */
+  function pause() external virtual override;
+
+  function unpause() external virtual override;
+
+  /**
+   * @notice Update the swap fee to be applied on swaps
+   * @param newSwapFee new swap fee to be applied on future transactions
+   */
+  function setSwapFee(uint256 newSwapFee) external virtual override;
+
+  /**
+   * @notice Update the admin fee. Admin fee takes portion of the swap fee.
+   * @param newAdminFee new admin fee to be applied on future transactions
+   */
+  function setAdminFee(uint256 newAdminFee) external virtual override;
+
+  /**
+   * @notice Withdraw all admin fees to the contract owner
+   */
+  function withdrawAdminFees(address receiver) external virtual override;
+
+  /**
+   * @notice Start ramping up or down A parameter towards given futureA and futureTime
+   * Checks if the change is too rapid, and commits the new A value only when it falls under
+   * the limit range.
+   * @param futureA the new A to ramp towards
+   * @param futureTime timestamp when the new A should be reached
+   */
+  function rampA(uint256 futureA, uint256 futureTime) external virtual override;
+
+  /**
+   * @notice Stop ramping A immediately. Reverts if ramp A is already stopped.
+   */
+  function stopRampA() external virtual override;
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -125,20 +164,18 @@ abstract contract LiquidityModule is
     address _gETH_position,
     address _lpToken_referance,
     uint256 _pooledTokenId,
-    uint256 _initialA,
-    uint256 _futureA,
+    uint256 _A,
     uint256 _swapFee,
     string memory _poolName
   ) internal onlyInitializing {
-    __ERC1155Holder_init_unchained();
-    __ReentrancyGuard_init_unchained();
-    __Pausable_init_unchained();
+    __ReentrancyGuard_init();
+    __Pausable_init();
+    __ERC1155Holder_init();
     __LiquidityModule_init_unchained(
       _gETH_position,
       _lpToken_referance,
       _pooledTokenId,
-      _initialA,
-      _futureA,
+      _A,
       _swapFee,
       _poolName
     );
@@ -148,34 +185,31 @@ abstract contract LiquidityModule is
     address _gETH_position,
     address _lpToken_referance,
     uint256 _pooledTokenId,
-    uint256 _initialA,
-    uint256 _futureA,
+    uint256 _A,
     uint256 _swapFee,
     string memory _poolName
   ) internal onlyInitializing {
-    require(_gETH_position != address(0), "LML:_gETH_position can not be zero");
-    require(_lpToken_referance != address(0), "LML:_lpToken_referance can not be zero");
-    require(_pooledTokenId != 0, "LML:_pooledTokenId can not be zero");
-    require(_initialA != 0, "LML:_initialA can not be zero");
-    require(_futureA != 0, "LML:_futureA can not be zero");
+    require(_gETH_position != address(0), "LM:_gETH_position can not be zero");
+    require(_lpToken_referance != address(0), "LM:_lpToken_referance can not be zero");
+    require(_pooledTokenId != 0, "LM:_pooledTokenId can not be zero");
+    require(_A != 0, "LM:_A can not be zero");
+    require(_A < AL.MAX_A, "LM:_A exceeds maximum");
+    require(_swapFee < LML.MAX_SWAP_FEE, "LM:_swapFee exceeds maximum");
 
     // Clone and initialize a LPToken contract
     ILPToken _lpToken = ILPToken(Clones.clone(_lpToken_referance));
-    string memory name_suffix = " Geode Liquidity Pool";
+    string memory name_prefix = "Geode LP Token: ";
     string memory symbol_suffix = "-LP";
-    require(
-      _lpToken.initialize(
-        string(abi.encodePacked(_poolName, name_suffix)),
-        string(abi.encodePacked(_poolName, symbol_suffix))
-      ),
-      "LML:could not init lpToken clone"
+    _lpToken.initialize(
+      string(abi.encodePacked(name_prefix, _poolName)),
+      string(abi.encodePacked(_poolName, symbol_suffix))
     );
 
     LIQUIDITY.gETH = IgETH(_gETH_position);
     LIQUIDITY.lpToken = _lpToken;
     LIQUIDITY.pooledTokenId = _pooledTokenId;
-    LIQUIDITY.initialA = _initialA;
-    LIQUIDITY.futureA = _futureA;
+    LIQUIDITY.initialA = _A * AL.A_PRECISION;
+    LIQUIDITY.futureA = _A * AL.A_PRECISION;
     LIQUIDITY.swapFee = _swapFee;
 
     // Do not trust middlewares. Protect LPs, gETH tokens from
@@ -184,24 +218,37 @@ abstract contract LiquidityModule is
   }
 
   /**
-   * @custom:section                           ** FUNCTIONS TO OVERRIDE **
-   */
-  function pause() external virtual override;
-
-  function unpause() external virtual override;
-
-  /**
    * @custom:section                           ** GETTER FUNCTIONS **
-   */
-  /**
-   * @dev -> external view: all
+   *
+   * @custom:visibility -> view-external
    */
 
-  /**
-   * @notice Returns the internal staking token, which is ERC1155
-   */
-  function getgETH() external view virtual override returns (address) {
-    return address(LIQUIDITY.gETH);
+  function LiquidityParams()
+    external
+    view
+    virtual
+    override
+    returns (
+      address gETH,
+      address lpToken,
+      uint256 pooledTokenId,
+      uint256 initialA,
+      uint256 futureA,
+      uint256 initialATime,
+      uint256 futureATime,
+      uint256 swapFee,
+      uint256 adminFee
+    )
+  {
+    gETH = address(LIQUIDITY.gETH);
+    lpToken = address(LIQUIDITY.lpToken);
+    pooledTokenId = LIQUIDITY.pooledTokenId;
+    initialA = LIQUIDITY.initialA;
+    futureA = LIQUIDITY.futureA;
+    initialATime = LIQUIDITY.initialATime;
+    futureATime = LIQUIDITY.futureATime;
+    swapFee = LIQUIDITY.swapFee;
+    adminFee = LIQUIDITY.adminFee;
   }
 
   /**
@@ -223,18 +270,12 @@ abstract contract LiquidityModule is
   }
 
   /**
-   * @notice Return id of the pooled token
-   * @return id of the pooled gETH
+   * @notice Debt, The amount of buyback for stable pricing (1=1).
+   * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
+   * @dev result might change when price is in.
    */
-  function getSwapFee() external view virtual override returns (uint256) {
-    return LIQUIDITY.swapFee;
-  }
-
-  /**
-   * @notice Returns the ERC1155 Id of the represented staking token
-   */
-  function getTokenId() external view virtual override returns (uint256) {
-    return LIQUIDITY.pooledTokenId;
+  function getDebt() external view virtual override returns (uint256) {
+    return LIQUIDITY.getDebt();
   }
 
   /**
@@ -255,15 +296,6 @@ abstract contract LiquidityModule is
   }
 
   /**
-   * @notice Debt, The amount of buyback for stable pricing (1=1).
-   * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
-   * @dev result might change when price is in.
-   */
-  function getDebt() external view virtual override returns (uint256) {
-    return LIQUIDITY.getDebt();
-  }
-
-  /**
    * @notice Reads the accumulated amount of admin fees of the token with given index
    * @param index Index of the pooled token
    * @return admin's token balance in the token's precision
@@ -274,10 +306,8 @@ abstract contract LiquidityModule is
 
   /**
    * @custom:section                           ** HELPER FUNCTIONS **
-   */
-
-  /**
-   * @dev -> external view: all
+   *
+   * @custom:visibility -> view-external
    */
 
   /**
@@ -347,9 +377,8 @@ abstract contract LiquidityModule is
 
   /**
    * @custom:section                           ** STATE MODIFYING FUNCTIONS **
-   */
-  /**
-   * @dev -> external: all
+   *
+   * @custom:visibility -> external
    */
 
   /**
@@ -367,7 +396,7 @@ abstract contract LiquidityModule is
     uint256 minDy,
     uint256 deadline
   )
-    external
+    public
     payable
     virtual
     override
@@ -392,7 +421,7 @@ abstract contract LiquidityModule is
     uint256 minToMint,
     uint256 deadline
   )
-    external
+    public
     payable
     virtual
     override
@@ -417,7 +446,7 @@ abstract contract LiquidityModule is
     uint256 amount,
     uint256[2] calldata minAmounts,
     uint256 deadline
-  ) external virtual override nonReentrant deadlineCheck(deadline) returns (uint256[2] memory) {
+  ) public virtual override nonReentrant deadlineCheck(deadline) returns (uint256[2] memory) {
     return LIQUIDITY.removeLiquidity(amount, minAmounts);
   }
 
@@ -434,7 +463,7 @@ abstract contract LiquidityModule is
     uint8 tokenIndex,
     uint256 minAmount,
     uint256 deadline
-  ) external virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
+  ) public virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
     return LIQUIDITY.removeLiquidityOneToken(tokenAmount, tokenIndex, minAmount);
   }
 
@@ -451,55 +480,7 @@ abstract contract LiquidityModule is
     uint256[2] calldata amounts,
     uint256 maxBurnAmount,
     uint256 deadline
-  ) external virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
+  ) public virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
     return LIQUIDITY.removeLiquidityImbalance(amounts, maxBurnAmount);
-  }
-
-  /**
-   * @custom:section                           ** ADMIN FUNCTIONS **
-   */
-  /**
-   * @dev -> external: all
-   */
-
-  /**
-   * @notice Update the admin fee. Admin fee takes portion of the swap fee.
-   * @param newAdminFee new admin fee to be applied on future transactions
-   */
-  function setAdminFee(uint256 newAdminFee) public virtual override {
-    LIQUIDITY.setAdminFee(newAdminFee);
-  }
-
-  /**
-   * @notice Update the swap fee to be applied on swaps
-   * @param newSwapFee new swap fee to be applied on future transactions
-   */
-  function setSwapFee(uint256 newSwapFee) public virtual override {
-    LIQUIDITY.setSwapFee(newSwapFee);
-  }
-
-  /**
-   * @notice Withdraw all admin fees to the contract owner
-   */
-  function withdrawAdminFees(address receiver) public virtual override nonReentrant {
-    LIQUIDITY.withdrawAdminFees(receiver);
-  }
-
-  /**
-   * @notice Start ramping up or down A parameter towards given futureA and futureTime
-   * Checks if the change is too rapid, and commits the new A value only when it falls under
-   * the limit range.
-   * @param futureA the new A to ramp towards
-   * @param futureTime timestamp when the new A should be reached
-   */
-  function rampA(uint256 futureA, uint256 futureTime) public virtual override {
-    LIQUIDITY.rampA(futureA, futureTime);
-  }
-
-  /**
-   * @notice Stop ramping A immediately. Reverts if ramp A is already stopped.
-   */
-  function stopRampA() public virtual override {
-    LIQUIDITY.stopRampA();
   }
 }

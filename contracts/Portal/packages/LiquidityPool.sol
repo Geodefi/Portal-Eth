@@ -1,56 +1,59 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
+import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
 import {PERCENTAGE_DENOMINATOR} from "../globals/macros.sol";
 import {ID_TYPE} from "../globals/id_type.sol";
 // interfaces
-import {IgETH} from "../interfaces/IgETH.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
-import {IGeodePackage} from "../interfaces/packages/IGeodePackage.sol";
 import {ILiquidityPool} from "../interfaces/packages/ILiquidityPool.sol";
-import {ILPToken} from "../interfaces/helpers/ILPToken.sol";
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
-import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLib as GML, DualGovernance} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
+import {LiquidityModuleLib as LML, Swap} from "../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 // contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
 
 /**
- * @title Liquidity Pool Package - LPP
+ * @title LPP: Liquidity Pool Package: Geode Module + Liquidity Module
  *
  * @notice LPP is a package that provides a liquidity pool for a staking pool created through Portal.
  *
- * @dev Refer to LiquidityModule for StableSwap implementation. Also note:
- * * initial and future A coefficients are set as 60 (LM)
- * * trade fee set to 4 bips (LM)
- * * owner fee is set to 0 (LM)
- * * governance fee is set to 0 (GM)
- * * senate expiry is not effective (GM)
- *
- * @dev  As a Package, it utilizes geodeModule: The Limited Upgradability through Dual Governance:
- * * Governance is the Portal, package version controller.
- * * Senate is the Staking Pool Owner.
- *
- * @dev As a Package, it utilizes IGeodePackage interface, meaning initialize function takes 3 parameters:
+ * @dev TYPE: PACKAGE_LIQUIDITY_POOL
+ * @dev Utilizing IGeodePackage interface, meaning initialize function takes 3 parameters:
  * * * poolOwner: will be assigned as the senate of the package
  * * * pooledTokenId: used internally on LM and LML.
  * * * data: referances 1 parameter: name. Used to generate lpTokenName and lpTokenSymbol for __LM_init.
  *
- * @author Ice Bear & Crash Bandicoot
+ * @dev review: LM for StableSwap implementation. Also note:
+ * * initial and future A coefficients are set as 60 (LM)
+ * * trade fee set to 4 bips (LM)
+ * * owner fee is set to 0 (LM)
+ * * senate expiry is not effective (GM)
  *
+ * @dev review: GM for The Limited Upgradability through Dual Governance:
+ * * Governance is the Portal, package version controller.
+ * * Senate is the Staking Pool Owner.
+ *
+ * @author Ice Bear & Crash Bandicoot
  */
-contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
-  using GML for GML.DualGovernance;
+contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
+  using GML for DualGovernance;
+  using AL for Swap;
+  using LML for Swap;
 
   /**
    * @custom:section                           ** VARIABLES **
-   * Following immutable parameters are set when the referance library implementation is deployed.
-   * Making necessary data for initialization reachable for all instances of LP package.
+   *
+   * @dev Following immutable parameters are set when the referance library implementation is deployed.
+   * It is not desired to provide these package-specific not-changing parameters
+   * accross all instances of the packages.
+   * So, we will store them in the ref implementation contract of the package,
+   * and fetch when needed on initialization of an instance.
    */
   /// @notice gETH position
   address internal immutable gETHPos;
@@ -59,7 +62,6 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /// @notice LPToken implementation referance, needs to be cloned
   address internal immutable LPTokenRef;
   /// @notice LPP package type, useful for Limited Upgradability
-  uint256 internal immutable PACKAGE_TYPE;
 
   /**
    * @custom:section                           ** MODIFIERS **
@@ -73,13 +75,9 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /**
    * @custom:section                           ** INITIALIZING **
    */
+
   /**
    * @custom:oz-upgrades-unsafe-allow constructor
-   *
-   * @dev we don't want to provide these package-specific not-changing parameters
-   * accross all instances of the packages.
-   * So we will store them in the ref implementation contract of the package,
-   * and fetch when needed on initialization.
    */
   constructor(address _gETHPos, address _portalPos, address _LPTokenRef) {
     require(_gETHPos != address(0), "LPP:_gETHPos can not be zero");
@@ -89,51 +87,52 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
     gETHPos = _gETHPos;
     portalPos = _portalPos;
     LPTokenRef = _LPTokenRef;
-    PACKAGE_TYPE = ID_TYPE.PACKAGE_LIQUIDITY_POOL;
 
     _disableInitializers();
   }
 
-  /// @param data only poolName is required from Portal
+  /**
+   * @param data only poolName is required from Portal
+   */
   function initialize(
-    uint256 versionId,
     uint256 pooledTokenId,
     address poolOwner,
-    bytes memory data
-  ) public virtual override initializer returns (bool success) {
-    __LiquidityPool_init(versionId, pooledTokenId, poolOwner, data);
-    success = true;
+    bytes calldata versionName,
+    bytes calldata data
+  ) public virtual override initializer {
+    __LiquidityPool_init(pooledTokenId, poolOwner, versionName, data);
   }
 
   function __LiquidityPool_init(
-    uint256 versionId,
     uint256 pooledTokenId,
     address poolOwner,
-    bytes memory data
+    bytes calldata versionName,
+    bytes calldata data
   ) internal onlyInitializing {
-    __GeodeModule_init(portalPos, poolOwner, 0, type(uint256).max);
-    string memory poolName = string(data);
+    __GeodeModule_init(
+      portalPos,
+      poolOwner,
+      type(uint256).max,
+      ID_TYPE.PACKAGE_LIQUIDITY_POOL,
+      versionName
+    );
     __LiquidityModule_init(
       gETHPos,
       LPTokenRef,
       pooledTokenId,
-      60 * AL.A_PRECISION,
-      60 * AL.A_PRECISION,
+      60,
       (4 * PERCENTAGE_DENOMINATOR) / 10000,
-      poolName
+      string(data)
     );
-    __LiquidityPool_init_unchained(versionId);
+    __LiquidityPool_init_unchained();
   }
 
-  function __LiquidityPool_init_unchained(uint256 versionId) internal onlyInitializing {
-    _setContractVersion(versionId);
-  }
+  function __LiquidityPool_init_unchained() internal onlyInitializing {}
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **
-   */
-  /**
-   * @dev -> public view: all
+   *
+   * @custom:visibility -> view-public
    */
 
   /**
@@ -153,25 +152,64 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   /**
    * @dev GeodeModule override
    */
-  function getProposedVersion()
-    public
+  function getProposedVersion() public view virtual override returns (uint256) {
+    return getPortal().getPackageVersion(GEODE.PACKAGE_TYPE);
+  }
+
+  /**
+   * @dev GeodeModule override
+   *
+   * @custom:visibility -> view
+   */
+  function isolationMode()
+    external
     view
     virtual
     override(GeodeModule, IGeodeModule)
-    returns (uint256)
+    returns (bool)
   {
-    return getPortal().getPackageVersion(PACKAGE_TYPE);
+    if (paused()) {
+      return true;
+    }
+
+    if (getContractVersion() != getProposedVersion()) {
+      return true;
+    }
+
+    if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
+      return true;
+    }
+
+    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
    * @custom:section                           ** ADMIN FUNCTIONS **
-   */
-  /**
-   * @dev -> external: all
+   *
+   * @custom:visibility -> external
    */
 
   /**
-   * @custom:section                           ** PAUSABILITY FUNCTIONS **
+   * @custom:subsection                           ** UPGRADABILITY FUNCTIONS **
+   */
+
+  /**
+   * @dev IGeodePackage override
+   */
+  function pullUpgrade() external virtual override onlyOwner {
+    require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
+    require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
+
+    uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
+    approveProposal(id);
+  }
+
+  /**
+   * @custom:subsection                           ** PAUSABILITY FUNCTIONS **
    */
 
   /**
@@ -189,91 +227,48 @@ contract LiquidityPool is ILiquidityPool, LiquidityModule, GeodeModule {
   }
 
   /**
-   * @custom:section                           ** UPGRADABILITY FUNCTIONS **
+   * @custom:subsection                           ** LIQUIDITY POOL **
+   *
+   * @dev LM override
    */
 
-  /**
-   * @dev -> external
-   */
-  /**
-   * @dev GeodeModule override
-   */
-  function pullUpgrade() external virtual override(GeodeModule, IGeodeModule) onlyOwner {
-    require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
-    require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
-
-    uint256 proposedVersion = getPortal().pushUpgrade(PACKAGE_TYPE);
-    require(proposedVersion != 0, "LPP:PROPOSED_VERSION ERROR");
-
-    approveProposal(proposedVersion);
-    _authorizeUpgrade(GEODE.APPROVED_UPGRADE);
-    _upgradeToAndCallUUPS(GEODE.APPROVED_UPGRADE, new bytes(0), false);
-    _setContractVersion(proposedVersion);
-  }
-
-  /**
-   * @dev GeodeModule override
-   */
-  function isolationMode()
-    external
-    view
-    virtual
-    override(GeodeModule, IGeodeModule)
-    returns (bool)
-  {
-    if (paused()) return true;
-    if (getContractVersion() != getProposedVersion()) return true;
-    if (GEODE.APPROVED_UPGRADE != _getImplementation()) return true;
-    if (getPortal().readAddress(getPoolId(), "CONTROLLER") != GEODE.SENATE) return true;
-    return false;
-  }
-
-  /**
-   * @custom:section                           ** LIQUIDITY POOL ADMIN **
-   */
-
-  function withdrawAdminFees(
-    address receiver
+  function setSwapFee(
+    uint256 newSwapFee
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.withdrawAdminFees(receiver);
+    LIQUIDITY.setSwapFee(newSwapFee);
   }
 
   function setAdminFee(
     uint256 newAdminFee
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.setAdminFee(newAdminFee);
+    LIQUIDITY.setAdminFee(newAdminFee);
   }
 
-  function setSwapFee(
-    uint256 newSwapFee
+  function withdrawAdminFees(
+    address receiver
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.setSwapFee(newSwapFee);
+    LIQUIDITY.withdrawAdminFees(receiver);
   }
 
   function rampA(
     uint256 futureA,
     uint256 futureTime
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.rampA(futureA, futureTime);
+    LIQUIDITY.rampA(futureA, futureTime);
   }
 
-  function stopRampA() public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    super.stopRampA();
+  function stopRampA() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
+    LIQUIDITY.stopRampA();
   }
 
   /**
    * @notice fallback functions
    */
-  function Do_we_care() external pure virtual override returns (bool) {
-    return true;
-  }
-
-  fallback() external payable {}
 
   receive() external payable {}
 
   /**
-   * @notice keep the contract size at 50
+   * @notice keep the total number of variables at 50
    */
-  uint256[46] private __gap;
+  uint256[50] private __gap;
 }

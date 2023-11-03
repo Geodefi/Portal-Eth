@@ -1,27 +1,29 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // libraries
-import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML, Swap} from "./LiquidityModuleLib.sol";
 
 /**
- * @title Amplification Library - AL
+ * @title AL: Amplification Library
  *
- * @notice An helper library for LiquidityModuleLibrary(LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
- * @dev This library assumes the struct is fully validated.
+ * @notice A helper library for Liquidity Module Library (LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
+ *
+ * @dev review: Liquidity Module for the StableSwap logic.
+ * @dev This library assumes the Swap struct is fully validated.
+ *
+ * @dev This is an internal library, requires NO deployment.
  *
  * @author Ice Bear & Crash Bandicoot
  */
 library AmplificationLib {
   /**
    * @custom:section                           ** CONSTANTS **
-   *
-   * @dev Constant values used in ramping A coefficient
    */
-  uint256 public constant A_PRECISION = 100;
-  uint256 public constant MAX_A = 10 ** 6;
-  uint256 public constant MAX_A_CHANGE = 2;
-  uint256 public constant MIN_RAMP_TIME = 14 days;
+  uint256 internal constant A_PRECISION = 100;
+  uint256 internal constant MAX_A = 1e6;
+  uint256 internal constant MAX_A_CHANGE = 2;
+  uint256 internal constant MIN_RAMP_TIME = 14 days;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -32,9 +34,7 @@ library AmplificationLib {
   /**
    * @custom:section                           ** GETTER FUNCTIONS **
    *
-   */
-  /**
-   * @dev -> internal view: all
+   * @custom:visibility -> view-internal
    */
 
   /**
@@ -43,7 +43,7 @@ library AmplificationLib {
    * @param self Swap struct to read from
    * @return A parameter
    */
-  function getA(LML.Swap storage self) internal view returns (uint256) {
+  function getA(Swap storage self) internal view returns (uint256) {
     return _getAPrecise(self) / (A_PRECISION);
   }
 
@@ -53,7 +53,7 @@ library AmplificationLib {
    * @param self Swap struct to read from
    * @return A parameter in its raw precision form
    */
-  function getAPrecise(LML.Swap storage self) internal view returns (uint256) {
+  function getAPrecise(Swap storage self) internal view returns (uint256) {
     return _getAPrecise(self);
   }
 
@@ -63,7 +63,7 @@ library AmplificationLib {
    * @param self Swap struct to read from
    * @return A parameter in its raw precision form
    */
-  function _getAPrecise(LML.Swap storage self) internal view returns (uint256) {
+  function _getAPrecise(Swap storage self) internal view returns (uint256) {
     uint256 t1 = self.futureATime; // time when ramp is finished
     uint256 a1 = self.futureA; // final A value when ramp is finished
 
@@ -83,11 +83,9 @@ library AmplificationLib {
   }
 
   /**
-   * @custom:section                           ** STATE MODIFYING FUNCTIONS **
+   * @custom:section                           ** SETTER FUNCTIONS **
    *
-   */
-  /**
-   * @dev -> internal: all
+   * @custom:visibility -> internal
    */
 
   /**
@@ -98,7 +96,7 @@ library AmplificationLib {
    * @param futureA_ the new A to ramp towards
    * @param futureTime_ timestamp when the new A should be reached
    */
-  function rampA(LML.Swap storage self, uint256 futureA_, uint256 futureTime_) internal {
+  function rampA(Swap storage self, uint256 futureA_, uint256 futureTime_) internal {
     require(block.timestamp >= self.initialATime + 1 days, "AL:Wait 1 day before starting ramp");
     require(futureTime_ >= block.timestamp + MIN_RAMP_TIME, "AL:Insufficient ramp time");
     require(futureA_ > 0 && futureA_ < MAX_A, "AL:futureA_ must be > 0 and < MAX_A");
@@ -125,7 +123,7 @@ library AmplificationLib {
    * cannot be called for another 24 hours
    * @param self Swap struct to update
    */
-  function stopRampA(LML.Swap storage self) internal {
+  function stopRampA(Swap storage self) internal {
     require(self.futureATime > block.timestamp, "AL:Ramp is already stopped");
 
     uint256 currentA = _getAPrecise(self);

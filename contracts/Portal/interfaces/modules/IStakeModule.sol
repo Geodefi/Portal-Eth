@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
-import {StakeModuleLib as SML} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
+pragma solidity =0.8.19;
 
-interface IStakeModule {
+import {IDataStoreModule} from "./IDataStoreModule.sol";
+import {Validator} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
+
+interface IStakeModule is IDataStoreModule {
   function pause() external;
 
   function unpause() external;
@@ -11,20 +13,24 @@ interface IStakeModule {
     external
     view
     returns (
+      address gETH,
+      address oraclePosition,
       uint256 validatorsIndex,
       uint256 verificationIndex,
       uint256 monopolyThreshold,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
       uint256 dailyPriceDecreaseLimit,
+      uint256 governanceFee,
       bytes32 priceMerkleRoot,
-      bytes32 balanceMerkleRoot,
-      address oraclePosition
+      bytes32 balanceMerkleRoot
     );
 
-  function getValidator(bytes calldata pubkey) external view returns (SML.Validator memory);
+  function getValidator(bytes calldata pubkey) external view returns (Validator memory);
 
   function getPackageVersion(uint256 _type) external view returns (uint256);
+
+  function getBalancesMerkleRoot() external view returns (bytes32);
 
   function isMiddleware(uint256 _type, uint256 _version) external view returns (bool);
 
@@ -46,15 +52,17 @@ interface IStakeModule {
     bool[3] calldata config
   ) external payable returns (uint256 poolId);
 
-  function setPoolVisibility(uint256 poolId, bool isPrivate) external;
+  function setPoolVisibility(uint256 poolId, bool makePrivate) external;
 
   function setWhitelist(uint256 poolId, address whitelist) external;
 
-  function changeMaintainer(uint256 poolId, address newMaintainer) external;
+  function setYieldReceiver(uint256 poolId, address yieldReceiver) external;
+
+  function changeMaintainer(uint256 id, address newMaintainer) external;
 
   function getMaintenanceFee(uint256 id) external view returns (uint256);
 
-  function switchMaintenanceFee(uint256 id, address newMaintainer) external;
+  function switchMaintenanceFee(uint256 id, uint256 newFee) external;
 
   function increaseWalletBalance(uint256 id) external payable returns (bool);
 
@@ -64,15 +72,22 @@ interface IStakeModule {
 
   function blameOperator(bytes calldata pk) external;
 
+  function getValidatorPeriod(uint256 id) external view returns (uint256);
+
   function switchValidatorPeriod(uint256 operatorId, uint256 newPeriod) external;
+
+  function setFallbackOperator(
+    uint256 poolId,
+    uint256 operatorId,
+    uint256 fallbackThreshold
+  ) external;
 
   function operatorAllowance(uint256 poolId, uint256 operatorId) external view returns (uint256);
 
   function delegate(
     uint256 poolId,
     uint256[] calldata operatorIds,
-    uint256[] calldata allowances,
-    uint256 fallbackOperator
+    uint256[] calldata allowances
   ) external;
 
   function isWhitelisted(uint256 poolId, address staker) external view returns (bool);
@@ -85,6 +100,8 @@ interface IStakeModule {
 
   function deposit(
     uint256 poolId,
+    uint256 price,
+    bytes32[] calldata priceProof,
     uint256 mingETH,
     uint256 deadline,
     address receiver
@@ -100,7 +117,11 @@ interface IStakeModule {
     bytes[] calldata signatures31
   ) external;
 
-  function beaconStake(uint256 operatorId, bytes[] calldata pubkeys) external;
+  function stake(uint256 operatorId, bytes[] calldata pubkeys) external;
+
+  function requestExit(uint256 poolId, bytes memory pk) external;
+
+  function finalizeExit(uint256 poolId, bytes memory pk) external;
 
   function updateVerificationIndex(
     uint256 validatorVerificationIndex,

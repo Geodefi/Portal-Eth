@@ -1,12 +1,44 @@
+# Dependency directory
 node_modules
+
+# Debug log from npm
+npm-debug.log
+
+# local env variables
 .env
+
+# Logs
+logs
+*.log
+
+# Coverage directory used by tools like istanbul
 coverage
 coverage.json
-typechain
+coverageEnv
 
 #Hardhat files
 cache
 artifacts
-.DS_STORE
 
+# truffle build directory
+build/
+bin/
+
+# macOS
+.DS_Store
+
+# hardat-exposed
+contracts-exposed
+
+# openzeppelin
 .openzeppelin/*
+
+# local solidity compilers
+soljson-v0.8.7+commit.e28d00a7.js
+soljson-v0.8.19+commit.7dd6d404.js
+
+# vscode
+.vscode
+
+# deployments
+releases/31337/*

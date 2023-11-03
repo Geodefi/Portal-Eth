@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/ERC20.sol)
 
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
 import {IgETH} from "../interfaces/IgETH.sol";
 import {IgETHMiddleware} from "../interfaces/middlewares/IgETHMiddleware.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 // libraries
 import {BytesLib} from "../helpers/BytesLib.sol";
 // external
-import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @dev differences between ERC20Middleware and Openzeppelin's implementation of ERC20Upgradeable is:
- * -> pragma set to =0.8.7;
+ * -> pragma set to =0.8.7 and then =0.8.19;
  * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
  * -> unique id of ERC1155 is used
  * -> there is no mint or burn functionality implemented here.
  *
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/2cb8996b777060e658e2b8c9b1630313aedb04c0/contracts/token/ERC20/ERC20Upgradeable.sol
- * diffchecker link: https://www.diffchecker.com/0PlrxJT9
  */
 
 /**
@@ -54,6 +53,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 contract ERC20Middleware is
   Initializable,
   ContextUpgradeable,
+  IgETHMiddleware,
   IERC20Upgradeable,
   IERC20MetadataUpgradeable
 {
@@ -72,8 +72,8 @@ contract ERC20Middleware is
   string private _name;
   string private _symbol;
 
-  uint256 private _id;
-  IgETH private _ERC1155;
+  IgETH public ERC1155;
+  uint256 public ERC1155_ID;
 
   ///@custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -81,7 +81,9 @@ contract ERC20Middleware is
   }
 
   /**
-   * @dev Sets the values for {name} and {symbol}.
+   * @dev Sets the values for {name} and {symbol} based on provided data:
+   * * First 32 bytes indicate the lenght of the name, one therefore can find out
+   * * which byte the name ends and symbol starts.
    *
    * The default value of {decimals} is 18. To select a different value for
    * {decimals} you should overload it.
@@ -91,7 +93,7 @@ contract ERC20Middleware is
     uint256 id_,
     address gETH_,
     bytes calldata data
-  ) public virtual initializer returns (bool) {
+  ) public virtual override initializer {
     uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
     __ERC20Middleware_init(
       id_,
@@ -99,7 +101,6 @@ contract ERC20Middleware is
       string(BytesLib.slice(data, 32, nameLen)),
       string(BytesLib.slice(data, 32 + nameLen, data.length - (32 + nameLen)))
     );
-    return true;
   }
 
   /**
@@ -118,7 +119,6 @@ contract ERC20Middleware is
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
-    __Context_init_unchained();
     __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
   }
 
@@ -128,10 +128,10 @@ contract ERC20Middleware is
     string memory name_,
     string memory symbol_
   ) internal onlyInitializing {
-    _id = id_;
     _name = name_;
     _symbol = symbol_;
-    _ERC1155 = IgETH(gETH_);
+    ERC1155 = IgETH(gETH_);
+    ERC1155_ID = id_;
   }
 
   /**
@@ -172,7 +172,7 @@ contract ERC20Middleware is
    * @dev See {gETH-totalSupply}.
    */
   function totalSupply() public view virtual override returns (uint256) {
-    return _ERC1155.totalSupply(_id);
+    return ERC1155.totalSupply(ERC1155_ID);
   }
 
   /**
@@ -181,7 +181,7 @@ contract ERC20Middleware is
    * @dev See {gETH-balanceOf}.
    */
   function balanceOf(address account) public view virtual override returns (uint256) {
-    return _ERC1155.balanceOf(account, _id);
+    return ERC1155.balanceOf(account, ERC1155_ID);
   }
 
   /**
@@ -190,7 +190,7 @@ contract ERC20Middleware is
    * @dev See {gETH-pricePerShare}.
    */
   function pricePerShare() public view returns (uint256) {
-    return _ERC1155.pricePerShare(_id);
+    return ERC1155.pricePerShare(ERC1155_ID);
   }
 
   /**
@@ -330,7 +330,7 @@ contract ERC20Middleware is
 
     uint256 fromBalance = balanceOf(from);
     require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
-    _ERC1155.safeTransferFrom(from, to, _id, amount, "");
+    ERC1155.safeTransferFrom(from, to, ERC1155_ID, amount, "");
 
     emit Transfer(from, to, amount);
 
@@ -412,7 +412,9 @@ contract ERC20Middleware is
    * @dev This empty reserved space is put in place to allow future versions to add new
    * variables without shifting down storage in the inheritance chain.
    * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+   *
+   * @dev GEODE: middlewares are de-facto not upgrdable, just here to be cloned.
+   * * So, we don't need this gap.
    */
-
-  uint256[45] private __gap;
+  // uint256[] private __gap;
 }

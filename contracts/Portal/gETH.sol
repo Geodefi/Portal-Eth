@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
+// globals
+import {gETH_DENOMINATOR} from "./globals/macros.sol";
 // interfaces
 import {IgETH} from "./interfaces/IgETH.sol";
+import {IERC1155} from "./interfaces/helpers/IERC1155PausableBurnableSupply.sol";
 // libraries
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // contracts
-import {ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
+import {ERC1155, ERC1155PausableBurnableSupply, ERC1155Burnable, IERC1155Burnable} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
  * @title gETH : Geode Finance Liquid Staking Derivatives
@@ -45,12 +48,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   /**
    * @custom:section                           ** CONSTANTS **
    */
-  /**
-   * @dev both of these functions are
-   */
-  bytes32 public constant MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
-  bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
-  uint256 internal constant DENOMINATOR = 1 ether;
+  uint256 private immutable DENOMINATOR = gETH_DENOMINATOR;
+  bytes32 public immutable MIDDLEWARE_MANAGER_ROLE = keccak256("MIDDLEWARE_MANAGER_ROLE");
+  bytes32 public immutable ORACLE_ROLE = keccak256("ORACLE_ROLE");
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -87,14 +87,14 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @custom:section                           ** EVENTS **
    */
   event PriceUpdated(uint256 id, uint256 pricePerShare, uint256 updateTimestamp);
-  event MiddlewareSet(address indexed newMiddleware, uint256 id, bool isSet);
-  event Avoided(address indexed avoider, uint256 id, bool isAvoid);
+  event MiddlewareSet(uint256 id, address middleware, bool isSet);
+  event Avoider(address avoider, uint256 id, bool isAvoid);
 
   /**
    * @custom:section                           ** CONSTRUCTOR **
    */
   /**
-   * @notice ID to timestamp, pointing the second that the latest price update happened
+   * @notice Sets name, symbol, uri and grants necessary roles.
    * @param _name chain specific name: Geode Staked Ether, geode Staked Avax etc.
    * @param _symbol chain specific symbol of the staking derivative: gETH, gGNO, gAVAX, etc.
    **/
@@ -106,31 +106,32 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     name = _name;
     symbol = _symbol;
 
-    _grantRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
-    _grantRole(ORACLE_ROLE, _msgSender());
+    _grantRole(keccak256("MIDDLEWARE_MANAGER_ROLE"), _msgSender());
+    _grantRole(keccak256("ORACLE_ROLE"), _msgSender());
   }
 
   /**
    * @custom:section                           ** DENOMINATOR **
-   */
-  /**
-   * @dev -> view: all
+   *
+   * @custom:visibility -> view
    */
   /**
    * @notice a centralized denominator for all contract using gETH
    * @dev ERC1155 does not have a decimals, and it is not wise to use the same name
    * @dev ADDED for gETH
    */
-  function denominator() external view virtual override returns (uint256) {
+  function denominator() public view virtual override returns (uint256) {
     return DENOMINATOR;
   }
 
   /**
    * @custom:section                           ** MIDDLEWARES **
    */
+
   /**
-   * @dev -> view
+   * @custom:visibility -> view-public
    */
+
   /**
    * @notice Check if an address is approved as an middleware for an ID
    * @dev ADDED for gETH
@@ -143,23 +144,22 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
   /**
    * @dev Only authorized parties should set the middleware
    * @dev ADDED for gETH
    */
   function _setMiddleware(address _middleware, uint256 _id, bool _isSet) internal virtual {
-    require(_middleware != address(0), "gETH:middleware query for the zero address");
     _middlewares[_id][_middleware] = _isSet;
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
   /**
    * @notice Set an address of a contract that will
-   * act as an middleware on gETH contract for a spesific ID
+   * act as a middleware on gETH contract for a specific ID
    * @param middleware Address of the contract that will act as an middleware
    * @param isSet true: sets as an middleware, false: unsets
    * @dev ADDED for gETH
@@ -169,18 +169,19 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 id,
     bool isSet
   ) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
+    require(middleware != address(0), "gETH:middleware query for the zero address");
     require(middleware.isContract(), "gETH:middleware must be a contract");
 
     _setMiddleware(middleware, id, isSet);
 
-    emit MiddlewareSet(middleware, id, isSet);
+    emit MiddlewareSet(id, middleware, isSet);
   }
 
   /**
    * @custom:section                           ** AVOIDERS **
    */
   /**
-   * @dev -> view
+   * @custom:visibility -> view-public
    */
   /**
    * @notice Checks if the given address restricts the affect of the middlewares on their gETH
@@ -192,7 +193,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
   /**
    * @notice Restrict any affect of middlewares on the tokens of caller
@@ -204,15 +205,17 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
 
     _avoiders[account][id] = isAvoid;
 
-    emit Avoided(account, id, isAvoid);
+    emit Avoider(account, id, isAvoid);
   }
 
   /**
    * @custom:section                           ** PRICE **
    */
+
   /**
-   * @dev -> view
+   * @custom:visibility -> view-external
    */
+
   /**
    * @dev ADDED for gETH
    * @return price of the derivative in terms of underlying token, Ether
@@ -230,8 +233,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
+
   /**
    * @dev ADDED for gETH
    */
@@ -241,8 +245,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
+
   /**
    * @notice Only ORACLE can call this function and set price
    * @dev ADDED for gETH
@@ -260,9 +265,8 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
 
   /**
    * @custom:section                           ** ROLES **
-   */
-  /**
-   * @dev -> external: all
+   *
+   * @custom:visibility -> external
    */
 
   /**
@@ -270,7 +274,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev URI_SETTER is basically a superuser, there can be only 1 at a given time,
    * @dev intended as "Governance/DAO"
    */
-  function transferUriSetterRole(address newUriSetter) external virtual override {
+  function transferUriSetterRole(
+    address newUriSetter
+  ) external virtual override onlyRole(URI_SETTER_ROLE) {
     _grantRole(URI_SETTER_ROLE, newUriSetter);
     renounceRole(URI_SETTER_ROLE, _msgSender());
   }
@@ -280,7 +286,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev PAUSER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferPauserRole(address newPauser) external virtual override {
+  function transferPauserRole(address newPauser) external virtual override onlyRole(PAUSER_ROLE) {
     _grantRole(PAUSER_ROLE, newPauser);
     renounceRole(PAUSER_ROLE, _msgSender());
   }
@@ -290,7 +296,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev MINTER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMinterRole(address newMinter) external virtual override {
+  function transferMinterRole(address newMinter) external virtual override onlyRole(MINTER_ROLE) {
     _grantRole(MINTER_ROLE, newMinter);
     renounceRole(MINTER_ROLE, _msgSender());
   }
@@ -300,7 +306,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev ORACLE is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferOracleRole(address newOracle) external virtual override {
+  function transferOracleRole(address newOracle) external virtual override onlyRole(ORACLE_ROLE) {
     _grantRole(ORACLE_ROLE, newOracle);
     renounceRole(ORACLE_ROLE, _msgSender());
   }
@@ -310,7 +316,9 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev MIDDLEWARE MANAGER is basically a superUser, there can be only 1 at a given time,
    * @dev intended as "Portal"
    */
-  function transferMiddlewareManagerRole(address newMiddlewareManager) external virtual override {
+  function transferMiddlewareManagerRole(
+    address newMiddlewareManager
+  ) external virtual override onlyRole(MIDDLEWARE_MANAGER_ROLE) {
     _grantRole(MIDDLEWARE_MANAGER_ROLE, newMiddlewareManager);
     renounceRole(MIDDLEWARE_MANAGER_ROLE, _msgSender());
   }
@@ -334,7 +342,7 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    */
 
   /**
-   * @dev -> internal
+   * @custom:visibility -> internal
    */
 
   /**
@@ -351,13 +359,13 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 amount,
     bytes memory data
   ) internal virtual override {
-    if (!isMiddleware(operator, id)) {
+    if (!(isMiddleware(operator, id))) {
       super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
   }
 
   /**
-   * @dev -> external
+   * @custom:visibility -> external
    */
 
   /**
@@ -372,12 +380,12 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
     uint256 id,
     uint256 amount,
     bytes memory data
-  ) public virtual override {
+  ) public virtual override(ERC1155, IERC1155) {
     require(
       (from == _msgSender()) ||
         (isApprovedForAll(from, _msgSender())) ||
         (isMiddleware(_msgSender(), id) && !isAvoider(from, id)),
-      "ERC1155: caller is not token owner or approved or a middleware"
+      "ERC1155: caller is not token owner or approved"
     );
     _safeTransferFrom(from, to, id, amount, data);
   }
@@ -388,12 +396,16 @@ contract gETH is IgETH, ERC1155PausableBurnableSupply {
    * @dev See ERC1155Burnable burn:
    * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Burnable.sol#L15
    */
-  function burn(address account, uint256 id, uint256 value) public virtual override {
+  function burn(
+    address account,
+    uint256 id,
+    uint256 value
+  ) public virtual override(ERC1155Burnable, IERC1155Burnable) {
     require(
       (account == _msgSender()) ||
         (isApprovedForAll(account, _msgSender())) ||
         (isMiddleware(_msgSender(), id) && !isAvoider(account, id)),
-      "ERC1155: caller is not token owner or approved or a middleware"
+      "ERC1155: caller is not token owner or approved"
     );
 
     _burn(account, id, value);

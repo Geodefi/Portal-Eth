@@ -1,79 +1,84 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 /**
- * @title DataStoreModule Library - DSML
- * A Storage Management Library for Dynamic Structs providing an Isolated Storage Layout
- * for the contracts and modules that inherits DataStoreModule (DSM)
+ * @notice Main Struct for reading/writing operations for given (id, key) pairs.
  *
- * * DataStoreUtils is a storage management tool designed to create a safe and scalable
- * * storage layout with the help of data types, IDs and keys.
+ * @param allIdsByType type => id[], optional categorization for IDs, can be directly accessed.
+ * @param uintData keccak(id, key) =>  returns uint256
+ * @param bytesData keccak(id, key) => returns bytes
+ * @param addressData keccak(id, key) =>  returns address
+ * @param __gap keep the struct size at 16
  *
- * * Focusing on upgradable contracts with multiple user types to create a
+ * @dev any other storage type can be expressed as uint or bytes. E.g., bools are 0/1 as uints.
+ */
+struct IsolatedStorage {
+  mapping(uint256 => uint256[]) allIdsByType;
+  mapping(bytes32 => uint256) uintData;
+  mapping(bytes32 => bytes) bytesData;
+  mapping(bytes32 => address) addressData;
+  uint256[12] __gap;
+}
+
+/**
+ * @title DSML: DataStore Module Library
+ *
+ * @notice A Storage Management Library created for the contracts and modules that inherits DataStoreModule (DSM).
+ * Enables Dynamic Structs with unlimited key space.
+ * Provides an Isolated Storage Layout with IDs and KEYs.
+ * Focusing on upgradable contracts with various data types to create a
  * * sustainable development environment.
- * * In summary, extra gas cost that would be saved with Storage packing are
- * * ignored to create upgradable structs.
+ * In summary, extra gas cost that would be saved with Storage packing are
+ * * ignored to create dynamic structs.
  *
- * @dev Distinct id and key pairs SHOULD return different storage slots
- * @dev TYPEs are defined in globals.sol
- *
+ * @dev Distinct id and key pairs SHOULD return different storage slots. No collisions!
  * @dev IDs are the representation of an entity with any given key as properties.
- * @dev While it is good practice to keep record,
+ * @dev review: Reserved TYPEs are defined within globals/id_type.sol
+ * @dev review: For a safer development process, NEVER use the IsolatedStorage with strings. Refer to globals/reserved_key_space.sol
+ *
+ * @dev While it is a good practice for keeping a record;
  * * TYPE for ID is NOT mandatory, an ID might not have an explicit type.
- * * Thus there is no checks of types or keys.
+ * * e.g., When a relational data is added with getKey, like allowance, it has a unique ID but no TYPE.
+ * * Thus there are no checks for types or keys.
+ *
+ * @dev readUint(id, arrayName) returns the lenght of array.
+ *
+ * @dev Contracts relying on this library must use DataStoreModuleLib.IsolatedStorage
+ * @dev This is an internal library, requires NO deployment.
  *
  * @author Ice Bear & Crash Bandicoot
  */
-
 library DataStoreModuleLib {
   /**
-   * @notice Main Struct for reading and writing operations for given (id, key) pairs
-   * @param allIdsByType type => id[], optional categorization for IDs, requires direct access
-   * @param uintData keccak(id, key) =>  returns uint256
-   * @param bytesData keccak(id, key) => returns bytes
-   * @param addressData keccak(id, key) =>  returns address
-   * @param __gap keep the struct size at 16
-   * @dev any other storage type can be expressed as uint or bytes
-   */
-  struct IsolatedStorage {
-    mapping(uint256 => uint256[]) allIdsByType;
-    mapping(bytes32 => uint256) uintData;
-    mapping(bytes32 => bytes) bytesData;
-    mapping(bytes32 => address) addressData;
-    uint256[12] __gap;
-  }
-
-  /**
    * @custom:section                           ** HELPERS **
-   */
-  /**
-   * @dev -> pure: all
+   *
+   * @custom:visibility -> pure-internal
    */
 
   /**
-   * @notice generaliazed method of generating an ID
-   * @dev Some TYPEs may require permissionless creation. Allowing anyone to claim any ID,
+   * @notice generalized method of generating an ID
+   *
+   * @dev Some TYPEs may require permissionless creation, allowing anyone to claim any ID;
    * meaning malicious actors can claim names to mislead people. To prevent this
    * TYPEs will be considered during ID generation.
    */
   function generateId(bytes memory _name, uint256 _type) internal pure returns (uint256 id) {
-    id = uint256(keccak256(abi.encodePacked(_name, _type)));
+    id = uint256(keccak256(abi.encode(_name, _type)));
   }
 
   /**
-   * @notice hashes given id and a parameter to be used as key in getters and setters
-   * @return key bytes32 hash of id and parameter to be stored
+   * @notice hash of given ID and a KEY defines the key for the IsolatedStorage
+   * @return key bytes32, hash.
    **/
   function getKey(uint256 id, bytes32 param) internal pure returns (bytes32 key) {
-    key = keccak256(abi.encodePacked(id, param));
+    key = keccak256(abi.encode(id, param));
   }
 
   /**
    * @custom:section                           ** DATA GETTERS **
-   */
-  /**
-   * @dev -> internal view: all
+   *
+   * @custom:visibility -> view-internal
    */
 
   function readUint(
@@ -102,9 +107,8 @@ library DataStoreModuleLib {
 
   /**
    * @custom:section                           ** ARRAY GETTERS **
-   */
-  /**
-   * @dev -> internal view: all
+   *
+   * @custom:visibility -> view-internal
    */
 
   function readUintArray(
@@ -136,12 +140,12 @@ library DataStoreModuleLib {
 
   /**
    * @custom:section                           ** STATE MODIFYING FUNCTIONS **
+   *
+   * @custom:visibility -> internal
    */
+
   /**
-   * @custom:section                           ** DATA SETTERS **
-   */
-  /**
-   * @dev -> internal: all
+   * @custom:subsection                        ** DATA SETTERS **
    */
 
   function writeUint(
@@ -190,10 +194,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @custom:section                           ** ARRAY SETTERS **
-   */
-  /**
-   * @dev -> internal: all
+   * @custom:subsection                        ** ARRAY SETTERS **
    */
 
   function appendUintArray(
@@ -227,10 +228,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @custom:section                           ** BATCH ARRAY SETTERS **
-   */
-  /**
-   * @dev -> internal: all
+   * @custom:subsection                        ** BATCH ARRAY SETTERS **
    */
 
   function appendUintArrayBatch(
@@ -242,7 +240,8 @@ library DataStoreModuleLib {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
 
-    for (uint256 i = 0; i < _data.length; ) {
+    uint256 _dataLen = _data.length;
+    for (uint256 i; i < _dataLen; ) {
       self.uintData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
@@ -261,7 +260,8 @@ library DataStoreModuleLib {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
 
-    for (uint256 i = 0; i < _data.length; ) {
+    uint256 _dataLen = _data.length;
+    for (uint256 i; i < _dataLen; ) {
       self.bytesData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;
@@ -280,7 +280,8 @@ library DataStoreModuleLib {
     bytes32 arrayKey = getKey(_id, _key);
     uint256 arrayLen = self.uintData[arrayKey];
 
-    for (uint256 i = 0; i < _data.length; ) {
+    uint256 _dataLen = _data.length;
+    for (uint256 i; i < _dataLen; ) {
       self.addressData[getKey(arrayLen++, arrayKey)] = _data[i];
       unchecked {
         i += 1;

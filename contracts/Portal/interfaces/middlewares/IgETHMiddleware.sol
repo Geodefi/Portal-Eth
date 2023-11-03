@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 interface IgETHMiddleware {
-  function initialize(uint256 id_, address erc1155_, bytes memory data) external returns (bool);
+  function initialize(uint256 id_, address erc1155_, bytes memory data) external;
 }

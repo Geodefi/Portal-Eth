@@ -1,44 +1,72 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
+// globals
+import {ID_TYPE} from "../../globals/id_type.sol";
 // interfaces
 import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
 // libraries
-import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
+import {GeodeModuleLib as GML, Proposal, DualGovernance} from "./libs/GeodeModuleLib.sol";
+import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
 // external
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /**
- * @title Geode Module - GM
+ * @title GM: Geode Module
+ *
+ * @notice Base logic for Upgradable Packages:
+ * * Dual Governance with Senate+Governance: Governance proposes, Senate approves.
+ * * Limited Upgradability built on top of UUPS via Dual Governance.
+ *
+ * @dev review: this module delegates its functionality to GML (GeodeModuleLib):
+ * GML has onlyGovernance, onlySenate, onlyController modifiers for access control.
+ *
+ * @dev There is 1 additional functionality implemented apart from the library:
+ * Mutating UUPS pattern to fit Limited Upgradability:
+ * 1. New implementation contract is proposed with its own package type within the limits, refer to globals/id_type.sol.
+ * 2. Proposal is approved by the contract owner, Senate.
+ * 3. approveProposal calls _handleUpgrade which mimics UUPS.upgradeTo:
+ * 3.1. Checks the implementation address with _authorizeUpgrade, also preventing any UUPS upgrades.
+ * 3.2. Upgrades the contract with no function to call afterwards.
+ * 3.3. Sets contract version. Note that it does not increase linearly like one might expect.
+ *
+ * @dev 1 function needs to be overriden when inherited: isolationMode. (also refer to approveProposal)
+ *
+ * @dev __GeodeModule_init (or _unchained) call is NECESSARY when inherited.
+ * However, deployer MUST call initializer after upgradeTo call,
+ * SHOULD NOT call initializer on upgradeToAndCall or new ERC1967Proxy calls.
+ *
+ * @dev This module inherits DataStoreModule.
  *
  * @author Ice Bear & Crash Bandicoot
  */
-abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable {
-  using GML for GML.DualGovernance;
+abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule {
+  using GML for DualGovernance;
 
   /**
    * @custom:section                           ** VARIABLES **
    *
-   * @dev note do not add any other vairables, Modules do not have a gap.
-   * Instead library main struct has a gap, providing up to 16 storage slot.
-   * todo add this to internal docs
+   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  GML.DualGovernance internal GEODE;
+  DualGovernance internal GEODE;
 
   /**
    * @custom:section                           ** EVENTS **
    */
   event ContractVersionSet(uint256 version);
-  /**
-   * @dev following events are added from GML to help fellow devs with a better ABI
-   */
-  event GovernanceFeeUpdated(uint256 newFee);
+
   event ControllerChanged(uint256 indexed ID, address CONTROLLER);
   event Proposed(uint256 indexed TYPE, uint256 ID, address CONTROLLER, uint256 deadline);
   event Approved(uint256 ID);
   event NewSenate(address senate, uint256 expiry);
+
+  /**
+   * @custom:section                           ** ABSTRACT FUNCTIONS **
+   */
+  function isolationMode() external view virtual override returns (bool);
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -47,79 +75,91 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
   function __GeodeModule_init(
     address governance,
     address senate,
-    uint256 governanceFee,
-    uint256 senateExpiry
+    uint256 senateExpiry,
+    uint256 packageType,
+    bytes calldata initVersionName
   ) internal onlyInitializing {
-    __UUPSUpgradeable_init_unchained();
-    __DataStoreModule_init_unchained();
-    __GeodeModule_init_unchained(governance, senate, governanceFee, senateExpiry);
+    __UUPSUpgradeable_init();
+    __DataStoreModule_init();
+    __GeodeModule_init_unchained(governance, senate, senateExpiry, packageType, initVersionName);
   }
 
+  /**
+   * @dev This function uses _getImplementation(), clearly deployer SHOULD NOT call initializer on
+   * upgradeToAndCall or new ERC1967Proxy calls. _getImplementation() returns 0 then.
+   * @dev GOVERNANCE and SENATE set to msg.sender at beginning, can not propose+approve otherwise.
+   * @dev native approveProposal(public) is not used here. Because it has an _handleUpgrade,
+   * however initialization does not require UUPS.upgradeTo.
+   */
   function __GeodeModule_init_unchained(
     address governance,
     address senate,
-    uint256 governanceFee,
-    uint256 senateExpiry
+    uint256 senateExpiry,
+    uint256 packageType,
+    bytes calldata initVersionName
   ) internal onlyInitializing {
+    require(governance != address(0), "GM:governance can not be zero");
+    require(senate != address(0), "GM:senate can not be zero");
+    require(senateExpiry > block.timestamp, "GM:low senateExpiry");
+    require(packageType != 0, "GM:packageType can not be zero");
+    require(initVersionName.length != 0, "GM:initVersionName can not be empty");
+
+    GEODE.GOVERNANCE = msg.sender;
+    GEODE.SENATE = msg.sender;
+
+    GEODE.SENATE_EXPIRY = senateExpiry;
+    GEODE.PACKAGE_TYPE = packageType;
+
+    uint256 initVersion = GEODE.propose(
+      DATASTORE,
+      _getImplementation(),
+      packageType,
+      initVersionName,
+      1 days
+    );
+
+    GEODE.approveProposal(DATASTORE, initVersion);
+
+    _setContractVersion(DSML.generateId(initVersionName, GEODE.PACKAGE_TYPE));
+
     GEODE.GOVERNANCE = governance;
     GEODE.SENATE = senate;
-    GEODE.GOVERNANCE_FEE = governanceFee;
-    GEODE.SENATE_EXPIRY = senateExpiry;
   }
 
   /**
-   * @custom:section                           ** FUNCTIONS TO OVERRIDE **
-   */
-  /**
-   * @notice get the latest version of the package using this module, from Portal
-   */
-  function getProposedVersion() public view virtual override returns (uint256);
-
-  function pullUpgrade() external virtual override;
-
-  function isolationMode() external view virtual override returns (bool);
-
-  /**
-   * @custom:section                           ** VERSION CONTROL FUNCTIONS **
+   * @custom:section                           ** LIMITED UUPS VERSION CONTROL **
+   *
+   * @custom:visibility -> internal
    */
 
   /**
-   * @dev -> internal
-   */
-  /**
-   * @dev required by the OZ UUPS module
-   * note that there is no Governance check, as upgrades are effective
-   * * right after the Senate approval
+   * @dev required by the OZ UUPS module, improved by the Geode Module.
    */
   function _authorizeUpgrade(address proposed_implementation) internal virtual override {
-    require(isUpgradeAllowed(proposed_implementation), "GM:not allowed to upgrade");
+    require(
+      GEODE.isUpgradeAllowed(proposed_implementation, _getImplementation()),
+      "GM:not allowed to upgrade"
+    );
   }
 
-  function _setContractVersion(uint256 newVersion) internal virtual {
-    GEODE.CONTRACT_VERSION = newVersion;
-    emit ContractVersionSet(newVersion);
+  function _setContractVersion(uint256 id) internal virtual {
+    GEODE.CONTRACT_VERSION = id;
+    emit ContractVersionSet(id);
   }
 
   /**
-   * @dev -> external view
+   * @dev Would use the public upgradeTo() call, which does _authorizeUpgrade and _upgradeToAndCallUUPS,
+   * but it is external, OZ have not made it public yet.
    */
-
-  function getContractVersion() public view virtual override returns (uint256) {
-    return GEODE.CONTRACT_VERSION;
-  }
-
-  function isUpgradeAllowed(
-    address proposedImplementation
-  ) public view virtual override returns (bool) {
-    return GEODE.isUpgradeAllowed(proposedImplementation, _getImplementation());
+  function _handleUpgrade(address proposed_implementation, uint256 id) internal virtual {
+    upgradeTo(proposed_implementation);
+    _setContractVersion(id);
   }
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **
-   */
-
-  /**
-   * @dev -> external view
+   *
+   * @custom:visibility -> view-external
    */
 
   function GeodeParams()
@@ -131,73 +171,45 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
       address governance,
       address senate,
       address approvedUpgrade,
-      uint256 governanceFee,
       uint256 senateExpiry,
-      uint256 contractVersion
+      uint256 packageType
     )
   {
     governance = GEODE.GOVERNANCE;
     senate = GEODE.SENATE;
     approvedUpgrade = GEODE.APPROVED_UPGRADE;
-    governanceFee = GEODE.GOVERNANCE_FEE;
     senateExpiry = GEODE.SENATE_EXPIRY;
-    contractVersion = GEODE.CONTRACT_VERSION;
+    packageType = GEODE.PACKAGE_TYPE;
+  }
+
+  function getContractVersion() public view virtual override returns (uint256) {
+    return GEODE.CONTRACT_VERSION;
   }
 
   function getProposal(
     uint256 id
-  ) external view virtual override returns (GML.Proposal memory proposal) {
+  ) external view virtual override returns (Proposal memory proposal) {
     proposal = GEODE.getProposal(id);
   }
 
   /**
    * @custom:section                           ** SETTER FUNCTIONS **
-   */
-  /**
-   * @dev -> external: all
-   */
-
-  /**
-   * @dev Governance Functions
+   *
+   * @custom:visibility -> public/external
    */
 
-  function newProposal(
+  /**
+   * @custom:subsection                        ** ONLY GOVERNANCE **
+   *
+   */
+
+  function propose(
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
     uint256 duration
-  ) external virtual override returns (uint256 id, bool success) {
-    id = GEODE.newProposal(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
-    success = true;
-  }
-
-  /**
-   * @notice only parameter of GeodeUtils that can be mutated is the fee
-   */
-  function setGovernanceFee(uint256 newFee) external virtual override {
-    GEODE.setGovernanceFee(newFee);
-  }
-
-  /**
-   * @dev Senate Functions
-   */
-
-  /**
-   * @notice approves a specific proposal
-   * @dev OnlySenate is checked inside the GeodeUtils
-   */
-  function approveProposal(
-    uint256 id
-  ) public virtual override returns (uint256 _type, address _controller) {
-    (_type, _controller) = GEODE.approveProposal(DATASTORE, id);
-  }
-
-  /**
-   * @notice changes the Senate's address without extending the expiry
-   * @dev OnlySenate is checked inside the GeodeUtils
-   */
-  function changeSenate(address _newSenate) external virtual override {
-    GEODE.changeSenate(_newSenate);
+  ) public virtual override returns (uint256 id) {
+    id = GEODE.propose(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
   }
 
   function rescueSenate(address _newSenate) external virtual override {
@@ -205,8 +217,30 @@ abstract contract GeodeModule is IGeodeModule, DataStoreModule, UUPSUpgradeable 
   }
 
   /**
-   * @dev CONTROLLER Functions
+   * @custom:subsection                        ** ONLY SENATE **
    */
+
+  /**
+   * @dev handles PACKAGE_TYPE proposals by upgrading the contract immediately.
+   */
+  function approveProposal(
+    uint256 id
+  ) public virtual override returns (address _controller, uint256 _type, bytes memory _name) {
+    (_controller, _type, _name) = GEODE.approveProposal(DATASTORE, id);
+
+    if (_type == GEODE.PACKAGE_TYPE) {
+      _handleUpgrade(_controller, id);
+    }
+  }
+
+  function changeSenate(address _newSenate) external virtual override {
+    GEODE.changeSenate(_newSenate);
+  }
+
+  /**
+   * @custom:subsection                        ** ONLY CONTROLLER **
+   */
+
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external virtual override {
     GML.changeIdCONTROLLER(DATASTORE, id, newCONTROLLER);
   }
