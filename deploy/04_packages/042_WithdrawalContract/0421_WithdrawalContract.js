@@ -9,6 +9,7 @@ const func = async function (hre) {
     skipIfAlreadyDeployed: true,
     libraries: {
       GeodeModuleLib: (await get("GeodeModuleLib")).address,
+      WithdrawalModuleLib: (await get("WithdrawalModuleLib")).address,
     },
     args: [(await get("gETH")).address, (await get("Portal")).address],
   });
@@ -16,4 +17,4 @@ const func = async function (hre) {
 
 module.exports = func;
 module.exports.tags = ["WithdrawalContract"];
-module.exports.dependencies = ["GeodeModuleLib", "gETH", "Portal"];
+module.exports.dependencies = ["GeodeModuleLib", "WithdrawalModuleLib", "gETH", "Portal"];

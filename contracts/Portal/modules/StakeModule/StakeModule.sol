@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
@@ -7,7 +7,8 @@ import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IStakeModule} from "../../interfaces/modules/IStakeModule.sol";
 // libraries
-import {StakeModuleLib as SML} from "./libs/StakeModuleLib.sol";
+import {StakeModuleLib as SML, Validator, PooledStaking} from "./libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib as IEL} from "./libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib as OEL} from "./libs/OracleExtensionLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
@@ -44,13 +45,14 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
  */
 abstract contract StakeModule is
   IStakeModule,
-  DataStoreModule,
   ERC1155HolderUpgradeable,
+  ReentrancyGuardUpgradeable,
   PausableUpgradeable,
-  ReentrancyGuardUpgradeable
+  DataStoreModule
 {
-  using SML for SML.PooledStaking;
-  using OEL for SML.PooledStaking;
+  using SML for PooledStaking;
+  using IEL for PooledStaking;
+  using OEL for PooledStaking;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -58,7 +60,7 @@ abstract contract StakeModule is
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  SML.PooledStaking internal STAKE;
+  PooledStaking internal STAKE;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -109,8 +111,8 @@ abstract contract StakeModule is
     address _gETH,
     address _oracle_position
   ) internal onlyInitializing {
-    require(_gETH != address(0));
-    require(_oracle_position != address(0));
+    require(_gETH != address(0), "SM:gETH cannot be zero address");
+    require(_oracle_position != address(0), "SM:oracle cannot be zero address");
     STAKE.gETH = IgETH(_gETH);
     STAKE.ORACLE_POSITION = _oracle_position;
     STAKE.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
@@ -157,12 +159,16 @@ abstract contract StakeModule is
 
   function getValidator(
     bytes calldata pubkey
-  ) external view virtual override returns (SML.Validator memory) {
+  ) external view virtual override returns (Validator memory) {
     return STAKE.validators[pubkey];
   }
 
   function getPackageVersion(uint256 _type) external view virtual override returns (uint256) {
     return STAKE.packages[_type];
+  }
+
+  function getBalancesMerkleRoot() external view virtual override returns (bytes32) {
+    return STAKE.BALANCE_MERKLE_ROOT;
   }
 
   function isMiddleware(
@@ -182,8 +188,8 @@ abstract contract StakeModule is
     uint256 fee,
     uint256 validatorPeriod,
     address maintainer
-  ) external payable virtual override whenNotPaused nonReentrant {
-    SML.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
+  ) external payable virtual override nonReentrant whenNotPaused {
+    IEL.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
   }
 
   /**
@@ -267,10 +273,10 @@ abstract contract StakeModule is
    */
 
   function changeMaintainer(
-    uint256 poolId,
+    uint256 id,
     address newMaintainer
   ) external virtual override whenNotPaused {
-    SML.changeMaintainer(DATASTORE, poolId, newMaintainer);
+    SML.changeMaintainer(DATASTORE, id, newMaintainer);
   }
 
   /**
@@ -297,7 +303,7 @@ abstract contract StakeModule is
 
   function increaseWalletBalance(
     uint256 id
-  ) external payable virtual override whenNotPaused nonReentrant returns (bool) {
+  ) external payable virtual override nonReentrant whenNotPaused returns (bool) {
     return SML.increaseWalletBalance(DATASTORE, id);
   }
 
@@ -407,8 +413,8 @@ abstract contract StakeModule is
     payable
     virtual
     override
-    whenNotPaused
     nonReentrant
+    whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
     if (!STAKE.isPriceValid(poolId)) {
@@ -445,6 +451,26 @@ abstract contract StakeModule is
    */
   function canStake(bytes calldata pubkey) external view virtual override returns (bool) {
     return STAKE.canStake(pubkey);
+  }
+
+  /**
+   * @custom:section                           ** VALIDATOR EXITS **
+   *
+   * @custom:visibility -> external
+   */
+
+  function requestExit(
+    uint256 poolId,
+    bytes memory pk
+  ) external virtual override nonReentrant whenNotPaused {
+    STAKE.requestExit(DATASTORE, poolId, pk);
+  }
+
+  function finalizeExit(
+    uint256 poolId,
+    bytes memory pk
+  ) external virtual override nonReentrant whenNotPaused {
+    STAKE.finalizeExit(DATASTORE, poolId, pk);
   }
 
   /**

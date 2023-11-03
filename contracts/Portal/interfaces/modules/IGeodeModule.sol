@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {IDataStoreModule} from "./IDataStoreModule.sol";
-import {GeodeModuleLib as GML} from "../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {Proposal} from "../../modules/GeodeModule/libs/GeodeModuleLib.sol";
 
 interface IGeodeModule is IDataStoreModule {
   function isolationMode() external view returns (bool);
@@ -20,7 +20,7 @@ interface IGeodeModule is IDataStoreModule {
 
   function getContractVersion() external view returns (uint256);
 
-  function getProposal(uint256 id) external view returns (GML.Proposal memory proposal);
+  function getProposal(uint256 id) external view returns (Proposal memory proposal);
 
   function propose(
     address _CONTROLLER,

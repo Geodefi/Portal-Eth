@@ -1,5 +1,4 @@
 const { BN, expectRevert } = require("@openzeppelin/test-helpers");
-
 const LPToken = artifacts.require("$LPToken");
 const { shouldBehaveLikeERC20 } = require("../utils/ERC20.behavior");
 
@@ -7,7 +6,7 @@ contract("LPToken", function (accounts) {
   const [deployer, recipient, anotherAccount] = accounts;
   const name = "Test Token";
   const symbol = "TEST";
-  const initialSupply = new BN(100);
+  const initialSupply = new BN(String(1e18)).muln(100);
 
   let factory;
 
@@ -15,8 +14,8 @@ contract("LPToken", function (accounts) {
     const contract = await upgrades.deployProxy(factory, [name, symbol], {
       unsafeAllow: ["state-variable-assignment"],
     });
-    await contract.deployed();
-    return await LPToken.at(contract.address);
+    await contract.waitForDeployment();
+    return await LPToken.at(contract.target);
   };
 
   before(async function () {

@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { expectRevert, BN } = require("@openzeppelin/test-helpers");
 const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants");
-const { strToBytes, generateId, DAY, setTimestamp, getBlockTimestamp } = require("../utils");
+const { strToBytes, generateId, DAY, setTimestamp, getBlockTimestamp } = require("../../utils");
 
 const ERC1967Proxy = artifacts.require("ERC1967Proxy");
 
@@ -13,7 +13,9 @@ const LiquidityModuleLib = artifacts.require("LiquidityModuleLib");
 const GeodeModuleLib = artifacts.require("GeodeModuleLib");
 const OracleExtensionLib = artifacts.require("OracleExtensionLib");
 const StakeModuleLib = artifacts.require("StakeModuleLib");
+const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 
+const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
 const WithdrawalContract = artifacts.require("WithdrawalContract");
 const LiquidityPool = artifacts.require("LiquidityPool");
 
@@ -23,18 +25,24 @@ contract("LiquidityPool", function (accounts) {
 
   before(async function () {
     this.SML = await StakeModuleLib.new();
+    // this should be before --> await InitiatorExtensionLib.new();
+    await InitiatorExtensionLib.link(this.SML);
+    this.IEL = await InitiatorExtensionLib.new();
     this.OEL = await OracleExtensionLib.new();
     this.LML = await LiquidityModuleLib.new();
     this.GML = await GeodeModuleLib.new();
+    this.WML = await WithdrawalModuleLib.new();
 
     await Portal.link(this.GML);
     await Portal.link(this.SML);
     await Portal.link(this.OEL);
+    await Portal.link(this.IEL);
 
     await LiquidityPool.link(this.GML);
     await LiquidityPool.link(this.LML);
 
     await WithdrawalContract.link(this.GML);
+    await WithdrawalContract.link(this.WML);
 
     tokenId = await generateId(strToBytes("name"), 5);
   });

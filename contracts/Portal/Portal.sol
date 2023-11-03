@@ -7,7 +7,7 @@
 //
 
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // globals
 import {ID_TYPE} from "./globals/id_type.sol";
@@ -16,9 +16,9 @@ import {IGeodeModule} from "./interfaces/modules/IGeodeModule.sol";
 import {IPortal} from "./interfaces/IPortal.sol";
 import {IStakeModule} from "./interfaces/modules/IStakeModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
-import {GeodeModuleLib as GML} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
-import {StakeModuleLib as SML} from "./modules/StakeModule/libs/StakeModuleLib.sol";
+import {DataStoreModuleLib as DSML, IsolatedStorage} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {GeodeModuleLib as GML, DualGovernance} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {StakeModuleLib as SML, PooledStaking} from "./modules/StakeModule/libs/StakeModuleLib.sol";
 // contracts
 import {GeodeModule} from "./modules/GeodeModule/GeodeModule.sol";
 import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
@@ -55,9 +55,10 @@ import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract Portal is IPortal, StakeModule, GeodeModule {
-  using DSML for DSML.IsolatedStorage;
-  using GML for GML.DualGovernance;
+contract Portal is IPortal, GeodeModule, StakeModule {
+  using DSML for IsolatedStorage;
+  using GML for DualGovernance;
+  using SML for PooledStaking;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -163,7 +164,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
   }
 
   /**
-   * @notice releases an imprisoned operator immidately
+   * @notice releases an imprisoned operator immediately
    * @dev in different situations such as a faulty imprisonment or coordinated testing periods
    * * Governance can release the prisoners
    * @dev onlyGovernance SHOULD be checked in Portal
@@ -176,7 +177,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
 
   function setGovernanceFee(uint256 newFee) external virtual override onlyGovernance {
     require(newFee <= SML.MAX_GOVERNANCE_FEE, "PORTAL:> MAX_GOVERNANCE_FEE");
-    require(block.timestamp > 1714514461, "PORTAL:not yet.");
+    require(block.timestamp > SML.GOVERNANCE_FEE_COMMENCEMENT, "PORTAL:not yet.");
 
     STAKE.GOVERNANCE_FEE = newFee;
 
@@ -212,7 +213,7 @@ contract Portal is IPortal, StakeModule, GeodeModule {
 
   function pushUpgrade(
     uint256 packageType
-  ) external virtual override whenNotPaused nonReentrant returns (uint256 id) {
+  ) external virtual override nonReentrant whenNotPaused returns (uint256 id) {
     require(
       packageType > ID_TYPE.LIMIT_MIN_PACKAGE && packageType < ID_TYPE.LIMIT_MAX_PACKAGE,
       "PORTAL:invalid package type"

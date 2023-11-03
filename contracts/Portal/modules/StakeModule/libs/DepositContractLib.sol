@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 // interfaces
 import {IDepositContract} from "../../../interfaces/helpers/IDepositContract.sol";
@@ -60,7 +60,7 @@ library DepositContractLib {
   function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
     result = 0;
     uint256 temp_value = _value;
-    for (uint256 i = 0; i < 8; ++i) {
+    for (uint256 i; i < 8; ++i) {
       result = (result << 8) | (temp_value & 0xFF);
       temp_value >>= 8;
     }

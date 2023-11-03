@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.7;
+pragma solidity =0.8.19;
 
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
-import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {StakeModuleLib, PooledStaking} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
-import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib, IsolatedStorage} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract StakeModuleLibMock is StakeModule {
-  using StakeModuleLib for StakeModuleLib.PooledStaking;
-  using OracleExtensionLib for StakeModuleLib.PooledStaking;
-  using DataStoreModuleLib for DataStoreModuleLib.IsolatedStorage;
+  using StakeModuleLib for PooledStaking;
+  using OracleExtensionLib for PooledStaking;
+  using InitiatorExtensionLib for PooledStaking;
+  using DataStoreModuleLib for IsolatedStorage;
 
   event return$_buyback(uint256 remETH, uint256 boughtgETH);
 
@@ -198,8 +200,8 @@ contract StakeModuleLibMock is StakeModule {
     payable
     virtual
     override
-    whenNotPaused
     nonReentrant
+    whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
     (boughtgETH, mintedgETH) = STAKE.deposit(DATASTORE, poolId, mingETH, deadline, receiver);

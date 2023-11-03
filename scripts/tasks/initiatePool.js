@@ -10,7 +10,7 @@ const func = async (taskArgs, hre) => {
 
   const intToBytes32 = (x) => {
     // Note: The biggest number that hexlify can get is 2^53-2,
-    return ethers.utils.hexZeroPad(ethers.utils.hexlify(x), 32);
+    return ethers.zeroPadValue(ethers.toBeHex(x), 32);
   };
 
   const interfaces = ["ERC20", "ERC20Permit"];

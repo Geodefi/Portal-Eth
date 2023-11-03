@@ -13,7 +13,7 @@ const {
   getReceiptTimestamp,
   setTimestamp,
   strToBytes32,
-} = require("../../utils");
+} = require("../../../utils");
 
 const ERC1967Proxy = artifacts.require("ERC1967Proxy");
 
@@ -357,6 +357,14 @@ contract("GeodeModule", function (accounts) {
       it("reverts if not senate", async function () {
         await expectRevert(this.contract.changeSenate(user), "GML:SENATE role needed");
       });
+
+      it("reverts if new senate is zero address", async function () {
+        await expectRevert(
+          this.contract.changeSenate(ZERO_ADDRESS, { from: senate }),
+          "GML:Senate cannot be zero address"
+        );
+      });
+
       describe("success", function () {
         beforeEach(async function () {
           await this.contract.changeSenate(user, { from: senate });
@@ -382,6 +390,14 @@ contract("GeodeModule", function (accounts) {
         await expectRevert(
           this.contract.rescueSenate(user, { from: governance }),
           "GML:cannot rescue yet"
+        );
+      });
+
+      it("reverts if new senate is zero address", async function () {
+        await setTimestamp(initTs.add(MAX_SENATE_PERIOD).addn(10).toNumber());
+        await expectRevert(
+          this.contract.rescueSenate(ZERO_ADDRESS, { from: governance }),
+          "GML:Senate cannot be zero address"
         );
       });
 

@@ -8,7 +8,7 @@ const initiatePool = require("./tasks/initiatePool");
 
 // proposals
 task("propose", "Creates a proposal with desired parameters")
-  .addParam("t", "defines type such as pool , operator , senate , Upgrade")
+  .addParam("t", "defines type such as middleware, operator, senate, Upgrade")
   .addParam("c", "refers to the proposed address as the controller of resulting ID")
   .addParam("n", "name")
   .setAction(propose);
