@@ -663,17 +663,16 @@ library WithdrawalModuleLib {
     uint256 reportedWithdrawn,
     uint256 processedWithdrawn
   ) internal returns (uint256 extra) {
-    if (reportedWithdrawn > processedWithdrawn) {
-      uint256 profit = reportedWithdrawn - processedWithdrawn;
-      Validator memory val = self.PORTAL.getValidator(pubkey);
+    // reportedWithdrawn > processedWithdrawn checks are done as it should be before calling this function
+    uint256 profit = reportedWithdrawn - processedWithdrawn;
+    Validator memory val = self.PORTAL.getValidator(pubkey);
 
-      uint256 poolProfit = (profit * val.poolFee) / PERCENTAGE_DENOMINATOR;
-      uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;
-      extra = (profit - poolProfit) - operatorProfit;
+    uint256 poolProfit = (profit * val.poolFee) / PERCENTAGE_DENOMINATOR;
+    uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;
+    extra = (profit - poolProfit) - operatorProfit;
 
-      self.PORTAL.increaseWalletBalance{value: poolProfit}(val.poolId);
-      self.PORTAL.increaseWalletBalance{value: operatorProfit}(val.operatorId);
-    }
+    self.PORTAL.increaseWalletBalance{value: poolProfit}(val.poolId);
+    self.PORTAL.increaseWalletBalance{value: operatorProfit}(val.operatorId);
   }
 
   /**
@@ -731,6 +730,10 @@ library WithdrawalModuleLib {
 
     bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
     for (uint256 i; i < pkLen; ) {
+      // check pubkey belong to this pool
+      uint256 poolId = self.PORTAL.getValidator(pubkeys[i]).poolId;
+      require(poolId == self.POOL_ID, "WML:validator for an unknown pool");
+
       // verify balances
       bytes32 leaf = keccak256(
         bytes.concat(keccak256(abi.encode(pubkeys[i], beaconBalances[i], withdrawnBalances[i])))
@@ -742,16 +745,6 @@ library WithdrawalModuleLib {
 
       unchecked {
         i += 1;
-      }
-    }
-
-    // check all pubkeys are for this pool
-    for (uint256 k; k < pkLen; ) {
-      uint256 poolId = self.PORTAL.getValidator(pubkeys[k]).poolId;
-      require(poolId == self.POOL_ID, "WML:validator for an unknown pool");
-
-      unchecked {
-        k += 1;
       }
     }
 
@@ -773,13 +766,17 @@ library WithdrawalModuleLib {
             oldWitBal + DCL.DEPOSIT_AMOUNT
           );
           processed += DCL.DEPOSIT_AMOUNT;
-        } else if (withdrawnBalances[j] > oldWitBal) {
+        } else if (withdrawnBalances[j] >= oldWitBal) {
           processed += withdrawnBalances[j] - oldWitBal;
+        } else {
+          revert("WML:oldWitBal should not be smaller");
         }
         _finalizeExit(self, pubkeys[j]);
       } else {
         // check if should request exit
-        processed += _distributeFees(self, pubkeys[j], withdrawnBalances[j], oldWitBal);
+        if (withdrawnBalances[j] > oldWitBal) {
+          processed += _distributeFees(self, pubkeys[j], withdrawnBalances[j], oldWitBal);
+        }
         commonPoll = checkAndRequestExit(self, pubkeys[j], commonPoll);
       }
 
