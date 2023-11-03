@@ -1313,15 +1313,10 @@ contract("WithdrawalModuleLib", function (accounts) {
         beforePoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
         beforeOperatorWallet = await this.SMLM.readUint(this.operatorId, strToBytes32("wallet"));
       });
-      it("if reportedWithdrawn is not bigger than processedWithdrawn wallet balances stay same", async function () {
-        await this.contract.$_distributeFees(pubkey0, new BN(String(1e18)), new BN(String(2e18)));
-        const afterPoolWallet = await this.SMLM.readUint(this.poolId, strToBytes32("wallet"));
-        const afterOperatorWallet = await this.SMLM.readUint(
-          this.operatorId,
-          strToBytes32("wallet")
+      it("reverts if reportedWithdrawn is not bigger than processedWithdrawn", async function () {
+        await expectRevert.unspecified(
+          this.contract.$_distributeFees(pubkey0, new BN(String(1e18)), new BN(String(2e18)))
         );
-        expect(afterPoolWallet).to.be.bignumber.equal(beforePoolWallet);
-        expect(afterOperatorWallet).to.be.bignumber.equal(beforeOperatorWallet);
       });
       it("success, balances updated accordingly", async function () {
         const mockReportedWithdrawn = new BN(String(2e18));
