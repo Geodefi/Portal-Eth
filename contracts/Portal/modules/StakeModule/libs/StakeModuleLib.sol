@@ -254,7 +254,9 @@ library StakeModuleLib {
       }
     } else if (typeOfId == ID_TYPE.POOL) {
       require(_restrictionMap[1], "SML:TYPE NOT allowed");
-    } else revert("SML:invalid TYPE");
+    } else {
+      revert("SML:invalid TYPE");
+    }
 
     if (_expectMaintainer) {
       require(
