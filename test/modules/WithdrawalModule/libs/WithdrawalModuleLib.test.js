@@ -829,6 +829,8 @@ contract("WithdrawalModuleLib", function (accounts) {
       "0xb49c13f4b8ffad378bac0c89eeb8f4087cd763f9f72860a4e176ea4681020d9ee7856279d6a53e6f609b8a97f2cfbc0b";
     const pubkey4 =
       "0x8a8bb626ef9dfb4573a868fca0e9a9e1baf814ef83d393a4f5373593864ee6800eff284a215374d3fc938db8e81fc71b";
+    const otherPoolPubkey0 =
+      "0x850b60aee6ef58ec9c422e71d8112d4d47f2b780ac3f781cee966f4019c4085bd891055a5ec72c10555ed1545d64ec66";
 
     const signature01 =
       "0x8bbeff59e3016c98d7daf05ddbd0c71309fae34bf3e544d56ebff030b97bccb83c5abfaab437ec7c652bbafa19eb30661979b82e79fa351d65a50e3a854c1ef0c8537f97ceaf0f334096509cd52f716150e67e17c8085d9622f376553da51181";
@@ -840,6 +842,8 @@ contract("WithdrawalModuleLib", function (accounts) {
       "0xa7a63f12df0cdb8ee84d2a8d65f7d6a9ea8099a1454388d469ace34e7cc165a6748c9490404aead4e4bbd02bc117212e0b0f41e75eb5547f7ea618cc82a6dce8bf414a24bc2b84317075d8e54638e2ec846e54e78afa7d4e9fac2887c84e1cc0";
     const signature41 =
       "0xb0db285096f2eec2a3e17a4d40b4c19ed2fc6e8c91132bb3d168f5fd97ba2910289025dfde92e02f15d1ed9f323c6033016903b19b02180507fe2dd08c9a77bfed5477fbfa59f144c5b40351dce04eef497fb7df90553709947e7e053a8933d6";
+    const otherPoolSignature01 =
+      "0xb550a2cf6adff7b32595346a1647adfd09b20dd0ae133adefc220be810d66e9c62a6d11152fb453ca378ec26ff78750d12d298144907f0aa8c695f1b44050b0d2bb535d662c4b616e9e5666689f80117ede1db94f1080510eb9d5fd867c1b737";
 
     const signature031 =
       "0xa58af51205a996c87f23c80aeb3cb669001e3f919a88598d063ff6cee9b05fbb8a18dab15a4a5b85eabfd47c26d0f24f11f5f889f6a7fb8cbd5c4ccd7607c449b57a9f0703e1bb63b513cb3e9fcd1d79b0d8f269c7441173054b9284cfb7a13c";
@@ -851,6 +855,8 @@ contract("WithdrawalModuleLib", function (accounts) {
       "0x83d9f2df7a87994f4ea9b68cf61ed800d1e1c8ea01ad42d7c286eb5fec81fc66cd8088bb0bc6f35399c313de63169a340366a62748647c8aae09c6c0bd3985937e3509475adc21df2bb441353e37269a0c79100c7b3273038327225146389ed5";
     const signature431 =
       "0x8e3776be0a15f2570c257d78508827cb319e8a8f18ffcf423e241c93b60be9a95a8dbc6f0cfc7a539709bd0fd7a2208a163e6b5735b5bae2195549aedf6b5c0d535ca2fc976a74d1ea6319041ef9c2f5e47ba00664f2022556a4c94adcd9c147";
+    const otherPoolSignature031 =
+      "0xa7e2415318b51cc034f552f98031e6822db8dc0463e79aec78334fba302bd33f24056631f9eaad52b90cd38d26e624c015da759dc6ef2277e8db62ced4f15433ce9bf613f6c93856ea961ea03b5938199d4cf1dd41f3f3b31e46d91b9b01157d";
 
     beforeEach(async function () {
       await this.SMLM.deposit(this.poolId, 0, [], 0, MAX_UINT256, staker, {
@@ -1363,13 +1369,21 @@ contract("WithdrawalModuleLib", function (accounts) {
       let ts;
       let proofs = [];
       const pks = [pubkey0, pubkey1, pubkey2, pubkey3, pubkey4];
-      const beaconBalances = [String(0), String(0), String(32e18), String(32e18), String(30e18)];
+      const beaconBalances = [
+        String(0),
+        String(0),
+        String(32e18),
+        String(32e18),
+        String(30e18),
+        String(32e18), // otherPool
+      ];
       const withdrawnBalances = [
         String(31e18),
         String(34e18),
         String(1e18),
         String(7e18), // 5e18 previously now 7e18 so profit from here will be 2e18
         String(0),
+        String(1e18), // otherPool
       ];
 
       const beaconBalancesBN = [
@@ -1439,7 +1453,9 @@ contract("WithdrawalModuleLib", function (accounts) {
           [pks[2], beaconBalances[2], withdrawnBalances[2]],
           [pks[3], beaconBalances[3], withdrawnBalances[3]],
           [pks[4], beaconBalances[4], withdrawnBalances[4]],
+          [otherPoolPubkey0, beaconBalances[5], withdrawnBalances[5]],
         ];
+
         tree = StandardMerkleTree.of(values, ["bytes", "uint256", "uint256"]);
         proofs = [];
         for (let i = 0; i < pks.length; i++) {
@@ -1508,6 +1524,70 @@ contract("WithdrawalModuleLib", function (accounts) {
         await expectRevert(
           this.contract.$processValidators(pks, beaconBalancesBN, withdrawnBalancesBN, proofs),
           "WML:NOT all proofs are valid"
+        );
+      });
+      it("reverts if not all pubkey belong to the pool", async function () {
+        otherPoolId = await this.createPool("otherPool");
+
+        await this.SMLM.deposit(otherPoolId, 0, [], 0, MAX_UINT256, staker, {
+          from: poolOwner,
+          value: new BN(String(160e18)),
+        });
+
+        await this.SMLM.delegate(otherPoolId, [this.operatorId], [1], {
+          from: poolMaintainer,
+        });
+
+        await this.SMLM.proposeStake(
+          otherPoolId,
+          this.operatorId,
+          [otherPoolPubkey0],
+          [otherPoolSignature01],
+          [otherPoolSignature031],
+          {
+            from: operatorMaintainer,
+          }
+        );
+
+        await this.gETH.safeTransferFrom(
+          staker,
+          this.contract.address,
+          otherPoolId,
+          new BN(String(100e18)),
+          strToBytes(""),
+          { from: staker }
+        );
+
+        // make validators active
+        await this.SMLM.$set_VERIFICATION_INDEX(6);
+
+        const tx = await this.SMLM.stake(this.operatorId, [otherPoolPubkey0], {
+          from: operatorMaintainer,
+        });
+        ts = new BN((await getReceiptTimestamp(tx)).toString());
+        const delay = DAY.muln(91);
+        await setTimestamp(ts.add(delay).toNumber());
+
+        // set mock contract as withdrawalContract
+        await this.SMLM.$writeAddress(
+          otherPoolId,
+          strToBytes32("withdrawalContract"),
+          this.contract.address
+        );
+
+        const tempPks = pks.concat([otherPoolPubkey0]);
+        const tempBeaconBalancesBN = beaconBalancesBN.concat([new BN(String(32e18))]);
+        const tempWithdrawnBalancesBN = withdrawnBalancesBN.concat([new BN(String(1e18))]);
+        const tempProofs = proofs.concat([tree.getProof(pks.length - 1)]);
+
+        await expectRevert(
+          this.contract.$processValidators(
+            tempPks,
+            tempBeaconBalancesBN,
+            tempWithdrawnBalancesBN,
+            tempProofs
+          ),
+          "WML:validator for an unknown pool"
         );
       });
       it("success", async function () {
