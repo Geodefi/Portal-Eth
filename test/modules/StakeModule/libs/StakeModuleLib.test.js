@@ -2224,7 +2224,6 @@ contract("StakeModuleLib", function (accounts) {
             });
 
             it("blameProposal reverts if proposal is not approved yet", async function () {
-              await this.contract.$set_VERIFICATION_INDEX(3);
               await expectRevert(
                 this.contract.blameProposal(pubkey2),
                 "SML:can not blame proposal"
@@ -2232,10 +2231,8 @@ contract("StakeModuleLib", function (accounts) {
             });
 
             it("blameProposal reverts if delay is acceptable", async function () {
-              await expectRevert(
-                this.contract.blameProposal(pubkey2),
-                "SML:unexpected validator state"
-              );
+              await this.contract.$set_VERIFICATION_INDEX(3);
+              await expectRevert(this.contract.blameProposal(pubkey2), "SML:acceptable delay");
             });
 
             it("blameExit reverts when validator is never activated", async function () {
@@ -2300,7 +2297,7 @@ contract("StakeModuleLib", function (accounts) {
                 ).to.be.bignumber.equal(preWallet.add(new BN(String(3e18))));
               });
               it("emits Stake", async function () {
-                await expectEvent(tx, "Stake", { pubkeys: [pubkey0, pubkey1, pubkey2] });
+                await expectEvent(tx, "Stake", { pubkeys: [pubkey2] });
               });
             });
           });

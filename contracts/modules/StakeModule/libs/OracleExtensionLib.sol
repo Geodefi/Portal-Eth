@@ -250,10 +250,7 @@ library OracleExtensionLib {
     IsolatedStorage storage DATASTORE,
     bytes calldata pk
   ) external {
-    require(
-      self.validators[pk].state == VALIDATOR_STATE.ACTIVE,
-      "SML:validator is never activated"
-    );
+    require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "SML:unexpected validator state");
     require(
       block.timestamp > self.validators[pk].createdAt + self.validators[pk].period,
       "SML:validator is active"
