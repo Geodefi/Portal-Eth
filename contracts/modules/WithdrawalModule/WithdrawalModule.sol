@@ -56,14 +56,6 @@ abstract contract WithdrawalModule is
   PooledWithdrawal internal WITHDRAWAL;
 
   /**
-   * @custom:section                           ** EVENTS **
-   */
-  event NewExitThreshold(uint256 threshold);
-  event Enqueue(uint256 indexed index, address owner);
-  event RequestTransfer(uint256 indexed index, address oldOwner, address newOwner);
-  event Dequeue(uint256 indexed index, uint256 claim);
-
-  /**
    * @custom:section                           ** ABSTRACT FUNCTIONS **
    *
    * @dev these functions MUST be overriden for admin functionality.

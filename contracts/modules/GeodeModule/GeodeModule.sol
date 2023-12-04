@@ -56,15 +56,10 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
    */
   DualGovernance internal GEODE;
 
-  // /**
-  //  * @custom:section                           ** EVENTS **
-  //  */
+  /**
+   * @custom:section                           ** EVENTS **
+   */
   event ContractVersionSet(uint256 version);
-
-  event ControllerChanged(uint256 indexed ID, address CONTROLLER);
-  event Proposed(uint256 indexed TYPE, uint256 ID, address CONTROLLER, uint256 deadline);
-  event Approved(uint256 ID);
-  event NewSenate(address senate, uint256 expiry);
 
   /**
    * @custom:section                           ** ABSTRACT FUNCTIONS **
