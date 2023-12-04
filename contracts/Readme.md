@@ -2,7 +2,7 @@
 
 ## Understanding the Contracts
 
-![contracts](../../docs/images/contracts.png)
+![contracts](../docs/images/contracts.png)
 
 The Staking Library utilizes a Modular Architecture with Packages that relies on Limited Upgradability.
 
@@ -36,13 +36,13 @@ Thus resulting in:
 
 ## Contracts Overview
 
-![Overview](../../docs/images/overview.png)
+![Contracts Overview](../docs/images/overview.png)
 
 ## Contents
 
 ### gETH
 
-![](../../docs/images/gETH.png)
+![gETH Summary](../docs/images/gETH.png)
 
 gETH is a Databases of **Balances** and **Prices** with extra **Scalability**. It is designed to host all of the Staking Derivatives, created by Portal.
 
