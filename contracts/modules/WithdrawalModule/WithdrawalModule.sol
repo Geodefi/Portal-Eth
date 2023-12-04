@@ -5,8 +5,8 @@ pragma solidity =0.8.20;
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // external - contracts
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 // internal - interfaces
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IWithdrawalModule} from "../../interfaces/modules/IWithdrawalModule.sol";

@@ -28,7 +28,7 @@ contract LPToken is ERC20BurnableUpgradeable, OwnableUpgradeable {
     __Context_init_unchained();
     __ERC20_init_unchained(name, symbol);
     __ERC20Burnable_init_unchained();
-    __Ownable_init_unchained();
+    __Ownable_init_unchained(msg.sender);
   }
 
   /**
@@ -47,12 +47,12 @@ contract LPToken is ERC20BurnableUpgradeable, OwnableUpgradeable {
    * minting and burning. This ensures that Swap.updateUserWithdrawFees are called everytime.
    * This assumes the owner is set to a Swap contract's address.
    */
-  function _beforeTokenTransfer(
+  function _update(
     address from,
     address to,
     uint256 amount
   ) internal virtual override(ERC20Upgradeable) {
     require(to != address(this), "LPToken: cannot send to itself");
-    super._beforeTokenTransfer(from, to, amount);
+    super._update(from, to, amount);
   }
 }

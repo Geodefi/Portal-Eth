@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 // structs
 import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
 import {PooledStaking} from "../../../modules/StakeModule/structs/storage.sol";
@@ -107,7 +108,7 @@ contract PortalV3_0_Mock is IPortalV3_0_Mock, GeodeModuleV3_0_Mock, StakeModule 
     returns (bool)
   {
     return (paused() ||
-      GEODE.APPROVED_UPGRADE != _getImplementation() ||
+      GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation() ||
       block.timestamp > GEODE.SENATE_EXPIRY);
   }
 

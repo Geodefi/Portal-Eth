@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 // structs
 import {DualGovernance} from "../../../modules/GeodeModule/structs/storage.sol";
 import {Swap} from "../../../modules/LiquidityModule/structs/storage.sol";
@@ -192,7 +193,7 @@ contract LiquidityPoolV2_0_Mock is ILiquidityPoolV2_0_Mock, GeodeModule, Liquidi
       return true;
     }
 
-    if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
+    if (GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation()) {
       return true;
     }
 

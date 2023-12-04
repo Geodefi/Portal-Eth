@@ -8,10 +8,10 @@ import {IFreshSlotModule} from "./interfaces/IFreshSlotModule.sol";
 // import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // IMPORTANT NOTE: Cannot use UUPSUpgradeable because of the following error so using PausableUpgradeable instead:
-// TODO: @openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29: Replaced `_status` with `_paused` of incompatible type
+// TODO: @openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:29: Replaced `_status` with `_paused` of incompatible type
 // This is beauce we already use and initialize PausableUpgradeable in the previous inherited contract I guess. Need to check it.
 
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 abstract contract FreshSlotModule is IFreshSlotModule, PausableUpgradeable {
   using FSL for FreshSlotStruct;

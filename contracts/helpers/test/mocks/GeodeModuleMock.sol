@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+// external - library
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+
 import {DualGovernance} from "../../../modules/GeodeModule/structs/storage.sol";
 import {GeodeModule} from "../../../modules/GeodeModule/GeodeModule.sol";
 import {GeodeModuleLib} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
@@ -29,12 +32,12 @@ contract GeodeModuleMock is GeodeModule {
    * @custom:section                           ** INTERNAL **
    */
   function isolationMode() external view virtual override returns (bool) {
-    return (GEODE.APPROVED_UPGRADE != _getImplementation() ||
+    return (GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation() ||
       block.timestamp > GEODE.SENATE_EXPIRY);
   }
 
   function isUpgradeAllowed(address proposedImplementation) public view virtual returns (bool) {
-    return GEODE.isUpgradeAllowed(proposedImplementation, _getImplementation());
+    return GEODE.isUpgradeAllowed(proposedImplementation, ERC1967Utils.getImplementation());
   }
 
   /**

@@ -9,6 +9,8 @@ pragma solidity =0.8.20;
 //   ╚═════╝ ╚══════╝ ╚═════╝ ╚═════╝ ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝
 //
 
+// external - library
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 // internal - globals
 import {ID_TYPE} from "./globals/id_type.sol";
 // internal - interfaces
@@ -141,7 +143,7 @@ contract Portal is IPortal, GeodeModule, StakeModule {
     returns (bool)
   {
     return (paused() ||
-      GEODE.APPROVED_UPGRADE != _getImplementation() ||
+      GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation() ||
       block.timestamp > GEODE.SENATE_EXPIRY);
   }
 

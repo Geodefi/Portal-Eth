@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 // internal - globals
 import {ID_TYPE} from "../globals/id_type.sol";
 import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
@@ -126,7 +127,7 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
       return true;
     }
 
-    if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
+    if (GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation()) {
       return true;
     }
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 // structs
 import {PooledWithdrawal} from "../../../modules/WithdrawalModule/structs/storage.sol";
 // globals
@@ -144,7 +145,7 @@ contract WithdrawalContractV2_0_Mock is
       return true;
     }
 
-    if (GEODE.APPROVED_UPGRADE != _getImplementation()) {
+    if (GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation()) {
       return true;
     }
 

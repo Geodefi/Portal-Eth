@@ -12,7 +12,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @notice base contract for gETH.
@@ -504,7 +504,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
     uint256 amount,
     bytes memory data
   ) internal virtual {
-    if (to.isContract()) {
+    if (to.code.length > 0) {
       try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (
         bytes4 response
       ) {
@@ -527,7 +527,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
     uint256[] memory amounts,
     bytes memory data
   ) private {
-    if (to.isContract()) {
+    if (to.code.length > 0) {
       try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, amounts, data) returns (
         bytes4 response
       ) {

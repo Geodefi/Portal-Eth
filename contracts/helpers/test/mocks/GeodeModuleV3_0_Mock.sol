@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 // structs
 import {Proposal} from "../../../modules/GeodeModule/structs/utils.sol";
 // globals
@@ -114,7 +115,7 @@ abstract contract GeodeModuleV3_0_Mock is IGeodeModuleV3_0_Mock, UUPSUpgradeable
 
     uint256 initVersion = GEODE.propose(
       DATASTORE,
-      _getImplementation(),
+      ERC1967Utils.getImplementation(),
       packageType,
       initVersionName,
       1 days
@@ -151,7 +152,7 @@ abstract contract GeodeModuleV3_0_Mock is IGeodeModuleV3_0_Mock, UUPSUpgradeable
    */
   function _authorizeUpgrade(address proposed_implementation) internal virtual override {
     require(
-      GEODE.isUpgradeAllowed(proposed_implementation, _getImplementation()),
+      GEODE.isUpgradeAllowed(proposed_implementation, ERC1967Utils.getImplementation()),
       "GM:not allowed to upgrade"
     );
   }
@@ -166,7 +167,7 @@ abstract contract GeodeModuleV3_0_Mock is IGeodeModuleV3_0_Mock, UUPSUpgradeable
    * but it is external, OZ have not made it public yet.
    */
   function _handleUpgrade(address proposed_implementation, uint256 id) internal virtual {
-    upgradeTo(proposed_implementation);
+    upgradeToAndCall(proposed_implementation, "");
     _setContractVersion(id);
   }
 

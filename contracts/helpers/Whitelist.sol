@@ -13,6 +13,8 @@ import {IWhitelist} from "../interfaces/helpers/IWhitelist.sol";
  * @dev Even though this is a fairly small contract, use it at your own risk.
  */
 contract Whitelist is IWhitelist, Ownable {
+  constructor() Ownable(msg.sender) {}
+
   mapping(address => bool) private _whitelist;
 
   event Listed(address indexed account, bool isWhitelisted);
