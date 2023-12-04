@@ -24,7 +24,6 @@ contract WithdrawalContractV2_0_Mock is
 {
   using WML for PooledWithdrawal;
   /**
-   * TODO: this can be renamed to withdrawalQueue or ValidatorCustodian
    * @custom:section                           ** VARIABLES **
    * Following immutable parameters are set when the referance library implementation is deployed.
    * Making necessary data for initialization reachable for all instances of LP package.

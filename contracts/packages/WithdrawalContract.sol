@@ -20,7 +20,6 @@ import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol
 contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModule {
   using WML for PooledWithdrawal;
   /**
-   * TODO: this can be renamed to withdrawalQueue or ValidatorCustodian
    * @custom:section                           ** VARIABLES **
    * Following immutable parameters are set when the referance library implementation is deployed.
    * Making necessary data for initialization reachable for all instances of LP package.

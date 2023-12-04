@@ -8,7 +8,6 @@ import {Validator} from "./utils.sol";
 
 /**
  * @notice Storage struct for the Pooled Liquid Staking logic
- * todo: ask if that would be a problem if the interface changes??? like should you update the param too?? Then check other params with IPortal IgETH etc.
  * @param gETH constant, ERC1155, all Geode Staking Derivatives.
  * @param ORACLE_POSITION constant, address of the Oracle https://github.com/Geodefi/Telescope-Eth
  * @param VALIDATORS_INDEX total number of validators that are proposed at any given point.
