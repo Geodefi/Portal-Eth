@@ -38,7 +38,7 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     returns (address gETH, address PORTAL, uint256 POOL_ID, uint256 EXIT_THRESHOLD)
   {
     gETH = address(WITHDRAWAL.gETH);
-    PORTAL = address(WITHDRAWAL.PORTAL);
+    PORTAL = WITHDRAWAL.PORTAL;
     POOL_ID = WITHDRAWAL.POOL_ID;
     EXIT_THRESHOLD = WITHDRAWAL.EXIT_THRESHOLD;
   }
@@ -202,7 +202,7 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     uint256 processedWithdrawn
   ) external returns (uint256 extra) {
     extra = WITHDRAWAL._distributeFees(
-      WITHDRAWAL.PORTAL.getValidator(pubkey),
+      WITHDRAWAL._getPortal().getValidator(pubkey),
       reportedWithdrawn,
       processedWithdrawn
     );

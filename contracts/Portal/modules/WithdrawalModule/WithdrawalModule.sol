@@ -3,7 +3,6 @@ pragma solidity =0.8.19;
 
 // interfaces
 import {IgETH} from "../../interfaces/IgETH.sol";
-import {IPortal} from "../../interfaces/IPortal.sol";
 import {IWithdrawalModule} from "../../interfaces/modules/IWithdrawalModule.sol";
 // libraries
 import {WithdrawalModuleLib as WML, PooledWithdrawal} from "./libs/WithdrawalModuleLib.sol";
@@ -95,7 +94,7 @@ abstract contract WithdrawalModule is
     require(_gETH_position != address(0), "WM:gETH cannot be zero address");
     require(_portal_position != address(0), "WM:portal cannot be zero address");
     WITHDRAWAL.gETH = IgETH(_gETH_position);
-    WITHDRAWAL.PORTAL = IPortal(_portal_position);
+    WITHDRAWAL.PORTAL = _portal_position;
     WITHDRAWAL.POOL_ID = _poolId;
     WITHDRAWAL.EXIT_THRESHOLD = WML.MIN_EXIT_THRESHOLD;
   }
@@ -113,7 +112,7 @@ abstract contract WithdrawalModule is
     returns (address gETH, address portal, uint256 poolId, uint256 exitThreshold)
   {
     gETH = address(WITHDRAWAL.gETH);
-    portal = address(WITHDRAWAL.PORTAL);
+    portal = WITHDRAWAL.PORTAL;
     poolId = WITHDRAWAL.POOL_ID;
     exitThreshold = WITHDRAWAL.EXIT_THRESHOLD;
   }
@@ -272,8 +271,8 @@ abstract contract WithdrawalModule is
     uint256 price,
     bytes32[] calldata priceProof
   ) external virtual override {
-    if (!WITHDRAWAL.PORTAL.isPriceValid(WITHDRAWAL.POOL_ID)) {
-      WITHDRAWAL.PORTAL.priceSync(WITHDRAWAL.POOL_ID, price, priceProof);
+    if (!WITHDRAWAL._getPortal().isPriceValid(WITHDRAWAL.POOL_ID)) {
+      WITHDRAWAL._getPortal().priceSync(WITHDRAWAL.POOL_ID, price, priceProof);
     }
     WITHDRAWAL.processValidators(pubkeys, beaconBalances, withdrawnBalances, balanceProofs);
   }

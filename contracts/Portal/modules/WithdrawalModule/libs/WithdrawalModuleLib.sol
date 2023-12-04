@@ -73,7 +73,7 @@ struct ValidatorData {
  **/
 struct PooledWithdrawal {
   IgETH gETH;
-  IPortal PORTAL;
+  address PORTAL;
   uint256 POOL_ID;
   uint256 EXIT_THRESHOLD;
   Queue queue;
@@ -185,6 +185,14 @@ library WithdrawalModuleLib {
   event Dequeue(uint256 indexed index, uint256 claim);
 
   /**
+   * @custom:section                           ** HELPER **
+   */
+
+  function _getPortal(PooledWithdrawal storage self) internal view returns (IPortal) {
+    return IPortal(self.PORTAL);
+  }
+
+  /**
    * @custom:section                           ** EARLY EXIT REQUESTS **
    */
 
@@ -203,7 +211,7 @@ library WithdrawalModuleLib {
       return false;
     }
 
-    Validator memory val = self.PORTAL.getValidator(pubkey);
+    Validator memory val = _getPortal(self).getValidator(pubkey);
     if (val.state != VALIDATOR_STATE.ACTIVE && val.state != VALIDATOR_STATE.EXIT_REQUESTED) {
       return false;
     }
@@ -220,7 +228,7 @@ library WithdrawalModuleLib {
    * @param pubkey public key of the given validator.
    */
   function _requestExit(PooledWithdrawal storage self, bytes memory pubkey) internal {
-    self.PORTAL.requestExit(self.POOL_ID, pubkey);
+    _getPortal(self).requestExit(self.POOL_ID, pubkey);
   }
 
   /**
@@ -229,7 +237,7 @@ library WithdrawalModuleLib {
    * @param pubkey public key of the given validator.
    */
   function _finalizeExit(PooledWithdrawal storage self, bytes memory pubkey) internal {
-    self.PORTAL.finalizeExit(self.POOL_ID, pubkey);
+    _getPortal(self).finalizeExit(self.POOL_ID, pubkey);
   }
 
   /**
@@ -309,7 +317,7 @@ library WithdrawalModuleLib {
    * @param size specified gETH amount
    */
   function _vote(PooledWithdrawal storage self, bytes calldata pubkey, uint256 size) internal {
-    Validator memory val = self.PORTAL.getValidator(pubkey);
+    Validator memory val = _getPortal(self).getValidator(pubkey);
 
     require(val.poolId == self.POOL_ID, "WML:vote for an unknown pool");
     require(val.state == VALIDATOR_STATE.ACTIVE, "WML:voted for inactive validator");
@@ -670,8 +678,8 @@ library WithdrawalModuleLib {
     uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;
     extra = (profit - poolProfit) - operatorProfit;
 
-    self.PORTAL.increaseWalletBalance{value: poolProfit}(val.poolId);
-    self.PORTAL.increaseWalletBalance{value: operatorProfit}(val.operatorId);
+    _getPortal(self).increaseWalletBalance{value: poolProfit}(val.poolId);
+    _getPortal(self).increaseWalletBalance{value: operatorProfit}(val.operatorId);
   }
 
   /**
@@ -730,10 +738,10 @@ library WithdrawalModuleLib {
     Validator[] memory validators = new Validator[](pkLen);
 
     {
-      bytes32 balanceMerkleRoot = self.PORTAL.getBalancesMerkleRoot();
+      bytes32 balanceMerkleRoot = _getPortal(self).getBalancesMerkleRoot();
       for (uint256 i; i < pkLen; ) {
         // fill the validators array while checking the pool id
-        validators[i] = self.PORTAL.getValidator(pubkeys[i]);
+        validators[i] = _getPortal(self).getValidator(pubkeys[i]);
 
         // check pubkey belong to this pool
         require(validators[i].poolId == self.POOL_ID, "WML:validator for an unknown pool");
