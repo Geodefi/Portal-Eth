@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// globals
-import {gETH_DENOMINATOR} from "./globals/macros.sol";
-// interfaces
-import {IgETH} from "./interfaces/IgETH.sol";
-import {IERC1155} from "./interfaces/helpers/IERC1155PausableBurnableSupply.sol";
-// libraries
+// external - libraries
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-// contracts
-import {ERC1155, ERC1155PausableBurnableSupply, ERC1155Burnable, IERC1155Burnable} from "./helpers/ERC1155PausableBurnableSupply.sol";
+// internal - globals
+import {gETH_DENOMINATOR} from "./globals/macros.sol";
+// internal - interfaces
+import {IgETH} from "./interfaces/IgETH.sol";
+import {IERC1155, IERC1155Burnable} from "./interfaces/helpers/IERC1155PausableBurnableSupply.sol";
+// internal - contracts
+import {ERC1155, ERC1155Burnable, ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
  * @title gETH : Geode Finance Liquid Staking Derivatives

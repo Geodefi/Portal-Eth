@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
-import {Swap} from "./structs/storage.sol";
-// interfaces
+// external - contracts
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+// internal - interfaces
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {ILiquidityModule} from "../../interfaces/modules/ILiquidityModule.sol";
-// libraries
+import {ILPToken} from "../../interfaces/helpers/ILPToken.sol";
+// internal - structs
+import {Swap} from "./structs/storage.sol";
+// internal - libraries
 import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
-// contracts
-import {ILPToken} from "../../interfaces/helpers/ILPToken.sol";
-// external
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
-import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
  * @title LM: Liquidity Module

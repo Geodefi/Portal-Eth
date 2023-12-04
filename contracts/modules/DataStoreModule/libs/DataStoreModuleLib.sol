@@ -2,8 +2,15 @@
 
 pragma solidity =0.8.19;
 
-// structs
+// external - interfaces
+// external - libraries
+// external - contracts
+// internal - globals
+// internal - interfaces
 import {IsolatedStorage} from "../structs/storage.sol";
+
+// internal - structs
+// internal - libraries
 
 /**
  * @title DSML: DataStore Module Library

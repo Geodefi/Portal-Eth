@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// interfaces
+// internal - interfaces
 import {IDepositContract} from "../../../interfaces/helpers/IDepositContract.sol";
-// libraries
+// internal - libraries
 import {BytesLib} from "../../../helpers/BytesLib.sol";
 
 /**

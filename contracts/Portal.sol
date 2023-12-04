@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.19;
+
 //   ██████╗ ███████╗ ██████╗ ██████╗ ███████╗    ██████╗  ██████╗ ██████╗ ████████╗ █████╗ ██╗
 //  ██╔════╝ ██╔════╝██╔═══██╗██╔══██╗██╔════╝    ██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██╔══██╗██║
 //  ██║  ███╗█████╗  ██║   ██║██║  ██║█████╗      ██████╔╝██║   ██║██████╔╝   ██║   ███████║██║
@@ -6,23 +9,21 @@
 //   ╚═════╝ ╚══════╝ ╚═════╝ ╚═════╝ ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝
 //
 
-// SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
-// structs
+// internal - globals
+import {ID_TYPE} from "./globals/id_type.sol";
+// internal - interfaces
+import {IGeodeModule} from "./interfaces/modules/IGeodeModule.sol";
+import {IStakeModule} from "./interfaces/modules/IStakeModule.sol";
+import {IPortal} from "./interfaces/IPortal.sol";
+// internal - structs
 import {IsolatedStorage} from "./modules/DataStoreModule/structs/storage.sol";
 import {DualGovernance} from "./modules/GeodeModule/structs/storage.sol";
 import {PooledStaking} from "./modules/StakeModule/structs/storage.sol";
-// globals
-import {ID_TYPE} from "./globals/id_type.sol";
-// interfaces
-import {IGeodeModule} from "./interfaces/modules/IGeodeModule.sol";
-import {IPortal} from "./interfaces/IPortal.sol";
-import {IStakeModule} from "./interfaces/modules/IStakeModule.sol";
-// libraries
+// internal - libraries
 import {DataStoreModuleLib as DSML} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {StakeModuleLib as SML} from "./modules/StakeModule/libs/StakeModuleLib.sol";
-// contracts
+// internal - contracts
 import {GeodeModule} from "./modules/GeodeModule/GeodeModule.sol";
 import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
 

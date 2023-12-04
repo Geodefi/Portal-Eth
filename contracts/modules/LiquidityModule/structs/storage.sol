@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// interfaces
+// internal -interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
 

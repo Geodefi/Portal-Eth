@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
+// internal - globals
+import {gETH_DENOMINATOR, PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
+// internal - interfaces
+import {IgETH} from "../../../interfaces/IgETH.sol";
+import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
+// internal - structs
 import {Swap} from "../structs/storage.sol";
 import {CalculateWithdrawOneTokenDYInfo, ManageLiquidityInfo} from "../structs/helpers.sol";
-// globals
-import {gETH_DENOMINATOR, PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
-// interfaces
-import {IgETH} from "../../../interfaces/IgETH.sol";
-// libraries
+// internal - libraries
 import {AmplificationLib as AL} from "./AmplificationLib.sol";
-// contracts
-import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
 
 /**
  * @title LiquidityModule Library - LML

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
-import {Validator} from "./utils.sol";
-// interfaces
+// internal - interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
+// internal - structs
+import {Validator} from "./utils.sol";
 
 /**
  * @notice Storage struct for the Pooled Liquid Staking logic

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
+// internal - structs
 import {Swap} from "../structs/storage.sol";
-// libraries
+// internal - libraries
 import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
 
 /**

@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
-import {IsolatedStorage} from "../DataStoreModule/structs/storage.sol";
-import {PooledStaking} from "./structs/storage.sol";
-import {Validator} from "./structs/utils.sol";
-// globals
-import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
-// interfaces
-import {IgETH} from "../../interfaces/IgETH.sol";
-import {IStakeModule} from "../../interfaces/modules/IStakeModule.sol";
-// libraries
-import {StakeModuleLib as SML} from "./libs/StakeModuleLib.sol";
-import {InitiatorExtensionLib as IEL} from "./libs/InitiatorExtensionLib.sol";
-import {OracleExtensionLib as OEL} from "./libs/OracleExtensionLib.sol";
-// contracts
-import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
-// external
+// external - contracts
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+// internal - globals
+import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
+// internal - interfaces
+import {IgETH} from "../../interfaces/IgETH.sol";
+import {IStakeModule} from "../../interfaces/modules/IStakeModule.sol";
+// internal - structs
+import {IsolatedStorage} from "../DataStoreModule/structs/storage.sol";
+import {PooledStaking} from "./structs/storage.sol";
+import {Validator} from "./structs/utils.sol";
+// internal - libraries
+import {StakeModuleLib as SML} from "./libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib as IEL} from "./libs/InitiatorExtensionLib.sol";
+import {OracleExtensionLib as OEL} from "./libs/OracleExtensionLib.sol";
+// internal - contracts
+import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
 
 /**
  * @title SM: Stake Module

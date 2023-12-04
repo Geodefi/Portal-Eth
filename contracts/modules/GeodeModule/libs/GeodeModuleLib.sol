@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
+// internal - globals
+import {ID_TYPE} from "../../../globals/id_type.sol";
+import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
+// internal - structs
 import {DualGovernance} from "../structs/storage.sol";
 import {Proposal} from "../structs/utils.sol";
 import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
-// globals
-import {ID_TYPE} from "../../../globals/id_type.sol";
-import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
-// libraries
+// internal - libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 
 /**

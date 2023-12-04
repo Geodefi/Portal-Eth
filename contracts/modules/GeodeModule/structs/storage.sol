@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
+// external - interfaces
+// external - libraries
+// external - contracts
+// internal - globals
+// internal - interfaces
+// internal - structs
 import {Proposal} from "./utils.sol";
+// internal - libraries
+// internal - contracts
 
 /**
  * @notice Storage struct for the Dual Governance logic

@@ -3,16 +3,17 @@
 
 pragma solidity =0.8.19;
 
-// interfaces
+// external - interfaces
 import {IERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-IERC20PermitUpgradeable.sol";
-// libraries
-import {BytesLib} from "../helpers/BytesLib.sol";
-// contracts
-import {ERC20RebaseMiddleware} from "./ERC20RebaseMiddleware.sol";
-// external
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
+// external - libraries
 import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+// external - contracts
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
+// internal - libraries
+import {BytesLib} from "../helpers/BytesLib.sol";
+// internal - contracts
+import {ERC20RebaseMiddleware} from "./ERC20RebaseMiddleware.sol";
 
 /**
  * @dev differences between ERC20RebasePermitMiddleware and Openzeppelin's implementation of ERC20PermitUpgradable is:

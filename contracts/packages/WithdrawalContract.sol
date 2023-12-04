@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
-import {PooledWithdrawal} from "../modules/WithdrawalModule/structs/storage.sol";
-// globals
+// internal - globals
 import {ID_TYPE} from "../globals/id_type.sol";
 import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
-// interfaces
-import {IPortal} from "../interfaces/IPortal.sol";
+// internal - interfaces
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
-import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
 import {IWithdrawalModule} from "../interfaces/modules/IWithdrawalModule.sol";
-// libraries
+import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
+import {IPortal} from "../interfaces/IPortal.sol";
+// internal - structs
+import {PooledWithdrawal} from "../modules/WithdrawalModule/structs/storage.sol";
+// internal - libraries
 import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
-// contracts
+// internal - contracts
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 

@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
-import {Queue, Request, ValidatorData} from "../structs/utils.sol";
-import {PooledWithdrawal} from "../structs/storage.sol";
-// globals
+// external - libraries
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+// internal - globals
 import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
-// libraries
-import {DepositContractLib as DCL} from "../../StakeModule/libs/DepositContractLib.sol";
-import {Validator} from "../../StakeModule/structs/utils.sol";
-// interfaces
+// internal - interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {IPortal} from "../../../interfaces/IPortal.sol";
-// external
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+// internal - structs
+import {Queue, Request, ValidatorData} from "../structs/utils.sol";
+import {PooledWithdrawal} from "../structs/storage.sol";
+// internal - libraries
+import {DepositContractLib as DCL} from "../../StakeModule/libs/DepositContractLib.sol";
+import {Validator} from "../../StakeModule/structs/utils.sol";
 
 /**
  * @title WML: Withdrawal Module Library

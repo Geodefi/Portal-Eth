@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
+// external - contracts
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+// internal - globals
+import {ID_TYPE} from "../../globals/id_type.sol";
+// internal - interfaces
+import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
+// internal - structs
 import {DualGovernance} from "./structs/storage.sol";
 import {Proposal} from "./structs/utils.sol";
-// globals
-import {ID_TYPE} from "../../globals/id_type.sol";
-// interfaces
-import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
-// libraries
+// internal - libraries
 import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
 import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
-// contracts
+// internal - contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
-// external
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @title GM: Geode Module

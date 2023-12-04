@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
-import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
-import {PooledStaking} from "../structs/storage.sol";
-import {ConstantValidatorData} from "../structs/helpers.sol";
-import {Validator} from "../structs/utils.sol";
-// globals
+// internal - globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
-// libraries
-import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
-import {DepositContractLib as DCL} from "./DepositContractLib.sol";
-// interfaces
+// internal - interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {IGeodePackage} from "../../../interfaces/packages/IGeodePackage.sol";
 import {ILiquidityPool} from "../../../interfaces/packages/ILiquidityPool.sol";
 import {IWhitelist} from "../../../interfaces/helpers/IWhitelist.sol";
+// internal - structs
+import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
+import {PooledStaking} from "../structs/storage.sol";
+import {ConstantValidatorData} from "../structs/helpers.sol";
+import {Validator} from "../structs/utils.sol";
+// internal - libraries
+import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DepositContractLib as DCL} from "./DepositContractLib.sol";
 
 /**
  * @title SML: Stake Module Library (The Staking Library)

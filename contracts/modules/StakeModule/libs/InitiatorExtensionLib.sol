@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
-// structs
-import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
-import {PooledStaking} from "../structs/storage.sol";
-// globals
+// external - contracts
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+// internal - globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
-// libraries
+// internal - interfaces
+import {IgETHMiddleware} from "../../../interfaces/middlewares/IgETHMiddleware.sol";
+import {IGeodePackage} from "../../../interfaces/packages/IGeodePackage.sol";
+// internal - structs
+import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
+import {PooledStaking} from "../structs/storage.sol";
+// internal - libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
 import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
-// interfaces
-import {IgETHMiddleware} from "../../../interfaces/middlewares/IgETHMiddleware.sol";
-import {IGeodePackage} from "../../../interfaces/packages/IGeodePackage.sol";
-// external
-import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @title IEL: Initiator Extension Library
