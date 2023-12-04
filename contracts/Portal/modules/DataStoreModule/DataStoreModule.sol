@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {IsolatedStorage} from "./structs/storage.sol";
 // interfaces
 import {IDataStoreModule} from "../../interfaces/modules/IDataStoreModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML, IsolatedStorage} from "./libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
 // external
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 

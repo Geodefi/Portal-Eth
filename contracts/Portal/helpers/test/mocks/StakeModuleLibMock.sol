@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {PooledStaking} from "../../../modules/StakeModule/structs/storage.sol";
+import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
+
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
-import {StakeModuleLib, PooledStaking} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
-import {DataStoreModuleLib, IsolatedStorage} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract StakeModuleLibMock is StakeModule {
+  using DataStoreModuleLib for IsolatedStorage;
   using StakeModuleLib for PooledStaking;
   using OracleExtensionLib for PooledStaking;
   using InitiatorExtensionLib for PooledStaking;
-  using DataStoreModuleLib for IsolatedStorage;
 
   event return$_buyback(uint256 remETH, uint256 boughtgETH);
 

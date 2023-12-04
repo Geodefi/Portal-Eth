@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+import {PooledWithdrawal} from "../../../modules/WithdrawalModule/structs/storage.sol";
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {WithdrawalModule} from "../../../modules/WithdrawalModule/WithdrawalModule.sol";
-import {WithdrawalModuleLib, PooledWithdrawal} from "../../../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib} from "../../../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";

@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
+import {PooledStaking} from "../structs/storage.sol";
 // globals
 import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 // libraries
-import {DataStoreModuleLib as DSML, IsolatedStorage} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
-import {StakeModuleLib as SML, PooledStaking} from "./StakeModuleLib.sol";
+import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
 // external
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+import {Swap} from "../../../modules/LiquidityModule/structs/storage.sol";
 import {LiquidityModule} from "../../../modules/LiquidityModule/LiquidityModule.sol";
-import {LiquidityModuleLib as LML, Swap} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "../../../modules/LiquidityModule/libs/AmplificationLib.sol";
 
 contract LiquidityModuleMock is LiquidityModule {

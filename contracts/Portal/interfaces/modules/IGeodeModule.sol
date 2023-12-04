@@ -2,7 +2,7 @@
 pragma solidity =0.8.19;
 
 import {IDataStoreModule} from "./IDataStoreModule.sol";
-import {Proposal} from "../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {Proposal} from "../../modules/GeodeModule/structs/utils.sol";
 
 interface IGeodeModule is IDataStoreModule {
   function isolationMode() external view returns (bool);

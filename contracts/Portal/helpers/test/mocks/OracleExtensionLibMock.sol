@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
+import {PooledStaking} from "../../../modules/StakeModule/structs/storage.sol";
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
-import {StakeModuleLib, PooledStaking} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
-import {DataStoreModuleLib, IsolatedStorage} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract OracleExtensionLibMock is StakeModule {
   using StakeModuleLib for PooledStaking;

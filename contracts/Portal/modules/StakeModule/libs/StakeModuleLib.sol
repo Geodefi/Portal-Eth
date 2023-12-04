@@ -1,97 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
+import {PooledStaking} from "../structs/storage.sol";
+import {ConstantValidatorData} from "../structs/helpers.sol";
+import {Validator} from "../structs/utils.sol";
 // globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {PERCENTAGE_DENOMINATOR, gETH_DENOMINATOR} from "../../../globals/macros.sol";
 import {VALIDATOR_STATE} from "../../../globals/validator_state.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // libraries
-import {DataStoreModuleLib as DSML, IsolatedStorage} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
 // interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {IGeodePackage} from "../../../interfaces/packages/IGeodePackage.sol";
 import {ILiquidityPool} from "../../../interfaces/packages/ILiquidityPool.sol";
 import {IWhitelist} from "../../../interfaces/helpers/IWhitelist.sol";
-
-/**
- * @notice Helper Struct to pack constant data that does not change per validator on batch proposals
- * * needed for that famous Solidity feature.
- */
-struct ConstantValidatorData {
-  uint64 index;
-  uint64 period;
-  uint256 poolFee;
-  uint256 operatorFee;
-  uint256 governanceFee;
-  bytes withdrawalCredential;
-}
-
-/**
- * @param state state of the validator, refer to globals.sol
- * @param index representing this validator's placement on the chronological order of the validators proposals
- * @param createdAt the timestamp pointing the proposal to create a validator with given pubkey.
- * @param period the latest point in time the operator is allowed to maintain this validator (createdAt + validatorPeriod).
- * @param poolId needed for withdrawal_credential
- * @param operatorId needed for staking after allowance
- * @param poolFee percentage of the rewards that will go to pool's maintainer, locked when the validator is proposed
- * @param operatorFee percentage of the rewards that will go to operator's maintainer, locked when the validator is proposed
- * @param governanceFee although governance fee is zero right now, all fees are crucial for the price calculation by the oracle.
- * @param signature31 BLS12-381 signature for the validator, used when the remaining 31 ETH is sent on validator activation.
- **/
-struct Validator {
-  uint64 state;
-  uint64 index;
-  uint64 createdAt;
-  uint64 period;
-  uint256 poolId;
-  uint256 operatorId;
-  uint256 poolFee;
-  uint256 operatorFee;
-  uint256 governanceFee;
-  bytes signature31;
-}
-
-/**
- * @notice Storage struct for the Pooled Liquid Staking logic
- * todo: ask if that would be a problem if the interface changes??? like should you update the param too?? Then check other params with IPortal IgETH etc.
- * @param gETH constant, ERC1155, all Geode Staking Derivatives.
- * @param ORACLE_POSITION constant, address of the Oracle https://github.com/Geodefi/Telescope-Eth
- * @param VALIDATORS_INDEX total number of validators that are proposed at any given point.
- * * Includes all validators: proposed, active, alienated, exited.
- * @param VERIFICATION_INDEX the highest index of the validators that are verified (as not alien) by the Holy Oracle.
- * @param MONOPOLY_THRESHOLD max number of validators 1 operator is allowed to operate, updated by the Holy Oracle.
- * @param ORACLE_UPDATE_TIMESTAMP timestamp of the latest oracle update
- * @param DAILY_PRICE_DECREASE_LIMIT limiting the price decreases for one oracle period, 24h. Effective for any time interval, per second.
- * @param DAILY_PRICE_INCREASE_LIMIT limiting the price increases for one oracle period, 24h. Effective for any time interval, per second.
- * @param PRICE_MERKLE_ROOT merkle root of the prices of every pool, updated by the Holy Oracle.
- * @param GOVERNANCE_FEE **reserved** Although it is 0 right now, It can be updated in the future.
- * @param BALANCE_MERKLE_ROOT merkle root of the balances and other validator related data, useful on withdrawals, updated by the Holy Oracle.
- * @param validators pubkey => Validator, contains all the data about proposed, alienated, active, exit-called and fully exited validators.
- * @param packages TYPE => version id, pointing to the latest versions of the given package.
- * * Like default Withdrawal Contract version.
- * @param middlewares TYPE => version id => isAllowed, useful to check if given version of the middleware can be used.
- * * Like all the whitelisted gETHMiddlewares.
- * @param __gap keep the struct size at 16
- **/
-struct PooledStaking {
-  IgETH gETH;
-  address ORACLE_POSITION;
-  uint256 VALIDATORS_INDEX;
-  uint256 VERIFICATION_INDEX;
-  uint256 MONOPOLY_THRESHOLD;
-  uint256 ORACLE_UPDATE_TIMESTAMP;
-  uint256 DAILY_PRICE_INCREASE_LIMIT;
-  uint256 DAILY_PRICE_DECREASE_LIMIT;
-  uint256 GOVERNANCE_FEE;
-  bytes32 PRICE_MERKLE_ROOT;
-  bytes32 BALANCE_MERKLE_ROOT;
-  mapping(bytes => Validator) validators;
-  mapping(uint256 => uint256) packages;
-  mapping(uint256 => mapping(uint256 => bool)) middlewares;
-  uint256[2] __gap;
-}
 
 /**
  * @title SML: Stake Module Library (The Staking Library)

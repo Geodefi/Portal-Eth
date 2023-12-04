@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
+import {PooledStaking} from "../../../modules/StakeModule/structs/storage.sol";
 // globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
 // interfaces
@@ -8,9 +11,9 @@ import {IPortalV3_0_Mock} from "./interfaces/IPortalV3_0_Mock.sol";
 import {IGeodeModuleV3_0_Mock} from "./interfaces/IGeodeModuleV3_0_Mock.sol";
 import {IStakeModule} from "../../../interfaces/modules/IStakeModule.sol";
 // libraries
-import {DataStoreModuleLib as DSML, IsolatedStorage} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
+import {DataStoreModuleLib as DSML} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLibV3_0_Mock as GML, DualGovernanceV3_0_Mock} from "./GeodeModuleLibV3_0_Mock.sol";
-import {StakeModuleLib as SML, PooledStaking} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {StakeModuleLib as SML} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 // contracts
 import {GeodeModuleV3_0_Mock} from "./GeodeModuleV3_0_Mock.sol";
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";

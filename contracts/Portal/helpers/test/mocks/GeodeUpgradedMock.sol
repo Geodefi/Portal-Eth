@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+import {DualGovernance} from "../../../modules/GeodeModule/structs/storage.sol";
 import {GeodeModuleMock} from "./GeodeModuleMock.sol";
-import {GeodeModuleLib, DualGovernance} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLib} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
 
 contract GeodeUpgradedMock is GeodeModuleMock {
   using GeodeModuleLib for DualGovernance;

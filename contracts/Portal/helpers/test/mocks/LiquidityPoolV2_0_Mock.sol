@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {DualGovernance} from "../../../modules/GeodeModule/structs/storage.sol";
+import {Swap} from "../../../modules/LiquidityModule/structs/storage.sol";
 // globals
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 import {PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";
@@ -11,9 +14,9 @@ import {ILiquidityPoolV2_0_Mock} from "./interfaces/ILiquidityPoolV2_0_Mock.sol"
 import {IGeodeModule} from "../../../interfaces/modules/IGeodeModule.sol";
 import {ILiquidityModule} from "../../../interfaces/modules/ILiquidityModule.sol";
 // libraries
-import {GeodeModuleLib as GML, DualGovernance} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
+import {GeodeModuleLib as GML} from "../../../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../../../modules/LiquidityModule/libs/AmplificationLib.sol";
-import {LiquidityModuleLib as LML, Swap} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
+import {LiquidityModuleLib as LML} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 // contracts
 import {GeodeModule} from "../../../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../../../modules/LiquidityModule/LiquidityModule.sol";

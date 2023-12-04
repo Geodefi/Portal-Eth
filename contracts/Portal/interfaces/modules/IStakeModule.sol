@@ -2,7 +2,7 @@
 pragma solidity =0.8.19;
 
 import {IDataStoreModule} from "./IDataStoreModule.sol";
-import {Validator} from "../../modules/StakeModule/libs/StakeModuleLib.sol";
+import {Validator} from "../../modules/StakeModule/structs/utils.sol";
 
 interface IStakeModule is IDataStoreModule {
   function pause() external;

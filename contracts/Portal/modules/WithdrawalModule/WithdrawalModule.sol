@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {PooledWithdrawal} from "./structs/storage.sol";
 // interfaces
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IWithdrawalModule} from "../../interfaces/modules/IWithdrawalModule.sol";
 // libraries
-import {WithdrawalModuleLib as WML, PooledWithdrawal} from "./libs/WithdrawalModuleLib.sol";
+import {WithdrawalModuleLib as WML} from "./libs/WithdrawalModuleLib.sol";
 // external
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";

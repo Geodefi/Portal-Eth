@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.19;
 
+// structs
+import {DualGovernance} from "./structs/storage.sol";
+import {Proposal} from "./structs/utils.sol";
 // globals
 import {ID_TYPE} from "../../globals/id_type.sol";
 // interfaces
 import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
 // libraries
-import {GeodeModuleLib as GML, Proposal, DualGovernance} from "./libs/GeodeModuleLib.sol";
+import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
 import {DataStoreModuleLib as DSML} from "../DataStoreModule/libs/DataStoreModuleLib.sol";
 // contracts
 import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
