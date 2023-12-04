@@ -343,8 +343,13 @@ abstract contract StakeModule is
    *
    * @custom:visibility -> external
    */
-  function blameOperator(bytes calldata pk) external virtual override whenNotPaused {
-    STAKE.blameOperator(DATASTORE, pk);
+
+  function blameProposal(bytes calldata pk) external virtual override whenNotPaused {
+    STAKE.blameProposal(DATASTORE, pk);
+  }
+
+  function blameExit(bytes calldata pk) external virtual override whenNotPaused {
+    STAKE.blameExit(DATASTORE, pk);
   }
 
   /**

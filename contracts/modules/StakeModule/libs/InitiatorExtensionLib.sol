@@ -63,7 +63,7 @@ library InitiatorExtensionLib {
    * @param validatorPeriod the expected maximum staking interval. This value should between
    * * MIN_VALIDATOR_PERIOD and MAX_VALIDATOR_PERIOD values defined as constants above.
    * Operator can unstake at any given point before this period ends.
-   * If operator disobeys this rule, it can be prisoned with blameOperator()
+   * If operator disobeys this rule, it can be prisoned with blameProposal()
    * @param maintainer an address that automates daily operations, a script, a contract...
    * @dev operators can fund their internal wallet on initiation by simply sending some ether.
    */

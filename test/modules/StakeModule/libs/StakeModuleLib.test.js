@@ -253,8 +253,11 @@ contract("StakeModuleLib", function (accounts) {
     it("switchMaintenanceFee", async function () {
       await expectRevert(this.contract.switchMaintenanceFee(0, 0), "Pausable: paused");
     });
-    it("blameOperator", async function () {
-      await expectRevert(this.contract.blameOperator("0x"), "Pausable: paused");
+    it("blameExit", async function () {
+      await expectRevert(this.contract.blameExit("0x"), "Pausable: paused");
+    });
+    it("blameProposal", async function () {
+      await expectRevert(this.contract.blameProposal("0x"), "Pausable: paused");
     });
     it("switchValidatorPeriod", async function () {
       await expectRevert(this.contract.switchValidatorPeriod(0, 0), "Pausable: paused");
@@ -1083,15 +1086,6 @@ contract("StakeModuleLib", function (accounts) {
         });
         it("emits Prisoned", async function () {
           expectEvent(tx, "Prisoned", {});
-        });
-      });
-
-      describe("blameOperator", function () {
-        it("reverts if not active", async function () {
-          await expectRevert(
-            this.contract.blameOperator(ZERO_BYTES32),
-            "SML:validator is never activated"
-          );
         });
       });
     });
@@ -2187,7 +2181,7 @@ contract("StakeModuleLib", function (accounts) {
             let preWallet;
 
             beforeEach(async function () {
-              await this.contract.$set_VERIFICATION_INDEX(3);
+              await this.contract.$set_VERIFICATION_INDEX(2);
 
               preSecured = [new BN("0"), new BN("0")];
               preProposedValidators = [new BN("0"), new BN("0")];
@@ -2217,59 +2211,101 @@ contract("StakeModuleLib", function (accounts) {
 
               preWallet = await this.contract.readUint(operatorId, strToBytes32("wallet"));
 
-              tx = await this.contract.stake(operatorId, [pubkey0, pubkey1, pubkey2], {
+              await this.contract.stake(operatorId, [pubkey0, pubkey1], {
                 from: operatorMaintainer,
               });
-              ts = new BN((await getReceiptTimestamp(tx)).toString());
             });
 
-            it("for both pools: decreases secured", async function () {
-              expect(
-                await this.contract.readUint(publicPoolId, strToBytes32("secured"))
-              ).to.be.bignumber.equal(preSecured[0].sub(new BN(String(64e18))));
-              expect(
-                await this.contract.readUint(publicPoolId, strToBytes32("secured"))
-              ).to.be.bignumber.equal(preSecured[1].sub(new BN(String(32e18))));
-            });
-            it("for both pools: decreased proposedValidators of operator", async function () {
-              const key = await this.contract.getKey(
-                operatorId,
-                strToBytes32("proposedValidators")
-              );
-              expect(await this.contract.readUint(publicPoolId, key)).to.be.bignumber.equal(
-                preProposedValidators[0].subn(2)
-              );
-              expect(await this.contract.readUint(privatePoolId, key)).to.be.bignumber.equal(
-                preProposedValidators[1].subn(1)
+            it("blameProposal reverts if validator is active", async function () {
+              await expectRevert(
+                this.contract.blameProposal(pubkey0),
+                "SML:can not blame proposal"
               );
             });
-            it("for both pools: increased activeValidators of operator", async function () {
-              const key = await this.contract.getKey(operatorId, strToBytes32("activeValidators"));
-              expect(await this.contract.readUint(publicPoolId, key)).to.be.bignumber.equal(
-                preActiveValidators[0].addn(2)
+
+            it("blameProposal reverts if proposal is not approved yet", async function () {
+              await this.contract.$set_VERIFICATION_INDEX(3);
+              await expectRevert(
+                this.contract.blameProposal(pubkey2),
+                "SML:can not blame proposal"
               );
-              expect(await this.contract.readUint(privatePoolId, key)).to.be.bignumber.equal(
-                preActiveValidators[1].addn(1)
+            });
+
+            it("blameProposal reverts if delay is acceptable", async function () {
+              await expectRevert(
+                this.contract.blameProposal(pubkey2),
+                "SML:unexpected validator state"
               );
             });
-            it("for all validators: changes validator state", async function () {
-              for (const pk of [pubkey0, pubkey1, pubkey2]) {
-                expect((await this.contract.getValidator(pk)).state).to.be.bignumber.equal("2");
-              }
+
+            it("blameExit reverts when validator is never activated", async function () {
+              await expectRevert(
+                this.contract.blameExit(ZERO_BYTES32),
+                "SML:unexpected validator state"
+              );
             });
-            it("repays to operator wallet", async function () {
-              expect(
-                await this.contract.readUint(operatorId, strToBytes32("wallet"))
-              ).to.be.bignumber.equal(preWallet.add(new BN(String(3e18))));
+
+            it("blameExit reverts when still active", async function () {
+              await expectRevert(this.contract.blameExit(pubkey0), "SML:validator is active");
             });
-            it("emits Stake", async function () {
-              await expectEvent(tx, "Stake", { pubkeys: [pubkey0, pubkey1, pubkey2] });
+
+            describe("all staked", function () {
+              beforeEach(async function () {
+                await this.contract.$set_VERIFICATION_INDEX(3);
+                tx = await this.contract.stake(operatorId, [pubkey2], {
+                  from: operatorMaintainer,
+                });
+              });
+
+              it("for both pools: decreases secured", async function () {
+                expect(
+                  await this.contract.readUint(publicPoolId, strToBytes32("secured"))
+                ).to.be.bignumber.equal(preSecured[0].sub(new BN(String(64e18))));
+                expect(
+                  await this.contract.readUint(publicPoolId, strToBytes32("secured"))
+                ).to.be.bignumber.equal(preSecured[1].sub(new BN(String(32e18))));
+              });
+              it("for both pools: decreased proposedValidators of operator", async function () {
+                const key = await this.contract.getKey(
+                  operatorId,
+                  strToBytes32("proposedValidators")
+                );
+                expect(await this.contract.readUint(publicPoolId, key)).to.be.bignumber.equal(
+                  preProposedValidators[0].subn(2)
+                );
+                expect(await this.contract.readUint(privatePoolId, key)).to.be.bignumber.equal(
+                  preProposedValidators[1].subn(1)
+                );
+              });
+              it("for both pools: increased activeValidators of operator", async function () {
+                const key = await this.contract.getKey(
+                  operatorId,
+                  strToBytes32("activeValidators")
+                );
+                expect(await this.contract.readUint(publicPoolId, key)).to.be.bignumber.equal(
+                  preActiveValidators[0].addn(2)
+                );
+                expect(await this.contract.readUint(privatePoolId, key)).to.be.bignumber.equal(
+                  preActiveValidators[1].addn(1)
+                );
+              });
+              it("for all validators: changes validator state", async function () {
+                for (const pk of [pubkey0, pubkey1, pubkey2]) {
+                  expect((await this.contract.getValidator(pk)).state).to.be.bignumber.equal("2");
+                }
+              });
+              it("repays to operator wallet", async function () {
+                expect(
+                  await this.contract.readUint(operatorId, strToBytes32("wallet"))
+                ).to.be.bignumber.equal(preWallet.add(new BN(String(3e18))));
+              });
+              it("emits Stake", async function () {
+                await expectEvent(tx, "Stake", { pubkeys: [pubkey0, pubkey1, pubkey2] });
+              });
             });
           });
         });
       });
-
-      // TODO: test requestExit and finalizeExit
     });
   });
 });

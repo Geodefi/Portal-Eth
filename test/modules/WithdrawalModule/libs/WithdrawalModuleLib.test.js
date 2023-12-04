@@ -997,7 +997,7 @@ contract("WithdrawalModuleLib", function (accounts) {
 
         await expectRevert(
           this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll),
-          "SML: early exit not allowed"
+          "SML:early exit not allowed"
         );
       });
       it("validator state changes to EXIT_REQUESTED and commonPoll increases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than beaconBalancePriced", async function () {
@@ -1037,7 +1037,7 @@ contract("WithdrawalModuleLib", function (accounts) {
 
         await expectRevert(
           this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll),
-          "SML: early exit not allowed"
+          "SML:early exit not allowed"
         );
       });
       it("validator state changes to EXIT_REQUESTED and commonPoll stays same if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than validatorThreshold and smaller than beaconBalancePriced", async function () {
@@ -1073,7 +1073,7 @@ contract("WithdrawalModuleLib", function (accounts) {
 
         await expectRevert(
           this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll),
-          "SML: early exit not allowed"
+          "SML:early exit not allowed"
         );
       });
       it("validator state changes to EXIT_REQUESTED and commonPoll decreases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is smaller than validatorThreshold", async function () {

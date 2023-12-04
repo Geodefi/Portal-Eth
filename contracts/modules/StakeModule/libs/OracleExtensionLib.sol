@@ -57,7 +57,7 @@ import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
  * * 6. Minting is allowed within PRICE_EXPIRY (24H) after the last price update.
  * * 7. Updates the regulation around Monopolies and provides BALANCE_MERKLE_ROOT to be used within withdrawal process.
  *
- * @dev Most external functions have OracleOnly modifier. Except: priceSync, priceSyncBatch and blameOperator.
+ * @dev Most external functions have OracleOnly modifier. Except: priceSync, priceSyncBatch, blameExit and blameProposal.
  *
  * @dev This is an external library, requires deployment.
  *
@@ -79,6 +79,10 @@ library OracleExtensionLib {
 
   /// @notice limiting the access for Operators in case of bad/malicious/faulty behaviour
   uint256 internal constant PRISON_SENTENCE = 14 days;
+
+  /// @notice maximum delay between the creation of an (approved) proposal and stake() call.
+  uint256 internal constant MAX_BEACON_DELAY = 14 days;
+
   /**
    * @custom:section                           ** EVENTS **
    */
@@ -184,6 +188,9 @@ library OracleExtensionLib {
    * * 1. Created a malicious validator(alien): faulty withdrawal credential, faulty signatures etc.
    * * 2. Have not respect the validatorPeriod (or blamed for some other valid case)
    * * 3. Stole block fees or MEV boost rewards from the pool
+   *
+   * @dev this section lacks a potential punishable act, for now early exits are not enforced:
+   * While state is EXIT_REQUESTED: validator requested exit, but it hasn't been executed.
    */
 
   /**
@@ -211,16 +218,34 @@ library OracleExtensionLib {
    */
 
   /**
-   * @notice allows imprisoning an Operator if the validator have not been exited until expected exit
+   * @notice imprisoning an Operator if the validator proposal is approved but have not been executed.
+   * @dev anyone can call this function while the state is PROPOSED
+   * @dev this check can be problematic in the case the beaconchain deposit delay is > MAX_BEACON_DELAY,
+   * * depending on the expected delay of telescope approvals.
+   * @dev _canStake checks == VALIDATOR_STATE.PROPOSED.
+   */
+  function blameProposal(
+    PooledStaking storage self,
+    IsolatedStorage storage DATASTORE,
+    bytes calldata pk
+  ) external {
+    require(self._canStake(pk, self.VERIFICATION_INDEX), "SML:can not blame proposal");
+    require(
+      block.timestamp > self.validators[pk].createdAt + MAX_BEACON_DELAY,
+      "SML:acceptable delay"
+    );
+
+    _imprison(DATASTORE, self.validators[pk].operatorId, pk);
+  }
+
+  /**
+   * @notice imprisoning an Operator if the validator have not been exited until expected exit
+   * @dev normally, oracle should verify the signed exit request on beacon chain for a (deterministic) epoch
+   * * before approval. This function enforces it further for the stakers.
    * @dev anyone can call this function while the state is ACTIVE
    * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
-   *
-   * @dev this function lacks 2 other punishable acts:
-   * 1. while the state is PROPOSED: validator proposed, it is passed, but hasn't been created even though it has been a MAX_BEACON_DELAY
-   * 2. while state is EXIT_REQUESTED:  validator requested exit, but it hasn't been executed even tho it has been MAX_BEACON_DELAY
    */
-  function blameOperator(
-    // TODO: this should be blameValidatorProposal, blameValidatorPeriod, blameExitRequest etc.
+  function blameExit(
     PooledStaking storage self,
     IsolatedStorage storage DATASTORE,
     bytes calldata pk
@@ -238,7 +263,11 @@ library OracleExtensionLib {
   }
 
   /**
-   * @custom:visibility -> onlyOracle
+  
+   */
+
+  /**
+   * @custom:visibility -> external
    */
 
   /**

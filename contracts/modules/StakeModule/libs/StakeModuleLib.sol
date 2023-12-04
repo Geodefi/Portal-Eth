@@ -584,7 +584,7 @@ library StakeModuleLib {
    * @custom:section                           ** PRISON **
    *
    * @custom:visibility -> view-public
-   * @dev check OEL._blameOperators for imprisonment details
+   * @dev check OEL.blameProposal and OEL.blameExit for imprisonment details
    */
 
   /**
@@ -1256,6 +1256,9 @@ library StakeModuleLib {
    * @custom:visibility -> external
    */
 
+  /**
+    @notice todo
+  */
   function requestExit(
     PooledStaking storage self,
     IsolatedStorage storage DATASTORE,
@@ -1264,7 +1267,7 @@ library StakeModuleLib {
   ) external {
     require(
       block.timestamp > self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD,
-      "SML: early exit not allowed"
+      "SML:early exit not allowed"
     );
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
@@ -1278,6 +1281,9 @@ library StakeModuleLib {
     emit ExitRequest(pk);
   }
 
+  /**
+    @notice todo
+  */
   function finalizeExit(
     PooledStaking storage self,
     IsolatedStorage storage DATASTORE,
