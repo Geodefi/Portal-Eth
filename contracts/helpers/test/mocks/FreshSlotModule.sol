@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 import {FreshSlotModuleLib as FSL, FreshSlotStruct} from "./FreshSlotModuleLib.sol";
 import {IFreshSlotModule} from "./interfaces/IFreshSlotModule.sol";

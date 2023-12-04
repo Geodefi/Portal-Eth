@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/extensions/draft-ERC20Permit.sol)
 
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 // external - interfaces
 import {IERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-IERC20PermitUpgradeable.sol";
@@ -17,7 +17,7 @@ import {ERC20RebaseMiddleware} from "./ERC20RebaseMiddleware.sol";
 
 /**
  * @dev differences between ERC20RebasePermitMiddleware and Openzeppelin's implementation of ERC20PermitUpgradable is:
- * -> pragma set to =0.8.7 and then =0.8.19;
+ * -> pragma set to =0.8.7 and then =0.8.20;
  * -> using ERC20RebaseMiddleware instead of ERC20Upgradeable
  * -> added initialize
  *

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 import {ILiquidityModule} from "../../../../interfaces/modules/ILiquidityModule.sol";
 import {IGeodePackage} from "../../../../interfaces/packages/IGeodePackage.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 import {DualGovernance} from "../../../modules/GeodeModule/structs/storage.sol";
 import {GeodeModuleMock} from "./GeodeModuleMock.sol";

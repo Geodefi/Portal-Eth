@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/ERC20.sol)
 
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 // external - interfaces
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -19,7 +19,7 @@ import {BytesLib} from "../helpers/BytesLib.sol";
 
 /**
  * @dev differences between ERC20Middleware and Openzeppelin's implementation of ERC20Upgradeable is:
- * -> pragma set to =0.8.7 and then =0.8.19;
+ * -> pragma set to =0.8.7 and then =0.8.20;
  * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
  * -> unique id of ERC1155 is used
  * -> there is no mint or burn functionality implemented here.

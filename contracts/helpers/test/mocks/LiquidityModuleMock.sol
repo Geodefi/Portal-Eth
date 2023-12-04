@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 import {Swap} from "../../../modules/LiquidityModule/structs/storage.sol";
 import {LiquidityModule} from "../../../modules/LiquidityModule/LiquidityModule.sol";

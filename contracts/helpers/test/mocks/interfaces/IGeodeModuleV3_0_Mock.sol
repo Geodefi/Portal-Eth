@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 import {IDataStoreModule} from "../../../../interfaces/modules/IDataStoreModule.sol";
 import {Proposal} from "../../../../modules/GeodeModule/structs/utils.sol";

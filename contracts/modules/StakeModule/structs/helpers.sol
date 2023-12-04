@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 /**
  * @notice Helper Struct to pack constant data that does not change per validator on batch proposals

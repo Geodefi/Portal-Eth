@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 // internal - globals
 import {gETH_DENOMINATOR, PERCENTAGE_DENOMINATOR} from "../../../globals/macros.sol";

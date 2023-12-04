@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 import {IDataStoreModule} from "./IDataStoreModule.sol";
 import {Validator} from "../../modules/StakeModule/structs/utils.sol";

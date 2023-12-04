@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 // external - contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -56,9 +56,9 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
    */
   DualGovernance internal GEODE;
 
-  /**
-   * @custom:section                           ** EVENTS **
-   */
+  // /**
+  //  * @custom:section                           ** EVENTS **
+  //  */
   event ContractVersionSet(uint256 version);
 
   event ControllerChanged(uint256 indexed ID, address CONTROLLER);

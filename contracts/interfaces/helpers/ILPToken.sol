@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 interface ILPToken {
   function allowance(address owner, address spender) external view returns (uint256);

@@ -29,7 +29,8 @@ const config = {
   solidity: {
     compilers: [
       {
-        version: "0.8.19",
+        version: "0.8.20",
+        evmVersion: "shanghai", // if the blockchain is not supporting PUSH0: paris.
         settings: {
           // viaIR: false,
           optimizer: {

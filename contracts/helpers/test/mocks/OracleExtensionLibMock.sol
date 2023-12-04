@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.19;
+pragma solidity =0.8.20;
 
 import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
 import {PooledStaking} from "../../../modules/StakeModule/structs/storage.sol";

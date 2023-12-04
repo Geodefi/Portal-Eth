@@ -7,7 +7,7 @@
 * Interface can not have a constructor, state variables and modifiers.
 * Interface can have events, enums and structs. **However, we do not advise putting them in an interface.**
 
-> Please refer to the [official solidity docs](https://docs.soliditylang.org/en/v0.8.19/contracts.html#interfaces) for more.
+> Please refer to the [official solidity docs](https://docs.soliditylang.org/en/v0.8.20/contracts.html#interfaces) for more.
 
 ## As a Standard
 
