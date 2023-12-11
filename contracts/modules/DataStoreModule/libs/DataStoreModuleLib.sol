@@ -7,7 +7,7 @@ pragma solidity =0.8.20;
 // external - contracts
 // internal - globals
 // internal - interfaces
-import {IsolatedStorage} from "../structs/storage.sol";
+import {DataStoreModuleStorage} from "../structs/storage.sol";
 
 // internal - structs
 // internal - libraries
@@ -26,7 +26,7 @@ import {IsolatedStorage} from "../structs/storage.sol";
  * @dev Distinct id and key pairs SHOULD return different storage slots. No collisions!
  * @dev IDs are the representation of an entity with any given key as properties.
  * @dev review: Reserved TYPEs are defined within globals/id_type.sol
- * @dev review: For a safer development process, NEVER use the IsolatedStorage with strings. Refer to globals/reserved_key_space.sol
+ * @dev review: For a safer development process, NEVER use the DataStoreModuleStorage with strings. Refer to globals/reserved_key_space.sol
  *
  * @dev While it is a good practice for keeping a record;
  * * TYPE for ID is NOT mandatory, an ID might not have an explicit type.
@@ -35,7 +35,7 @@ import {IsolatedStorage} from "../structs/storage.sol";
  *
  * @dev readUint(id, arrayName) returns the lenght of array.
  *
- * @dev Contracts relying on this library must use DataStoreModuleLib.IsolatedStorage
+ * @dev Contracts relying on this library must use DataStoreModuleLib.DataStoreModuleStorage
  * @dev This is an internal library, requires NO deployment.
  *
  * @author Ice Bear & Crash Bandicoot
@@ -59,7 +59,7 @@ library DataStoreModuleLib {
   }
 
   /**
-   * @notice hash of given ID and a KEY defines the key for the IsolatedStorage
+   * @notice hash of given ID and a KEY defines the key for the DataStoreModuleStorage
    * @return key bytes32, hash.
    **/
   function getKey(uint256 id, bytes32 param) internal pure returns (bytes32 key) {
@@ -73,7 +73,7 @@ library DataStoreModuleLib {
    */
 
   function readUint(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key
   ) internal view returns (uint256 data) {
@@ -81,7 +81,7 @@ library DataStoreModuleLib {
   }
 
   function readBytes(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key
   ) internal view returns (bytes memory data) {
@@ -89,7 +89,7 @@ library DataStoreModuleLib {
   }
 
   function readAddress(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key
   ) internal view returns (address data) {
@@ -103,7 +103,7 @@ library DataStoreModuleLib {
    */
 
   function readUintArray(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256 _index
@@ -112,7 +112,7 @@ library DataStoreModuleLib {
   }
 
   function readBytesArray(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256 _index
@@ -121,7 +121,7 @@ library DataStoreModuleLib {
   }
 
   function readAddressArray(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256 _index
@@ -140,7 +140,7 @@ library DataStoreModuleLib {
    */
 
   function writeUint(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256 _data
@@ -149,7 +149,7 @@ library DataStoreModuleLib {
   }
 
   function addUint(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256 _addend
@@ -158,7 +158,7 @@ library DataStoreModuleLib {
   }
 
   function subUint(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256 _minuend
@@ -167,7 +167,7 @@ library DataStoreModuleLib {
   }
 
   function writeBytes(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     bytes memory _data
@@ -176,7 +176,7 @@ library DataStoreModuleLib {
   }
 
   function writeAddress(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     address _data
@@ -189,7 +189,7 @@ library DataStoreModuleLib {
    */
 
   function appendUintArray(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256 _data
@@ -199,7 +199,7 @@ library DataStoreModuleLib {
   }
 
   function appendBytesArray(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     bytes memory _data
@@ -209,7 +209,7 @@ library DataStoreModuleLib {
   }
 
   function appendAddressArray(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     address _data
@@ -223,7 +223,7 @@ library DataStoreModuleLib {
    */
 
   function appendUintArrayBatch(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     uint256[] memory _data
@@ -243,7 +243,7 @@ library DataStoreModuleLib {
   }
 
   function appendBytesArrayBatch(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     bytes[] memory _data
@@ -263,7 +263,7 @@ library DataStoreModuleLib {
   }
 
   function appendAddressArrayBatch(
-    IsolatedStorage storage self,
+    DataStoreModuleStorage storage self,
     uint256 _id,
     bytes32 _key,
     address[] memory _data

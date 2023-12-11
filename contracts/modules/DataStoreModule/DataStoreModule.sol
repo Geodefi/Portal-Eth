@@ -6,7 +6,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 // internal - interfaces
 import {IDataStoreModule} from "../../interfaces/modules/IDataStoreModule.sol";
 // internal - structs
-import {IsolatedStorage} from "./structs/storage.sol";
+import {DataStoreModuleStorage} from "./structs/storage.sol";
 // internal - libraries
 import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
 
@@ -30,7 +30,7 @@ import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
  * @author Ice Bear & Crash Bandicoot
  */
 abstract contract DataStoreModule is IDataStoreModule, Initializable {
-  using DSML for IsolatedStorage;
+  using DSML for DataStoreModuleStorage;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -38,7 +38,16 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  IsolatedStorage internal DATASTORE;
+
+  // keccak256(abi.encode(uint256(keccak256("geode.storage.DataStoreModule")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant DataStoreModuleStorageLocation =
+    0xa3ee0f890fa2a50cc11476f86783721ec49c3aba88b83a957fe08235f6485c00;
+
+  function _getDataStoreModuleStorage() internal pure returns (DataStoreModuleStorage storage $) {
+    assembly {
+      $.slot := DataStoreModuleStorageLocation
+    }
+  }
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -90,29 +99,34 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
     uint256 _type,
     uint256 _index
   ) external view virtual override returns (uint256) {
-    return DATASTORE.allIdsByType[_type][_index];
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    return $.allIdsByType[_type][_index];
   }
 
   function allIdsByTypeLength(uint256 _type) external view virtual override returns (uint256) {
-    return DATASTORE.allIdsByType[_type].length;
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    return $.allIdsByType[_type].length;
   }
 
   function readUint(uint256 id, bytes32 key) external view virtual override returns (uint256 data) {
-    data = DATASTORE.readUint(id, key);
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    data = $.readUint(id, key);
   }
 
   function readAddress(
     uint256 id,
     bytes32 key
   ) external view virtual override returns (address data) {
-    data = DATASTORE.readAddress(id, key);
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    data = $.readAddress(id, key);
   }
 
   function readBytes(
     uint256 id,
     bytes32 key
   ) external view virtual override returns (bytes memory data) {
-    data = DATASTORE.readBytes(id, key);
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    data = $.readBytes(id, key);
   }
 
   /**
@@ -126,7 +140,8 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
     bytes32 key,
     uint256 index
   ) external view virtual override returns (uint256 data) {
-    data = DATASTORE.readUintArray(id, key, index);
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    data = $.readUintArray(id, key, index);
   }
 
   function readBytesArray(
@@ -134,7 +149,8 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
     bytes32 key,
     uint256 index
   ) external view virtual override returns (bytes memory data) {
-    data = DATASTORE.readBytesArray(id, key, index);
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    data = $.readBytesArray(id, key, index);
   }
 
   function readAddressArray(
@@ -142,6 +158,7 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
     bytes32 key,
     uint256 index
   ) external view virtual override returns (address data) {
-    data = DATASTORE.readAddressArray(id, key, index);
+    DataStoreModuleStorage storage $ = _getDataStoreModuleStorage();
+    data = $.readAddressArray(id, key, index);
   }
 }
