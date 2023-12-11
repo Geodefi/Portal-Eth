@@ -64,13 +64,13 @@ const config = {
     },
     goerli: {
       url: process.env.GOERLI_URL,
-      deploy: ["./deploy/goerli"],
+      deploy: ["./deploy"],
       chainId: 5,
       gasPrice: 1e10, // 10 gwei
     },
     holesky: {
       url: process.env.HOLESKY_URL,
-      deploy: ["./deploy/holesky"],
+      deploy: ["./deploy"],
       chainId: 17000,
       gasPrice: 1e10, // 10 gwei
     },
