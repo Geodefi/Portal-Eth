@@ -1,57 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
+// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC1155/ERC1155.sol)
 
-// interfaces
+// External
+// Dependencies: ERC1155
+//  * interfaces
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
-import {IERC1155Burnable, IERC1155Supply, IERC1155PausableBurnableSupply} from "../interfaces/helpers/IERC1155PausableBurnableSupply.sol";
-// external
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC1155Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+//  * libraries
+import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
+//  * contracts
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
+// Dependencies: ERC1155Pausable
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-/**
- * @notice base contract for gETH.
- *
- * @dev Following contracts are taken from Openzeppelin.
- * Only difference is ERC1155._doSafeTransferAcceptanceCheck is being internal virtual instead of private,
- * because we want to override it in gETH.
- *
- * ERC1155:
- * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/ERC1155.sol
- * ERC1155Burnable:
- * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Burnable.sol
- * ERC1155Supply:
- * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cf86fd9962701396457e50ab0d6cc78aa29a5ebc/contracts/token/ERC1155/extensions/ERC1155Supply.sol
- *
- * @dev ERC1155PausableBurnableSupply is created with openzeppelin wizard.
- * + Mintable
- * + Burnable
- * + Supply Tracking
- * + Pausable
- * + Updatable URI
- * + Roles
- */
+// Dependencies: ERC1155PausableBurnableSupply
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-/**
- * @dev Implementation of the basic standard multi-token.
- * See https://eips.ethereum.org/EIPS/eip-1155
- * Originally based on code by Enjin: https://github.com/enjin/erc-1155
- *
- * _Available since v3.1._
- */
-contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
-  using Address for address;
+// Internal - interfaces
+import {IERC1155Burnable, IERC1155Supply, IERC1155PausableBurnableSupply} from "../interfaces/helpers/IERC1155PausableBurnableSupply.sol";
 
-  // Mapping from token ID to account balances
-  mapping(uint256 => mapping(address => uint256)) private _balances;
+abstract contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI, IERC1155Errors {
+  using Arrays for uint256[];
+  using Arrays for address[];
 
-  // Mapping from account to operator approvals
-  mapping(address => mapping(address => bool)) private _operatorApprovals;
+  mapping(uint256 id => mapping(address account => uint256)) private _balances;
+
+  mapping(address account => mapping(address operator => bool)) private _operatorApprovals;
 
   // Used as the URI for all token types by relying on ID substitution, e.g. https://token-cdn-domain/{id}.json
   string private _uri;
@@ -85,19 +65,14 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
    * Clients calling this function must replace the `\{id\}` substring with the
    * actual token type ID.
    */
-  function uri(uint256) public view virtual override returns (string memory) {
+  function uri(uint256 /* id */) public view virtual returns (string memory) {
     return _uri;
   }
 
   /**
    * @dev See {IERC1155-balanceOf}.
-   *
-   * Requirements:
-   *
-   * - `account` cannot be the zero address.
    */
-  function balanceOf(address account, uint256 id) public view virtual override returns (uint256) {
-    require(account != address(0), "ERC1155: address zero is not a valid owner");
+  function balanceOf(address account, uint256 id) public view virtual returns (uint256) {
     return _balances[id][account];
   }
 
@@ -111,17 +86,15 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
   function balanceOfBatch(
     address[] memory accounts,
     uint256[] memory ids
-  ) public view virtual override returns (uint256[] memory) {
-    require(accounts.length == ids.length, "ERC1155: accounts and ids length mismatch");
+  ) public view virtual returns (uint256[] memory) {
+    if (accounts.length != ids.length) {
+      revert ERC1155InvalidArrayLength(ids.length, accounts.length);
+    }
 
     uint256[] memory batchBalances = new uint256[](accounts.length);
 
-    for (uint256 i; i < accounts.length; ) {
-      batchBalances[i] = balanceOf(accounts[i], ids[i]);
-
-      unchecked {
-        i += 1;
-      }
+    for (uint256 i = 0; i < accounts.length; ++i) {
+      batchBalances[i] = balanceOf(accounts.unsafeMemoryAccess(i), ids.unsafeMemoryAccess(i));
     }
 
     return batchBalances;
@@ -130,17 +103,14 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
   /**
    * @dev See {IERC1155-setApprovalForAll}.
    */
-  function setApprovalForAll(address operator, bool approved) public virtual override {
+  function setApprovalForAll(address operator, bool approved) public virtual {
     _setApprovalForAll(_msgSender(), operator, approved);
   }
 
   /**
    * @dev See {IERC1155-isApprovedForAll}.
    */
-  function isApprovedForAll(
-    address account,
-    address operator
-  ) public view virtual override returns (bool) {
+  function isApprovedForAll(address account, address operator) public view virtual returns (bool) {
     return _operatorApprovals[account][operator];
   }
 
@@ -151,14 +121,14 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
     address from,
     address to,
     uint256 id,
-    uint256 amount,
+    uint256 value,
     bytes memory data
-  ) public virtual override {
-    require(
-      from == _msgSender() || isApprovedForAll(from, _msgSender()),
-      "ERC1155: caller is not token owner or approved"
-    );
-    _safeTransferFrom(from, to, id, amount, data);
+  ) public virtual {
+    address sender = _msgSender();
+    if (from != sender && !isApprovedForAll(from, sender)) {
+      revert ERC1155MissingApprovalForAll(sender, from);
+    }
+    _safeTransferFrom(from, to, id, value, data);
   }
 
   /**
@@ -168,25 +138,109 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
     address from,
     address to,
     uint256[] memory ids,
-    uint256[] memory amounts,
+    uint256[] memory values,
     bytes memory data
-  ) public virtual override {
-    require(
-      from == _msgSender() || isApprovedForAll(from, _msgSender()),
-      "ERC1155: caller is not token owner or approved"
-    );
-    _safeBatchTransferFrom(from, to, ids, amounts, data);
+  ) public virtual {
+    address sender = _msgSender();
+    if (from != sender && !isApprovedForAll(from, sender)) {
+      revert ERC1155MissingApprovalForAll(sender, from);
+    }
+    _safeBatchTransferFrom(from, to, ids, values, data);
   }
 
   /**
-   * @dev Transfers `amount` tokens of token type `id` from `from` to `to`.
+   * @dev Transfers a `value` amount of tokens of type `id` from `from` to `to`. Will mint (or burn) if `from`
+   * (or `to`) is the zero address.
+   *
+   * Emits a {TransferSingle} event if the arrays contain one element, and {TransferBatch} otherwise.
+   *
+   * Requirements:
+   *
+   * - If `to` refers to a smart contract, it must implement either {IERC1155Receiver-onERC1155Received}
+   *   or {IERC1155Receiver-onERC1155BatchReceived} and return the acceptance magic value.
+   * - `ids` and `values` must have the same length.
+   *
+   * NOTE: The ERC-1155 acceptance check is not performed in this function. See {_updateWithAcceptanceCheck} instead.
+   */
+  function _update(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory values
+  ) internal virtual {
+    if (ids.length != values.length) {
+      revert ERC1155InvalidArrayLength(ids.length, values.length);
+    }
+
+    address operator = _msgSender();
+
+    for (uint256 i = 0; i < ids.length; ++i) {
+      uint256 id = ids.unsafeMemoryAccess(i);
+      uint256 value = values.unsafeMemoryAccess(i);
+
+      if (from != address(0)) {
+        uint256 fromBalance = _balances[id][from];
+        if (fromBalance < value) {
+          revert ERC1155InsufficientBalance(from, fromBalance, value, id);
+        }
+        unchecked {
+          // Overflow not possible: value <= fromBalance
+          _balances[id][from] = fromBalance - value;
+        }
+      }
+
+      if (to != address(0)) {
+        _balances[id][to] += value;
+      }
+    }
+
+    if (ids.length == 1) {
+      uint256 id = ids.unsafeMemoryAccess(0);
+      uint256 value = values.unsafeMemoryAccess(0);
+      emit TransferSingle(operator, from, to, id, value);
+    } else {
+      emit TransferBatch(operator, from, to, ids, values);
+    }
+  }
+
+  /**
+   * @dev Version of {_update} that performs the token acceptance check by calling
+   * {IERC1155Receiver-onERC1155Received} or {IERC1155Receiver-onERC1155BatchReceived} on the receiver address if it
+   * contains code (eg. is a smart contract at the moment of execution).
+   *
+   * IMPORTANT: Overriding this function is discouraged because it poses a reentrancy risk from the receiver. So any
+   * update to the contract state after this function would break the check-effect-interaction pattern. Consider
+   * overriding {_update} instead.
+   */
+  function _updateWithAcceptanceCheck(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory values,
+    bytes memory data
+  ) internal virtual {
+    _update(from, to, ids, values);
+    if (to != address(0)) {
+      address operator = _msgSender();
+      if (ids.length == 1) {
+        uint256 id = ids.unsafeMemoryAccess(0);
+        uint256 value = values.unsafeMemoryAccess(0);
+        _doSafeTransferAcceptanceCheck(operator, from, to, id, value, data);
+      } else {
+        _doSafeBatchTransferAcceptanceCheck(operator, from, to, ids, values, data);
+      }
+    }
+  }
+
+  /**
+   * @dev Transfers a `value` tokens of token type `id` from `from` to `to`.
    *
    * Emits a {TransferSingle} event.
    *
    * Requirements:
    *
    * - `to` cannot be the zero address.
-   * - `from` must have a balance of tokens of type `id` of at least `amount`.
+   * - `from` must have a balance of tokens of type `id` of at least `value` amount.
    * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155Received} and return the
    * acceptance magic value.
    */
@@ -194,29 +248,17 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
     address from,
     address to,
     uint256 id,
-    uint256 amount,
+    uint256 value,
     bytes memory data
-  ) internal virtual {
-    require(to != address(0), "ERC1155: transfer to the zero address");
-
-    address operator = _msgSender();
-    uint256[] memory ids = _asSingletonArray(id);
-    uint256[] memory amounts = _asSingletonArray(amount);
-
-    _beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
-    uint256 fromBalance = _balances[id][from];
-    require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
-    unchecked {
-      _balances[id][from] = fromBalance - amount;
+  ) internal {
+    if (to == address(0)) {
+      revert ERC1155InvalidReceiver(address(0));
     }
-    _balances[id][to] += amount;
-
-    emit TransferSingle(operator, from, to, id, amount);
-
-    _afterTokenTransfer(operator, from, to, ids, amounts, data);
-
-    _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
+    if (from == address(0)) {
+      revert ERC1155InvalidSender(address(0));
+    }
+    (uint256[] memory ids, uint256[] memory values) = _asSingletonArrays(id, value);
+    _updateWithAcceptanceCheck(from, to, ids, values, data);
   }
 
   /**
@@ -228,42 +270,22 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
    *
    * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155BatchReceived} and return the
    * acceptance magic value.
+   * - `ids` and `values` must have the same length.
    */
   function _safeBatchTransferFrom(
     address from,
     address to,
     uint256[] memory ids,
-    uint256[] memory amounts,
+    uint256[] memory values,
     bytes memory data
-  ) internal virtual {
-    require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
-    require(to != address(0), "ERC1155: transfer to the zero address");
-
-    address operator = _msgSender();
-
-    _beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
-    for (uint256 i; i < ids.length; ) {
-      uint256 id = ids[i];
-      uint256 amount = amounts[i];
-
-      uint256 fromBalance = _balances[id][from];
-      require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
-      unchecked {
-        _balances[id][from] = fromBalance - amount;
-      }
-      _balances[id][to] += amount;
-
-      unchecked {
-        i += 1;
-      }
+  ) internal {
+    if (to == address(0)) {
+      revert ERC1155InvalidReceiver(address(0));
     }
-
-    emit TransferBatch(operator, from, to, ids, amounts);
-
-    _afterTokenTransfer(operator, from, to, ids, amounts, data);
-
-    _doSafeBatchTransferAcceptanceCheck(operator, from, to, ids, amounts, data);
+    if (from == address(0)) {
+      revert ERC1155InvalidSender(address(0));
+    }
+    _updateWithAcceptanceCheck(from, to, ids, values, data);
   }
 
   /**
@@ -272,7 +294,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
    * https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
    *
    * By this mechanism, any occurrence of the `\{id\}` substring in either the
-   * URI or any of the amounts in the JSON file at said URI will be replaced by
+   * URI or any of the values in the JSON file at said URI will be replaced by
    * clients with the token type ID.
    *
    * For example, the `https://token-cdn-domain/\{id\}.json` URI would be
@@ -290,7 +312,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
   }
 
   /**
-   * @dev Creates `amount` tokens of token type `id`, and assigns them to `to`.
+   * @dev Creates a `value` amount of tokens of type `id`, and assigns them to `to`.
    *
    * Emits a {TransferSingle} event.
    *
@@ -300,21 +322,12 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
    * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155Received} and return the
    * acceptance magic value.
    */
-  function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
-    require(to != address(0), "ERC1155: mint to the zero address");
-
-    address operator = _msgSender();
-    uint256[] memory ids = _asSingletonArray(id);
-    uint256[] memory amounts = _asSingletonArray(amount);
-
-    _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
-
-    _balances[id][to] += amount;
-    emit TransferSingle(operator, address(0), to, id, amount);
-
-    _afterTokenTransfer(operator, address(0), to, ids, amounts, data);
-
-    _doSafeTransferAcceptanceCheck(operator, address(0), to, id, amount, data);
+  function _mint(address to, uint256 id, uint256 value, bytes memory data) internal {
+    if (to == address(0)) {
+      revert ERC1155InvalidReceiver(address(0));
+    }
+    (uint256[] memory ids, uint256[] memory values) = _asSingletonArrays(id, value);
+    _updateWithAcceptanceCheck(address(0), to, ids, values, data);
   }
 
   /**
@@ -324,66 +337,39 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
    *
    * Requirements:
    *
-   * - `ids` and `amounts` must have the same length.
+   * - `ids` and `values` must have the same length.
+   * - `to` cannot be the zero address.
    * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155BatchReceived} and return the
    * acceptance magic value.
    */
   function _mintBatch(
     address to,
     uint256[] memory ids,
-    uint256[] memory amounts,
+    uint256[] memory values,
     bytes memory data
-  ) internal virtual {
-    require(to != address(0), "ERC1155: mint to the zero address");
-    require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
-
-    address operator = _msgSender();
-
-    _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
-
-    for (uint256 i; i < ids.length; ) {
-      _balances[ids[i]][to] += amounts[i];
-
-      unchecked {
-        i += 1;
-      }
+  ) internal {
+    if (to == address(0)) {
+      revert ERC1155InvalidReceiver(address(0));
     }
-
-    emit TransferBatch(operator, address(0), to, ids, amounts);
-
-    _afterTokenTransfer(operator, address(0), to, ids, amounts, data);
-
-    _doSafeBatchTransferAcceptanceCheck(operator, address(0), to, ids, amounts, data);
+    _updateWithAcceptanceCheck(address(0), to, ids, values, data);
   }
 
   /**
-   * @dev Destroys `amount` tokens of token type `id` from `from`
+   * @dev Destroys a `value` amount of tokens of type `id` from `from`
    *
    * Emits a {TransferSingle} event.
    *
    * Requirements:
    *
    * - `from` cannot be the zero address.
-   * - `from` must have at least `amount` tokens of token type `id`.
+   * - `from` must have at least `value` amount of tokens of type `id`.
    */
-  function _burn(address from, uint256 id, uint256 amount) internal virtual {
-    require(from != address(0), "ERC1155: burn from the zero address");
-
-    address operator = _msgSender();
-    uint256[] memory ids = _asSingletonArray(id);
-    uint256[] memory amounts = _asSingletonArray(amount);
-
-    _beforeTokenTransfer(operator, from, address(0), ids, amounts, "");
-
-    uint256 fromBalance = _balances[id][from];
-    require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
-    unchecked {
-      _balances[id][from] = fromBalance - amount;
+  function _burn(address from, uint256 id, uint256 value) internal {
+    if (from == address(0)) {
+      revert ERC1155InvalidSender(address(0));
     }
-
-    emit TransferSingle(operator, from, address(0), id, amount);
-
-    _afterTokenTransfer(operator, from, address(0), ids, amounts, "");
+    (uint256[] memory ids, uint256[] memory values) = _asSingletonArrays(id, value);
+    _updateWithAcceptanceCheck(from, address(0), ids, values, "");
   }
 
   /**
@@ -393,175 +379,152 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
    *
    * Requirements:
    *
-   * - `ids` and `amounts` must have the same length.
+   * - `from` cannot be the zero address.
+   * - `from` must have at least `value` amount of tokens of type `id`.
+   * - `ids` and `values` must have the same length.
    */
-  function _burnBatch(
-    address from,
-    uint256[] memory ids,
-    uint256[] memory amounts
-  ) internal virtual {
-    require(from != address(0), "ERC1155: burn from the zero address");
-    require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
-
-    address operator = _msgSender();
-
-    _beforeTokenTransfer(operator, from, address(0), ids, amounts, "");
-
-    for (uint256 i; i < ids.length; ) {
-      uint256 id = ids[i];
-      uint256 amount = amounts[i];
-
-      uint256 fromBalance = _balances[id][from];
-      require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
-      unchecked {
-        _balances[id][from] = fromBalance - amount;
-      }
-
-      unchecked {
-        i += 1;
-      }
+  function _burnBatch(address from, uint256[] memory ids, uint256[] memory values) internal {
+    if (from == address(0)) {
+      revert ERC1155InvalidSender(address(0));
     }
-
-    emit TransferBatch(operator, from, address(0), ids, amounts);
-
-    _afterTokenTransfer(operator, from, address(0), ids, amounts, "");
+    _updateWithAcceptanceCheck(from, address(0), ids, values, "");
   }
 
   /**
    * @dev Approve `operator` to operate on all of `owner` tokens
    *
    * Emits an {ApprovalForAll} event.
+   *
+   * Requirements:
+   *
+   * - `operator` cannot be the zero address.
    */
   function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
-    require(owner != operator, "ERC1155: setting approval status for self");
+    if (operator == address(0)) {
+      revert ERC1155InvalidOperator(address(0));
+    }
     _operatorApprovals[owner][operator] = approved;
     emit ApprovalForAll(owner, operator, approved);
   }
 
   /**
-   * @dev Hook that is called before any token transfer. This includes minting
-   * and burning, as well as batched variants.
-   *
-   * The same hook is called on both single and batched variants. For single
-   * transfers, the length of the `ids` and `amounts` arrays will be 1.
-   *
-   * Calling conditions (for each `id` and `amount` pair):
-   *
-   * - When `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-   * of token type `id` will be  transferred to `to`.
-   * - When `from` is zero, `amount` tokens of token type `id` will be minted
-   * for `to`.
-   * - when `to` is zero, `amount` of ``from``'s tokens of token type `id`
-   * will be burned.
-   * - `from` and `to` are never both zero.
-   * - `ids` and `amounts` have the same, non-zero length.
-   *
-   * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+   * @dev Performs an acceptance check by calling {IERC1155-onERC1155Received} on the `to` address
+   * if it contains code at the moment of execution.
    */
-  function _beforeTokenTransfer(
-    address operator,
-    address from,
-    address to,
-    uint256[] memory ids,
-    uint256[] memory amounts,
-    bytes memory data
-  ) internal virtual {}
-
-  /**
-   * @dev Hook that is called after any token transfer. This includes minting
-   * and burning, as well as batched variants.
-   *
-   * The same hook is called on both single and batched variants. For single
-   * transfers, the length of the `id` and `amount` arrays will be 1.
-   *
-   * Calling conditions (for each `id` and `amount` pair):
-   *
-   * - When `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-   * of token type `id` will be  transferred to `to`.
-   * - When `from` is zero, `amount` tokens of token type `id` will be minted
-   * for `to`.
-   * - when `to` is zero, `amount` of ``from``'s tokens of token type `id`
-   * will be burned.
-   * - `from` and `to` are never both zero.
-   * - `ids` and `amounts` have the same, non-zero length.
-   *
-   * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
-   */
-  function _afterTokenTransfer(
-    address operator,
-    address from,
-    address to,
-    uint256[] memory ids,
-    uint256[] memory amounts,
-    bytes memory data
-  ) internal virtual {}
-
   function _doSafeTransferAcceptanceCheck(
     address operator,
     address from,
     address to,
     uint256 id,
-    uint256 amount,
+    uint256 value,
     bytes memory data
   ) internal virtual {
     if (to.code.length > 0) {
-      try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (
+      try IERC1155Receiver(to).onERC1155Received(operator, from, id, value, data) returns (
         bytes4 response
       ) {
         if (response != IERC1155Receiver.onERC1155Received.selector) {
-          revert("ERC1155: ERC1155Receiver rejected tokens");
+          // Tokens rejected
+          revert ERC1155InvalidReceiver(to);
         }
-      } catch Error(string memory reason) {
-        revert(reason);
-      } catch {
-        revert("ERC1155: transfer to non-ERC1155Receiver implementer");
+      } catch (bytes memory reason) {
+        if (reason.length == 0) {
+          // non-ERC1155Receiver implementer
+          revert ERC1155InvalidReceiver(to);
+        } else {
+          /// @solidity memory-safe-assembly
+          assembly {
+            revert(add(32, reason), mload(reason))
+          }
+        }
       }
     }
   }
 
+  /**
+   * @dev Performs a batch acceptance check by calling {IERC1155-onERC1155BatchReceived} on the `to` address
+   * if it contains code at the moment of execution.
+   */
   function _doSafeBatchTransferAcceptanceCheck(
     address operator,
     address from,
     address to,
     uint256[] memory ids,
-    uint256[] memory amounts,
+    uint256[] memory values,
     bytes memory data
   ) private {
     if (to.code.length > 0) {
-      try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, amounts, data) returns (
+      try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, values, data) returns (
         bytes4 response
       ) {
         if (response != IERC1155Receiver.onERC1155BatchReceived.selector) {
-          revert("ERC1155: ERC1155Receiver rejected tokens");
+          // Tokens rejected
+          revert ERC1155InvalidReceiver(to);
         }
-      } catch Error(string memory reason) {
-        revert(reason);
-      } catch {
-        revert("ERC1155: transfer to non-ERC1155Receiver implementer");
+      } catch (bytes memory reason) {
+        if (reason.length == 0) {
+          // non-ERC1155Receiver implementer
+          revert ERC1155InvalidReceiver(to);
+        } else {
+          /// @solidity memory-safe-assembly
+          assembly {
+            revert(add(32, reason), mload(reason))
+          }
+        }
       }
     }
   }
 
-  function _asSingletonArray(uint256 element) private pure returns (uint256[] memory) {
-    uint256[] memory array = new uint256[](1);
-    array[0] = element;
+  /**
+   * @dev Creates an array in memory with only one value for each of the elements provided.
+   */
+  function _asSingletonArrays(
+    uint256 element1,
+    uint256 element2
+  ) private pure returns (uint256[] memory array1, uint256[] memory array2) {
+    /// @solidity memory-safe-assembly
+    assembly {
+      // Load the free memory pointer
+      array1 := mload(0x40)
+      // Set array length to 1
+      mstore(array1, 1)
+      // Store the single element at the next word after the length (where content starts)
+      mstore(add(array1, 0x20), element1)
 
-    return array;
+      // Repeat for next array locating it right after the first array
+      array2 := add(array1, 0x40)
+      mstore(array2, 1)
+      mstore(add(array2, 0x20), element2)
+
+      // Update the free memory pointer by pointing after the second array
+      mstore(0x40, add(array2, 0x40))
+    }
   }
 }
 
-/**
- * @dev Extension of {ERC1155} that allows token holders to destroy both their
- * own tokens and those that they have been approved to use.
- *
- * _Available since v3.1._
- */
+abstract contract ERC1155Pausable is ERC1155, Pausable {
+  /**
+   * @dev See {ERC1155-_update}.
+   *
+   * Requirements:
+   *
+   * - the contract must not be paused.
+   */
+  function _update(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory values
+  ) internal virtual override whenNotPaused {
+    super._update(from, to, ids, values);
+  }
+}
+
 abstract contract ERC1155Burnable is IERC1155Burnable, ERC1155 {
   function burn(address account, uint256 id, uint256 value) public virtual override {
-    require(
-      account == _msgSender() || isApprovedForAll(account, _msgSender()),
-      "ERC1155: caller is not token owner or approved"
-    );
+    if (account != _msgSender() && !isApprovedForAll(account, _msgSender())) {
+      revert ERC1155MissingApprovalForAll(_msgSender(), account);
+    }
 
     _burn(account, id, value);
   }
@@ -570,85 +533,110 @@ abstract contract ERC1155Burnable is IERC1155Burnable, ERC1155 {
     address account,
     uint256[] memory ids,
     uint256[] memory values
-  ) public virtual override {
-    require(
-      account == _msgSender() || isApprovedForAll(account, _msgSender()),
-      "ERC1155: caller is not token owner or approved"
-    );
+  ) public virtual {
+    if (account != _msgSender() && !isApprovedForAll(account, _msgSender())) {
+      revert ERC1155MissingApprovalForAll(_msgSender(), account);
+    }
 
     _burnBatch(account, ids, values);
   }
 }
 
-/**
- * @dev Extension of ERC1155 that adds tracking of total supply per id.
- *
- * Useful for scenarios where Fungible and Non-fungible tokens have to be
- * clearly identified. Note: While a totalSupply of 1 might mean the
- * corresponding is an NFT, there is no guarantees that no other token with the
- * same id are not going to be minted.
- */
 abstract contract ERC1155Supply is IERC1155Supply, ERC1155 {
-  mapping(uint256 => uint256) private _totalSupply;
+  mapping(uint256 id => uint256) private _totalSupply;
+  uint256 private _totalSupplyAll;
 
   /**
-   * @dev Total amount of tokens in with a given id.
+   * @dev Total value of tokens in with a given id.
    */
-  function totalSupply(uint256 id) public view virtual override returns (uint256) {
+  function totalSupply(uint256 id) public view virtual returns (uint256) {
     return _totalSupply[id];
+  }
+
+  /**
+   * @dev Total value of tokens.
+   */
+  function totalSupply() public view virtual returns (uint256) {
+    return _totalSupplyAll;
   }
 
   /**
    * @dev Indicates whether any token exist with a given id, or not.
    */
-  function exists(uint256 id) public view virtual override returns (bool) {
-    return ERC1155Supply.totalSupply(id) > 0;
+  function exists(uint256 id) public view virtual returns (bool) {
+    return totalSupply(id) > 0;
   }
 
   /**
-   * @dev See {ERC1155-_beforeTokenTransfer}.
+   * @dev See {ERC1155-_update}.
    */
-  function _beforeTokenTransfer(
-    address operator,
+  function _update(
     address from,
     address to,
     uint256[] memory ids,
-    uint256[] memory amounts,
-    bytes memory data
+    uint256[] memory values
   ) internal virtual override {
-    super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    super._update(from, to, ids, values);
 
     if (from == address(0)) {
-      for (uint256 i; i < ids.length; ) {
-        _totalSupply[ids[i]] += amounts[i];
-
-        unchecked {
-          i += 1;
-        }
+      uint256 totalMintValue = 0;
+      for (uint256 i = 0; i < ids.length; ++i) {
+        uint256 value = values[i];
+        // Overflow check required: The rest of the code assumes that totalSupply never overflows
+        _totalSupply[ids[i]] += value;
+        totalMintValue += value;
       }
+      // Overflow check required: The rest of the code assumes that totalSupplyAll never overflows
+      _totalSupplyAll += totalMintValue;
     }
 
     if (to == address(0)) {
-      for (uint256 i; i < ids.length; ) {
-        uint256 id = ids[i];
-        uint256 amount = amounts[i];
-        uint256 supply = _totalSupply[id];
-        require(supply >= amount, "ERC1155: burn amount exceeds totalSupply");
-        unchecked {
-          _totalSupply[id] = supply - amount;
+      uint256 totalBurnValue = 0;
+      for (uint256 i = 0; i < ids.length; ++i) {
+        uint256 value = values[i];
 
-          i += 1;
+        unchecked {
+          // Overflow not possible: values[i] <= balanceOf(from, ids[i]) <= totalSupply(ids[i])
+          _totalSupply[ids[i]] -= value;
+          // Overflow not possible: sum_i(values[i]) <= sum_i(totalSupply(ids[i])) <= totalSupplyAll
+          totalBurnValue += value;
         }
+      }
+      unchecked {
+        // Overflow not possible: totalBurnValue = sum_i(values[i]) <= sum_i(totalSupply(ids[i])) <= totalSupplyAll
+        _totalSupplyAll -= totalBurnValue;
       }
     }
   }
 }
 
+/**
+ * @notice Base contract for gETH.
+ * @dev Above contracts are taken from Openzeppelin.
+ * @dev Only difference is _doSafeTransferAcceptanceCheck is being internal virtual instead of private, because we want to be able to override it in gETH:
+ * ERC1155:
+ * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/cffb2f1ddcd87efd68effc92cfd336c5145acabd/contracts/token/ERC1155/ERC1155.sol#1
+ * ERC1155Pausable:
+ * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/37afdc8910f2853426c20e504ecfe5d992e21813/contracts/token/ERC1155/extensions/ERC1155Pausable.sol#L1
+ * ERC1155Burnable:
+ * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/37afdc8910f2853426c20e504ecfe5d992e21813/contracts/token/ERC1155/extensions/ERC1155Burnable.sol#L1
+ * ERC1155Supply:
+ * * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/37afdc8910f2853426c20e504ecfe5d992e21813/contracts/token/ERC1155/extensions/ERC1155Supply.sol#L1
+ *
+ * @dev Below contract ERC1155PausableBurnableSupply is created with openzeppelin wizard:
+ * + Mintable
+ * + Burnable
+ * + Supply Tracking
+ * + Pausable
+ * + Updatable URI
+ * + Roles
+ * Additionally, its constructor is changed for some gas savings.
+ */
 contract ERC1155PausableBurnableSupply is
   IERC1155PausableBurnableSupply,
   ERC1155,
   AccessControl,
-  Pausable,
+  ERC1155Pausable,
   ERC1155Burnable,
   ERC1155Supply
 {
@@ -693,22 +681,20 @@ contract ERC1155PausableBurnableSupply is
     _mintBatch(to, ids, amounts, data);
   }
 
-  function _beforeTokenTransfer(
-    address operator,
+  // The following functions are overrides required by Solidity.
+
+  function _update(
     address from,
     address to,
     uint256[] memory ids,
-    uint256[] memory amounts,
-    bytes memory data
-  ) internal override(ERC1155, ERC1155Supply) whenNotPaused {
-    super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    uint256[] memory values
+  ) internal override(ERC1155, ERC1155Pausable, ERC1155Supply) {
+    super._update(from, to, ids, values);
   }
-
-  // The following functions are overrides required by Solidity.
 
   function supportsInterface(
     bytes4 interfaceId
-  ) public view override(IERC165, ERC1155, AccessControl) returns (bool) {
+  ) public view override(ERC1155, AccessControl, IERC165) returns (bool) {
     return super.supportsInterface(interfaceId);
   }
 }

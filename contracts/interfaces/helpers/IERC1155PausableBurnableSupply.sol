@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+/// @dev IERC1155 inherits IERC165
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
+import {IERC1155Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
-interface IERC1155Burnable is IERC165, IERC1155, IERC1155MetadataURI {
+interface IERC1155Burnable is IERC1155, IERC1155MetadataURI, IERC1155Errors {
   function burn(address account, uint256 id, uint256 value) external;
 
   function burnBatch(address account, uint256[] memory ids, uint256[] memory values) external;
 }
 
-interface IERC1155Supply is IERC165, IERC1155, IERC1155MetadataURI {
+interface IERC1155Supply is IERC1155, IERC1155MetadataURI, IERC1155Errors {
   function totalSupply(uint256 id) external view returns (uint256);
 
   function exists(uint256 id) external view returns (bool);
