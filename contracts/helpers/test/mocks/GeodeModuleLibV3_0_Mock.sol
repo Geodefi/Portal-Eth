@@ -2,7 +2,7 @@
 pragma solidity =0.8.20;
 
 // structs
-import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
+import {DataStoreModuleStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
 // globals
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
@@ -42,7 +42,7 @@ struct DualGovernanceV3_0_Mock {
  * Administration of the Isolated Storage with a Dual Governance consisting a Governance and a Senate.
  * Administration of a UUPS contract with Limited Upgradability for Packages like Portal, LiquidityPool.
  *
- * @dev review: DataStoreModule for the IsolatedStorage logic.
+ * @dev review: DataStoreModule for the id based isolated storage logic.
  * @dev review: Reserved TYPEs are defined within globals/id_type.sol
  *
  * @dev SENATE_EXPIRY is not mandatory to utilize. Simply set it to MAX_UINT256 if rescueSenate is not needed.
@@ -54,13 +54,13 @@ struct DualGovernanceV3_0_Mock {
  * @dev Currently, there are no way to set a new Governance.
  *
  *
- * @dev Contracts relying on this library must use GeodeModuleLib.DualGovernance
+ * @dev Contracts relying on this library must use GeodeModuleLib.GeodeModuleStorage
  * @dev This is an external library, requires deployment.
  *
  * @author Ice Bear & Crash Bandicoot
  */
 library GeodeModuleLibV3_0_Mock {
-  using DSML for IsolatedStorage;
+  using DSML for DataStoreModuleStorage;
 
   /**
    * @custom:section                           ** CONSTANTS **
@@ -96,7 +96,7 @@ library GeodeModuleLibV3_0_Mock {
     _;
   }
 
-  modifier onlyController(IsolatedStorage storage DATASTORE, uint256 id) {
+  modifier onlyController(DataStoreModuleStorage storage DATASTORE, uint256 id) {
     require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "GML:CONTROLLER role needed");
     _;
   }
@@ -179,7 +179,7 @@ library GeodeModuleLibV3_0_Mock {
    */
   function propose(
     DualGovernanceV3_0_Mock storage self,
-    IsolatedStorage storage DATASTORE,
+    DataStoreModuleStorage storage DATASTORE,
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
@@ -244,7 +244,7 @@ library GeodeModuleLibV3_0_Mock {
    */
   function approveProposal(
     DualGovernanceV3_0_Mock storage self,
-    IsolatedStorage storage DATASTORE,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 id
   ) external onlySenate(self) returns (address _controller, uint256 _type, bytes memory _name) {
     require(self.proposals[id].deadline > block.timestamp, "GML:NOT an active proposal");
@@ -293,7 +293,7 @@ library GeodeModuleLibV3_0_Mock {
    * @dev can not provide address(0), try 0x000000000000000000000000000000000000dEaD
    */
   function changeIdCONTROLLER(
-    IsolatedStorage storage DATASTORE,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 id,
     address newCONTROLLER
   ) external onlyController(DATASTORE, id) {

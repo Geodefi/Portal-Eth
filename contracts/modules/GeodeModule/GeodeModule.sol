@@ -10,7 +10,8 @@ import {ID_TYPE} from "../../globals/id_type.sol";
 // internal - interfaces
 import {IGeodeModule} from "../../interfaces/modules/IGeodeModule.sol";
 // internal - structs
-import {DualGovernance} from "./structs/storage.sol";
+import {DataStoreModuleStorage} from "../DataStoreModule/structs/storage.sol";
+import {GeodeModuleStorage} from "./structs/storage.sol";
 import {Proposal} from "./structs/utils.sol";
 // internal - libraries
 import {GeodeModuleLib as GML} from "./libs/GeodeModuleLib.sol";
@@ -48,7 +49,7 @@ import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
  * @author Ice Bear & Crash Bandicoot
  */
 abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule {
-  using GML for DualGovernance;
+  using GML for GeodeModuleStorage;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -56,12 +57,26 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  DualGovernance internal GEODE;
+
+  // keccak256(abi.encode(uint256(keccak256("geode.storage.GeodeModuleStorage")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant GeodeModuleStorageLocation =
+    0x121584cf2b7b1dee51ceaabc76cdefc72f829ce42dd8cc5282d8e9f009b04200;
+
+  function _getGeodeModuleStorage() internal pure returns (GeodeModuleStorage storage $) {
+    assembly {
+      $.slot := GeodeModuleStorageLocation
+    }
+  }
 
   /**
    * @custom:section                           ** EVENTS **
    */
   event ContractVersionSet(uint256 version);
+
+  event ControllerChanged(uint256 indexed ID, address CONTROLLER);
+  event Proposed(uint256 indexed TYPE, uint256 ID, address CONTROLLER, uint256 deadline);
+  event Approved(uint256 ID);
+  event NewSenate(address senate, uint256 expiry);
 
   /**
    * @custom:section                           ** ABSTRACT FUNCTIONS **
@@ -104,26 +119,29 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
     require(packageType != 0, "GM:packageType can not be zero");
     require(initVersionName.length != 0, "GM:initVersionName can not be empty");
 
-    GEODE.GOVERNANCE = msg.sender;
-    GEODE.SENATE = msg.sender;
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    $.GOVERNANCE = msg.sender;
+    $.SENATE = msg.sender;
 
-    GEODE.SENATE_EXPIRY = senateExpiry;
-    GEODE.PACKAGE_TYPE = packageType;
+    $.SENATE_EXPIRY = senateExpiry;
+    $.PACKAGE_TYPE = packageType;
 
-    uint256 initVersion = GEODE.propose(
-      DATASTORE,
+    DataStoreModuleStorage storage DSMStorage = _getDataStoreModuleStorage();
+
+    uint256 initVersion = $.propose(
+      DSMStorage,
       ERC1967Utils.getImplementation(),
       packageType,
       initVersionName,
       1 days
     );
 
-    GEODE.approveProposal(DATASTORE, initVersion);
+    $.approveProposal(DSMStorage, initVersion);
 
-    _setContractVersion(DSML.generateId(initVersionName, GEODE.PACKAGE_TYPE));
+    _setContractVersion(DSML.generateId(initVersionName, $.PACKAGE_TYPE));
 
-    GEODE.GOVERNANCE = governance;
-    GEODE.SENATE = senate;
+    $.GOVERNANCE = governance;
+    $.SENATE = senate;
   }
 
   /**
@@ -136,14 +154,16 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
    * @dev required by the OZ UUPS module, improved by the Geode Module.
    */
   function _authorizeUpgrade(address proposed_implementation) internal virtual override {
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
     require(
-      GEODE.isUpgradeAllowed(proposed_implementation, ERC1967Utils.getImplementation()),
+      $.isUpgradeAllowed(proposed_implementation, ERC1967Utils.getImplementation()),
       "GM:not allowed to upgrade"
     );
   }
 
   function _setContractVersion(uint256 id) internal virtual {
-    GEODE.CONTRACT_VERSION = id;
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    $.CONTRACT_VERSION = id;
     emit ContractVersionSet(id);
   }
 
@@ -175,21 +195,30 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
       uint256 packageType
     )
   {
-    governance = GEODE.GOVERNANCE;
-    senate = GEODE.SENATE;
-    approvedUpgrade = GEODE.APPROVED_UPGRADE;
-    senateExpiry = GEODE.SENATE_EXPIRY;
-    packageType = GEODE.PACKAGE_TYPE;
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+
+    governance = $.GOVERNANCE;
+    senate = $.SENATE;
+    approvedUpgrade = $.APPROVED_UPGRADE;
+    senateExpiry = $.SENATE_EXPIRY;
+    packageType = $.PACKAGE_TYPE;
+  }
+
+  function getGovernance() external view virtual override returns (address) {
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    return $.GOVERNANCE;
   }
 
   function getContractVersion() public view virtual override returns (uint256) {
-    return GEODE.CONTRACT_VERSION;
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    return $.CONTRACT_VERSION;
   }
 
   function getProposal(
     uint256 id
   ) external view virtual override returns (Proposal memory proposal) {
-    proposal = GEODE.getProposal(id);
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    proposal = $.getProposal(id);
   }
 
   /**
@@ -209,11 +238,13 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
     bytes calldata _NAME,
     uint256 duration
   ) public virtual override returns (uint256 id) {
-    id = GEODE.propose(DATASTORE, _CONTROLLER, _TYPE, _NAME, duration);
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    id = $.propose(_getDataStoreModuleStorage(), _CONTROLLER, _TYPE, _NAME, duration);
   }
 
   function rescueSenate(address _newSenate) external virtual override {
-    GEODE.rescueSenate(_newSenate);
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    $.rescueSenate(_newSenate);
   }
 
   /**
@@ -222,19 +253,22 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
 
   /**
    * @dev handles PACKAGE_TYPE proposals by upgrading the contract immediately.
+   * @dev onlySenate is checked inside GML.approveProposal
    */
   function approveProposal(
     uint256 id
   ) public virtual override returns (address _controller, uint256 _type, bytes memory _name) {
-    (_controller, _type, _name) = GEODE.approveProposal(DATASTORE, id);
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    (_controller, _type, _name) = $.approveProposal(_getDataStoreModuleStorage(), id);
 
-    if (_type == GEODE.PACKAGE_TYPE) {
+    if (_type == $.PACKAGE_TYPE) {
       _handleUpgrade(_controller, id);
     }
   }
 
   function changeSenate(address _newSenate) external virtual override {
-    GEODE.changeSenate(_newSenate);
+    GeodeModuleStorage storage $ = _getGeodeModuleStorage();
+    $.changeSenate(_newSenate);
   }
 
   /**
@@ -242,6 +276,6 @@ abstract contract GeodeModule is IGeodeModule, UUPSUpgradeable, DataStoreModule 
    */
 
   function changeIdCONTROLLER(uint256 id, address newCONTROLLER) external virtual override {
-    GML.changeIdCONTROLLER(DATASTORE, id, newCONTROLLER);
+    GML.changeIdCONTROLLER(_getDataStoreModuleStorage(), id, newCONTROLLER);
   }
 }

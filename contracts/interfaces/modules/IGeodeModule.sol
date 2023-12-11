@@ -18,6 +18,8 @@ interface IGeodeModule is IDataStoreModule {
       uint256 packageType
     );
 
+  function getGovernance() external view returns (address);
+
   function getContractVersion() external view returns (uint256);
 
   function getProposal(uint256 id) external view returns (Proposal memory proposal);

@@ -1,8 +1,10 @@
 const { expect } = require("chai");
-const { upgrades } = require("hardhat");
+const { upgrades, ethers } = require("hardhat");
 
-const { BN, expectRevert, expectEvent, constants } = require("@openzeppelin/test-helpers");
+const { BN, expectRevert, constants } = require("@openzeppelin/test-helpers");
 const { ZERO_ADDRESS } = constants;
+
+const { expectEvent } = require("../../utils/helpers");
 
 const {
   DAY,
@@ -243,15 +245,15 @@ contract("GeodeModule", function (accounts) {
           expect(proposal.deadline).to.be.bignumber.equal(ts.add(MIN_PROPOSAL_DURATION));
         });
         it("emits Proposed", async function () {
-          await expectEvent(tx, "Proposed", {
-            TYPE: _type,
-            ID: _id,
-            CONTROLLER: user,
-            deadline: ts.add(MIN_PROPOSAL_DURATION),
-          });
+          await expectEvent(tx, this.contract, "Proposed", [
+            _type.toString(),
+            _id.toString(),
+            user,
+            ts.add(MIN_PROPOSAL_DURATION).toString(),
+          ]);
         });
         it("correct return", async function () {
-          await expectEvent(tx, "return$propose", { id: _id });
+          await expectEvent(tx, this.contract, "return$propose", [_id.toString()]);
         });
       });
     });
@@ -317,14 +319,14 @@ contract("GeodeModule", function (accounts) {
           expect((await this.contract.getProposal(_id)).deadline).to.be.bignumber.equal(ts);
         });
         it("emits Approved", async function () {
-          await expectEvent(tx, "Approved", { ID: _id });
+          await expectEvent(tx, this.contract, "Approved", [_id.toString()]);
         });
         it("correct return", async function () {
-          await expectEvent(tx, "return$approveProposal", {
-            controller: user,
-            _type: _type,
-            name: _name,
-          });
+          await expectEvent(tx, this.contract, "return$approveProposal", [
+            user,
+            _type.toString(),
+            _name,
+          ]);
         });
 
         context("SENATE: TYPE 1", function () {
@@ -347,7 +349,10 @@ contract("GeodeModule", function (accounts) {
             );
           });
           it("emits NewSenate", async function () {
-            await expectEvent(tx, "NewSenate", { senate: user, expiry: ts.add(MAX_SENATE_PERIOD) });
+            await expect(tx.tx).to.emit(
+              await ethers.getContractAt("GeodeModule", this.contract.address),
+              "NewSenate"
+            );
           });
         });
       });

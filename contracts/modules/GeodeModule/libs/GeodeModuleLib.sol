@@ -5,9 +5,9 @@ pragma solidity =0.8.20;
 import {ID_TYPE} from "../../../globals/id_type.sol";
 import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol";
 // internal - structs
-import {DualGovernance} from "../structs/storage.sol";
+import {DataStoreModuleStorage} from "../../DataStoreModule/structs/storage.sol";
+import {GeodeModuleStorage} from "../structs/storage.sol";
 import {Proposal} from "../structs/utils.sol";
-import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
 // internal - libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 
@@ -18,7 +18,7 @@ import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreMo
  * Administration of the Isolated Storage with a Dual Governance consisting a Governance and a Senate.
  * Administration of a UUPS contract with Limited Upgradability for Packages like Portal, LiquidityPool.
  *
- * @dev review: DataStoreModule for the IsolatedStorage logic.
+ * @dev review: DataStoreModule for the id based isolated storage logic.
  * @dev review: Reserved TYPEs are defined within globals/id_type.sol
  *
  * @dev SENATE_EXPIRY is not mandatory to utilize. Simply set it to MAX_UINT256 if rescueSenate is not needed.
@@ -30,13 +30,13 @@ import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreMo
  * @dev Currently, there are no way to set a new Governance.
  *
  *
- * @dev Contracts relying on this library must use GeodeModuleLib.DualGovernance
+ * @dev Contracts relying on this library must use GeodeModuleLib.GeodeModuleStorage
  * @dev This is an external library, requires deployment.
  *
  * @author Ice Bear & Crash Bandicoot
  */
 library GeodeModuleLib {
-  using DSML for IsolatedStorage;
+  using DSML for DataStoreModuleStorage;
 
   /**
    * @custom:section                           ** CONSTANTS **
@@ -61,18 +61,18 @@ library GeodeModuleLib {
   /**
    * @custom:section                           ** MODIFIERS **
    */
-  modifier onlyGovernance(DualGovernance storage self) {
+  modifier onlyGovernance(GeodeModuleStorage storage self) {
     require(msg.sender == self.GOVERNANCE, "GML:GOVERNANCE role needed");
     _;
   }
 
-  modifier onlySenate(DualGovernance storage self) {
+  modifier onlySenate(GeodeModuleStorage storage self) {
     require(msg.sender == self.SENATE, "GML:SENATE role needed");
     require(block.timestamp < self.SENATE_EXPIRY, "GML:SENATE expired");
     _;
   }
 
-  modifier onlyController(IsolatedStorage storage DATASTORE, uint256 id) {
+  modifier onlyController(DataStoreModuleStorage storage DATASTORE, uint256 id) {
     require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "GML:CONTROLLER role needed");
     _;
   }
@@ -90,7 +90,7 @@ library GeodeModuleLib {
    * @dev currentImplementation or zero as proposedImplementation will return false
    **/
   function isUpgradeAllowed(
-    DualGovernance storage self,
+    GeodeModuleStorage storage self,
     address proposedImplementation,
     address currentImplementation
   ) external view returns (bool) {
@@ -107,7 +107,7 @@ library GeodeModuleLib {
    */
 
   function getProposal(
-    DualGovernance storage self,
+    GeodeModuleStorage storage self,
     uint256 id
   ) external view returns (Proposal memory) {
     return self.proposals[id];
@@ -122,7 +122,11 @@ library GeodeModuleLib {
    *
    * @custom:visibility -> internal
    */
-  function _setSenate(DualGovernance storage self, address _newSenate, uint256 _expiry) internal {
+  function _setSenate(
+    GeodeModuleStorage storage self,
+    address _newSenate,
+    uint256 _expiry
+  ) internal {
     require(_newSenate != address(0), "GML:Senate cannot be zero address");
     self.SENATE = _newSenate;
     self.SENATE_EXPIRY = _expiry;
@@ -142,8 +146,8 @@ library GeodeModuleLib {
    * @dev Proposals can NEVER be overriden
    */
   function propose(
-    DualGovernance storage self,
-    IsolatedStorage storage DATASTORE,
+    GeodeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     address _CONTROLLER,
     uint256 _TYPE,
     bytes calldata _NAME,
@@ -183,7 +187,7 @@ library GeodeModuleLib {
    * @dev Refreshes the expiry
    */
   function rescueSenate(
-    DualGovernance storage self,
+    GeodeModuleStorage storage self,
     address _newSenate
   ) external onlyGovernance(self) {
     require(block.timestamp > self.SENATE_EXPIRY, "GML:cannot rescue yet");
@@ -207,8 +211,8 @@ library GeodeModuleLib {
    * @dev Senate is not able to approve expired proposals
    */
   function approveProposal(
-    DualGovernance storage self,
-    IsolatedStorage storage DATASTORE,
+    GeodeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 id
   ) external onlySenate(self) returns (address _controller, uint256 _type, bytes memory _name) {
     require(self.proposals[id].deadline > block.timestamp, "GML:NOT an active proposal");
@@ -238,7 +242,10 @@ library GeodeModuleLib {
    * @notice It is useful to be able to change the Senate's address without changing the expiry.
    * @dev Does not change the expiry
    */
-  function changeSenate(DualGovernance storage self, address _newSenate) external onlySenate(self) {
+  function changeSenate(
+    GeodeModuleStorage storage self,
+    address _newSenate
+  ) external onlySenate(self) {
     _setSenate(self, _newSenate, self.SENATE_EXPIRY);
   }
 
@@ -254,7 +261,7 @@ library GeodeModuleLib {
    * @dev can not provide address(0), try 0x000000000000000000000000000000000000dEaD
    */
   function changeIdCONTROLLER(
-    IsolatedStorage storage DATASTORE,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 id,
     address newCONTROLLER
   ) external onlyController(DATASTORE, id) {
