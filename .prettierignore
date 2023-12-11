@@ -4,6 +4,6 @@ cache
 coverage*
 gasReporterOutput.json
 
-contracts/Portal/gETHInterfaces
-contracts/Portal/helpers/ERC1155SupplyMinterPauser.sol
-contracts/Portal/helpers/BytesLib.sol
+contracts/gETHInterfaces
+contracts/helpers/ERC1155SupplyMinterPauser.sol
+contracts/helpers/BytesLib.sol
