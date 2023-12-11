@@ -1,50 +1,47 @@
-const { BN, expectRevert } = require("@openzeppelin/test-helpers");
-const LPToken = artifacts.require("$LPToken");
-const { shouldBehaveLikeERC20 } = require("../utils/ERC20.behavior");
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { deployWithProxy } = require("../utils/helpers");
+const {
+  shouldBehaveLikeERC20,
+  shouldBehaveLikeERC20Transfer,
+  shouldBehaveLikeERC20Approve,
+} = require("../utils/ERC20.behavior");
 
 contract("LPToken", function (accounts) {
-  const [deployer, recipient, anotherAccount] = accounts;
-  const name = "Test Token";
-  const symbol = "TEST";
-  const initialSupply = new BN(String(1e18)).muln(100);
+  const name = "LPToken";
+  const symbol = "LPT";
+  const initialSupply = 100n;
 
-  let factory;
+  const fixture = async () => {
+    const [initialHolder, recipient, anotherAccount] = await ethers.getSigners();
 
-  const deployWithProxy = async function () {
-    const contract = await upgrades.deployProxy(factory, [name, symbol], {
-      unsafeAllow: ["state-variable-assignment"],
-    });
-    await contract.waitForDeployment();
-    return await LPToken.at(contract.target);
+    const token = await deployWithProxy("$LPToken", [name, symbol]);
+    await token.$_mint(initialHolder, initialSupply);
+
+    return { initialHolder, recipient, anotherAccount, token };
   };
 
-  before(async function () {
-    factory = await ethers.getContractFactory("$LPToken");
-    this.deployWithProxy = deployWithProxy;
-  });
-
   beforeEach(async function () {
-    this.token = await this.deployWithProxy();
-    await this.token.mint(deployer, initialSupply);
+    Object.assign(this, await loadFixture(fixture));
+    this.approve = (owner, spender, value) => this.token.connect(owner).approve(spender, value);
   });
 
-  shouldBehaveLikeERC20("ERC20", initialSupply, deployer, recipient, anotherAccount);
+  shouldBehaveLikeERC20(initialSupply);
 
   describe("mint", function () {
     it("cannot mint 0", async function () {
-      await expectRevert(
-        this.token.mint(deployer, 0, { from: deployer }),
-        "LPToken: cannot mint 0"
-      );
+      await expect(
+        this.token.mint(this.initialHolder.address, 0n, { from: this.initialHolder })
+      ).to.be.revertedWithCustomError(this.token, "LPTokenZeroMint");
     });
   });
 
-  describe("_beforeTokenTransfer", function () {
+  describe("_update", function () {
     it("cannot send to itself", async function () {
-      await expectRevert(
-        this.token.$_beforeTokenTransfer(deployer, this.token.address, 1),
-        "LPToken: cannot send to itself"
-      );
+      await expect(this.token.$_update(this.initialHolder.address, this.token.target, 1n))
+        .to.be.revertedWithCustomError(this.token, "ERC20InvalidReceiver")
+        .withArgs(this.token.target);
     });
   });
 });

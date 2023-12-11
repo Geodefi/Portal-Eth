@@ -1,60 +1,69 @@
 const { expect } = require("chai");
-const { expectRevert, expectEvent } = require("@openzeppelin/test-helpers");
+const { ethers } = require("hardhat");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { expectCustomError, expectEvent } = require("../utils/helpers");
 
-const Whitelist = artifacts.require("$Whitelist");
-
-contract("Whitelist", function (accounts) {
-  const [owner, user] = accounts;
-
+contract("Whitelist", function () {
   beforeEach(async function () {
-    this.contract = await Whitelist.new({ from: owner });
+    Object.assign(this, await loadFixture(fixture));
   });
+
+  const fixture = async () => {
+    const [owner, user] = await ethers.getSigners();
+
+    const contract = await ethers.deployContract("$Whitelist", [], {
+      from: owner,
+    });
+    return { owner, user, contract };
+  };
 
   describe("setAddress", function () {
     it("onlyOwner", async function () {
-      await expectRevert(
-        this.contract.setAddress(owner, false, { from: user }),
-        "Ownable: caller is not the owner"
+      console.log(this.owner.address, this.user.address);
+      await expectCustomError(
+        this.contract.connect(this.user).setAddress(this.owner.address, false),
+        this.contract,
+        "OwnableUnauthorizedAccount",
+        [this.user.address]
       );
     });
 
     it("reverts if already set", async function () {
-      await expectRevert(
-        this.contract.setAddress(user, false, { from: owner }),
-        "Whitelist: already set"
+      await expectCustomError(
+        this.contract.setAddress(this.user, false, { from: this.owner }),
+        this.contract,
+        "AlreadySet"
       );
 
-      await this.contract.setAddress(user, true, { from: owner });
+      await this.contract.setAddress(this.user, true, { from: this.owner });
 
-      await expectRevert(
-        this.contract.setAddress(user, true, { from: owner }),
-        "Whitelist: already set"
+      await expectCustomError(
+        this.contract.setAddress(this.user, true, { from: this.owner }),
+        this.contract,
+        "AlreadySet"
       );
     });
 
     it("isAllowed returns correct", async function () {
-      await this.contract.setAddress(user, true);
-      expect(await this.contract.isAllowed(user)).to.be.equal(true);
+      await this.contract.setAddress(this.user, true);
+      expect(await this.contract.isAllowed(this.user)).to.be.equal(true);
 
-      await this.contract.setAddress(user, false);
-      expect(await this.contract.isAllowed(user)).to.be.equal(false);
+      await this.contract.setAddress(this.user, false);
+      expect(await this.contract.isAllowed(this.user)).to.be.equal(false);
 
-      await this.contract.setAddress(user, true);
-      expect(await this.contract.isAllowed(user)).to.be.equal(true);
+      await this.contract.setAddress(this.user, true);
+      expect(await this.contract.isAllowed(this.user)).to.be.equal(true);
 
-      await this.contract.setAddress(user, false);
-      expect(await this.contract.isAllowed(user)).to.be.equal(false);
+      await this.contract.setAddress(this.user, false);
+      expect(await this.contract.isAllowed(this.user)).to.be.equal(false);
     });
 
     it("emits Listed", async function () {
-      await expectEvent(await this.contract.setAddress(user, true), "Listed", {
-        account: user,
-        isWhitelisted: true,
-      });
-      await expectEvent(await this.contract.setAddress(user, false), "Listed", {
-        account: user,
-        isWhitelisted: false,
-      });
+      let receipt = await this.contract.setAddress(this.user, true);
+      await expectEvent(receipt, this.contract, "Listed", [this.user.address, true]);
+
+      receipt = await this.contract.setAddress(this.user, false);
+      await expectEvent(receipt, this.contract, "Listed", [this.user.address, false]);
     });
   });
 });
