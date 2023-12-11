@@ -8,10 +8,18 @@ interface IWithdrawalModule {
 
   function setExitThreshold(uint256 newThreshold) external;
 
+  function claimInfrastructureFees(address receiver) external returns (bool success);
+
   function WithdrawalParams()
     external
     view
-    returns (address gETH, address portal, uint256 poolId, uint256 exitThreshold);
+    returns (
+      address gETH,
+      address portal,
+      uint256 poolId,
+      uint256 exitThreshold,
+      uint256 gatheredInfrastructureFees
+    );
 
   function QueueParams()
     external

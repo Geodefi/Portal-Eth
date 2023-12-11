@@ -11,7 +11,7 @@ import {IgETH} from "../../../interfaces/IgETH.sol";
 import {IPortal} from "../../../interfaces/IPortal.sol";
 // internal - structs
 import {Queue, Request, ValidatorData} from "../structs/utils.sol";
-import {PooledWithdrawal} from "../structs/storage.sol";
+import {WithdrawalModuleStorage} from "../structs/storage.sol";
 // internal - libraries
 import {DepositContractLib as DCL} from "../../StakeModule/libs/DepositContractLib.sol";
 import {Validator} from "../../StakeModule/structs/utils.sol";
@@ -29,7 +29,6 @@ import {Validator} from "../../StakeModule/structs/utils.sol";
  * 2. Distributing the fees.
  * * Pool and Operator fees are distributed whenever the validator is processed.
  * * Note that if the validator is slashed before being processed, fees can be lost along with the stakers' profit.
- * * TODO: governanceFee.
  *
  * 3. Queueing withdrawal requests.
  * * Users can request a withdrawal by forfeiting their gETH tokens.
@@ -89,10 +88,10 @@ import {Validator} from "../../StakeModule/structs/utils.sol";
  * None of these approaches will be expensive, nor will disrupt the internal pricing for the latter requests.
  *
  * @dev while conducting the price calculations, a part of the balance within this contract should be taken into consideration.
- * This ETH amount can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - (TODO: ![realizedEtherBalance] OR [fulfilledEtherBalance])
+ * This ETH amount can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - [fulfilledEtherBalance] -> ? todo for oracle.
  * Note that, this is because: a price of the derivative is = total ETH / total Supply, and total ETH should include the balance within WC.
  *
- * @dev Contracts relying on this library must initialize WithdrawalModuleLib.PooledWithdrawal
+ * @dev Contracts relying on this library must initialize WithdrawalModuleLib.WithdrawalModuleStorage
  *
  * @dev There are 'owner' checks on 'transferRequest', _dequeue (used by dequeue, dequeueBatch).
  * However, we preferred to not use a modifier for that.
@@ -122,7 +121,7 @@ library WithdrawalModuleLib {
    * @custom:section                           ** HELPER **
    */
 
-  function _getPortal(PooledWithdrawal storage self) internal view returns (IPortal) {
+  function _getPortal(WithdrawalModuleStorage storage self) internal view returns (IPortal) {
     return IPortal(self.PORTAL);
   }
 
@@ -138,7 +137,7 @@ library WithdrawalModuleLib {
    * @dev an external view function, just as an helper.
    */
   function canFinalizeExit(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     bytes memory pubkey
   ) external view returns (bool) {
     if (self.validators[pubkey].beaconBalance != 0) {
@@ -161,7 +160,7 @@ library WithdrawalModuleLib {
    * @notice notifies Portal to change validator state from ACTIVE to EXIT_REQUESTED
    * @param pubkey public key of the given validator.
    */
-  function _requestExit(PooledWithdrawal storage self, bytes memory pubkey) internal {
+  function _requestExit(WithdrawalModuleStorage storage self, bytes memory pubkey) internal {
     _getPortal(self).requestExit(self.POOL_ID, pubkey);
   }
 
@@ -170,7 +169,7 @@ library WithdrawalModuleLib {
    * @dev no additional checks are needed as processValidators and PORTAL.finalizeExit has propser checks.
    * @param pubkey public key of the given validator.
    */
-  function _finalizeExit(PooledWithdrawal storage self, bytes memory pubkey) internal {
+  function _finalizeExit(WithdrawalModuleStorage storage self, bytes memory pubkey) internal {
     _getPortal(self).finalizeExit(self.POOL_ID, pubkey);
   }
 
@@ -181,7 +180,7 @@ library WithdrawalModuleLib {
    * @dev passing commonPoll around helps on gas on batch TXs.
    */
   function checkAndRequestExit(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     bytes calldata pubkey,
     uint256 commonPoll
   ) public returns (uint256) {
@@ -213,7 +212,7 @@ library WithdrawalModuleLib {
    * @param newThreshold as percentage, denominated in PERCENTAGE_DENOMINATOR.
    * @dev caller should be governed on module contract.
    */
-  function setExitThreshold(PooledWithdrawal storage self, uint256 newThreshold) external {
+  function setExitThreshold(WithdrawalModuleStorage storage self, uint256 newThreshold) external {
     require(newThreshold >= MIN_EXIT_THRESHOLD, "WML:min threshold is 60%");
     require(newThreshold <= PERCENTAGE_DENOMINATOR, "WML:max threshold is 100%");
 
@@ -233,7 +232,7 @@ library WithdrawalModuleLib {
    * @param pubkey public key of the given validator.
    */
   function getValidatorThreshold(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     bytes calldata pubkey
   ) public view returns (uint256 threshold, uint256 beaconBalancePriced) {
     uint256 price = self.gETH.pricePerShare(self.POOL_ID);
@@ -250,7 +249,11 @@ library WithdrawalModuleLib {
    * @param pubkey public key of the voted validator.
    * @param size specified gETH amount
    */
-  function _vote(PooledWithdrawal storage self, bytes calldata pubkey, uint256 size) internal {
+  function _vote(
+    WithdrawalModuleStorage storage self,
+    bytes calldata pubkey,
+    uint256 size
+  ) internal {
     Validator memory val = _getPortal(self).getValidator(pubkey);
 
     require(val.poolId == self.POOL_ID, "WML:vote for an unknown pool");
@@ -275,7 +278,7 @@ library WithdrawalModuleLib {
    * @param size specified gETH amount
    */
   function _enqueue(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256 trigger,
     uint256 size,
     address owner
@@ -302,7 +305,7 @@ library WithdrawalModuleLib {
    * @param owner allows caller to directly transfer the Request on creation
    */
   function enqueue(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256 size,
     bytes calldata pubkey,
     address owner
@@ -325,11 +328,10 @@ library WithdrawalModuleLib {
    * @notice enqueue() with batch optimizations
    * @param sizes array of gETH amount that are sent to enqueue multiple Requests.
    * @param pubkeys array of voted validators, vote goes into commonPoll if bytes(0) is given.
-   * @param owner the owner for all the Requests being created
-   * @dev TODO:  create and use _requestExitBatch to save gas
+   * @param owner the owner for all the Requests being created.
    */
   function enqueueBatch(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256[] calldata sizes,
     bytes[] calldata pubkeys,
     address owner
@@ -371,7 +373,7 @@ library WithdrawalModuleLib {
    * @dev only current Owner can change the owner
    */
   function transferRequest(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256 index,
     address newOwner
   ) external {
@@ -402,7 +404,7 @@ library WithdrawalModuleLib {
    * @dev taking the previously fulfilled amount into consideration as it is the previously claimed part.
    */
   function fulfillable(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256 index,
     uint256 qRealized,
     uint256 qFulfilled
@@ -435,7 +437,7 @@ library WithdrawalModuleLib {
    * @dev we burn the realized size of the Queue here because we do not want this process to mess with price
    * * calculations of the oracle.
    */
-  function _fulfill(PooledWithdrawal storage self, uint256 index) internal {
+  function _fulfill(WithdrawalModuleStorage storage self, uint256 index) internal {
     uint256 toFulfill = fulfillable(self, index, self.queue.realized, self.queue.fulfilled);
 
     if (toFulfill > 0) {
@@ -456,7 +458,7 @@ library WithdrawalModuleLib {
    * @param qPrice queue.realizedPrice, as a hot value.
    */
   function _fulfillBatch(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256[] calldata indexes,
     uint256 qRealized,
     uint256 qFulfilled,
@@ -489,11 +491,11 @@ library WithdrawalModuleLib {
   /**
    * @custom:visibility -> external
    */
-  function fulfill(PooledWithdrawal storage self, uint256 index) external {
+  function fulfill(WithdrawalModuleStorage storage self, uint256 index) external {
     _fulfill(self, index);
   }
 
-  function fulfillBatch(PooledWithdrawal storage self, uint256[] calldata indexes) external {
+  function fulfillBatch(WithdrawalModuleStorage storage self, uint256[] calldata indexes) external {
     _fulfillBatch(
       self,
       indexes,
@@ -517,7 +519,7 @@ library WithdrawalModuleLib {
    * @dev only owner can call this function
    */
   function _dequeue(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256 index
   ) internal returns (uint256 claimableETH) {
     require(msg.sender == self.requests[index].owner, "WML:not owner");
@@ -539,7 +541,7 @@ library WithdrawalModuleLib {
    * @param index placement of the Request within the requests array.
    * @dev only owner can call this function
    */
-  function dequeue(PooledWithdrawal storage self, uint256 index, address receiver) external {
+  function dequeue(WithdrawalModuleStorage storage self, uint256 index, address receiver) external {
     require(receiver != address(0), "WML:receiver can not be zero address");
 
     _fulfill(self, index);
@@ -554,7 +556,7 @@ library WithdrawalModuleLib {
    * @notice dequeue() with batch optimizations
    */
   function dequeueBatch(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256[] calldata indexes,
     address receiver
   ) external {
@@ -600,7 +602,7 @@ library WithdrawalModuleLib {
    @return extra calculated profit since the last time validator was processed
    */
   function _distributeFees(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     Validator memory val,
     uint256 reportedWithdrawn,
     uint256 processedWithdrawn
@@ -610,10 +612,13 @@ library WithdrawalModuleLib {
 
     uint256 poolProfit = (profit * val.poolFee) / PERCENTAGE_DENOMINATOR;
     uint256 operatorProfit = (profit * val.operatorFee) / PERCENTAGE_DENOMINATOR;
-    extra = (profit - poolProfit) - operatorProfit;
+    uint256 infrastructureProfit = (profit * val.infrastructureFee) / PERCENTAGE_DENOMINATOR;
 
     _getPortal(self).increaseWalletBalance{value: poolProfit}(val.poolId);
     _getPortal(self).increaseWalletBalance{value: operatorProfit}(val.operatorId);
+    self.gatheredInfrastructureFees += infrastructureProfit;
+
+    extra = ((profit - poolProfit) - operatorProfit) - infrastructureProfit;
   }
 
   /**
@@ -621,7 +626,7 @@ library WithdrawalModuleLib {
    * * by using the Ether from the latest withdrawals.
    */
   function _realizeProcessedEther(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     uint256 processedBalance
   ) internal {
     uint256 pps = self.gETH.pricePerShare(self.POOL_ID);
@@ -655,7 +660,7 @@ library WithdrawalModuleLib {
    * We should not be charging others extra to save their gas.
    */
   function processValidators(
-    PooledWithdrawal storage self,
+    WithdrawalModuleStorage storage self,
     bytes[] calldata pubkeys,
     uint256[] calldata beaconBalances,
     uint256[] calldata withdrawnBalances,

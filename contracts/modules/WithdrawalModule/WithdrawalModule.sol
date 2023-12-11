@@ -9,9 +9,10 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 // internal - interfaces
 import {IgETH} from "../../interfaces/IgETH.sol";
+import {IPortal} from "../../interfaces/IPortal.sol";
 import {IWithdrawalModule} from "../../interfaces/modules/IWithdrawalModule.sol";
 // internal - structs
-import {PooledWithdrawal} from "./structs/storage.sol";
+import {WithdrawalModuleStorage} from "./structs/storage.sol";
 // internal - libraries
 import {WithdrawalModuleLib as WML} from "./libs/WithdrawalModuleLib.sol";
 
@@ -30,8 +31,8 @@ import {WithdrawalModuleLib as WML} from "./libs/WithdrawalModuleLib.sol";
  *
  * @dev review: this module delegates its functionality to WML (WithdrawalModuleLib).
  *
- * @dev 3 functions need to be overriden with access control when inherited:
- * * pause, unpause, setExitThreshold
+ * @dev 4 functions need to be overriden with access control when inherited:
+ * * pause, unpause, setExitThreshold, claimInfrastructureFees
  *
  * @dev __WithdrawalModule_init (or _unchained) call is NECESSARY when inherited.
  *
@@ -46,14 +47,32 @@ abstract contract WithdrawalModule is
   ReentrancyGuardUpgradeable,
   PausableUpgradeable
 {
-  using WML for PooledWithdrawal;
+  using WML for WithdrawalModuleStorage;
   /**
    * @custom:section                           ** VARIABLES **
    *
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  PooledWithdrawal internal WITHDRAWAL;
+  // keccak256(abi.encode(uint256(keccak256("geode.storage.WithdrawalModuleStorage")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant WithdrawalModuleStorageLocation =
+    0x50605cc6f5170f0cdbb610edd2214831ea96f61cd1eba92cf58939f65736af00;
+
+  function _getWithdrawalModuleStorage() internal pure returns (WithdrawalModuleStorage storage $) {
+    assembly {
+      $.slot := WithdrawalModuleStorageLocation
+    }
+  }
+
+  /**
+   * @custom:section                           ** EVENTS **
+   */
+  event NewExitThreshold(uint256 threshold);
+  event Enqueue(uint256 indexed index, address owner);
+  event RequestTransfer(uint256 indexed index, address oldOwner, address newOwner);
+  event Dequeue(uint256 indexed index, uint256 claim);
+
+  /**
 
   /**
    * @custom:section                           ** ABSTRACT FUNCTIONS **
@@ -66,6 +85,10 @@ abstract contract WithdrawalModule is
   function unpause() external virtual override;
 
   function setExitThreshold(uint256 newThreshold) external virtual override;
+
+  function claimInfrastructureFees(
+    address receiver
+  ) external virtual override returns (bool success);
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -88,10 +111,14 @@ abstract contract WithdrawalModule is
   ) internal onlyInitializing {
     require(_gETH_position != address(0), "WM:gETH cannot be zero address");
     require(_portal_position != address(0), "WM:portal cannot be zero address");
-    WITHDRAWAL.gETH = IgETH(_gETH_position);
-    WITHDRAWAL.PORTAL = _portal_position;
-    WITHDRAWAL.POOL_ID = _poolId;
-    WITHDRAWAL.EXIT_THRESHOLD = WML.MIN_EXIT_THRESHOLD;
+
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    $.gETH = IgETH(_gETH_position);
+    $.PORTAL = _portal_position;
+    $.POOL_ID = _poolId;
+    $.EXIT_THRESHOLD = WML.MIN_EXIT_THRESHOLD;
+
+    $.gETH.avoidMiddlewares(_poolId, true);
   }
 
   /**
@@ -104,12 +131,20 @@ abstract contract WithdrawalModule is
     view
     virtual
     override
-    returns (address gETH, address portal, uint256 poolId, uint256 exitThreshold)
+    returns (
+      address gETH,
+      address portal,
+      uint256 poolId,
+      uint256 exitThreshold,
+      uint256 gatheredInfrastructureFees
+    )
   {
-    gETH = address(WITHDRAWAL.gETH);
-    portal = WITHDRAWAL.PORTAL;
-    poolId = WITHDRAWAL.POOL_ID;
-    exitThreshold = WITHDRAWAL.EXIT_THRESHOLD;
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    gETH = address($.gETH);
+    portal = $.PORTAL;
+    poolId = $.POOL_ID;
+    exitThreshold = $.EXIT_THRESHOLD;
+    gatheredInfrastructureFees = $.gatheredInfrastructureFees;
   }
 
   function QueueParams()
@@ -127,13 +162,14 @@ abstract contract WithdrawalModule is
       uint256 commonPoll
     )
   {
-    requested = WITHDRAWAL.queue.requested;
-    realized = WITHDRAWAL.queue.realized;
-    realizedEtherBalance = WITHDRAWAL.queue.realizedEtherBalance;
-    realizedPrice = WITHDRAWAL.queue.realizedPrice;
-    fulfilled = WITHDRAWAL.queue.fulfilled;
-    fulfilledEtherBalance = WITHDRAWAL.queue.fulfilledEtherBalance;
-    commonPoll = WITHDRAWAL.queue.commonPoll;
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    requested = $.queue.requested;
+    realized = $.queue.realized;
+    realizedEtherBalance = $.queue.realizedEtherBalance;
+    realizedPrice = $.queue.realizedPrice;
+    fulfilled = $.queue.fulfilled;
+    fulfilledEtherBalance = $.queue.fulfilledEtherBalance;
+    commonPoll = $.queue.commonPoll;
   }
 
   function getRequest(
@@ -151,11 +187,12 @@ abstract contract WithdrawalModule is
       uint256 claimableEther
     )
   {
-    owner = WITHDRAWAL.requests[index].owner;
-    trigger = WITHDRAWAL.requests[index].trigger;
-    size = WITHDRAWAL.requests[index].size;
-    fulfilled = WITHDRAWAL.requests[index].fulfilled;
-    claimableEther = WITHDRAWAL.requests[index].claimableEther;
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    owner = $.requests[index].owner;
+    trigger = $.requests[index].trigger;
+    size = $.requests[index].size;
+    fulfilled = $.requests[index].fulfilled;
+    claimableEther = $.requests[index].claimableEther;
   }
 
   function getValidatorData(
@@ -167,9 +204,10 @@ abstract contract WithdrawalModule is
     override
     returns (uint256 beaconBalance, uint256 withdrawnBalance, uint256 poll)
   {
-    beaconBalance = WITHDRAWAL.validators[pubkey].beaconBalance;
-    withdrawnBalance = WITHDRAWAL.validators[pubkey].withdrawnBalance;
-    poll = WITHDRAWAL.validators[pubkey].poll;
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    beaconBalance = $.validators[pubkey].beaconBalance;
+    withdrawnBalance = $.validators[pubkey].withdrawnBalance;
+    poll = $.validators[pubkey].poll;
   }
 
   /**
@@ -180,13 +218,15 @@ abstract contract WithdrawalModule is
    * @custom:visibility -> view
    */
   function canFinalizeExit(bytes memory pubkey) external view virtual override returns (bool) {
-    return WITHDRAWAL.canFinalizeExit(pubkey);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    return $.canFinalizeExit(pubkey);
   }
 
   function validatorThreshold(
     bytes memory pubkey
   ) external view virtual override returns (uint256 threshold) {
-    (threshold, ) = WITHDRAWAL.getValidatorThreshold(pubkey);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    (threshold, ) = $.getValidatorThreshold(pubkey);
   }
 
   /**
@@ -203,7 +243,8 @@ abstract contract WithdrawalModule is
     bytes calldata pubkey,
     address owner
   ) external virtual override returns (uint256 index) {
-    index = WITHDRAWAL.enqueue(size, pubkey, owner);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    index = $.enqueue(size, pubkey, owner);
   }
 
   function enqueueBatch(
@@ -211,11 +252,13 @@ abstract contract WithdrawalModule is
     bytes[] calldata pubkeys,
     address owner
   ) external virtual override returns (uint256[] memory indexes) {
-    indexes = WITHDRAWAL.enqueueBatch(sizes, pubkeys, owner);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    indexes = $.enqueueBatch(sizes, pubkeys, owner);
   }
 
   function transferRequest(uint256 index, address newOwner) external virtual override {
-    WITHDRAWAL.transferRequest(index, newOwner);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    $.transferRequest(index, newOwner);
   }
 
   /**
@@ -227,18 +270,21 @@ abstract contract WithdrawalModule is
    */
 
   function fulfillable(uint256 index) external view virtual override returns (uint256) {
-    return WITHDRAWAL.fulfillable(index, WITHDRAWAL.queue.realized, WITHDRAWAL.queue.fulfilled);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    return $.fulfillable(index, $.queue.realized, $.queue.fulfilled);
   }
 
   /**
    * @custom:visibility -> external
    */
   function fulfill(uint256 index) external virtual override {
-    WITHDRAWAL.fulfill(index);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    $.fulfill(index);
   }
 
   function fulfillBatch(uint256[] calldata indexes) external virtual override {
-    WITHDRAWAL.fulfillBatch(indexes);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    $.fulfillBatch(indexes);
   }
 
   /**
@@ -248,11 +294,13 @@ abstract contract WithdrawalModule is
    * @custom:visibility -> external
    */
   function dequeue(uint256 index, address receiver) external virtual override {
-    WITHDRAWAL.dequeue(index, receiver);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    $.dequeue(index, receiver);
   }
 
   function dequeueBatch(uint256[] calldata indexes, address receiver) external virtual override {
-    WITHDRAWAL.dequeueBatch(indexes, receiver);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    $.dequeueBatch(indexes, receiver);
   }
 
   /**
@@ -266,10 +314,11 @@ abstract contract WithdrawalModule is
     uint256 price,
     bytes32[] calldata priceProof
   ) external virtual override {
-    if (!WITHDRAWAL._getPortal().isPriceValid(WITHDRAWAL.POOL_ID)) {
-      WITHDRAWAL._getPortal().priceSync(WITHDRAWAL.POOL_ID, price, priceProof);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    if (!IPortal($.PORTAL).isPriceValid($.POOL_ID)) {
+      IPortal($.PORTAL).priceSync($.POOL_ID, price, priceProof);
     }
-    WITHDRAWAL.processValidators(pubkeys, beaconBalances, withdrawnBalances, balanceProofs);
+    $.processValidators(pubkeys, beaconBalances, withdrawnBalances, balanceProofs);
   }
 
   /**
