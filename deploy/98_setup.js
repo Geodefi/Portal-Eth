@@ -1,5 +1,4 @@
 const { strToBytes, generateId } = require("../utils");
-// TODO : use generateId instead generateId
 
 const func = async (hre) => {
   const { deployments, getNamedAccounts } = hre;

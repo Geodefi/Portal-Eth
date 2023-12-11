@@ -29,7 +29,7 @@ Thus, Modular Architecture of the Portal relies on interfaces as its building bl
 
 ## Contents
 
- The directory structure within the `/interfaces` directory corresponds to the `/contracts/Portal` directory.
+ The directory structure within the `/interfaces` directory corresponds to the `/contracts` directory.
 
 * **Helpers**
   * [**IDepositContract**](./helpers/IDepositContract.sol): Referance for the [Beacon Deposit Contract](https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa). Used within [DepositContractLib](../modules/StakeModule/libs/DepositContractLib.sol) when creating a validator or a validator proposal.
