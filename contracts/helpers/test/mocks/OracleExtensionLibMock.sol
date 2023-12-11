@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
-import {PooledStaking} from "../../../modules/StakeModule/structs/storage.sol";
+import {DataStoreModuleStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
+import {StakeModuleStorage} from "../../../modules/StakeModule/structs/storage.sol";
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract OracleExtensionLibMock is StakeModule {
-  using StakeModuleLib for PooledStaking;
-  using OracleExtensionLib for PooledStaking;
-  using DataStoreModuleLib for IsolatedStorage;
+  using StakeModuleLib for StakeModuleStorage;
+  using OracleExtensionLib for StakeModuleStorage;
+  using DataStoreModuleLib for DataStoreModuleStorage;
 
   function initialize(address _gETH_position, address _oracle_position) external initializer {
     __StakeModule_init(_gETH_position, _oracle_position);
@@ -25,62 +25,71 @@ contract OracleExtensionLibMock is StakeModule {
     _unpause();
   }
 
+  function setInfrastructureFee(uint256 _type, uint256 fee) external virtual override {
+    _getStakeModuleStorage().setInfrastructureFee(_type, fee);
+  }
+
   /**
    * @custom:section                           ** DATA MANIPULATORS **
    */
   function $writeUint(uint256 _id, bytes32 _key, uint256 _data) external {
-    DATASTORE.writeUint(_id, _key, _data);
+    _getDataStoreModuleStorage().writeUint(_id, _key, _data);
   }
 
   function $writeBytes(uint256 _id, bytes32 _key, bytes calldata _data) external {
-    DATASTORE.writeBytes(_id, _key, _data);
+    _getDataStoreModuleStorage().writeBytes(_id, _key, _data);
   }
 
   function $writeAddress(uint256 _id, bytes32 _key, address _data) external {
-    DATASTORE.writeAddress(_id, _key, _data);
+    _getDataStoreModuleStorage().writeAddress(_id, _key, _data);
   }
 
   function $set_ORACLE_POSITION(address _data) external {
-    STAKE.ORACLE_POSITION = _data;
+    _getStakeModuleStorage().ORACLE_POSITION = _data;
   }
 
   function $set_VALIDATORS_INDEX(uint256 _data) external {
-    STAKE.VALIDATORS_INDEX = _data;
+    _getStakeModuleStorage().VALIDATORS_INDEX = _data;
   }
 
   function $set_VERIFICATION_INDEX(uint256 _data) external {
-    STAKE.VERIFICATION_INDEX = _data;
+    _getStakeModuleStorage().VERIFICATION_INDEX = _data;
   }
 
   function $set_MONOPOLY_THRESHOLD(uint256 _data) external {
-    STAKE.MONOPOLY_THRESHOLD = _data;
+    _getStakeModuleStorage().MONOPOLY_THRESHOLD = _data;
   }
 
   function $set_ORACLE_UPDATE_TIMESTAMP(uint256 _data) external {
-    STAKE.ORACLE_UPDATE_TIMESTAMP = _data;
+    _getStakeModuleStorage().ORACLE_UPDATE_TIMESTAMP = _data;
   }
 
   function $set_package(uint256 _type, uint256 package) external {
-    STAKE.packages[_type] = package;
+    _getStakeModuleStorage().packages[_type] = package;
   }
 
   function $set_middleware(uint256 _type, uint256 middleware) external {
-    STAKE.middlewares[_type][middleware] = true;
+    _getStakeModuleStorage().middlewares[_type][middleware] = true;
   }
 
   function $set_PricePerShare(uint256 price, uint256 poolId) external {
-    STAKE.gETH.setPricePerShare(price, poolId);
+    _getStakeModuleStorage().gETH.setPricePerShare(price, poolId);
   }
 
   /**
    * @custom:section                           ** INTERNAL **
    */
   function $_alienateValidator(bytes calldata _pk) external {
-    return STAKE._alienateValidator(DATASTORE, STAKE.VERIFICATION_INDEX, _pk);
+    return
+      _getStakeModuleStorage()._alienateValidator(
+        _getDataStoreModuleStorage(),
+        _getStakeModuleStorage().VERIFICATION_INDEX,
+        _pk
+      );
   }
 
   function $_sanityCheck(uint256 _id, uint256 _newPrice) external view {
-    return STAKE._sanityCheck(DATASTORE, _id, _newPrice);
+    return _getStakeModuleStorage()._sanityCheck(_getDataStoreModuleStorage(), _id, _newPrice);
   }
 
   /**

@@ -2,8 +2,8 @@
 pragma solidity =0.8.20;
 
 // structs
-import {PooledStaking} from "../../../modules/StakeModule/structs/storage.sol";
-import {IsolatedStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
+import {StakeModuleStorage} from "../../../modules/StakeModule/structs/storage.sol";
+import {DataStoreModuleStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
 
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
@@ -12,10 +12,10 @@ import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtens
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 
 contract StakeModuleLibMock is StakeModule {
-  using DataStoreModuleLib for IsolatedStorage;
-  using StakeModuleLib for PooledStaking;
-  using OracleExtensionLib for PooledStaking;
-  using InitiatorExtensionLib for PooledStaking;
+  using DataStoreModuleLib for DataStoreModuleStorage;
+  using StakeModuleLib for StakeModuleStorage;
+  using OracleExtensionLib for StakeModuleStorage;
+  using InitiatorExtensionLib for StakeModuleStorage;
 
   event return$_buyback(uint256 remETH, uint256 boughtgETH);
 
@@ -35,43 +35,47 @@ contract StakeModuleLibMock is StakeModule {
     _unpause();
   }
 
+  function setInfrastructureFee(uint256 _type, uint256 fee) external virtual override {
+    _getStakeModuleStorage().setInfrastructureFee(_type, fee);
+  }
+
   /**
    * @custom:section                           ** DATA MANIPULATORS **
    */
   function $writeUint(uint256 _id, bytes32 _key, uint256 _data) external {
-    DATASTORE.writeUint(_id, _key, _data);
+    _getDataStoreModuleStorage().writeUint(_id, _key, _data);
   }
 
   function $writeBytes(uint256 _id, bytes32 _key, bytes calldata _data) external {
-    DATASTORE.writeBytes(_id, _key, _data);
+    _getDataStoreModuleStorage().writeBytes(_id, _key, _data);
   }
 
   function $writeAddress(uint256 _id, bytes32 _key, address _data) external {
-    DATASTORE.writeAddress(_id, _key, _data);
+    _getDataStoreModuleStorage().writeAddress(_id, _key, _data);
   }
 
   function $set_VERIFICATION_INDEX(uint256 _data) external {
-    STAKE.VERIFICATION_INDEX = _data;
+    _getStakeModuleStorage().VERIFICATION_INDEX = _data;
   }
 
   function $set_MONOPOLY_THRESHOLD(uint256 _data) external {
-    STAKE.MONOPOLY_THRESHOLD = _data;
+    _getStakeModuleStorage().MONOPOLY_THRESHOLD = _data;
   }
 
   function $set_ORACLE_UPDATE_TIMESTAMP(uint256 _data) external {
-    STAKE.ORACLE_UPDATE_TIMESTAMP = _data;
+    _getStakeModuleStorage().ORACLE_UPDATE_TIMESTAMP = _data;
   }
 
   function $set_package(uint256 _type, uint256 package) external {
-    STAKE.packages[_type] = package;
+    _getStakeModuleStorage().packages[_type] = package;
   }
 
   function $set_middleware(uint256 _type, uint256 middleware) external {
-    STAKE.middlewares[_type][middleware] = true;
+    _getStakeModuleStorage().middlewares[_type][middleware] = true;
   }
 
   function $set_PricePerShare(uint256 price, uint256 poolId) external {
-    STAKE.gETH.setPricePerShare(price, poolId);
+    _getStakeModuleStorage().gETH.setPricePerShare(price, poolId);
   }
 
   /**
@@ -85,7 +89,7 @@ contract StakeModuleLibMock is StakeModule {
     bool[2] memory _restrictionMap
   ) external view {
     StakeModuleLib._authenticate(
-      DATASTORE,
+      _getDataStoreModuleStorage(),
       _id,
       _expectCONTROLLER,
       _expectMaintainer,
@@ -94,7 +98,7 @@ contract StakeModuleLibMock is StakeModule {
   }
 
   function $_setgETHMiddleware(uint256 id, address _middleware) external {
-    STAKE._setgETHMiddleware(DATASTORE, id, _middleware);
+    _getStakeModuleStorage()._setgETHMiddleware(_getDataStoreModuleStorage(), id, _middleware);
   }
 
   function $_deploygETHMiddleware(
@@ -102,7 +106,12 @@ contract StakeModuleLibMock is StakeModule {
     uint256 _versionId,
     bytes memory _middleware_data
   ) external {
-    STAKE._deploygETHMiddleware(DATASTORE, _id, _versionId, _middleware_data);
+    _getStakeModuleStorage()._deploygETHMiddleware(
+      _getDataStoreModuleStorage(),
+      _id,
+      _versionId,
+      _middleware_data
+    );
   }
 
   function $_deployGeodePackage(
@@ -110,35 +119,41 @@ contract StakeModuleLibMock is StakeModule {
     uint256 _poolId,
     bytes memory _package_data
   ) external returns (address packageInstance) {
-    return STAKE._deployGeodePackage(DATASTORE, _type, _poolId, _package_data);
+    return
+      _getStakeModuleStorage()._deployGeodePackage(
+        _getDataStoreModuleStorage(),
+        _type,
+        _poolId,
+        _package_data
+      );
   }
 
   function $_deployWithdrawalContract(uint256 _poolId) external {
-    STAKE._deployWithdrawalContract(DATASTORE, _poolId);
+    _getStakeModuleStorage()._deployWithdrawalContract(_getDataStoreModuleStorage(), _poolId);
   }
 
   function $_setMaintainer(uint256 _id, address _newMaintainer) external {
-    StakeModuleLib._setMaintainer(DATASTORE, _id, _newMaintainer);
+    StakeModuleLib._setMaintainer(_getDataStoreModuleStorage(), _id, _newMaintainer);
   }
 
   function $_setMaintenanceFee(uint256 _id, uint256 _newFee) external {
-    StakeModuleLib._setMaintenanceFee(DATASTORE, _id, _newFee);
+    StakeModuleLib._setMaintenanceFee(_getDataStoreModuleStorage(), _id, _newFee);
   }
 
   function $_increaseWalletBalance(uint256 _id, uint256 _value) external {
-    StakeModuleLib._increaseWalletBalance(DATASTORE, _id, _value);
+    StakeModuleLib._increaseWalletBalance(_getDataStoreModuleStorage(), _id, _value);
   }
 
   function $_decreaseWalletBalance(uint256 _id, uint256 _value) external {
-    StakeModuleLib._decreaseWalletBalance(DATASTORE, _id, _value);
+    StakeModuleLib._decreaseWalletBalance(_getDataStoreModuleStorage(), _id, _value);
   }
 
   function $_imprison(uint256 _operatorId, bytes calldata _proof) external {
-    OracleExtensionLib._imprison(DATASTORE, _operatorId, _proof);
+    OracleExtensionLib._imprison(_getDataStoreModuleStorage(), _operatorId, _proof);
   }
 
   function $_setValidatorPeriod(uint256 _operatorId, uint256 _newPeriod) external {
-    StakeModuleLib._setValidatorPeriod(DATASTORE, _operatorId, _newPeriod);
+    StakeModuleLib._setValidatorPeriod(_getDataStoreModuleStorage(), _operatorId, _newPeriod);
   }
 
   function $_approveOperator(
@@ -146,11 +161,12 @@ contract StakeModuleLibMock is StakeModule {
     uint256 operatorId,
     uint256 allowance
   ) external returns (uint256 oldAllowance) {
-    return StakeModuleLib._approveOperator(DATASTORE, poolId, operatorId, allowance);
+    return
+      StakeModuleLib._approveOperator(_getDataStoreModuleStorage(), poolId, operatorId, allowance);
   }
 
   function $_mintgETH(uint256 _poolId, uint256 _ethAmount) external returns (uint256 mintedgETH) {
-    return STAKE._mintgETH(DATASTORE, _poolId, _ethAmount);
+    return _getStakeModuleStorage()._mintgETH(_getDataStoreModuleStorage(), _poolId, _ethAmount);
   }
 
   function $_buyback(
@@ -158,7 +174,12 @@ contract StakeModuleLibMock is StakeModule {
     uint256 _maxEthToSell,
     uint256 _deadline
   ) external payable returns (uint256 remETH, uint256 boughtgETH) {
-    (remETH, boughtgETH) = StakeModuleLib._buyback(DATASTORE, _poolId, _maxEthToSell, _deadline);
+    (remETH, boughtgETH) = StakeModuleLib._buyback(
+      _getDataStoreModuleStorage(),
+      _poolId,
+      _maxEthToSell,
+      _deadline
+    );
     emit return$_buyback(remETH, boughtgETH);
   }
 
@@ -166,7 +187,7 @@ contract StakeModuleLibMock is StakeModule {
     bytes calldata _pubkey,
     uint256 _verificationIndex
   ) external view returns (bool) {
-    return STAKE._canStake(_pubkey, _verificationIndex);
+    return _getStakeModuleStorage()._canStake(_pubkey, _verificationIndex);
   }
 
   /**
@@ -180,8 +201,8 @@ contract StakeModuleLibMock is StakeModule {
     bytes calldata middleware_data,
     bool[3] calldata config
   ) external payable virtual override whenNotPaused returns (uint256 poolId) {
-    poolId = STAKE.initiatePool(
-      DATASTORE,
+    poolId = _getStakeModuleStorage().initiatePool(
+      _getDataStoreModuleStorage(),
       fee,
       middlewareVersion,
       maintainer,
@@ -208,7 +229,13 @@ contract StakeModuleLibMock is StakeModule {
     whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
-    (boughtgETH, mintedgETH) = STAKE.deposit(DATASTORE, poolId, mingETH, deadline, receiver);
+    (boughtgETH, mintedgETH) = _getStakeModuleStorage().deposit(
+      _getDataStoreModuleStorage(),
+      poolId,
+      mingETH,
+      deadline,
+      receiver
+    );
     emit return$deposit(boughtgETH, mintedgETH);
   }
 
