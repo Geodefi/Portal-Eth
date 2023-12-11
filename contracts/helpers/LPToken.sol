@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.20;
+pragma solidity ^0.8.20;
+// Created with https://wizard.openzeppelin.com/#erc20
 
-// external
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ERC20Upgradeable, ERC20BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {ERC20BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 /**
  * @title Liquidity Provider Token
@@ -11,8 +15,16 @@ import {ERC20Upgradeable, ERC20BurnableUpgradeable} from "@openzeppelin/contract
  * It is used to represent user shares when providing liquidity to LPP.
  * @dev Only LPP contracts should initialize and own LPToken contracts.
  */
-contract LPToken is ERC20BurnableUpgradeable, OwnableUpgradeable {
-  ///@custom:oz-upgrades-unsafe-allow constructor
+contract LPToken is
+  Initializable,
+  ERC20Upgradeable,
+  ERC20BurnableUpgradeable,
+  OwnableUpgradeable,
+  ERC20PermitUpgradeable
+{
+  error LPTokenZeroMint();
+
+  /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
   }
@@ -25,25 +37,27 @@ contract LPToken is ERC20BurnableUpgradeable, OwnableUpgradeable {
    * @param symbol symbol of this token
    */
   function initialize(string memory name, string memory symbol) external initializer {
-    __Context_init_unchained();
     __ERC20_init_unchained(name, symbol);
-    __ERC20Burnable_init_unchained();
+    __ERC20Burnable_init();
     __Ownable_init_unchained(msg.sender);
   }
 
   /**
    * @notice Mints the given amount of LPToken to the recipient.
    * @dev only owner can call this mint function
-   * @param recipient address of account to receive the tokens
+   * @param to address of account to receive the tokens
    * @param amount amount of tokens to mint
    */
-  function mint(address recipient, uint256 amount) external onlyOwner {
-    require(amount != 0, "LPToken: cannot mint 0");
-    _mint(recipient, amount);
+  function mint(address to, uint256 amount) external onlyOwner {
+    if (amount == 0) {
+      revert LPTokenZeroMint();
+    }
+
+    _mint(to, amount);
   }
 
   /**
-   * @dev Overrides ERC20._beforeTokenTransfer() which get called on every transfers including
+   * @dev Overrides ERC20._update() which get called on every transfers including
    * minting and burning. This ensures that Swap.updateUserWithdrawFees are called everytime.
    * This assumes the owner is set to a Swap contract's address.
    */
@@ -52,7 +66,10 @@ contract LPToken is ERC20BurnableUpgradeable, OwnableUpgradeable {
     address to,
     uint256 amount
   ) internal virtual override(ERC20Upgradeable) {
-    require(to != address(this), "LPToken: cannot send to itself");
+    if (to == address(this)) {
+      revert ERC20InvalidReceiver(address(this));
+    }
+
     super._update(from, to, amount);
   }
 }

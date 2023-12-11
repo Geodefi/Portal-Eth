@@ -18,13 +18,14 @@ contract Whitelist is IWhitelist, Ownable {
   mapping(address => bool) private _whitelist;
 
   event Listed(address indexed account, bool isWhitelisted);
+  error AlreadySet();
 
   function isAllowed(address _address) external view virtual override returns (bool) {
     return _whitelist[_address];
   }
 
   function setAddress(address _address, bool allow) external virtual onlyOwner {
-    require(_whitelist[_address] != allow, "Whitelist: already set");
+    if (_whitelist[_address] == allow) revert AlreadySet();
 
     _whitelist[_address] = allow;
 
