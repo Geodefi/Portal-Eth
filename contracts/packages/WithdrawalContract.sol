@@ -11,7 +11,8 @@ import {IWithdrawalModule} from "../interfaces/modules/IWithdrawalModule.sol";
 import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
 // internal - structs
-import {PooledWithdrawal} from "../modules/WithdrawalModule/structs/storage.sol";
+import {GeodeModuleStorage} from "../modules/GeodeModule/structs/storage.sol";
+import {WithdrawalModuleStorage} from "../modules/WithdrawalModule/structs/storage.sol";
 // internal - libraries
 import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
 // internal - contracts
@@ -19,7 +20,7 @@ import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
 contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModule {
-  using WML for PooledWithdrawal;
+  using WML for WithdrawalModuleStorage;
   /**
    * @custom:section                           ** VARIABLES **
    * Following immutable parameters are set when the referance library implementation is deployed.
@@ -35,7 +36,7 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
    */
 
   modifier onlyOwner() {
-    require(msg.sender == GEODE.SENATE, "WC:sender NOT owner");
+    require(msg.sender == _getGeodeModuleStorage().SENATE, "WCP:sender NOT owner");
     _;
   }
 
@@ -51,8 +52,8 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
    * and fetch when needed on initialization.
    */
   constructor(address _gETHPos, address _portalPos) {
-    require(_gETHPos != address(0), "WC:_gETHPos can not be zero");
-    require(_portalPos != address(0), "WC:_portalPos can not be zero");
+    require(_gETHPos != address(0), "WCP:_gETHPos can not be zero");
+    require(_portalPos != address(0), "WCP:_portalPos can not be zero");
 
     gETHPos = _gETHPos;
     portalPos = _portalPos;
@@ -92,21 +93,16 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
   function __WithdrawalContract_init_unchained() internal onlyInitializing {}
 
   function getPoolId() public view override returns (uint256) {
-    return WITHDRAWAL.POOL_ID;
-  }
-
-  /**
-   * @notice get Portal as a contract
-   */
-  function getPortal() public view override returns (IPortal) {
-    return IPortal(GEODE.GOVERNANCE);
+    return _getWithdrawalModuleStorage().POOL_ID;
   }
 
   /**
    * @dev GeodeModule override
    */
   function getProposedVersion() public view virtual override returns (uint256) {
-    return getPortal().getPackageVersion(GEODE.PACKAGE_TYPE);
+    GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
+
+    return IPortal(GMStorage.GOVERNANCE).getPackageVersion(GMStorage.PACKAGE_TYPE);
   }
 
   /**
@@ -123,15 +119,22 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
       return true;
     }
 
-    if (getContractVersion() != getProposedVersion()) {
+    GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
+
+    if (
+      GMStorage.CONTRACT_VERSION !=
+      IPortal(GMStorage.GOVERNANCE).getPackageVersion(GMStorage.PACKAGE_TYPE)
+    ) {
       return true;
     }
 
-    if (GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation()) {
+    if (GMStorage.APPROVED_UPGRADE != ERC1967Utils.getImplementation()) {
       return true;
     }
 
-    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) {
+    if (
+      IPortal(GMStorage.GOVERNANCE).readAddress(getPoolId(), rks.CONTROLLER) != GMStorage.SENATE
+    ) {
       return true;
     }
 
@@ -152,10 +155,16 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
    * @dev IGeodePackage override
    */
   function pullUpgrade() external virtual override onlyOwner {
-    require(!(getPortal().isolationMode()), "WC:Portal is isolated");
-    require(getProposedVersion() != getContractVersion(), "WC:no upgrades");
+    GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
+    IPortal Portal = IPortal(GMStorage.GOVERNANCE);
 
-    uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
+    require(!Portal.isolationMode(), "WCP:Portal is isolated");
+    require(
+      GMStorage.CONTRACT_VERSION != Portal.getPackageVersion(GMStorage.PACKAGE_TYPE),
+      "WCP:no upgrades"
+    );
+
+    uint256 id = Portal.pushUpgrade(GMStorage.PACKAGE_TYPE);
     approveProposal(id);
   }
 
@@ -185,11 +194,30 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
   function setExitThreshold(
     uint256 newThreshold
   ) external virtual override(WithdrawalModule, IWithdrawalModule) onlyOwner {
-    WITHDRAWAL.setExitThreshold(newThreshold);
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    $.setExitThreshold(newThreshold);
   }
 
   /**
-   * @notice keep the total number of variables at 50
+   * @custom:subsection                           ** INFRASTRUCTURE FEE **
+   *
+   * @dev WM override
    */
-  uint256[50] private __gap;
+  function claimInfrastructureFees(
+    address receiver
+  ) external virtual override(WithdrawalModule, IWithdrawalModule) returns (bool success) {
+    require(msg.sender == IPortal(_getGeodeModuleStorage().GOVERNANCE).getGovernance());
+
+    WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
+    uint256 claimable = $.gatheredInfrastructureFees;
+
+    (success, ) = payable(receiver).call{value: claimable}("");
+    require(success, "WCP:Failed to send ETH");
+  }
+
+  /**
+   * @notice fallback functions
+   */
+
+  receive() external payable {}
 }
