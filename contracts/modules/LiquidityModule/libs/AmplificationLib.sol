@@ -2,14 +2,14 @@
 pragma solidity =0.8.20;
 
 // internal - structs
-import {Swap} from "../structs/storage.sol";
+import {LiquidityModuleStorage} from "../structs/storage.sol";
 // internal - libraries
 import {LiquidityModuleLib as LML} from "./LiquidityModuleLib.sol";
 
 /**
  * @title AL: Amplification Library
  *
- * @notice A helper library for Liquidity Module Library (LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.Swap` struct.
+ * @notice A helper library for Liquidity Module Library (LML) to calculate and ramp the A parameter of a given `LiquidityModuleLib.LiquidityModuleStorage` struct.
  *
  * @dev review: Liquidity Module for the StableSwap logic.
  * @dev This library assumes the Swap struct is fully validated.
@@ -45,7 +45,7 @@ library AmplificationLib {
    * @param self Swap struct to read from
    * @return A parameter
    */
-  function getA(Swap storage self) internal view returns (uint256) {
+  function getA(LiquidityModuleStorage storage self) internal view returns (uint256) {
     return _getAPrecise(self) / (A_PRECISION);
   }
 
@@ -55,7 +55,7 @@ library AmplificationLib {
    * @param self Swap struct to read from
    * @return A parameter in its raw precision form
    */
-  function getAPrecise(Swap storage self) internal view returns (uint256) {
+  function getAPrecise(LiquidityModuleStorage storage self) internal view returns (uint256) {
     return _getAPrecise(self);
   }
 
@@ -65,7 +65,7 @@ library AmplificationLib {
    * @param self Swap struct to read from
    * @return A parameter in its raw precision form
    */
-  function _getAPrecise(Swap storage self) internal view returns (uint256) {
+  function _getAPrecise(LiquidityModuleStorage storage self) internal view returns (uint256) {
     uint256 t1 = self.futureATime; // time when ramp is finished
     uint256 a1 = self.futureA; // final A value when ramp is finished
 
@@ -98,7 +98,11 @@ library AmplificationLib {
    * @param futureA_ the new A to ramp towards
    * @param futureTime_ timestamp when the new A should be reached
    */
-  function rampA(Swap storage self, uint256 futureA_, uint256 futureTime_) internal {
+  function rampA(
+    LiquidityModuleStorage storage self,
+    uint256 futureA_,
+    uint256 futureTime_
+  ) internal {
     require(block.timestamp >= self.initialATime + 1 days, "AL:Wait 1 day before starting ramp");
     require(futureTime_ >= block.timestamp + MIN_RAMP_TIME, "AL:Insufficient ramp time");
     require(futureA_ > 0 && futureA_ < MAX_A, "AL:futureA_ must be > 0 and < MAX_A");
@@ -125,7 +129,7 @@ library AmplificationLib {
    * cannot be called for another 24 hours
    * @param self Swap struct to update
    */
-  function stopRampA(Swap storage self) internal {
+  function stopRampA(LiquidityModuleStorage storage self) internal {
     require(self.futureATime > block.timestamp, "AL:Ramp is already stopped");
 
     uint256 currentA = _getAPrecise(self);

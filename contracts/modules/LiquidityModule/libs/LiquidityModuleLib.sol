@@ -7,7 +7,7 @@ import {gETH_DENOMINATOR, PERCENTAGE_DENOMINATOR} from "../../../globals/macros.
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
 // internal - structs
-import {Swap} from "../structs/storage.sol";
+import {LiquidityModuleStorage} from "../structs/storage.sol";
 import {CalculateWithdrawOneTokenDYInfo, ManageLiquidityInfo} from "../structs/helpers.sol";
 // internal - libraries
 import {AmplificationLib as AL} from "./AmplificationLib.sol";
@@ -291,7 +291,7 @@ library LiquidityModuleLib {
    * @param i if i is 0 it means we are dealing with ETH, if i is 1 it is gETH
    */
   function _pricedIn(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256 balance,
     uint256 i
   ) internal view returns (uint256) {
@@ -307,7 +307,7 @@ library LiquidityModuleLib {
    * @param i if i is 0 it means we are dealing with ETH, if i is 1 it is gETH
    */
   function _pricedOut(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256 balance,
     uint256 i
   ) internal view returns (uint256) {
@@ -322,7 +322,7 @@ library LiquidityModuleLib {
    * @param balances ARRAY of balances that will be taken into calculation
    */
   function _pricedInBatch(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
@@ -337,7 +337,7 @@ library LiquidityModuleLib {
    * @param balances ARRAY of balances that will be taken into calculation
    */
   function _pricedOutBatch(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256[2] memory balances
   ) internal view returns (uint256[2] memory _p) {
     _p[0] = balances[0];
@@ -365,7 +365,7 @@ library LiquidityModuleLib {
    * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
    */
   function _getDebt(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256[2] memory xp,
     uint256 a
   ) internal view returns (uint256 debt) {
@@ -386,7 +386,7 @@ library LiquidityModuleLib {
    * @return debt the half of the D StableSwap invariant when debt is needed to be payed.
    * @dev might change when price is in.
    */
-  function getDebt(Swap storage self) external view returns (uint256) {
+  function getDebt(LiquidityModuleStorage storage self) external view returns (uint256) {
     return _getDebt(self, _pricedInBatch(self, self.balances), AL._getAPrecise(self));
   }
 
@@ -424,7 +424,7 @@ library LiquidityModuleLib {
    */
 
   function _calculateWithdrawOneToken(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256 tokenAmount,
     uint8 tokenIndex,
     uint256 totalSupply
@@ -455,7 +455,7 @@ library LiquidityModuleLib {
    * @return dyFee the associated fee
    */
   function _calculateSwap(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint8 tokenIndexFrom,
     uint8 tokenIndexTo,
     uint256 dx,
@@ -488,7 +488,7 @@ library LiquidityModuleLib {
    * @return the amount of token user will receive
    */
   function calculateWithdrawOneToken(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256 tokenAmount,
     uint8 tokenIndex
   ) external view returns (uint256) {
@@ -509,7 +509,7 @@ library LiquidityModuleLib {
    * @return the d and the new y after withdrawing one token
    */
   function calculateWithdrawOneTokenDY(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint8 tokenIndex,
     uint256 tokenAmount,
     uint256 totalSupply
@@ -563,7 +563,7 @@ library LiquidityModuleLib {
    * @param self Swap struct to read from
    * @return the virtual price
    */
-  function getVirtualPrice(Swap storage self) external view returns (uint256) {
+  function getVirtualPrice(LiquidityModuleStorage storage self) external view returns (uint256) {
     uint256 d = getD(_pricedInBatch(self, self.balances), AL._getAPrecise(self));
     ILPToken lpToken = self.lpToken;
     uint256 supply = lpToken.totalSupply();
@@ -583,7 +583,7 @@ library LiquidityModuleLib {
    * @return dy the number of tokens the user will get
    */
   function calculateSwap(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint8 tokenIndexFrom,
     uint8 tokenIndexTo,
     uint256 dx
@@ -597,7 +597,7 @@ library LiquidityModuleLib {
    * to get Real Balances, before removing them from pool.
    */
   function calculateRemoveLiquidity(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256 amount
   ) external view returns (uint256[2] memory) {
     return
@@ -629,7 +629,7 @@ library LiquidityModuleLib {
    * deposit was false, total amount of lp token that will be burned
    */
   function calculateTokenAmount(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256[2] calldata amounts,
     bool deposit
   ) external view returns (uint256) {
@@ -672,7 +672,10 @@ library LiquidityModuleLib {
    * @param index Index of the pooled token
    * @return admin balance in the token's precision
    */
-  function getAdminBalance(Swap storage self, uint256 index) external view returns (uint256) {
+  function getAdminBalance(
+    LiquidityModuleStorage storage self,
+    uint256 index
+  ) external view returns (uint256) {
     require(index < 2, "LML:Token index out of range");
     if (index == 0) {
       return address(this).balance - (self.balances[index]);
@@ -699,7 +702,7 @@ library LiquidityModuleLib {
    * @return amount of token user received on swap
    */
   function swap(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint8 tokenIndexFrom,
     uint8 tokenIndexTo,
     uint256 dx,
@@ -712,7 +715,6 @@ library LiquidityModuleLib {
       require(dx == msg.value, "LML:Cannot swap != eth sent");
     }
     if (tokenIndexFrom == 1) {
-      // TODO: ask if this is necessary to the auditors...
       // Means user is selling some gETH to the pool to get some ETH.
 
       require(dx <= gETHRef.balanceOf(msg.sender, self.pooledTokenId), "LML:Cannot swap > you own");
@@ -765,7 +767,7 @@ library LiquidityModuleLib {
    * @return amount of LP token user received
    */
   function addLiquidity(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256[2] memory amounts,
     uint256 minToMint
   ) external returns (uint256) {
@@ -866,7 +868,7 @@ library LiquidityModuleLib {
    * @return amounts of tokens the user received
    */
   function removeLiquidity(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256 amount,
     uint256[2] calldata minAmounts
   ) external returns (uint256[2] memory) {
@@ -912,7 +914,7 @@ library LiquidityModuleLib {
    * @return amount chosen token that user received
    */
   function removeLiquidityOneToken(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256 tokenAmount,
     uint8 tokenIndex,
     uint256 minAmount
@@ -964,7 +966,7 @@ library LiquidityModuleLib {
    * @return actual amount of LP tokens burned in the withdrawal
    */
   function removeLiquidityImbalance(
-    Swap storage self,
+    LiquidityModuleStorage storage self,
     uint256[2] memory amounts,
     uint256 maxBurnAmount
   ) public returns (uint256) {
@@ -1049,7 +1051,7 @@ library LiquidityModuleLib {
    * @param self Swap struct to withdraw fees from
    * @param receiver Address to send the fees to
    */
-  function withdrawAdminFees(Swap storage self, address receiver) external {
+  function withdrawAdminFees(LiquidityModuleStorage storage self, address receiver) external {
     IgETH gETHRef = self.gETH;
     uint256 tokenBalance = gETHRef.balanceOf(address(this), self.pooledTokenId) - self.balances[1];
     if (tokenBalance != 0) {
@@ -1069,7 +1071,7 @@ library LiquidityModuleLib {
    * @param self Swap struct to update
    * @param newAdminFee new admin fee to be applied on future transactions
    */
-  function setAdminFee(Swap storage self, uint256 newAdminFee) external {
+  function setAdminFee(LiquidityModuleStorage storage self, uint256 newAdminFee) external {
     require(newAdminFee <= MAX_ADMIN_FEE, "LML:Fee is too high");
     self.adminFee = newAdminFee;
 
@@ -1082,7 +1084,7 @@ library LiquidityModuleLib {
    * @param self Swap struct to update
    * @param newSwapFee new swap fee to be applied on future transactions
    */
-  function setSwapFee(Swap storage self, uint256 newSwapFee) external {
+  function setSwapFee(LiquidityModuleStorage storage self, uint256 newSwapFee) external {
     require(newSwapFee <= MAX_SWAP_FEE, "LML:Fee is too high");
     self.swapFee = newSwapFee;
 

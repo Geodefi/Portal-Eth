@@ -12,8 +12,8 @@ import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
 import {ILiquidityPool} from "../interfaces/packages/ILiquidityPool.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
 // internal - structs
-import {DualGovernance} from "../modules/GeodeModule/structs/storage.sol";
-import {Swap} from "../modules/LiquidityModule/structs/storage.sol";
+import {GeodeModuleStorage} from "../modules/GeodeModule/structs/storage.sol";
+import {LiquidityModuleStorage} from "../modules/LiquidityModule/structs/storage.sol";
 // internal - libraries
 import {GeodeModuleLib as GML} from "../modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {AmplificationLib as AL} from "../modules/LiquidityModule/libs/AmplificationLib.sol";
@@ -46,9 +46,9 @@ import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
  * @author Ice Bear & Crash Bandicoot
  */
 contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
-  using GML for DualGovernance;
-  using AL for Swap;
-  using LML for Swap;
+  using GML for GeodeModuleStorage;
+  using AL for LiquidityModuleStorage;
+  using LML for LiquidityModuleStorage;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -72,7 +72,7 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
    */
 
   modifier onlyOwner() {
-    require(msg.sender == GEODE.SENATE, "LPP:sender NOT owner");
+    require(msg.sender == _getGeodeModuleStorage().SENATE, "LPP:sender NOT owner");
     _;
   }
 
@@ -143,21 +143,15 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
    * @notice get the gETH ID of the corresponding staking pool
    */
   function getPoolId() public view override returns (uint256) {
-    return LIQUIDITY.pooledTokenId;
-  }
-
-  /**
-   * @notice get Portal as a contract
-   */
-  function getPortal() public view override returns (IPortal) {
-    return IPortal(GEODE.GOVERNANCE);
+    return _getLiquidityModuleStorage().pooledTokenId;
   }
 
   /**
    * @dev GeodeModule override
    */
   function getProposedVersion() public view virtual override returns (uint256) {
-    return getPortal().getPackageVersion(GEODE.PACKAGE_TYPE);
+    GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
+    return IPortal(GMStorage.GOVERNANCE).getPackageVersion(GMStorage.PACKAGE_TYPE);
   }
 
   /**
@@ -176,15 +170,22 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
       return true;
     }
 
-    if (getContractVersion() != getProposedVersion()) {
+    GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
+
+    if (
+      GMStorage.CONTRACT_VERSION !=
+      IPortal(GMStorage.GOVERNANCE).getPackageVersion(GMStorage.PACKAGE_TYPE)
+    ) {
       return true;
     }
 
-    if (GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation()) {
+    if (GMStorage.APPROVED_UPGRADE != ERC1967Utils.getImplementation()) {
       return true;
     }
 
-    if (getPortal().readAddress(getPoolId(), rks.CONTROLLER) != GEODE.SENATE) {
+    if (
+      IPortal(GMStorage.GOVERNANCE).readAddress(getPoolId(), rks.CONTROLLER) != GMStorage.SENATE
+    ) {
       return true;
     }
 
@@ -205,10 +206,16 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
    * @dev IGeodePackage override
    */
   function pullUpgrade() external virtual override onlyOwner {
-    require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
-    require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
+    GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
+    IPortal Portal = IPortal(GMStorage.GOVERNANCE);
 
-    uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
+    require(!Portal.isolationMode(), "LPP:Portal is isolated");
+    require(
+      GMStorage.CONTRACT_VERSION != Portal.getPackageVersion(GMStorage.PACKAGE_TYPE),
+      "LPP:no upgrades"
+    );
+
+    uint256 id = Portal.pushUpgrade(GMStorage.PACKAGE_TYPE);
     approveProposal(id);
   }
 
@@ -239,30 +246,30 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
   function setSwapFee(
     uint256 newSwapFee
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    LIQUIDITY.setSwapFee(newSwapFee);
+    _getLiquidityModuleStorage().setSwapFee(newSwapFee);
   }
 
   function setAdminFee(
     uint256 newAdminFee
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    LIQUIDITY.setAdminFee(newAdminFee);
+    _getLiquidityModuleStorage().setAdminFee(newAdminFee);
   }
 
   function withdrawAdminFees(
     address receiver
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    LIQUIDITY.withdrawAdminFees(receiver);
+    _getLiquidityModuleStorage().withdrawAdminFees(receiver);
   }
 
   function rampA(
     uint256 futureA,
     uint256 futureTime
   ) public virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    LIQUIDITY.rampA(futureA, futureTime);
+    _getLiquidityModuleStorage().rampA(futureA, futureTime);
   }
 
   function stopRampA() external virtual override(LiquidityModule, ILiquidityModule) onlyOwner {
-    LIQUIDITY.stopRampA();
+    _getLiquidityModuleStorage().stopRampA();
   }
 
   /**
@@ -270,9 +277,4 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
    */
 
   receive() external payable {}
-
-  /**
-   * @notice keep the total number of variables at 50
-   */
-  uint256[50] private __gap;
 }

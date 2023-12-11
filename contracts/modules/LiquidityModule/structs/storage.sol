@@ -18,9 +18,11 @@ import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
  * @param swapFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from resulting tokens of a swap
  * @param adminFee fee as a percentage/PERCENTAGE_DENOMINATOR, will be deducted from swapFee
  * @param balances the pool balance as [ETH, gETH]; the contract's actual token balance might differ
- * @param __gap keep the contract size at 16
+ *
+ * @dev normally we would put custom:storage-location erc7201:geode.storage.LiquidityModule
+ * but compiler throws an error... So np for now, just effects dev ex.
  */
-struct Swap {
+struct LiquidityModuleStorage {
   IgETH gETH;
   ILPToken lpToken;
   uint256 pooledTokenId;
@@ -31,5 +33,4 @@ struct Swap {
   uint256 swapFee;
   uint256 adminFee;
   uint256[2] balances;
-  uint256[5] __gap;
 }

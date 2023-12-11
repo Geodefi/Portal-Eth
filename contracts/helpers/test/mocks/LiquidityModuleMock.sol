@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
-import {Swap} from "../../../modules/LiquidityModule/structs/storage.sol";
+import {LiquidityModuleStorage} from "../../../modules/LiquidityModule/structs/storage.sol";
 import {LiquidityModule} from "../../../modules/LiquidityModule/LiquidityModule.sol";
 import {LiquidityModuleLib as LML} from "../../../modules/LiquidityModule/libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "../../../modules/LiquidityModule/libs/AmplificationLib.sol";
 
 contract LiquidityModuleMock is LiquidityModule {
-  using LML for Swap;
-  using AL for Swap;
+  using LML for LiquidityModuleStorage;
+  using AL for LiquidityModuleStorage;
 
   event return$swap(uint256 ret0);
 
@@ -103,23 +103,23 @@ contract LiquidityModuleMock is LiquidityModule {
    */
 
   function setSwapFee(uint256 newSwapFee) public virtual override {
-    LIQUIDITY.setSwapFee(newSwapFee);
+    _getLiquidityModuleStorage().setSwapFee(newSwapFee);
   }
 
   function setAdminFee(uint256 newAdminFee) public virtual override {
-    LIQUIDITY.setAdminFee(newAdminFee);
+    _getLiquidityModuleStorage().setAdminFee(newAdminFee);
   }
 
   function withdrawAdminFees(address receiver) public virtual override {
-    LIQUIDITY.withdrawAdminFees(receiver);
+    _getLiquidityModuleStorage().withdrawAdminFees(receiver);
   }
 
   function rampA(uint256 futureA, uint256 futureTime) public virtual override {
-    LIQUIDITY.rampA(futureA, futureTime);
+    _getLiquidityModuleStorage().rampA(futureA, futureTime);
   }
 
   function stopRampA() public virtual override {
-    LIQUIDITY.stopRampA();
+    _getLiquidityModuleStorage().stopRampA();
   }
 
   /**

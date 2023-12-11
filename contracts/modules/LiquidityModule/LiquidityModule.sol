@@ -11,7 +11,7 @@ import {IgETH} from "../../interfaces/IgETH.sol";
 import {ILiquidityModule} from "../../interfaces/modules/ILiquidityModule.sol";
 import {ILPToken} from "../../interfaces/helpers/ILPToken.sol";
 // internal - structs
-import {Swap} from "./structs/storage.sol";
+import {LiquidityModuleStorage} from "./structs/storage.sol";
 // internal - libraries
 import {LiquidityModuleLib as LML} from "./libs/LiquidityModuleLib.sol";
 import {AmplificationLib as AL} from "./libs/AmplificationLib.sol";
@@ -51,8 +51,8 @@ abstract contract LiquidityModule is
   ReentrancyGuardUpgradeable,
   PausableUpgradeable
 {
-  using LML for Swap;
-  using AL for Swap;
+  using LML for LiquidityModuleStorage;
+  using AL for LiquidityModuleStorage;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -60,7 +60,54 @@ abstract contract LiquidityModule is
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  Swap internal LIQUIDITY;
+
+  // keccak256(abi.encode(uint256(keccak256("geode.storage.LiquidityModule")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant LiquidityModuleStorageLocation =
+    0xbf570a7b0f42d13b79178a015638486db13c20a3e56dc93ef0739ba4e0119a00;
+
+  function _getLiquidityModuleStorage() internal pure returns (LiquidityModuleStorage storage $) {
+    assembly {
+      $.slot := LiquidityModuleStorageLocation
+    }
+  }
+
+  /**
+   * @custom:section                           ** EVENTS **
+   */
+  event TokenSwap(
+    address indexed buyer,
+    uint256 tokensSold,
+    uint256 tokensBought,
+    uint128 soldId,
+    uint128 boughtId
+  );
+  event AddLiquidity(
+    address indexed provider,
+    uint256[2] tokenAmounts,
+    uint256[2] fees,
+    uint256 invariant,
+    uint256 lpTokenSupply
+  );
+  event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
+  event RemoveLiquidityOne(
+    address indexed provider,
+    uint256 lpTokenAmount,
+    uint256 lpTokenSupply,
+    uint256 boughtId,
+    uint256 tokensBought
+  );
+  event RemoveLiquidityImbalance(
+    address indexed provider,
+    uint256[2] tokenAmounts,
+    uint256[2] fees,
+    uint256 invariant,
+    uint256 lpTokenSupply
+  );
+  event NewAdminFee(uint256 newAdminFee);
+  event NewSwapFee(uint256 newSwapFee);
+  event NewWithdrawFee(uint256 newWithdrawFee);
+  event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
+  event StopRampA(uint256 currentA, uint256 time);
 
   /**
    * @custom:section                           ** MODIFIERS **
@@ -168,16 +215,17 @@ abstract contract LiquidityModule is
       string(abi.encodePacked(_poolName, symbol_suffix))
     );
 
-    LIQUIDITY.gETH = IgETH(_gETH_position);
-    LIQUIDITY.lpToken = _lpToken;
-    LIQUIDITY.pooledTokenId = _pooledTokenId;
-    LIQUIDITY.initialA = _A * AL.A_PRECISION;
-    LIQUIDITY.futureA = _A * AL.A_PRECISION;
-    LIQUIDITY.swapFee = _swapFee;
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    $.gETH = IgETH(_gETH_position);
+    $.lpToken = _lpToken;
+    $.pooledTokenId = _pooledTokenId;
+    $.initialA = _A * AL.A_PRECISION;
+    $.futureA = _A * AL.A_PRECISION;
+    $.swapFee = _swapFee;
 
     // Do not trust middlewares. Protect LPs, gETH tokens from
     // issues that can be surfaced with future middlewares.
-    LIQUIDITY.gETH.avoidMiddlewares(_pooledTokenId, true);
+    $.gETH.avoidMiddlewares(_pooledTokenId, true);
   }
 
   /**
@@ -203,15 +251,16 @@ abstract contract LiquidityModule is
       uint256 adminFee
     )
   {
-    gETH = address(LIQUIDITY.gETH);
-    lpToken = address(LIQUIDITY.lpToken);
-    pooledTokenId = LIQUIDITY.pooledTokenId;
-    initialA = LIQUIDITY.initialA;
-    futureA = LIQUIDITY.futureA;
-    initialATime = LIQUIDITY.initialATime;
-    futureATime = LIQUIDITY.futureATime;
-    swapFee = LIQUIDITY.swapFee;
-    adminFee = LIQUIDITY.adminFee;
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    gETH = address($.gETH);
+    lpToken = address($.lpToken);
+    pooledTokenId = $.pooledTokenId;
+    initialA = $.initialA;
+    futureA = $.futureA;
+    initialATime = $.initialATime;
+    futureATime = $.futureATime;
+    swapFee = $.swapFee;
+    adminFee = $.adminFee;
   }
 
   /**
@@ -220,7 +269,8 @@ abstract contract LiquidityModule is
    * @return A parameter
    */
   function getA() external view virtual override returns (uint256) {
-    return LIQUIDITY.getA();
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.getA();
   }
 
   /**
@@ -229,7 +279,8 @@ abstract contract LiquidityModule is
    * @return A parameter in its raw precision form
    */
   function getAPrecise() external view virtual override returns (uint256) {
-    return LIQUIDITY.getAPrecise();
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.getAPrecise();
   }
 
   /**
@@ -238,7 +289,8 @@ abstract contract LiquidityModule is
    * @dev result might change when price is in.
    */
   function getDebt() external view virtual override returns (uint256) {
-    return LIQUIDITY.getDebt();
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.getDebt();
   }
 
   /**
@@ -247,7 +299,8 @@ abstract contract LiquidityModule is
    * @return current balance of the pooled token at given index with token's native precision
    */
   function getBalance(uint8 index) external view virtual override returns (uint256) {
-    return LIQUIDITY.balances[index];
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.balances[index];
   }
 
   /**
@@ -255,7 +308,8 @@ abstract contract LiquidityModule is
    * @return the virtual override price
    */
   function getVirtualPrice() external view virtual override returns (uint256) {
-    return LIQUIDITY.getVirtualPrice();
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.getVirtualPrice();
   }
 
   /**
@@ -264,7 +318,8 @@ abstract contract LiquidityModule is
    * @return admin's token balance in the token's precision
    */
   function getAdminBalance(uint256 index) external view virtual override returns (uint256) {
-    return LIQUIDITY.getAdminBalance(index);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.getAdminBalance(index);
   }
 
   /**
@@ -286,7 +341,8 @@ abstract contract LiquidityModule is
     uint8 tokenIndexTo,
     uint256 dx
   ) external view virtual override returns (uint256) {
-    return LIQUIDITY.calculateSwap(tokenIndexFrom, tokenIndexTo, dx);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.calculateSwap(tokenIndexFrom, tokenIndexTo, dx);
   }
 
   /**
@@ -308,7 +364,8 @@ abstract contract LiquidityModule is
     uint256[2] calldata amounts,
     bool deposit
   ) external view virtual override returns (uint256) {
-    return LIQUIDITY.calculateTokenAmount(amounts, deposit);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.calculateTokenAmount(amounts, deposit);
   }
 
   /**
@@ -320,7 +377,8 @@ abstract contract LiquidityModule is
   function calculateRemoveLiquidity(
     uint256 amount
   ) external view virtual override returns (uint256[2] memory) {
-    return LIQUIDITY.calculateRemoveLiquidity(amount);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.calculateRemoveLiquidity(amount);
   }
 
   /**
@@ -335,7 +393,8 @@ abstract contract LiquidityModule is
     uint256 tokenAmount,
     uint8 tokenIndex
   ) external view virtual override returns (uint256 availableTokenAmount) {
-    return LIQUIDITY.calculateWithdrawOneToken(tokenAmount, tokenIndex);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.calculateWithdrawOneToken(tokenAmount, tokenIndex);
   }
 
   /**
@@ -368,7 +427,8 @@ abstract contract LiquidityModule is
     deadlineCheck(deadline)
     returns (uint256)
   {
-    return LIQUIDITY.swap(tokenIndexFrom, tokenIndexTo, dx, minDy);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.swap(tokenIndexFrom, tokenIndexTo, dx, minDy);
   }
 
   /**
@@ -393,7 +453,8 @@ abstract contract LiquidityModule is
     deadlineCheck(deadline)
     returns (uint256)
   {
-    return LIQUIDITY.addLiquidity(amounts, minToMint);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.addLiquidity(amounts, minToMint);
   }
 
   /**
@@ -410,7 +471,8 @@ abstract contract LiquidityModule is
     uint256[2] calldata minAmounts,
     uint256 deadline
   ) public virtual override nonReentrant deadlineCheck(deadline) returns (uint256[2] memory) {
-    return LIQUIDITY.removeLiquidity(amount, minAmounts);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.removeLiquidity(amount, minAmounts);
   }
 
   /**
@@ -427,7 +489,8 @@ abstract contract LiquidityModule is
     uint256 minAmount,
     uint256 deadline
   ) public virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
-    return LIQUIDITY.removeLiquidityOneToken(tokenAmount, tokenIndex, minAmount);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.removeLiquidityOneToken(tokenAmount, tokenIndex, minAmount);
   }
 
   /**
@@ -444,6 +507,7 @@ abstract contract LiquidityModule is
     uint256 maxBurnAmount,
     uint256 deadline
   ) public virtual override nonReentrant whenNotPaused deadlineCheck(deadline) returns (uint256) {
-    return LIQUIDITY.removeLiquidityImbalance(amounts, maxBurnAmount);
+    LiquidityModuleStorage storage $ = _getLiquidityModuleStorage();
+    return $.removeLiquidityImbalance(amounts, maxBurnAmount);
   }
 }
