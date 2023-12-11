@@ -1,423 +1,232 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/ERC20.sol)
+// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/ERC20.sol)
 
-pragma solidity =0.8.20;
+pragma solidity ^0.8.20;
 
-// // external - interfaces
-// import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-// import {IERC20MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-// // external - contracts
-// import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-// import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-// // internal - interfaces
-// import {IgETH} from "../interfaces/IgETH.sol";
-// import {IgETHMiddleware} from "../interfaces/middlewares/IgETHMiddleware.sol";
-// // internal - libraries
-// import {BytesLib} from "../helpers/BytesLib.sol";
+// external - interfaces
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+// external - contracts
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+// internal - interfaces
+import {IgETH} from "../interfaces/IgETH.sol";
+import {IgETHMiddleware} from "../interfaces/middlewares/IgETHMiddleware.sol";
+// internal - libraries
+import {BytesLib} from "../helpers/BytesLib.sol";
 
-// // internal - contracts
+/**
+ * @notice A virtual ERC20 implementation to move underlying ERC1155 tokens.
+ * @dev This contract should only be used for user interaction when ERC1155 is not an option.
+ * @dev As a known bug, not all Transfer events are logged here. Please listen the underlying ERC1155 for the correct data.
+ *
+ * @dev ref: https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/4ca003c9635d2c16756cf8c9db6760e2d3653dee/contracts/token/ERC20/ERC20Upgradeable.sol#L1
+ *
+ * @dev differences between ERC20Middleware and Openzeppelin's implementation of ERC20Upgradeable is:
+ * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
+ * -> unique id of ERC1155 is used
+ * -> there is no _mint, _burn.
+ * -> differences can be observed at totalSupply, balanceOf, _update.
+ *
+ * diffchecker: https://www.diffchecker.com/20q5E9GA/
+ *
+ * @dev decimals is 18 onlyif erc1155.denominator = 1e18
+ *
+ */
+contract ERC20Middleware is
+  Initializable,
+  ContextUpgradeable,
+  IgETHMiddleware,
+  IERC20,
+  IERC20Metadata,
+  IERC20Errors
+{
+  /// @custom:storage-location erc7201:geode.storage.ERC20Middleware
+  struct ERC20MiddlewareStorage {
+    // mapping(address account => uint256) _balances; -> use ERC1155
+    mapping(address account => mapping(address spender => uint256)) _allowances;
+    // uint256 _totalSupply; -> use ERC1155
+    string _name;
+    string _symbol;
+    IgETH ERC1155;
+    uint256 ERC1155_ID;
+  }
 
-// /**
-//  * @dev differences between ERC20Middleware and Openzeppelin's implementation of ERC20Upgradeable is:
-//  * -> pragma set to =0.8.7 and then =0.8.20;
-//  * -> ERC20Middleware uses gETH contract for balances and totalsupply info.
-//  * -> unique id of ERC1155 is used
-//  * -> there is no mint or burn functionality implemented here.
-//  *
-//  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/2cb8996b777060e658e2b8c9b1630313aedb04c0/contracts/token/ERC20/ERC20Upgradeable.sol
-//  */
+  // keccak256(abi.encode(uint256(keccak256("geode.storage.ERC20Middleware")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant ERC20MiddlewareStorageLocation =
+    0xe22aaba88ea2d91ae86fe1c55e46fee2f572fef0a3fd6d1010f5764e3170a300;
 
-// /**
-//  * @dev Implementation of the {IERC20} interface.
-//  *
-//  * This implementation is agnostic to the way tokens are created. This means
-//  * that a supply mechanism has to be added in a derived contract using {_mint}.
-//  * For a generic mechanism see {ERC20PresetMinterPauser}.
-//  *
-//  * TIP: For a detailed writeup see our guide
-//  * https://forum.zeppelin.solutions/t/how-to-implement-erc20-supply-mechanisms/226[How
-//  * to implement supply mechanisms].
-//  *
-//  * We have followed general OpenZeppelin Contracts guidelines: functions revert
-//  * instead returning `false` on failure. This behavior is nonetheless
-//  * conventional and does not conflict with the expectations of ERC20
-//  * applications.
-//  *
-//  * Additionally, an {Approval} event is emitted on calls to {transferFrom}.
-//  * This allows applications to reconstruct the allowance for all accounts just
-//  * by listening to said events. Other implementations of the EIP may not emit
-//  * these events, as it isn't required by the specification.
-//  *
-//  * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
-//  * functions have been added to mitigate the well-known issues around setting
-//  * allowances. See {IERC20-approve}.
-//  */
+  function _getERC20MiddlewareStorage() private pure returns (ERC20MiddlewareStorage storage $) {
+    assembly {
+      $.slot := ERC20MiddlewareStorageLocation
+    }
+  }
 
-// contract ERC20Middleware is
-//   Initializable,
-//   ContextUpgradeable,
-//   IgETHMiddleware,
-//   IERC20Upgradeable,
-//   IERC20MetadataUpgradeable
-// {
-//   /**
-//    * @dev gETH ERC20 interface doesn't use balance info, catches it from ERC1155.
-//    * mapping(address => uint256) private _balances;
-//    **/
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
 
-//   mapping(address => mapping(address => uint256)) private _allowances;
+  function initialize(
+    uint256 id_,
+    address gETH_,
+    bytes calldata data
+  ) public virtual override initializer {
+    uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
+    __ERC20Middleware_init(
+      id_,
+      gETH_,
+      string(BytesLib.slice(data, 32, nameLen)),
+      string(BytesLib.slice(data, 32 + nameLen, data.length - (32 + nameLen)))
+    );
+  }
 
-//   /**
-//    * @dev gETH ERC20 interface doesn't use totalSupply info, catches it from ERC1155.
-//    * uint256 private _totalSupply;
-//    **/
+  /**
+   * @dev Sets the values for {name} and {symbol} based on provided data:
+   * * First 32 bytes indicate the lenght of the name, one therefore can find out
+   * * which byte the name ends and symbol starts.
+   */
+  function __ERC20Middleware_init(
+    uint256 id_,
+    address gETH_,
+    string memory name_,
+    string memory symbol_
+  ) internal onlyInitializing {
+    __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
+  }
 
-//   string private _name;
-//   string private _symbol;
+  function __ERC20Middleware_init_unchained(
+    uint256 id_,
+    address gETH_,
+    string memory name_,
+    string memory symbol_
+  ) internal onlyInitializing {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    $._name = name_;
+    $._symbol = symbol_;
+    $.ERC1155 = IgETH(gETH_);
+    $.ERC1155_ID = id_;
+  }
 
-//   IgETH public ERC1155;
-//   uint256 public ERC1155_ID;
+  function name() public view virtual returns (string memory) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return $._name;
+  }
 
-//   ///@custom:oz-upgrades-unsafe-allow constructor
-//   constructor() {
-//     _disableInitializers();
-//   }
+  function symbol() public view virtual returns (string memory) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return $._symbol;
+  }
 
-//   /**
-//    * @dev Sets the values for {name} and {symbol} based on provided data:
-//    * * First 32 bytes indicate the lenght of the name, one therefore can find out
-//    * * which byte the name ends and symbol starts.
-//    *
-//    * The default value of {decimals} is 18. To select a different value for
-//    * {decimals} you should overload it.
-//    *
-//    */
-//   function initialize(
-//     uint256 id_,
-//     address gETH_,
-//     bytes calldata data
-//   ) public virtual override initializer {
-//     uint256 nameLen = uint256(bytes32(BytesLib.slice(data, 0, 32)));
-//     __ERC20Middleware_init(
-//       id_,
-//       gETH_,
-//       string(BytesLib.slice(data, 32, nameLen)),
-//       string(BytesLib.slice(data, 32 + nameLen, data.length - (32 + nameLen)))
-//     );
-//   }
+  function ERC1155() public view virtual override returns (address) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return address($.ERC1155);
+  }
 
-//   /**
-//    * @dev Sets the values for {name} and {symbol}.
-//    *
-//    * The default value of {decimals} is 18. To select a different value for
-//    * {decimals} you should overload it.
-//    *
-//    * All two of these values are immutable: they can only be set once during
-//    * construction.
-//    */
+  function ERC1155_ID() public view virtual override returns (uint256) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return $.ERC1155_ID;
+  }
 
-//   function __ERC20Middleware_init(
-//     uint256 id_,
-//     address gETH_,
-//     string memory name_,
-//     string memory symbol_
-//   ) internal onlyInitializing {
-//     __ERC20Middleware_init_unchained(id_, gETH_, name_, symbol_);
-//   }
+  function pricePerShare() public view virtual override returns (uint256) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return $.ERC1155.pricePerShare($.ERC1155_ID);
+  }
 
-//   function __ERC20Middleware_init_unchained(
-//     uint256 id_,
-//     address gETH_,
-//     string memory name_,
-//     string memory symbol_
-//   ) internal onlyInitializing {
-//     _name = name_;
-//     _symbol = symbol_;
-//     ERC1155 = IgETH(gETH_);
-//     ERC1155_ID = id_;
-//   }
+  function decimals() public view virtual returns (uint8) {
+    return 18;
+  }
 
-//   /**
-//    * @dev Returns the name of the token.
-//    */
-//   function name() public view virtual override returns (string memory) {
-//     return _name;
-//   }
+  function totalSupply() public view virtual returns (uint256) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return $.ERC1155.totalSupply($.ERC1155_ID);
+  }
 
-//   /**
-//    * @dev Returns the symbol of the token, usually a shorter version of the
-//    * name.
-//    */
-//   function symbol() public view virtual override returns (string memory) {
-//     return _symbol;
-//   }
+  function balanceOf(address account) public view virtual returns (uint256) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return $.ERC1155.balanceOf(account, $.ERC1155_ID);
+  }
 
-//   /**
-//    * @dev Returns the number of decimals used to get its user representation.
-//    * For example, if `decimals` equals `2`, a balance of `505` tokens should
-//    * be displayed to a user as `5.05` (`505 / 10 ** 2`).
-//    *
-//    * Tokens usually opt for a value of 18, imitating the relationship between
-//    * Ether and Wei. This is the value {ERC20} uses, unless this function is
-//    * overridden;
-//    *
-//    * NOTE: This information is only used for _display_ purposes: it in
-//    * no way affects any of the arithmetic of the contract, including
-//    * {IERC20-balanceOf} and {IERC20-transfer}.
-//    */
-//   function decimals() public view virtual override returns (uint8) {
-//     return 18;
-//   }
+  function transfer(address to, uint256 value) public virtual returns (bool) {
+    address owner = _msgSender();
+    _transfer(owner, to, value);
+    return true;
+  }
 
-//   /**
-//    * @dev See {IERC20-totalSupply}.
-//    * @dev CHANGED for gETH.
-//    * @dev See {gETH-totalSupply}.
-//    */
-//   function totalSupply() public view virtual override returns (uint256) {
-//     return ERC1155.totalSupply(ERC1155_ID);
-//   }
+  function allowance(address owner, address spender) public view virtual returns (uint256) {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    return $._allowances[owner][spender];
+  }
 
-//   /**
-//    * @dev See {IERC20-balanceOf}.
-//    * @dev CHANGED for gETH.
-//    * @dev See {gETH-balanceOf}.
-//    */
-//   function balanceOf(address account) public view virtual override returns (uint256) {
-//     return ERC1155.balanceOf(account, ERC1155_ID);
-//   }
+  function approve(address spender, uint256 value) public virtual returns (bool) {
+    address owner = _msgSender();
+    _approve(owner, spender, value);
+    return true;
+  }
 
-//   /**
-//    * @dev shows the underlying ETH for 1 staked ether for a given id
-//    * @dev CHANGED for gETH.
-//    * @dev See {gETH-pricePerShare}.
-//    */
-//   function pricePerShare() public view returns (uint256) {
-//     return ERC1155.pricePerShare(ERC1155_ID);
-//   }
+  function transferFrom(address from, address to, uint256 value) public virtual returns (bool) {
+    address spender = _msgSender();
+    _spendAllowance(from, spender, value);
+    _transfer(from, to, value);
+    return true;
+  }
 
-//   /**
-//    * @dev See {IERC20-transfer}.
-//    *
-//    * Requirements:
-//    *
-//    * - `to` cannot be the zero address.
-//    * - the caller must have a balance of at least `amount`.
-//    */
-//   function transfer(address to, uint256 amount) public virtual override returns (bool) {
-//     address owner = _msgSender();
-//     _transfer(owner, to, amount);
-//     return true;
-//   }
+  function _transfer(address from, address to, uint256 value) internal {
+    if (from == address(0)) {
+      revert ERC20InvalidSender(address(0));
+    }
+    if (to == address(0)) {
+      revert ERC20InvalidReceiver(address(0));
+    }
+    _update(from, to, value);
+  }
 
-//   /**
-//    * @dev See {IERC20-allowance}.
-//    */
-//   function allowance(
-//     address owner,
-//     address spender
-//   ) public view virtual override returns (uint256) {
-//     return _allowances[owner][spender];
-//   }
+  function _update(address from, address to, uint256 value) internal virtual {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
 
-//   /**
-//    * @dev See {IERC20-approve}.
-//    *
-//    * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
-//    * `transferFrom`. This is semantically equivalent to an infinite approval.
-//    *
-//    * Requirements:
-//    *
-//    * - `spender` cannot be the zero address.
-//    */
-//   function approve(address spender, uint256 amount) public virtual override returns (bool) {
-//     address owner = _msgSender();
-//     _approve(owner, spender, amount);
-//     return true;
-//   }
+    uint256 fromBalance = balanceOf(from);
+    if (fromBalance < value) {
+      revert ERC20InsufficientBalance(from, fromBalance, value);
+    }
 
-//   /**
-//    * @dev See {IERC20-transferFrom}.
-//    *
-//    * Emits an {Approval} event indicating the updated allowance. This is not
-//    * required by the EIP. See the note at the beginning of {ERC20}.
-//    *
-//    * NOTE: Does not update the allowance if the current allowance
-//    * is the maximum `uint256`.
-//    *
-//    * Requirements:
-//    *
-//    * - `from` and `to` cannot be the zero address.
-//    * - `from` must have a balance of at least `amount`.
-//    * - the caller must have allowance for ``from``'s tokens of at least
-//    * `amount`.
-//    */
-//   function transferFrom(
-//     address from,
-//     address to,
-//     uint256 amount
-//   ) public virtual override returns (bool) {
-//     address spender = _msgSender();
-//     _spendAllowance(from, spender, amount);
-//     _transfer(from, to, amount);
-//     return true;
-//   }
+    $.ERC1155.safeTransferFrom(from, to, $.ERC1155_ID, value, "");
 
-//   /**
-//    * @dev Atomically increases the allowance granted to `spender` by the caller.
-//    *
-//    * This is an alternative to {approve} that can be used as a mitigation for
-//    * problems described in {IERC20-approve}.
-//    *
-//    * Emits an {Approval} event indicating the updated allowance.
-//    *
-//    * Requirements:
-//    *
-//    * - `spender` cannot be the zero address.
-//    */
-//   function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-//     address owner = _msgSender();
-//     _approve(owner, spender, allowance(owner, spender) + addedValue);
-//     return true;
-//   }
+    emit Transfer(from, to, value);
+  }
 
-//   /**
-//    * @dev Atomically decreases the allowance granted to `spender` by the caller.
-//    *
-//    * This is an alternative to {approve} that can be used as a mitigation for
-//    * problems described in {IERC20-approve}.
-//    *
-//    * Emits an {Approval} event indicating the updated allowance.
-//    *
-//    * Requirements:
-//    *
-//    * - `spender` cannot be the zero address.
-//    * - `spender` must have allowance for the caller of at least
-//    * `subtractedValue`.
-//    */
-//   function decreaseAllowance(
-//     address spender,
-//     uint256 subtractedValue
-//   ) public virtual returns (bool) {
-//     address owner = _msgSender();
-//     uint256 currentAllowance = allowance(owner, spender);
-//     require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
-//     unchecked {
-//       _approve(owner, spender, currentAllowance - subtractedValue);
-//     }
+  function _approve(address owner, address spender, uint256 value) internal {
+    _approve(owner, spender, value, true);
+  }
 
-//     return true;
-//   }
+  function _approve(
+    address owner,
+    address spender,
+    uint256 value,
+    bool emitEvent
+  ) internal virtual {
+    ERC20MiddlewareStorage storage $ = _getERC20MiddlewareStorage();
+    if (owner == address(0)) {
+      revert ERC20InvalidApprover(address(0));
+    }
+    if (spender == address(0)) {
+      revert ERC20InvalidSpender(address(0));
+    }
+    $._allowances[owner][spender] = value;
+    if (emitEvent) {
+      emit Approval(owner, spender, value);
+    }
+  }
 
-//   /**
-//    * @dev Moves `amount` of tokens from `from` to `to`.
-//    *
-//    * This internal function is equivalent to {transfer}, and can be used to
-//    * e.g. implement automatic token fees, slashing mechanisms, etc.
-//    *
-//    * Emits a {Transfer} event.
-//    *
-//    * Requirements:
-//    *
-//    * - `from` cannot be the zero address.
-//    * - `to` cannot be the zero address.
-//    * - `from` must have a balance of at least `amount`.
-//    * @dev CHANGED for gETH.
-//    * @dev See {gETH-safeTransferFrom}.
-//    */
-//   function _transfer(address from, address to, uint256 amount) internal virtual {
-//     require(from != address(0), "ERC20: transfer from the zero address");
-//     require(to != address(0), "ERC20: transfer to the zero address");
-
-//     _beforeTokenTransfer(from, to, amount);
-
-//     uint256 fromBalance = balanceOf(from);
-//     require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
-//     ERC1155.safeTransferFrom(from, to, ERC1155_ID, amount, "");
-
-//     emit Transfer(from, to, amount);
-
-//     _afterTokenTransfer(from, to, amount);
-//   }
-
-//   /**
-//    * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
-//    *
-//    * This internal function is equivalent to `approve`, and can be used to
-//    * e.g. set automatic allowances for certain subsystems, etc.
-//    *
-//    * Emits an {Approval} event.
-//    *
-//    * Requirements:
-//    *
-//    * - `owner` cannot be the zero address.
-//    * - `spender` cannot be the zero address.
-//    */
-//   function _approve(address owner, address spender, uint256 amount) internal virtual {
-//     require(owner != address(0), "ERC20: approve from the zero address");
-//     require(spender != address(0), "ERC20: approve to the zero address");
-
-//     _allowances[owner][spender] = amount;
-//     emit Approval(owner, spender, amount);
-//   }
-
-//   /**
-//    * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
-//    *
-//    * Does not update the allowance amount in case of infinite allowance.
-//    * Revert if not enough allowance is available.
-//    *
-//    * Might emit an {Approval} event.
-//    */
-//   function _spendAllowance(address owner, address spender, uint256 amount) internal virtual {
-//     uint256 currentAllowance = allowance(owner, spender);
-//     if (currentAllowance != type(uint256).max) {
-//       require(currentAllowance >= amount, "ERC20: insufficient allowance");
-//       unchecked {
-//         _approve(owner, spender, currentAllowance - amount);
-//       }
-//     }
-//   }
-
-//   /**
-//    * @dev Hook that is called before any transfer of tokens. This includes
-//    * minting and burning.
-//    *
-//    * Calling conditions:
-//    *
-//    * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-//    * will be transferred to `to`.
-//    * - when `from` is zero, `amount` tokens will be minted for `to`.
-//    * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
-//    * - `from` and `to` are never both zero.
-//    *
-//    * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
-//    */
-//   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual {}
-
-//   /**
-//    * @dev Hook that is called after any transfer of tokens. This includes
-//    * minting and burning.
-//    *
-//    * Calling conditions:
-//    *
-//    * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-//    * has been transferred to `to`.
-//    * - when `from` is zero, `amount` tokens have been minted for `to`.
-//    * - when `to` is zero, `amount` of ``from``'s tokens have been burned.
-//    * - `from` and `to` are never both zero.
-//    *
-//    * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
-//    */
-//   function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual {}
-
-//   /**
-//    * @dev This empty reserved space is put in place to allow future versions to add new
-//    * variables without shifting down storage in the inheritance chain.
-//    * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-//    *
-//    * @dev GEODE: middlewares are de-facto not upgrdable, just here to be cloned.
-//    * * So, we don't need this gap.
-//    */
-//   // uint256[] private __gap;
-// }
+  function _spendAllowance(address owner, address spender, uint256 value) internal virtual {
+    uint256 currentAllowance = allowance(owner, spender);
+    if (currentAllowance != type(uint256).max) {
+      if (currentAllowance < value) {
+        revert ERC20InsufficientAllowance(spender, currentAllowance, value);
+      }
+      unchecked {
+        _approve(owner, spender, currentAllowance - value, false);
+      }
+    }
+  }
+}
