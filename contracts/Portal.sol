@@ -18,9 +18,9 @@ import {IGeodeModule} from "./interfaces/modules/IGeodeModule.sol";
 import {IStakeModule} from "./interfaces/modules/IStakeModule.sol";
 import {IPortal} from "./interfaces/IPortal.sol";
 // internal - structs
-import {IsolatedStorage} from "./modules/DataStoreModule/structs/storage.sol";
-import {DualGovernance} from "./modules/GeodeModule/structs/storage.sol";
-import {PooledStaking} from "./modules/StakeModule/structs/storage.sol";
+import {DataStoreModuleStorage} from "./modules/DataStoreModule/structs/storage.sol";
+import {GeodeModuleStorage} from "./modules/GeodeModule/structs/storage.sol";
+import {StakeModuleStorage} from "./modules/StakeModule/structs/storage.sol";
 // internal - libraries
 import {DataStoreModuleLib as DSML} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
@@ -57,26 +57,26 @@ import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
  * * GeodeModule has OnlyGovernance, OnlySenate and OnlyController checks with modifiers.
  * * StakeModuleLib has "authenticate()" function which checks for Maintainers, Controllers, and TYPE.
  * * OracleModuleLib has OnlyOracle checks with a modifier.
- * * Portal has an OnlyGovernance check on : pause, unpause, pausegETH, unpausegETH, setGovernanceFee, releasePrisoned.
+ * * Portal has an OnlyGovernance check on : pause, unpause, pausegETH, unpausegETH, setInfrastructureFee, releasePrisoned.
  *
  * @author Ice Bear & Crash Bandicoot
  */
 contract Portal is IPortal, GeodeModule, StakeModule {
-  using DSML for IsolatedStorage;
-  using GML for DualGovernance;
-  using SML for PooledStaking;
+  using DSML for DataStoreModuleStorage;
+  using GML for GeodeModuleStorage;
+  using SML for StakeModuleStorage;
 
   /**
    * @custom:section                           ** EVENTS **
    */
   event Released(uint256 operatorId);
-  event GovernanceFeeSet(uint256 fee);
+  event InfrastructureFeeSet(uint256 _type, uint256 fee);
 
   /**
    * @custom:section                           ** MODIFIERS **
    */
   modifier onlyGovernance() {
-    require(msg.sender == GEODE.GOVERNANCE, "PORTAL:sender NOT governance");
+    require(msg.sender == _getGeodeModuleStorage().GOVERNANCE, "PORTAL:sender NOT governance");
     _;
   }
 
@@ -142,9 +142,10 @@ contract Portal is IPortal, GeodeModule, StakeModule {
     override(GeodeModule, IGeodeModule)
     returns (bool)
   {
+    GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
     return (paused() ||
-      GEODE.APPROVED_UPGRADE != ERC1967Utils.getImplementation() ||
-      block.timestamp > GEODE.SENATE_EXPIRY);
+      GMStorage.APPROVED_UPGRADE != ERC1967Utils.getImplementation() ||
+      block.timestamp > GMStorage.SENATE_EXPIRY);
   }
 
   /**
@@ -152,6 +153,14 @@ contract Portal is IPortal, GeodeModule, StakeModule {
    *
    * @custom:visibility -> external
    */
+
+  function pausegETH() external virtual override onlyGovernance {
+    _getStakeModuleStorage().gETH.pause();
+  }
+
+  function unpausegETH() external virtual override onlyGovernance {
+    _getStakeModuleStorage().gETH.unpause();
+  }
 
   function pause() external virtual override(StakeModule, IStakeModule) onlyGovernance {
     _pause();
@@ -161,12 +170,17 @@ contract Portal is IPortal, GeodeModule, StakeModule {
     _unpause();
   }
 
-  function pausegETH() external virtual override onlyGovernance {
-    STAKE.gETH.pause();
-  }
+  function setInfrastructureFee(
+    uint256 _type,
+    uint256 fee
+  ) external virtual override(StakeModule, IStakeModule) onlyGovernance {
+    if (_type == ID_TYPE.POOL) {
+      require(fee <= SML.MAX_POOL_INFRASTRUCTURE_FEE, "PORTAL:> MAX");
+    }
 
-  function unpausegETH() external virtual override onlyGovernance {
-    STAKE.gETH.unpause();
+    _getStakeModuleStorage().setInfrastructureFee(_type, fee);
+
+    emit InfrastructureFeeSet(_type, fee);
   }
 
   /**
@@ -176,18 +190,9 @@ contract Portal is IPortal, GeodeModule, StakeModule {
    * @dev onlyGovernance SHOULD be checked in Portal
    */
   function releasePrisoned(uint256 operatorId) external virtual override onlyGovernance {
-    DATASTORE.writeUint(operatorId, "release", block.timestamp);
+    _getDataStoreModuleStorage().writeUint(operatorId, "release", block.timestamp);
 
     emit Released(operatorId);
-  }
-
-  function setGovernanceFee(uint256 newFee) external virtual override onlyGovernance {
-    require(newFee <= SML.MAX_GOVERNANCE_FEE, "PORTAL:> MAX_GOVERNANCE_FEE");
-    require(block.timestamp > SML.GOVERNANCE_FEE_COMMENCEMENT, "PORTAL:not yet.");
-
-    STAKE.GOVERNANCE_FEE = newFee;
-
-    emit GovernanceFeeSet(newFee);
   }
 
   /**
@@ -211,9 +216,9 @@ contract Portal is IPortal, GeodeModule, StakeModule {
     (_controller, _type, _name) = super.approveProposal(id);
 
     if (_type > ID_TYPE.LIMIT_MIN_PACKAGE && _type < ID_TYPE.LIMIT_MAX_PACKAGE) {
-      STAKE.packages[_type] = id;
+      _getStakeModuleStorage().packages[_type] = id;
     } else if (_type > ID_TYPE.LIMIT_MIN_MIDDLEWARE && _type < ID_TYPE.LIMIT_MAX_MIDDLEWARE) {
-      STAKE.middlewares[_type][id] = true;
+      _getStakeModuleStorage().middlewares[_type][id] = true;
     }
   }
 
@@ -225,12 +230,14 @@ contract Portal is IPortal, GeodeModule, StakeModule {
       "PORTAL:invalid package type"
     );
 
-    uint256 currentPackageVersion = STAKE.packages[packageType];
+    uint256 currentPackageVersion = _getStakeModuleStorage().packages[packageType];
+
+    DataStoreModuleStorage storage DSMStorage = _getDataStoreModuleStorage();
 
     id = IGeodeModule(msg.sender).propose(
-      DATASTORE.readAddress(currentPackageVersion, "CONTROLLER"),
+      DSMStorage.readAddress(currentPackageVersion, "CONTROLLER"),
       packageType,
-      DATASTORE.readBytes(currentPackageVersion, "NAME"),
+      DSMStorage.readBytes(currentPackageVersion, "NAME"),
       GML.MAX_PROPOSAL_DURATION
     );
 
@@ -242,9 +249,4 @@ contract Portal is IPortal, GeodeModule, StakeModule {
    */
 
   receive() external payable {}
-
-  /**
-   * @notice keep the total number of variables at 50
-   */
-  uint256[50] private __gap;
 }

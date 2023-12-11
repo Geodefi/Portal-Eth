@@ -12,6 +12,4 @@ interface IPortal is IGeodeModule, IStakeModule {
   function pushUpgrade(uint256 packageType) external returns (uint256 id);
 
   function releasePrisoned(uint256 operatorId) external;
-
-  function setGovernanceFee(uint256 newFee) external;
 }
