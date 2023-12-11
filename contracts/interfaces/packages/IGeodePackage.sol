@@ -12,8 +12,6 @@ interface IGeodePackage is IGeodeModule {
     bytes memory data
   ) external;
 
-  function getPortal() external view returns (IPortal);
-
   function getPoolId() external view returns (uint256);
 
   function getProposedVersion() external view returns (uint256);

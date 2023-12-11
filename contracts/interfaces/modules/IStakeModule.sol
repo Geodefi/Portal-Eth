@@ -9,6 +9,8 @@ interface IStakeModule is IDataStoreModule {
 
   function unpause() external;
 
+  function setInfrastructureFee(uint256 _type, uint256 fee) external;
+
   function StakeParams()
     external
     view
@@ -20,19 +22,20 @@ interface IStakeModule is IDataStoreModule {
       uint256 monopolyThreshold,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
-      uint256 dailyPriceDecreaseLimit,
-      uint256 governanceFee,
-      bytes32 priceMerkleRoot,
-      bytes32 balanceMerkleRoot
+      uint256 dailyPriceDecreaseLimit
     );
 
   function getValidator(bytes calldata pubkey) external view returns (Validator memory);
 
   function getPackageVersion(uint256 _type) external view returns (uint256);
 
+  function getPriceMerkleRoot() external view returns (bytes32);
+
   function getBalancesMerkleRoot() external view returns (bytes32);
 
   function isMiddleware(uint256 _type, uint256 _version) external view returns (bool);
+
+  function getInfrastructureFee(uint256 _type) external view returns (uint256);
 
   function initiateOperator(
     uint256 id,

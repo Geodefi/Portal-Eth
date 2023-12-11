@@ -11,8 +11,8 @@ import {PERCENTAGE_DENOMINATOR} from "../../globals/macros.sol";
 import {IgETH} from "../../interfaces/IgETH.sol";
 import {IStakeModule} from "../../interfaces/modules/IStakeModule.sol";
 // internal - structs
-import {IsolatedStorage} from "../DataStoreModule/structs/storage.sol";
-import {PooledStaking} from "./structs/storage.sol";
+import {DataStoreModuleStorage} from "../DataStoreModule/structs/storage.sol";
+import {StakeModuleStorage} from "./structs/storage.sol";
 import {Validator} from "./structs/utils.sol";
 // internal - libraries
 import {StakeModuleLib as SML} from "./libs/StakeModuleLib.sol";
@@ -39,7 +39,7 @@ import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
  * * However, this module inherits and implements nonReentrant & whenNotPaused modifiers.
  * * SM has pausability and expects inheriting contract to provide the access control mechanism.
  *
- * @dev 2 functions need to be overriden when inherited: pause, unpause.
+ * @dev 3 functions need to be overriden when inherited: pause, unpause, setInfrastructureFee
  *
  * @dev __StakeModule_init (or _unchained) call is NECESSARY when inherited.
  *
@@ -54,9 +54,9 @@ abstract contract StakeModule is
   PausableUpgradeable,
   DataStoreModule
 {
-  using SML for PooledStaking;
-  using IEL for PooledStaking;
-  using OEL for PooledStaking;
+  using SML for StakeModuleStorage;
+  using IEL for StakeModuleStorage;
+  using OEL for StakeModuleStorage;
 
   /**
    * @custom:section                           ** VARIABLES **
@@ -64,7 +64,42 @@ abstract contract StakeModule is
    * @dev Do not add any other variables here. Modules do NOT have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
-  PooledStaking internal STAKE;
+  // keccak256(abi.encode(uint256(keccak256("geode.storage.StakeModuleStorage")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant StakeModuleStorageLocation =
+    0x642b1534be65022221e9e6919fcbcd097fefb6d9d9b7897cee77332e470da700;
+
+  function _getStakeModuleStorage() internal pure returns (StakeModuleStorage storage $) {
+    assembly {
+      $.slot := StakeModuleStorageLocation
+    }
+  }
+
+  /**
+   * @custom:section                           ** EVENTS **
+   */
+  event IdInitiated(uint256 id, uint256 indexed TYPE);
+  event MiddlewareDeployed(uint256 poolId, uint256 version);
+  event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
+  event VisibilitySet(uint256 id, bool isPrivate);
+  event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
+  event MaintainerChanged(uint256 indexed id, address newMaintainer);
+  event FeeSwitched(uint256 indexed id, uint256 fee, uint256 effectiveAfter);
+  event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
+  event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
+  event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 threshold);
+  event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
+  event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
+  event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
+  event Stake(bytes[] pubkeys);
+
+  event Alienated(bytes pubkey);
+  event VerificationIndexUpdated(uint256 validatorVerificationIndex);
+  event FeeTheft(uint256 indexed id, bytes proofs);
+  event OracleReported(
+    bytes32 priceMerkleRoot,
+    bytes32 balanceMerkleRoot,
+    uint256 monopolyThreshold
+  );
 
   /**
    * @custom:section                           ** ABSTRACT FUNCTIONS **
@@ -72,6 +107,8 @@ abstract contract StakeModule is
   function pause() external virtual override;
 
   function unpause() external virtual override;
+
+  function setInfrastructureFee(uint256 _type, uint256 fee) external virtual override;
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -90,10 +127,12 @@ abstract contract StakeModule is
   ) internal onlyInitializing {
     require(_gETH != address(0), "SM:gETH cannot be zero address");
     require(_oracle_position != address(0), "SM:oracle cannot be zero address");
-    STAKE.gETH = IgETH(_gETH);
-    STAKE.ORACLE_POSITION = _oracle_position;
-    STAKE.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
-    STAKE.DAILY_PRICE_DECREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
+
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.gETH = IgETH(_gETH);
+    $.ORACLE_POSITION = _oracle_position;
+    $.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
+    $.DAILY_PRICE_DECREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
   }
 
   /**
@@ -115,44 +154,53 @@ abstract contract StakeModule is
       uint256 monopolyThreshold,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
-      uint256 dailyPriceDecreaseLimit,
-      uint256 governanceFee,
-      bytes32 priceMerkleRoot,
-      bytes32 balanceMerkleRoot
+      uint256 dailyPriceDecreaseLimit
     )
   {
-    gETH = address(STAKE.gETH);
-    oraclePosition = STAKE.ORACLE_POSITION;
-    validatorsIndex = STAKE.VALIDATORS_INDEX;
-    verificationIndex = STAKE.VERIFICATION_INDEX;
-    monopolyThreshold = STAKE.MONOPOLY_THRESHOLD;
-    oracleUpdateTimestamp = STAKE.ORACLE_UPDATE_TIMESTAMP;
-    dailyPriceIncreaseLimit = STAKE.DAILY_PRICE_INCREASE_LIMIT;
-    dailyPriceDecreaseLimit = STAKE.DAILY_PRICE_DECREASE_LIMIT;
-    governanceFee = STAKE.GOVERNANCE_FEE;
-    priceMerkleRoot = STAKE.PRICE_MERKLE_ROOT;
-    balanceMerkleRoot = STAKE.BALANCE_MERKLE_ROOT;
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    gETH = address($.gETH);
+    oraclePosition = $.ORACLE_POSITION;
+    validatorsIndex = $.VALIDATORS_INDEX;
+    verificationIndex = $.VERIFICATION_INDEX;
+    monopolyThreshold = $.MONOPOLY_THRESHOLD;
+    oracleUpdateTimestamp = $.ORACLE_UPDATE_TIMESTAMP;
+    dailyPriceIncreaseLimit = $.DAILY_PRICE_INCREASE_LIMIT;
+    dailyPriceDecreaseLimit = $.DAILY_PRICE_DECREASE_LIMIT;
   }
 
   function getValidator(
     bytes calldata pubkey
   ) external view virtual override returns (Validator memory) {
-    return STAKE.validators[pubkey];
-  }
-
-  function getPackageVersion(uint256 _type) external view virtual override returns (uint256) {
-    return STAKE.packages[_type];
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.validators[pubkey];
   }
 
   function getBalancesMerkleRoot() external view virtual override returns (bytes32) {
-    return STAKE.BALANCE_MERKLE_ROOT;
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.BALANCE_MERKLE_ROOT;
+  }
+
+  function getPriceMerkleRoot() external view virtual override returns (bytes32) {
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.PRICE_MERKLE_ROOT;
+  }
+
+  function getPackageVersion(uint256 _type) external view virtual override returns (uint256) {
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.packages[_type];
   }
 
   function isMiddleware(
     uint256 _type,
     uint256 _version
   ) external view virtual override returns (bool) {
-    return STAKE.middlewares[_type][_version];
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.middlewares[_type][_version];
+  }
+
+  function getInfrastructureFee(uint256 _type) external view virtual override returns (uint256) {
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.infrastructureFees[_type];
   }
 
   /**
@@ -166,7 +214,7 @@ abstract contract StakeModule is
     uint256 validatorPeriod,
     address maintainer
   ) external payable virtual override nonReentrant whenNotPaused {
-    IEL.initiateOperator(DATASTORE, id, fee, validatorPeriod, maintainer);
+    IEL.initiateOperator(_getDataStoreModuleStorage(), id, fee, validatorPeriod, maintainer);
   }
 
   /**
@@ -183,8 +231,9 @@ abstract contract StakeModule is
     bytes calldata middleware_data,
     bool[3] calldata config
   ) external payable virtual override whenNotPaused returns (uint256 poolId) {
-    poolId = STAKE.initiatePool(
-      DATASTORE,
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    poolId = $.initiatePool(
+      _getDataStoreModuleStorage(),
       fee,
       middlewareVersion,
       maintainer,
@@ -199,25 +248,25 @@ abstract contract StakeModule is
    */
 
   function setPoolVisibility(uint256 poolId, bool makePrivate) external virtual override {
-    SML.setPoolVisibility(DATASTORE, poolId, makePrivate);
+    SML.setPoolVisibility(_getDataStoreModuleStorage(), poolId, makePrivate);
   }
 
   function setWhitelist(uint256 poolId, address whitelist) external virtual override {
-    SML.setWhitelist(DATASTORE, poolId, whitelist);
+    SML.setWhitelist(_getDataStoreModuleStorage(), poolId, whitelist);
   }
 
   /**
    * @custom:visibility -> view
    */
   function isPrivatePool(uint256 poolId) external view virtual override returns (bool) {
-    return SML.isPrivatePool(DATASTORE, poolId);
+    return SML.isPrivatePool(_getDataStoreModuleStorage(), poolId);
   }
 
   function isWhitelisted(
     uint256 poolId,
     address staker
   ) external view virtual override returns (bool) {
-    return SML.isWhitelisted(DATASTORE, poolId, staker);
+    return SML.isWhitelisted(_getDataStoreModuleStorage(), poolId, staker);
   }
 
   /**
@@ -225,7 +274,8 @@ abstract contract StakeModule is
    */
 
   function deployLiquidityPool(uint256 poolId) external virtual override whenNotPaused {
-    STAKE.deployLiquidityPool(DATASTORE, poolId);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.deployLiquidityPool(_getDataStoreModuleStorage(), poolId);
   }
 
   /**
@@ -236,7 +286,7 @@ abstract contract StakeModule is
     uint256 poolId,
     address yieldReceiver
   ) external virtual override whenNotPaused {
-    SML.setYieldReceiver(DATASTORE, poolId, yieldReceiver);
+    SML.setYieldReceiver(_getDataStoreModuleStorage(), poolId, yieldReceiver);
   }
 
   /**
@@ -253,7 +303,7 @@ abstract contract StakeModule is
     uint256 id,
     address newMaintainer
   ) external virtual override whenNotPaused {
-    SML.changeMaintainer(DATASTORE, id, newMaintainer);
+    SML.changeMaintainer(_getDataStoreModuleStorage(), id, newMaintainer);
   }
 
   /**
@@ -264,14 +314,14 @@ abstract contract StakeModule is
     uint256 id,
     uint256 newFee
   ) external virtual override whenNotPaused {
-    SML.switchMaintenanceFee(DATASTORE, id, newFee);
+    SML.switchMaintenanceFee(_getDataStoreModuleStorage(), id, newFee);
   }
 
   /**
    * @custom:visibility -> view
    */
   function getMaintenanceFee(uint256 id) external view virtual override returns (uint256) {
-    return SML.getMaintenanceFee(DATASTORE, id);
+    return SML.getMaintenanceFee(_getDataStoreModuleStorage(), id);
   }
 
   /**
@@ -281,14 +331,14 @@ abstract contract StakeModule is
   function increaseWalletBalance(
     uint256 id
   ) external payable virtual override nonReentrant whenNotPaused returns (bool) {
-    return SML.increaseWalletBalance(DATASTORE, id);
+    return SML.increaseWalletBalance(_getDataStoreModuleStorage(), id);
   }
 
   function decreaseWalletBalance(
     uint256 id,
     uint256 value
   ) external virtual override nonReentrant returns (bool) {
-    return SML.decreaseWalletBalance(DATASTORE, id, value);
+    return SML.decreaseWalletBalance(_getDataStoreModuleStorage(), id, value);
   }
 
   /**
@@ -301,14 +351,14 @@ abstract contract StakeModule is
     uint256 operatorId,
     uint256 newPeriod
   ) external virtual override whenNotPaused {
-    SML.switchValidatorPeriod(DATASTORE, operatorId, newPeriod);
+    SML.switchValidatorPeriod(_getDataStoreModuleStorage(), operatorId, newPeriod);
   }
 
   /**
    * @custom:visibility -> view
    */
   function getValidatorPeriod(uint256 id) external view virtual override returns (uint256) {
-    return SML.getValidatorPeriod(DATASTORE, id);
+    return SML.getValidatorPeriod(_getDataStoreModuleStorage(), id);
   }
 
   /**
@@ -318,18 +368,20 @@ abstract contract StakeModule is
    */
 
   function blameProposal(bytes calldata pk) external virtual override whenNotPaused {
-    STAKE.blameProposal(DATASTORE, pk);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.blameProposal(_getDataStoreModuleStorage(), pk);
   }
 
   function blameExit(bytes calldata pk) external virtual override whenNotPaused {
-    STAKE.blameExit(DATASTORE, pk);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.blameExit(_getDataStoreModuleStorage(), pk);
   }
 
   /**
    * @custom:visibility -> view
    */
   function isPrisoned(uint256 operatorId) external view virtual override returns (bool) {
-    return SML.isPrisoned(DATASTORE, operatorId);
+    return SML.isPrisoned(_getDataStoreModuleStorage(), operatorId);
   }
 
   /**
@@ -343,7 +395,7 @@ abstract contract StakeModule is
     uint256[] calldata operatorIds,
     uint256[] calldata allowances
   ) external virtual override whenNotPaused {
-    SML.delegate(DATASTORE, poolId, operatorIds, allowances);
+    SML.delegate(_getDataStoreModuleStorage(), poolId, operatorIds, allowances);
   }
 
   function setFallbackOperator(
@@ -351,7 +403,7 @@ abstract contract StakeModule is
     uint256 operatorId,
     uint256 fallbackThreshold
   ) external virtual override whenNotPaused {
-    SML.setFallbackOperator(DATASTORE, poolId, operatorId, fallbackThreshold);
+    SML.setFallbackOperator(_getDataStoreModuleStorage(), poolId, operatorId, fallbackThreshold);
   }
 
   /**
@@ -361,7 +413,8 @@ abstract contract StakeModule is
     uint256 poolId,
     uint256 operatorId
   ) external view virtual override returns (uint256) {
-    return STAKE.operatorAllowance(DATASTORE, poolId, operatorId);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.operatorAllowance(_getDataStoreModuleStorage(), poolId, operatorId);
   }
 
   /**
@@ -371,11 +424,13 @@ abstract contract StakeModule is
    */
 
   function isPriceValid(uint256 poolId) external view virtual override returns (bool) {
-    return STAKE.isPriceValid(poolId);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.isPriceValid(poolId);
   }
 
   function isMintingAllowed(uint256 poolId) external view virtual override returns (bool) {
-    return STAKE.isMintingAllowed(DATASTORE, poolId);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.isMintingAllowed(_getDataStoreModuleStorage(), poolId);
   }
 
   /**
@@ -399,11 +454,19 @@ abstract contract StakeModule is
     whenNotPaused
     returns (uint256 boughtgETH, uint256 mintedgETH)
   {
-    if (!STAKE.isPriceValid(poolId)) {
-      STAKE.priceSync(DATASTORE, poolId, price, priceProof);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    DataStoreModuleStorage storage DSMStorage = _getDataStoreModuleStorage();
+    if (!$.isPriceValid(poolId)) {
+      $.priceSync(DSMStorage, poolId, price, priceProof);
     }
 
-    (boughtgETH, mintedgETH) = STAKE.deposit(DATASTORE, poolId, mingETH, deadline, receiver);
+    (boughtgETH, mintedgETH) = $.deposit(
+      _getDataStoreModuleStorage(),
+      poolId,
+      mingETH,
+      deadline,
+      receiver
+    );
   }
 
   /**
@@ -418,21 +481,31 @@ abstract contract StakeModule is
     bytes[] calldata signatures1,
     bytes[] calldata signatures31
   ) external virtual override whenNotPaused {
-    STAKE.proposeStake(DATASTORE, poolId, operatorId, pubkeys, signatures1, signatures31);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.proposeStake(
+      _getDataStoreModuleStorage(),
+      poolId,
+      operatorId,
+      pubkeys,
+      signatures1,
+      signatures31
+    );
   }
 
   function stake(
     uint256 operatorId,
     bytes[] calldata pubkeys
   ) external virtual override whenNotPaused {
-    STAKE.stake(DATASTORE, operatorId, pubkeys);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.stake(_getDataStoreModuleStorage(), operatorId, pubkeys);
   }
 
   /**
    * @custom:visibility -> view
    */
   function canStake(bytes calldata pubkey) external view virtual override returns (bool) {
-    return STAKE.canStake(pubkey);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    return $.canStake(pubkey);
   }
 
   /**
@@ -445,14 +518,16 @@ abstract contract StakeModule is
     uint256 poolId,
     bytes memory pk
   ) external virtual override nonReentrant whenNotPaused {
-    STAKE.requestExit(DATASTORE, poolId, pk);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.requestExit(_getDataStoreModuleStorage(), poolId, pk);
   }
 
   function finalizeExit(
     uint256 poolId,
     bytes memory pk
   ) external virtual override nonReentrant whenNotPaused {
-    STAKE.finalizeExit(DATASTORE, poolId, pk);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.finalizeExit(_getDataStoreModuleStorage(), poolId, pk);
   }
 
   /**
@@ -465,14 +540,20 @@ abstract contract StakeModule is
     uint256 validatorVerificationIndex,
     bytes[] calldata alienatedPubkeys
   ) external virtual override whenNotPaused {
-    STAKE.updateVerificationIndex(DATASTORE, validatorVerificationIndex, alienatedPubkeys);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.updateVerificationIndex(
+      _getDataStoreModuleStorage(),
+      validatorVerificationIndex,
+      alienatedPubkeys
+    );
   }
 
   function regulateOperators(
     uint256[] calldata feeThefts,
     bytes[] calldata proofs
   ) external virtual override whenNotPaused {
-    STAKE.regulateOperators(DATASTORE, feeThefts, proofs);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.regulateOperators(_getDataStoreModuleStorage(), feeThefts, proofs);
   }
 
   function reportBeacon(
@@ -480,7 +561,8 @@ abstract contract StakeModule is
     bytes32 balanceMerkleRoot,
     uint256 allValidatorsCount
   ) external virtual override whenNotPaused {
-    STAKE.reportBeacon(priceMerkleRoot, balanceMerkleRoot, allValidatorsCount);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.reportBeacon(priceMerkleRoot, balanceMerkleRoot, allValidatorsCount);
   }
 
   function priceSync(
@@ -488,7 +570,8 @@ abstract contract StakeModule is
     uint256 price,
     bytes32[] calldata priceProof
   ) external virtual override whenNotPaused {
-    STAKE.priceSync(DATASTORE, poolId, price, priceProof);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.priceSync(_getDataStoreModuleStorage(), poolId, price, priceProof);
   }
 
   function priceSyncBatch(
@@ -496,6 +579,7 @@ abstract contract StakeModule is
     uint256[] calldata prices,
     bytes32[][] calldata priceProofs
   ) external virtual override whenNotPaused {
-    STAKE.priceSyncBatch(DATASTORE, poolIds, prices, priceProofs);
+    StakeModuleStorage storage $ = _getStakeModuleStorage();
+    $.priceSyncBatch(_getDataStoreModuleStorage(), poolIds, prices, priceProofs);
   }
 }

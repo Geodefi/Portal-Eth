@@ -10,7 +10,7 @@ pragma solidity =0.8.20;
  * @param operatorId needed for staking after allowance
  * @param poolFee percentage of the rewards that will go to pool's maintainer, locked when the validator is proposed
  * @param operatorFee percentage of the rewards that will go to operator's maintainer, locked when the validator is proposed
- * @param governanceFee although governance fee is zero right now, all fees are crucial for the price calculation by the oracle.
+ * @param infrastructureFee all fees are crucial for the price calculation by the oracle, even if its zero.
  * @param signature31 BLS12-381 signature for the validator, used when the remaining 31 ETH is sent on validator activation.
  **/
 struct Validator {
@@ -22,6 +22,6 @@ struct Validator {
   uint256 operatorId;
   uint256 poolFee;
   uint256 operatorFee;
-  uint256 governanceFee;
+  uint256 infrastructureFee;
   bytes signature31;
 }

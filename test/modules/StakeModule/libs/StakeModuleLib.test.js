@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 
-const { expectRevert, expectEvent, constants, BN, balance } = require("@openzeppelin/test-helpers");
+const { expectRevert, constants, BN, balance } = require("@openzeppelin/test-helpers");
+const { expectEvent, expectCustomError } = require("../../../utils/helpers");
 const { ZERO_BYTES32, ZERO_ADDRESS, MAX_UINT256 } = constants;
 const {
   PERCENTAGE_DENOMINATOR,
@@ -233,46 +234,75 @@ contract("StakeModuleLib", function (accounts) {
     });
 
     it("initiateOperator", async function () {
-      await expectRevert(this.contract.initiateOperator(0, 0, 0, ZERO_ADDRESS), "Pausable: paused");
+      await expectCustomError(
+        this.contract.initiateOperator(0, 0, 0, ZERO_ADDRESS),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("deployLiquidityPool", async function () {
-      await expectRevert(this.contract.deployLiquidityPool(0), "Pausable: paused");
+      await expectCustomError(this.contract.deployLiquidityPool(0), this.contract, "EnforcedPause");
     });
     it("initiatePool", async function () {
-      await expectRevert(
+      await expectCustomError(
         this.contract.initiatePool(0, 0, ZERO_ADDRESS, "0x", "0x", [false, false, false]),
-        "Pausable: paused"
+        this.contract,
+        "EnforcedPause"
       );
     });
     it("setYieldReceiver", async function () {
-      await expectRevert(this.contract.setYieldReceiver(0, ZERO_ADDRESS), "Pausable: paused");
+      await expectCustomError(
+        this.contract.setYieldReceiver(0, ZERO_ADDRESS),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("changeMaintainer", async function () {
-      await expectRevert(this.contract.changeMaintainer(0, ZERO_ADDRESS), "Pausable: paused");
+      await expectCustomError(
+        this.contract.changeMaintainer(0, ZERO_ADDRESS),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("switchMaintenanceFee", async function () {
-      await expectRevert(this.contract.switchMaintenanceFee(0, 0), "Pausable: paused");
+      await expectCustomError(
+        this.contract.switchMaintenanceFee(0, 0),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("blameExit", async function () {
-      await expectRevert(this.contract.blameExit("0x"), "Pausable: paused");
+      await expectCustomError(this.contract.blameExit("0x"), this.contract, "EnforcedPause");
     });
     it("blameProposal", async function () {
-      await expectRevert(this.contract.blameProposal("0x"), "Pausable: paused");
+      await expectCustomError(this.contract.blameProposal("0x"), this.contract, "EnforcedPause");
     });
     it("switchValidatorPeriod", async function () {
-      await expectRevert(this.contract.switchValidatorPeriod(0, 0), "Pausable: paused");
+      await expectCustomError(
+        this.contract.switchValidatorPeriod(0, 0),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("delegate", async function () {
-      await expectRevert(this.contract.delegate(0, [], []), "Pausable: paused");
+      await expectCustomError(this.contract.delegate(0, [], []), this.contract, "EnforcedPause");
     });
     it("deposit", async function () {
-      await expectRevert(this.contract.deposit(0, 0, [], 0, 0, ZERO_ADDRESS), "Pausable: paused");
+      await expectCustomError(
+        this.contract.deposit(0, 0, [], 0, 0, ZERO_ADDRESS),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("proposeStake", async function () {
-      await expectRevert(this.contract.proposeStake(0, 0, [], [], []), "Pausable: paused");
+      await expectCustomError(
+        this.contract.proposeStake(0, 0, [], [], []),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("stake", async function () {
-      await expectRevert(this.contract.stake(0, []), "Pausable: paused");
+      await expectCustomError(this.contract.stake(0, []), this.contract, "EnforcedPause");
     });
   });
 
@@ -382,7 +412,7 @@ contract("StakeModuleLib", function (accounts) {
             ).to.be.bignumber.equal(await getReceiptTimestamp(tx));
           });
           it("emits IdInitiated", async function () {
-            await expectEvent(tx, "IdInitiated", { id: unknownId, TYPE: "4" });
+            await expectEvent(tx, this.contract, "IdInitiated", { id: unknownId, TYPE: "4" });
           });
         });
       });
@@ -569,10 +599,10 @@ contract("StakeModuleLib", function (accounts) {
             );
           });
           it("emits IdInitiated with correct id", async function () {
-            expectEvent(tx, "IdInitiated", { id: poolIds[0], TYPE: "5" });
+            expectEvent(tx, this.contract, "IdInitiated", { id: poolIds[0], TYPE: "5" });
           });
           it("returns correct id", function () {
-            expectEvent(tx, "return$initiatePool", { poolId: poolIds[0] });
+            expectEvent(tx, this.contract, "return$initiatePool", { poolId: poolIds[0] });
           });
         });
 
@@ -762,6 +792,7 @@ contract("StakeModuleLib", function (accounts) {
         it("emits VisibilitySet", async function () {
           expectEvent(
             await this.contract.setPoolVisibility(privatePoolId, false, { from: poolOwner }),
+            this.contract,
             "VisibilitySet",
             { id: privatePoolId, isPrivate: false }
           );
@@ -834,7 +865,7 @@ contract("StakeModuleLib", function (accounts) {
             await this.contract.readAddress(publicPoolId, strToBytes32("yieldReceiver"))
           ).to.be.eq(yieldReceiver);
 
-          expectEvent(tx, "YieldReceiverSet", {
+          expectEvent(tx, this.contract, "YieldReceiverSet", {
             poolId: publicPoolId,
             yieldReceiver: yieldReceiver,
           });
@@ -847,7 +878,7 @@ contract("StakeModuleLib", function (accounts) {
             await this.contract.readAddress(publicPoolId, strToBytes32("yieldReceiver"))
           ).to.be.eq(ZERO_ADDRESS);
 
-          expectEvent(tx, "YieldReceiverSet", {
+          expectEvent(tx, this.contract, "YieldReceiverSet", {
             poolId: publicPoolId,
             yieldReceiver: ZERO_ADDRESS,
           });
@@ -872,6 +903,7 @@ contract("StakeModuleLib", function (accounts) {
         it("emits MaintainerChanged", async function () {
           expectEvent(
             await this.contract.$_setMaintainer(publicPoolId, attacker),
+            this.contract,
             "MaintainerChanged",
             { id: publicPoolId, newMaintainer: attacker }
           );
@@ -966,7 +998,11 @@ contract("StakeModuleLib", function (accounts) {
             ).to.be.bignumber.equal(effectiveAfter);
           });
           it("emits FeeSwitched", async function () {
-            expectEvent(tx, "FeeSwitched", { id: operatorId, fee: newFee, effectiveAfter });
+            expectEvent(tx, this.contract, "FeeSwitched", {
+              id: operatorId,
+              fee: newFee,
+              effectiveAfter,
+            });
           });
         });
       });
@@ -1085,7 +1121,7 @@ contract("StakeModuleLib", function (accounts) {
           expect(await this.contract.isPrisoned(operatorId)).to.be.equal(true);
         });
         it("emits Prisoned", async function () {
-          expectEvent(tx, "Prisoned", {});
+          expectEvent(tx, this.contract, "Prisoned", {});
         });
       });
     });
@@ -1151,7 +1187,7 @@ contract("StakeModuleLib", function (accounts) {
             ).to.be.bignumber.equal(effectiveAfter);
           });
           it("emits ValidatorPeriodSwitched", async function () {
-            expectEvent(tx, "ValidatorPeriodSwitched", {
+            expectEvent(tx, this.contract, "ValidatorPeriodSwitched", {
               operatorId: operatorId,
               period: newPeriod,
               effectiveAfter,
@@ -1231,9 +1267,9 @@ contract("StakeModuleLib", function (accounts) {
             await this.contract.readUint(publicPoolId, strToBytes32("fallbackThreshold"))
           ).to.be.bignumber.equal(fallbackThreshold);
 
-          await expectEvent(tx, "FallbackOperator", {
-            operatorId: operatorId,
+          await expectEvent(tx, this.contract, "FallbackOperator", {
             poolId: publicPoolId,
+            operatorId: operatorId,
             threshold: fallbackThreshold,
           });
 
@@ -1249,9 +1285,9 @@ contract("StakeModuleLib", function (accounts) {
             await this.contract.readUint(publicPoolId, strToBytes32("fallbackThreshold"))
           ).to.be.bignumber.equal(new BN("0"));
 
-          await expectEvent(tx, "FallbackOperator", {
-            operatorId: new BN("0"),
+          await expectEvent(tx, this.contract, "FallbackOperator", {
             poolId: publicPoolId,
+            operatorId: new BN("0"),
             threshold: new BN("0"),
           });
         });
@@ -1271,7 +1307,11 @@ contract("StakeModuleLib", function (accounts) {
         });
         it("returns oldAllowance", async function () {}); // todo all returns
         it("emits Delegation", async function () {
-          await expectEvent(tx, "Delegation", { poolId: publicPoolId, operatorId, allowance });
+          await expectEvent(tx, this.contract, "Delegation", {
+            poolId: publicPoolId,
+            operatorId,
+            allowance,
+          });
         });
       });
       describe("delegate", function () {
@@ -1552,6 +1592,7 @@ contract("StakeModuleLib", function (accounts) {
         it("no LP: returns all eth", async function () {
           await expectEvent(
             await this.contract.$_buyback(privatePoolId, maxEthToSell, MAX_UINT256),
+            this.contract,
             "return$_buyback",
             {
               remETH: maxEthToSell,
@@ -1578,6 +1619,7 @@ contract("StakeModuleLib", function (accounts) {
             await this.contract.$writeAddress(liquidPoolId, strToBytes32("CONTROLLER"), deployer);
             await expectEvent(
               await this.contract.$_buyback(liquidPoolId, maxEthToSell, MAX_UINT256),
+              this.contract,
               "return$_buyback",
               {
                 remETH: maxEthToSell,
@@ -1595,6 +1637,7 @@ contract("StakeModuleLib", function (accounts) {
 
             await expectEvent(
               await this.contract.$_buyback(liquidPoolId, maxEthToSell, MAX_UINT256),
+              this.contract,
               "return$_buyback",
               {
                 remETH: maxEthToSell,
@@ -1622,6 +1665,7 @@ contract("StakeModuleLib", function (accounts) {
                   debt.sub(new BN(String(1e17))),
                   MAX_UINT256
                 ),
+                this.contract,
                 "return$_buyback",
                 {
                   remETH: "0",
@@ -1644,6 +1688,7 @@ contract("StakeModuleLib", function (accounts) {
                   debt.add(new BN(String(1e17))),
                   MAX_UINT256
                 ),
+                this.contract,
                 "return$_buyback",
                 {
                   remETH: String(1e17),
@@ -1734,14 +1779,14 @@ contract("StakeModuleLib", function (accounts) {
             expect(await this.gETH.balanceOf(staker, privatePoolId)).to.be.bignumber.equal(expBal);
           });
           it("emits Deposit", async function () {
-            await expectEvent(tx, "Deposit", {
+            await expectEvent(tx, this.contract, "Deposit", {
               poolId: privatePoolId,
               boughtgETH: expBuy,
               mintedgETH: extra,
             });
           });
           it("returns correct params", async function () {
-            await expectEvent(tx, "return$deposit", {
+            await expectEvent(tx, this.contract, "return$deposit", {
               boughtgETH: expBuy,
               mintedgETH: extra,
             });
@@ -2048,7 +2093,7 @@ contract("StakeModuleLib", function (accounts) {
               );
             });
             it("emits StakeProposal", async function () {
-              await expectEvent(tx, "StakeProposal", {
+              await expectEvent(tx, this.contract, "StakeProposal", {
                 poolId: publicPoolId,
                 operatorId: operatorId,
                 pubkeys: [pubkey0, pubkey1],
@@ -2219,31 +2264,31 @@ contract("StakeModuleLib", function (accounts) {
             it("blameProposal reverts if validator is active", async function () {
               await expectRevert(
                 this.contract.blameProposal(pubkey0),
-                "SML:can not blame proposal"
+                "OEL:can not blame proposal"
               );
             });
 
             it("blameProposal reverts if proposal is not approved yet", async function () {
               await expectRevert(
                 this.contract.blameProposal(pubkey2),
-                "SML:can not blame proposal"
+                "OEL:can not blame proposal"
               );
             });
 
             it("blameProposal reverts if delay is acceptable", async function () {
               await this.contract.$set_VERIFICATION_INDEX(3);
-              await expectRevert(this.contract.blameProposal(pubkey2), "SML:acceptable delay");
+              await expectRevert(this.contract.blameProposal(pubkey2), "OEL:acceptable delay");
             });
 
             it("blameExit reverts when validator is never activated", async function () {
               await expectRevert(
                 this.contract.blameExit(ZERO_BYTES32),
-                "SML:unexpected validator state"
+                "OEL:unexpected validator state"
               );
             });
 
             it("blameExit reverts when still active", async function () {
-              await expectRevert(this.contract.blameExit(pubkey0), "SML:validator is active");
+              await expectRevert(this.contract.blameExit(pubkey0), "OEL:validator is active");
             });
 
             describe("all staked", function () {
@@ -2297,7 +2342,7 @@ contract("StakeModuleLib", function (accounts) {
                 ).to.be.bignumber.equal(preWallet.add(new BN(String(3e18))));
               });
               it("emits Stake", async function () {
-                await expectEvent(tx, "Stake", { pubkeys: [pubkey2] });
+                await expectEvent(tx, this.contract, "Stake", { pubkeys: [pubkey2] });
               });
             });
           });

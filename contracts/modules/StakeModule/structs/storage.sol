@@ -25,9 +25,13 @@ import {Validator} from "./utils.sol";
  * * Like default Withdrawal Contract version.
  * @param middlewares TYPE => version id => isAllowed, useful to check if given version of the middleware can be used.
  * * Like all the whitelisted gETHMiddlewares.
- * @param __gap keep the struct size at 16
+ * @param fees TYPE->PERCENTAGE, we can set a fee for any defined TYPE then use it in related operations.
+ * * POOL type sets validator fees. Liqudity Pool Package type sets fee on swaps.
+ *
+ * @dev normally we would put custom:storage-location erc7201:geode.storage.StakeModule
+ * but compiler throws an error... So np for now, just MAKE SURE.
  **/
-struct PooledStaking {
+struct StakeModuleStorage {
   IgETH gETH;
   address ORACLE_POSITION;
   uint256 VALIDATORS_INDEX;
@@ -36,11 +40,10 @@ struct PooledStaking {
   uint256 ORACLE_UPDATE_TIMESTAMP;
   uint256 DAILY_PRICE_INCREASE_LIMIT;
   uint256 DAILY_PRICE_DECREASE_LIMIT;
-  uint256 GOVERNANCE_FEE;
   bytes32 PRICE_MERKLE_ROOT;
   bytes32 BALANCE_MERKLE_ROOT;
   mapping(bytes => Validator) validators;
   mapping(uint256 => uint256) packages;
   mapping(uint256 => mapping(uint256 => bool)) middlewares;
-  uint256[2] __gap;
+  mapping(uint256 => uint256) infrastructureFees;
 }

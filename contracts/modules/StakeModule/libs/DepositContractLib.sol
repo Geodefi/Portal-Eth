@@ -24,7 +24,7 @@ library DepositContractLib {
    */
 
   IDepositContract internal constant DEPOSIT_CONTRACT =
-    IDepositContract(0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b);
+    IDepositContract(0x4242424242424242424242424242424242424242);
   uint256 internal constant PUBKEY_LENGTH = 48;
   uint256 internal constant SIGNATURE_LENGTH = 96;
   uint256 internal constant WITHDRAWAL_CREDENTIALS_LENGTH = 32;

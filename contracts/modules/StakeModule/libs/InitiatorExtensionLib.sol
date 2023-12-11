@@ -11,8 +11,8 @@ import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol
 import {IgETHMiddleware} from "../../../interfaces/middlewares/IgETHMiddleware.sol";
 import {IGeodePackage} from "../../../interfaces/packages/IGeodePackage.sol";
 // internal - structs
-import {IsolatedStorage} from "../../DataStoreModule/structs/storage.sol";
-import {PooledStaking} from "../structs/storage.sol";
+import {DataStoreModuleStorage} from "../../DataStoreModule/structs/storage.sol";
+import {StakeModuleStorage} from "../structs/storage.sol";
 // internal - libraries
 import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreModuleLib.sol";
 import {DepositContractLib as DCL} from "./DepositContractLib.sol";
@@ -27,7 +27,7 @@ import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
  * * 2. Configurable Staking Pools Initiator and its helpers.
  * * 3. Bound Liquidity Pool deployment after pool initiation.
  *
- * @dev review: DataStoreModule for the IsolatedStorage logic.
+ * @dev review: DataStoreModule for the id based isolated storage logic.
  * @dev review: StakeModuleLib for base staking logic.
  *
  * @dev This library utilizes the '_authenticate' function on the external deployLiquidityPool,
@@ -40,8 +40,8 @@ import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
  */
 
 library InitiatorExtensionLib {
-  using DSML for IsolatedStorage;
-  using SML for PooledStaking;
+  using DSML for DataStoreModuleStorage;
+  using SML for StakeModuleStorage;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -68,7 +68,7 @@ library InitiatorExtensionLib {
    * @dev operators can fund their internal wallet on initiation by simply sending some ether.
    */
   function initiateOperator(
-    IsolatedStorage storage DATASTORE,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 id,
     uint256 fee,
     uint256 validatorPeriod,
@@ -106,8 +106,8 @@ library InitiatorExtensionLib {
    * @dev requires exactly 1 validator worth of funds to be deposited on initiation, prevent sybil attacks.
    */
   function initiatePool(
-    PooledStaking storage self,
-    IsolatedStorage storage DATASTORE,
+    StakeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 fee,
     uint256 middlewareVersion,
     address maintainer,
@@ -174,8 +174,8 @@ library InitiatorExtensionLib {
    * @dev if ever unset, SHOULD replace the implementation with address(0) for obvious security reasons.
    */
   function _setgETHMiddleware(
-    PooledStaking storage self,
-    IsolatedStorage storage DATASTORE,
+    StakeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 id,
     address _middleware
   ) internal {
@@ -195,8 +195,8 @@ library InitiatorExtensionLib {
    * @dev currrently, can NOT unset a middleware.
    */
   function _deploygETHMiddleware(
-    PooledStaking storage self,
-    IsolatedStorage storage DATASTORE,
+    StakeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 _id,
     uint256 _versionId,
     bytes memory _middleware_data
@@ -224,8 +224,8 @@ library InitiatorExtensionLib {
    * @dev no cloning because GeodePackages has Limited Upgradability (based on UUPS)
    */
   function _deployGeodePackage(
-    PooledStaking storage self,
-    IsolatedStorage storage DATASTORE,
+    StakeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 _poolId,
     uint256 _type,
     bytes memory _package_data
@@ -258,8 +258,8 @@ library InitiatorExtensionLib {
    * @dev every pool requires a Withdrawal Contract, thus this function is only used by the initiator
    */
   function _deployWithdrawalContract(
-    PooledStaking storage self,
-    IsolatedStorage storage DATASTORE,
+    StakeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 _poolId
   ) internal {
     address wp = _deployGeodePackage(
@@ -288,8 +288,8 @@ library InitiatorExtensionLib {
    * @dev _package_data of a liquidity pool is only the staking pool's name, used on LPToken.
    */
   function _deployLiquidityPool(
-    PooledStaking storage self,
-    IsolatedStorage storage DATASTORE,
+    StakeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 poolId
   ) public {
     address lp = _deployGeodePackage(
@@ -312,8 +312,8 @@ library InitiatorExtensionLib {
    * @notice allows pools to deploy a Liquidity Pool after initiation, if it does not have one.
    */
   function deployLiquidityPool(
-    PooledStaking storage self,
-    IsolatedStorage storage DATASTORE,
+    StakeModuleStorage storage self,
+    DataStoreModuleStorage storage DATASTORE,
     uint256 poolId
   ) public {
     SML._authenticate(DATASTORE, poolId, true, false, [false, true]);

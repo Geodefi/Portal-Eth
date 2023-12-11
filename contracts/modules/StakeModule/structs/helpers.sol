@@ -10,6 +10,6 @@ struct ConstantValidatorData {
   uint64 period;
   uint256 poolFee;
   uint256 operatorFee;
-  uint256 governanceFee;
+  uint256 infrastructureFee;
   bytes withdrawalCredential;
 }
