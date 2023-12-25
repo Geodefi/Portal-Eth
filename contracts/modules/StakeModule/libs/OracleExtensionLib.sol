@@ -229,13 +229,14 @@ library OracleExtensionLib {
     DataStoreModuleStorage storage DATASTORE,
     bytes calldata pk
   ) external {
-    require(self._canStake(pk, self.VERIFICATION_INDEX), "OEL:cannot blame proposal");
+    uint256 verificationIndex = self.VERIFICATION_INDEX;
+    require(self._canStake(pk, verificationIndex), "OEL:cannot blame proposal");
     require(
       block.timestamp > self.validators[pk].createdAt + MAX_BEACON_DELAY,
       "OEL:acceptable delay"
     );
 
-    _imprison(DATASTORE, self.validators[pk].operatorId, pk);
+    _alienateValidator(self, DATASTORE, verificationIndex, pk);
   }
 
   /**
