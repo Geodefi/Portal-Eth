@@ -104,7 +104,7 @@ contract StakeModuleLibMock is StakeModule {
   function $_deploygETHMiddleware(
     uint256 _id,
     uint256 _versionId,
-    bytes memory _middleware_data
+    bytes calldata _middleware_data
   ) external {
     _getStakeModuleStorage()._deploygETHMiddleware(
       _getDataStoreModuleStorage(),

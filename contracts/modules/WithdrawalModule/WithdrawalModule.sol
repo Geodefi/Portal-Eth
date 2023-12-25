@@ -218,13 +218,13 @@ abstract contract WithdrawalModule is
   /**
    * @custom:visibility -> view
    */
-  function canFinalizeExit(bytes memory pubkey) external view virtual override returns (bool) {
+  function canFinalizeExit(bytes calldata pubkey) external view virtual override returns (bool) {
     WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
     return $.canFinalizeExit(pubkey);
   }
 
   function validatorThreshold(
-    bytes memory pubkey
+    bytes calldata pubkey
   ) external view virtual override returns (uint256 threshold) {
     WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
     (threshold, ) = $.getValidatorThreshold(pubkey);

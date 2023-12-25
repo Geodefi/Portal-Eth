@@ -139,7 +139,7 @@ library WithdrawalModuleLib {
    */
   function canFinalizeExit(
     WithdrawalModuleStorage storage self,
-    bytes memory pubkey
+    bytes calldata pubkey
   ) external view returns (bool) {
     if (self.validators[pubkey].beaconBalance != 0) {
       return false;
@@ -165,7 +165,7 @@ library WithdrawalModuleLib {
    * @notice notifies Portal to change validator state from ACTIVE to EXIT_REQUESTED
    * @param pubkey public key of the given validator.
    */
-  function _requestExit(WithdrawalModuleStorage storage self, bytes memory pubkey) internal {
+  function _requestExit(WithdrawalModuleStorage storage self, bytes calldata pubkey) internal {
     _getPortal(self).requestExit(self.POOL_ID, pubkey);
   }
 
@@ -174,7 +174,7 @@ library WithdrawalModuleLib {
    * @dev no additional checks are needed as processValidators and PORTAL.finalizeExit has propser checks.
    * @param pubkey public key of the given validator.
    */
-  function _finalizeExit(WithdrawalModuleStorage storage self, bytes memory pubkey) internal {
+  function _finalizeExit(WithdrawalModuleStorage storage self, bytes calldata pubkey) internal {
     _getPortal(self).finalizeExit(self.POOL_ID, pubkey);
   }
 

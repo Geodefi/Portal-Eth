@@ -521,7 +521,7 @@ abstract contract StakeModule is
 
   function requestExit(
     uint256 poolId,
-    bytes memory pk
+    bytes calldata pk
   ) external virtual override nonReentrant whenNotPaused {
     StakeModuleStorage storage $ = _getStakeModuleStorage();
     $.requestExit(_getDataStoreModuleStorage(), poolId, pk);
@@ -529,7 +529,7 @@ abstract contract StakeModule is
 
   function finalizeExit(
     uint256 poolId,
-    bytes memory pk
+    bytes calldata pk
   ) external virtual override nonReentrant whenNotPaused {
     StakeModuleStorage storage $ = _getStakeModuleStorage();
     $.finalizeExit(_getDataStoreModuleStorage(), poolId, pk);
