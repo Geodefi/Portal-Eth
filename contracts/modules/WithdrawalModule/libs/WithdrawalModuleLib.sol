@@ -183,11 +183,11 @@ library WithdrawalModuleLib {
    * @param commonPoll cached commonPoll
    * @dev passing commonPoll around helps on gas on batch TXs.
    */
-  function checkAndRequestExit(
+  function _checkAndRequestExit(
     WithdrawalModuleStorage storage self,
     bytes calldata pubkey,
     uint256 commonPoll
-  ) public returns (uint256) {
+  ) internal returns (uint256) {
     (uint256 threshold, uint256 beaconBalancePriced) = getValidatorThreshold(self, pubkey);
     uint256 validatorPoll = self.validators[pubkey].poll;
 
@@ -733,7 +733,7 @@ library WithdrawalModuleLib {
         if (withdrawnBalances[j] > oldWitBal) {
           processed += _distributeFees(self, validators[j], withdrawnBalances[j], oldWitBal);
         }
-        commonPoll = checkAndRequestExit(self, pubkeys[j], commonPoll);
+        commonPoll = _checkAndRequestExit(self, pubkeys[j], commonPoll);
       }
 
       unchecked {
