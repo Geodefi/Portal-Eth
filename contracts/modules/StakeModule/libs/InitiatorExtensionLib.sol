@@ -144,7 +144,7 @@ library InitiatorExtensionLib {
     }
     if (config[2]) {
       // deploy a bound liquidity pool - optional
-      deployLiquidityPool(self, DATASTORE, poolId);
+      _deployLiquidityPool(self, DATASTORE, poolId);
     }
 
     // initially 1 ETHER = 1 ETHER
@@ -291,7 +291,7 @@ library InitiatorExtensionLib {
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 poolId
-  ) public {
+  ) internal {
     address lp = _deployGeodePackage(
       self,
       DATASTORE,
