@@ -446,9 +446,9 @@ library WithdrawalModuleLib {
       self.requests[index].fulfilled += toFulfill;
       self.queue.fulfilled += toFulfill;
       self.queue.fulfilledEtherBalance += claimableETH;
-    }
 
-    self.gETH.burn(address(this), self.POOL_ID, toFulfill);
+      self.gETH.burn(address(this), self.POOL_ID, toFulfill);
+    }
   }
 
   /**
