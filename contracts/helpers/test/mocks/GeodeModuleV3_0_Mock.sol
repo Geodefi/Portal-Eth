@@ -39,7 +39,7 @@ pragma solidity =0.8.20;
 //  *
 //  * @dev __GeodeModule_init (or _unchained) call is NECESSARY when inherited.
 //  * However, deployer MUST call initializer after upgradeTo call,
-//  * SHOULD NOT call initializer on upgradeToAndCall or new ERC1967Proxy calls.
+//  * should not call initializer on upgradeToAndCall or new ERC1967Proxy calls.
 //  *
 //  * @dev This module inherits DataStoreModule.
 //  *
@@ -51,7 +51,7 @@ pragma solidity =0.8.20;
 //   /**
 //    * @custom:section                           ** VARIABLES **
 //    *
-//    * @dev Do not add any other variables here. Modules do NOT have a gap.
+//    * @dev Do not add any other variables here. Modules do not have a gap.
 //    * Library's main struct has a gap, providing up to 16 storage slots for this module.
 //    */
 //   DualGovernanceV3_0_Mock internal GEODE;
@@ -88,9 +88,9 @@ pragma solidity =0.8.20;
 //   }
 
 //   /**
-//    * @dev This function uses _getImplementation(), clearly deployer SHOULD NOT call initializer on
+//    * @dev This function uses _getImplementation(), clearly deployer should not call initializer on
 //    * upgradeToAndCall or new ERC1967Proxy calls. _getImplementation() returns 0 then.
-//    * @dev GOVERNANCE and SENATE set to msg.sender at beginning, can not propose+approve otherwise.
+//    * @dev GOVERNANCE and SENATE set to msg.sender at beginning, cannot propose+approve otherwise.
 //    * @dev native approveProposal(public) is not used here. Because it has an _handleUpgrade,
 //    * however initialization does not require UUPS.upgradeTo.
 //    */
@@ -101,11 +101,11 @@ pragma solidity =0.8.20;
 //     uint256 packageType,
 //     bytes calldata initVersionName
 //   ) internal onlyInitializing {
-//     require(governance != address(0), "GM:governance can not be zero");
-//     require(senate != address(0), "GM:senate can not be zero");
+//     require(governance != address(0), "GM:governance cannot be zero");
+//     require(senate != address(0), "GM:senate cannot be zero");
 //     require(senateExpiry > block.timestamp, "GM:low senateExpiry");
-//     require(packageType != 0, "GM:packageType can not be zero");
-//     require(initVersionName.length != 0, "GM:initVersionName can not be empty");
+//     require(packageType != 0, "GM:packageType cannot be zero");
+//     require(initVersionName.length != 0, "GM:initVersionName cannot be empty");
 
 //     GEODE.GOVERNANCE = msg.sender;
 //     GEODE.SENATE = msg.sender;

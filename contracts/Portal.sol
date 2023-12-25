@@ -76,7 +76,7 @@ contract Portal is IPortal, GeodeModule, StakeModule {
    * @custom:section                           ** MODIFIERS **
    */
   modifier onlyGovernance() {
-    require(msg.sender == _getGeodeModuleStorage().GOVERNANCE, "PORTAL:sender NOT governance");
+    require(msg.sender == _getGeodeModuleStorage().GOVERNANCE, "PORTAL:sender not governance");
     _;
   }
 

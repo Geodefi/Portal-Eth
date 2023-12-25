@@ -57,7 +57,7 @@ abstract contract LiquidityModule is
   /**
    * @custom:section                           ** VARIABLES **
    *
-   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * @dev Do not add any other variables here. Modules do not have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
 
@@ -199,10 +199,10 @@ abstract contract LiquidityModule is
     uint256 _swapFee,
     string memory _poolName
   ) internal onlyInitializing {
-    require(_gETH_position != address(0), "LM:_gETH_position can not be zero");
-    require(_lpToken_referance != address(0), "LM:_lpToken_referance can not be zero");
-    require(_pooledTokenId != 0, "LM:_pooledTokenId can not be zero");
-    require(_A != 0, "LM:_A can not be zero");
+    require(_gETH_position != address(0), "LM:_gETH_position cannot be zero");
+    require(_lpToken_referance != address(0), "LM:_lpToken_referance cannot be zero");
+    require(_pooledTokenId != 0, "LM:_pooledTokenId cannot be zero");
+    require(_A != 0, "LM:_A cannot be zero");
     require(_A < AL.MAX_A, "LM:_A exceeds maximum");
     require(_swapFee < LML.MAX_SWAP_FEE, "LM:_swapFee exceeds maximum");
 

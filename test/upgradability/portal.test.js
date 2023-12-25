@@ -65,7 +65,7 @@
 //       );
 //     });
 
-//     it("can not call the old function: setGovernanceFee with only newFee parameter", async function () {
+//     it("cannot call the old function: setGovernanceFee with only newFee parameter", async function () {
 //       expectRevert(upgradedPortal.setGovernanceFee(3));
 //     });
 //   });

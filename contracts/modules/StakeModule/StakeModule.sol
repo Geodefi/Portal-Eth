@@ -61,7 +61,7 @@ abstract contract StakeModule is
   /**
    * @custom:section                           ** VARIABLES **
    *
-   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * @dev Do not add any other variables here. Modules do not have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
   // keccak256(abi.encode(uint256(keccak256("geode.storage.StakeModuleStorage")) - 1)) & ~bytes32(uint256(0xff))

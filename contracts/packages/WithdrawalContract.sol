@@ -36,7 +36,7 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
    */
 
   modifier onlyOwner() {
-    require(msg.sender == _getGeodeModuleStorage().SENATE, "WCP:sender NOT owner");
+    require(msg.sender == _getGeodeModuleStorage().SENATE, "WCP:sender not owner");
     _;
   }
 
@@ -52,8 +52,8 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
    * and fetch when needed on initialization.
    */
   constructor(address _gETHPos, address _portalPos) {
-    require(_gETHPos != address(0), "WCP:_gETHPos can not be zero");
-    require(_portalPos != address(0), "WCP:_portalPos can not be zero");
+    require(_gETHPos != address(0), "WCP:_gETHPos cannot be zero");
+    require(_portalPos != address(0), "WCP:_portalPos cannot be zero");
 
     gETHPos = _gETHPos;
     portalPos = _portalPos;

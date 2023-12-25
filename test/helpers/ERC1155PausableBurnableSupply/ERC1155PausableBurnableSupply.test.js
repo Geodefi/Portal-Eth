@@ -66,7 +66,7 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
       expect(await this.token.uri(0)).to.equal(newUri);
     });
 
-    it("others can not set URI", async function () {
+    it("others cannot set URI", async function () {
       await expect(this.token.connect(this.other).setURI(newUri))
         .to.be.revertedWithCustomError(this.token, "AccessControlUnauthorizedAccount")
         .withArgs(this.other.address, URI_SETTER_ROLE);
@@ -79,7 +79,7 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
       expect(await this.token.paused()).to.equal(true);
     });
 
-    it("others can not pause", async function () {
+    it("others cannot pause", async function () {
       await expect(this.token.connect(this.other).pause())
         .to.be.revertedWithCustomError(this.token, "AccessControlUnauthorizedAccount")
         .withArgs(this.other.address, PAUSER_ROLE);
@@ -96,7 +96,7 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
       expect(await this.token.paused()).to.equal(false);
     });
 
-    it("others can not unpause", async function () {
+    it("others cannot unpause", async function () {
       console.log(this.other.address, PAUSER_ROLE);
       await expect(this.token.connect(this.other).unpause())
         .to.be.revertedWithCustomError(this.token, "AccessControlUnauthorizedAccount")
@@ -110,7 +110,7 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
       expect(await this.token.balanceOf(this.deployer.address, tokenId)).to.be.equal(amount);
     });
 
-    it("others can not mint", async function () {
+    it("others cannot mint", async function () {
       await expect(this.token.connect(this.other).mint(this.other.address, tokenId, amount, data))
         .to.be.revertedWithCustomError(this.token, "AccessControlUnauthorizedAccount")
         .withArgs(this.other.address, MINTER_ROLE);
@@ -128,7 +128,7 @@ contract("ERC1155PausableBurnableSupply", function (accounts) {
       }
     });
 
-    it("others can not mintBatch", async function () {
+    it("others cannot mintBatch", async function () {
       await expect(
         this.token.connect(this.other).mintBatch(this.other.address, tokenIds, amounts, data)
       )

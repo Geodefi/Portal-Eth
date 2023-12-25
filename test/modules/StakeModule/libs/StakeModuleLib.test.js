@@ -327,28 +327,28 @@ contract("StakeModuleLib", function (accounts) {
         await this.contract.$writeUint(unknownId, strToBytes32("TYPE"), 4);
         await expectRevert(
           this.contract.$_authenticate(unknownId, false, false, [false, false]),
-          "SML:TYPE NOT allowed"
+          "SML:TYPE not allowed"
         );
       });
       it("reverts if pool, but not expected", async function () {
         await this.contract.$writeUint(unknownId, strToBytes32("TYPE"), 5);
         await expectRevert(
           this.contract.$_authenticate(unknownId, false, false, [false, false]),
-          "SML:TYPE NOT allowed"
+          "SML:TYPE not allowed"
         );
       });
       it("reverts if maintainer is expected but not", async function () {
         await this.contract.$writeUint(unknownId, strToBytes32("TYPE"), 5);
         await expectRevert(
           this.contract.$_authenticate(unknownId, false, true, [false, true]),
-          "SML:sender NOT maintainer"
+          "SML:sender not maintainer"
         );
       });
       it("reverts if CONTROLLER is expected but not", async function () {
         await this.contract.$writeUint(unknownId, strToBytes32("TYPE"), 5);
         await expectRevert(
           this.contract.$_authenticate(unknownId, true, false, [false, true]),
-          "SML:sender NOT CONTROLLER"
+          "SML:sender not CONTROLLER"
         );
       });
       context("operator & prisoned", function () {
@@ -368,7 +368,7 @@ contract("StakeModuleLib", function (accounts) {
             "SML:prisoned, get in touch with governance"
           );
         });
-        it("does not revert: NOT expectMaintainer, NOT expectCONTROLLER ", async function () {
+        it("does not revert: not expectMaintainer, not expectCONTROLLER ", async function () {
           await this.contract.$_authenticate(unknownId, false, false, [true, false]);
         });
       });
@@ -389,14 +389,14 @@ contract("StakeModuleLib", function (accounts) {
           await this.contract.$writeUint(unknownId, strToBytes32("TYPE"), 5);
           await expectRevert(
             this.contract.initiateOperator(unknownId, 0, 0, ZERO_ADDRESS),
-            "SML:TYPE NOT allowed"
+            "SML:TYPE not allowed"
           );
         });
         it("reverts: if not CONTROLLER", async function () {
           await this.contract.$writeUint(unknownId, strToBytes32("TYPE"), 4);
           await expectRevert(
             this.contract.initiateOperator(unknownId, 0, 0, ZERO_ADDRESS),
-            "SML:sender NOT CONTROLLER"
+            "SML:sender not CONTROLLER"
           );
         });
         context("success", function () {
@@ -847,13 +847,13 @@ contract("StakeModuleLib", function (accounts) {
         it("reverts if poolId is not pool type", async function () {
           await expectRevert(
             this.contract.setYieldReceiver(operatorId, yieldReceiver, { from: poolOwner }),
-            "SML:TYPE NOT allowed"
+            "SML:TYPE not allowed"
           );
         });
         it("reverts if sender is not controller of the pool", async function () {
           await expectRevert(
             this.contract.setYieldReceiver(publicPoolId, yieldReceiver, { from: poolMaintainer }),
-            "SML:sender NOT CONTROLLER"
+            "SML:sender not CONTROLLER"
           );
         });
         it("success: sets yieldReceiver and set back 0 address and emits YieldReceiverSet event", async function () {
@@ -891,7 +891,7 @@ contract("StakeModuleLib", function (accounts) {
         it("reverts if zero address", async function () {
           await expectRevert(
             this.contract.$_setMaintainer(publicPoolId, ZERO_ADDRESS),
-            "SML:maintainer can NOT be zero"
+            "SML:maintainer cannot be zero"
           );
         });
         it("sets maintainer", async function () {
@@ -919,7 +919,7 @@ contract("StakeModuleLib", function (accounts) {
         it("reverts if not CONTROLLER", async function () {
           await expectRevert(
             this.contract.changeMaintainer(publicPoolId, attacker, { from: attacker }),
-            "SML:sender NOT CONTROLLER"
+            "SML:sender not CONTROLLER"
           );
         });
         it("reverts if not POOL or Operator", async function () {
@@ -1226,7 +1226,7 @@ contract("StakeModuleLib", function (accounts) {
             this.contract.setFallbackOperator(publicPoolId, operatorId, fallbackThreshold, {
               from: attacker,
             }),
-            "SML:sender NOT maintainer"
+            "SML:sender not maintainer"
           );
         });
         it("reverts if fallback not operator", async function () {
@@ -1480,7 +1480,7 @@ contract("StakeModuleLib", function (accounts) {
               await this.contract.operatorAllowance(publicPoolId, operatorId)
             ).to.be.bignumber.equal("6969");
           });
-          it("returns allowance, if NOT reached fallbackThreshold", async function () {
+          it("returns allowance, if not reached fallbackThreshold", async function () {
             expect(
               await this.contract.operatorAllowance(publicPoolId, operatorId)
             ).to.be.bignumber.equal(allowance);
@@ -1732,7 +1732,7 @@ contract("StakeModuleLib", function (accounts) {
               from: attacker,
               value: 1,
             }),
-            "SML:sender NOT whitelisted"
+            "SML:sender not whitelisted"
           );
         });
         it("reverts if mingETH not achieved", async function () {
@@ -1900,7 +1900,7 @@ contract("StakeModuleLib", function (accounts) {
                   from: operatorMaintainer,
                 }
               ),
-              "SML:NOT enough surplus"
+              "SML:not enough surplus"
             );
           });
 
@@ -2124,7 +2124,7 @@ contract("StakeModuleLib", function (accounts) {
               this.contract.stake(operatorId, [pubkey0, pubkey1, pubkey2], {
                 from: operatorMaintainer,
               }),
-              "SML:NOT all pubkeys are stakeable"
+              "SML:not all pubkeys are stakeable"
             );
           });
         });
@@ -2184,7 +2184,7 @@ contract("StakeModuleLib", function (accounts) {
                 this.contract.stake(operatorId, [pubkey0, pubkey1, pubkey2], {
                   from: operatorMaintainer,
                 }),
-                "SML:NOT all pubkeys are stakeable"
+                "SML:not all pubkeys are stakeable"
               );
             });
 
@@ -2193,7 +2193,7 @@ contract("StakeModuleLib", function (accounts) {
                 this.contract.stake(maliciousOperatorId, [pubkey0], {
                   from: maliciousOperatorMaintainer,
                 }),
-                "SML:NOT all pubkeys belong to operator"
+                "SML:not all pubkeys belong to operator"
               );
             });
 
@@ -2262,17 +2262,11 @@ contract("StakeModuleLib", function (accounts) {
             });
 
             it("blameProposal reverts if validator is active", async function () {
-              await expectRevert(
-                this.contract.blameProposal(pubkey0),
-                "OEL:can not blame proposal"
-              );
+              await expectRevert(this.contract.blameProposal(pubkey0), "OEL:cannot blame proposal");
             });
 
             it("blameProposal reverts if proposal is not approved yet", async function () {
-              await expectRevert(
-                this.contract.blameProposal(pubkey2),
-                "OEL:can not blame proposal"
-              );
+              await expectRevert(this.contract.blameProposal(pubkey2), "OEL:cannot blame proposal");
             });
 
             it("blameProposal reverts if delay is acceptable", async function () {

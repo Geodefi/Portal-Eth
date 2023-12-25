@@ -83,7 +83,7 @@ import {DepositContractLib as DCL} from "./DepositContractLib.sol";
  * @dev Middlewares:
  * Can support many different versions that can be utilized by the Pool Owners.
  * No particular way to build one.
- * Can not be upgraded.
+ * Cannot be upgraded.
  * Currently only gETHMiddlewares.
  *
  * Type 20011 : gETHMiddleware
@@ -160,7 +160,7 @@ library StakeModuleLib {
    * @param _restrictionMap Restricts which TYPEs can pass the authentication.
    * * [0: Operator = TYPE(4), 1: Pool = TYPE(5)]
    * @dev can only be used after an ID is initiated
-   * @dev CONTROLLERS and maintainers of the Prisoned Operators can not access.
+   * @dev CONTROLLERS and maintainers of the Prisoned Operators cannot access.
    */
   function _authenticate(
     DataStoreModuleStorage storage DATASTORE,
@@ -174,12 +174,12 @@ library StakeModuleLib {
     uint256 typeOfId = DATASTORE.readUint(_id, rks.TYPE);
 
     if (typeOfId == ID_TYPE.OPERATOR) {
-      require(_restrictionMap[0], "SML:TYPE NOT allowed");
+      require(_restrictionMap[0], "SML:TYPE not allowed");
       if (_expectCONTROLLER || _expectMaintainer) {
         require(!isPrisoned(DATASTORE, _id), "SML:prisoned, get in touch with governance");
       }
     } else if (typeOfId == ID_TYPE.POOL) {
-      require(_restrictionMap[1], "SML:TYPE NOT allowed");
+      require(_restrictionMap[1], "SML:TYPE not allowed");
     } else {
       revert("SML:invalid TYPE");
     }
@@ -187,7 +187,7 @@ library StakeModuleLib {
     if (_expectMaintainer) {
       require(
         msg.sender == DATASTORE.readAddress(_id, rks.maintainer),
-        "SML:sender NOT maintainer"
+        "SML:sender not maintainer"
       );
       return;
     }
@@ -195,7 +195,7 @@ library StakeModuleLib {
     if (_expectCONTROLLER) {
       require(
         msg.sender == DATASTORE.readAddress(_id, rks.CONTROLLER),
-        "SML:sender NOT CONTROLLER"
+        "SML:sender not CONTROLLER"
       );
       return;
     }
@@ -340,7 +340,7 @@ library StakeModuleLib {
     uint256 _id,
     address _newMaintainer
   ) internal {
-    require(_newMaintainer != address(0), "SML:maintainer can NOT be zero");
+    require(_newMaintainer != address(0), "SML:maintainer cannot be zero");
 
     DATASTORE.writeAddress(_id, rks.maintainer, _newMaintainer);
     emit MaintainerChanged(_id, _newMaintainer);
@@ -363,7 +363,7 @@ library StakeModuleLib {
     address newMaintainer
   ) external {
     require(DATASTORE.readUint(id, rks.initiated) != 0, "SML:ID is not initiated");
-    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender NOT CONTROLLER");
+    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender not CONTROLLER");
     uint256 typeOfId = DATASTORE.readUint(id, rks.TYPE);
     require(typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL, "SML:invalid TYPE");
 
@@ -433,7 +433,7 @@ library StakeModuleLib {
 
   /**
    * @notice Changes the fee that is applied to the newly created validators, with A DELAY OF SWITCH_LATENCY.
-   * @dev Can NOT be called again while its currently switching.
+   * @dev Cannot be called again while its currently switching.
    * @dev advise that 100% == PERCENTAGE_DENOMINATOR
    */
   function switchMaintenanceFee(
@@ -623,7 +623,7 @@ library StakeModuleLib {
 
   /**
    * @notice maximum number of remaining operator allowance that the given Operator is allowed to create for given Pool
-   * @dev an operator can not create new validators if:
+   * @dev an operator cannot create new validators if:
    * * 1. operator is a monopoly
    * * 2. allowance is filled
    * * * But if operator is set as a fallback, it can if set fallbackThreshold is reached on all allowances.
@@ -719,7 +719,7 @@ library StakeModuleLib {
    * @param operatorIds array of Operator IDs to allow them create validators
    * @param allowances the MAX number of validators that can be created by the Operator, for given Pool
    * @dev When decreased the approved validator count below current active+proposed validators,
-   * operator can NOT create new validators.
+   * operator cannot create new validators.
    */
   function delegate(
     DataStoreModuleStorage storage DATASTORE,
@@ -978,7 +978,7 @@ library StakeModuleLib {
     require(receiver != address(0), "SML:receiver is zero address");
 
     if (isPrivatePool(DATASTORE, poolId)) {
-      require(isWhitelisted(DATASTORE, poolId, msg.sender), "SML:sender NOT whitelisted");
+      require(isWhitelisted(DATASTORE, poolId, msg.sender), "SML:sender not whitelisted");
     }
 
     uint256 remEth = msg.value;
@@ -1094,7 +1094,7 @@ library StakeModuleLib {
 
     require(
       DATASTORE.readUint(poolId, rks.surplus) >= DCL.DEPOSIT_AMOUNT * pkLen,
-      "SML:NOT enough surplus"
+      "SML:not enough surplus"
     );
 
     _decreaseWalletBalance(DATASTORE, operatorId, (pkLen * DCL.DEPOSIT_AMOUNT_PRESTAKE));
@@ -1196,12 +1196,12 @@ library StakeModuleLib {
       for (uint256 j; j < pubkeysLen; ) {
         require(
           _canStake(self, pubkeys[j], _verificationIndex),
-          "SML:NOT all pubkeys are stakeable"
+          "SML:not all pubkeys are stakeable"
         );
 
         require(
           self.validators[pubkeys[j]].operatorId == operatorId,
-          "SML:NOT all pubkeys belong to operator"
+          "SML:not all pubkeys belong to operator"
         );
 
         unchecked {
@@ -1286,7 +1286,7 @@ library StakeModuleLib {
     );
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is NOT withdrawal contract"
+      "SML:sender is not withdrawal contract"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
     require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "SML:not an active validator");
@@ -1307,7 +1307,7 @@ library StakeModuleLib {
   ) external {
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is NOT withdrawal contract"
+      "SML:sender is not withdrawal contract"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
 

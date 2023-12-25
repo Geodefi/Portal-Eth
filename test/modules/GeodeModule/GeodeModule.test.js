@@ -64,7 +64,7 @@ contract("GeodeModule", function (accounts) {
             packageType,
             initVersionName
           ),
-          "GM:governance can not be zero"
+          "GM:governance cannot be zero"
         );
       });
       it("reverts if no senate", async function () {
@@ -76,7 +76,7 @@ contract("GeodeModule", function (accounts) {
             packageType,
             initVersionName
           ),
-          "GM:senate can not be zero"
+          "GM:senate cannot be zero"
         );
       });
       it("reverts if already expired", async function () {
@@ -94,7 +94,7 @@ contract("GeodeModule", function (accounts) {
             0,
             initVersionName
           ),
-          "GM:packageType can not be zero"
+          "GM:packageType cannot be zero"
         );
       });
       it("reverts if no version name", async function () {
@@ -106,7 +106,7 @@ contract("GeodeModule", function (accounts) {
             packageType,
             "0x"
           ),
-          "GM:initVersionName can not be empty"
+          "GM:initVersionName cannot be empty"
         );
       });
     });
@@ -195,7 +195,7 @@ contract("GeodeModule", function (accounts) {
           this.contract.propose(ZERO_ADDRESS, _type, _name, MIN_PROPOSAL_DURATION, {
             from: governance,
           }),
-          "GML:CONTROLLER can NOT be ZERO"
+          "GML:CONTROLLER cannot be ZERO"
         );
       });
       it("reverts proposal duration is short or long", async function () {
@@ -285,7 +285,7 @@ contract("GeodeModule", function (accounts) {
           this.contract.approveProposal(_id, {
             from: senate,
           }),
-          "GML:NOT an active proposal"
+          "GML:not an active proposal"
         );
       });
 
@@ -438,7 +438,7 @@ contract("GeodeModule", function (accounts) {
         });
       });
 
-      it("reverts when NOT CONTROLLER", async function () {
+      it("reverts when not CONTROLLER", async function () {
         await expectRevert(
           this.contract.changeIdCONTROLLER(_id, user),
           "GML:CONTROLLER role needed"
@@ -447,7 +447,7 @@ contract("GeodeModule", function (accounts) {
       it("reverts when ZERO_ADDRESS", async function () {
         await expectRevert(
           this.contract.changeIdCONTROLLER(_id, ZERO_ADDRESS, { from: user }),
-          "GML:CONTROLLER can not be zero"
+          "GML:CONTROLLER cannot be zero"
         );
       });
 

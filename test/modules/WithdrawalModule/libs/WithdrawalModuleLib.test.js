@@ -239,7 +239,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     it("reverts if owner is zero address", async function () {
       await expectRevert(
         this.contract.$_enqueue(mockEnqueueTrigger, mockEnqueueSize, ZERO_ADDRESS),
-        "WML:owner can not be zero address"
+        "WML:owner cannot be zero address"
       );
     });
     it("success", async function () {
@@ -616,7 +616,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     it("reverts if receiver is ZERO_ADDRESS", async function () {
       await expectRevert(
         this.contract.$dequeue(new BN(String(0)), ZERO_ADDRESS, { from: staker }),
-        "WML:receiver can not be zero address"
+        "WML:receiver cannot be zero address"
       );
     });
     it("reverts if WC does not have enough balance", async function () {
@@ -699,7 +699,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         this.contract.$dequeueBatch([new BN(String(0)), new BN(String(1))], ZERO_ADDRESS, {
           from: staker,
         }),
-        "WML:receiver can not be zero address"
+        "WML:receiver cannot be zero address"
       );
     });
     it("reverts if WC does not have enough balance", async function () {
@@ -1523,7 +1523,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         proofs[0] = proofs[1];
         await expectRevert(
           this.contract.$processValidators(pks, beaconBalancesBN, withdrawnBalancesBN, proofs),
-          "WML:NOT all proofs are valid"
+          "WML:not all proofs are valid"
         );
       });
       it("reverts if not all pubkey belong to the pool", async function () {

@@ -29,7 +29,7 @@ import {DataStoreModuleStorage} from "../structs/storage.sol";
  * @dev review: For a safer development process, NEVER use the DataStoreModuleStorage with strings. Refer to globals/reserved_key_space.sol
  *
  * @dev While it is a good practice for keeping a record;
- * * TYPE for ID is NOT mandatory, an ID might not have an explicit type.
+ * * TYPE for ID is not mandatory, an ID might not have an explicit type.
  * * e.g., When a relational data is added with getKey, like allowance, it has a unique ID but no TYPE.
  * * Thus there are no checks for types or keys.
  *

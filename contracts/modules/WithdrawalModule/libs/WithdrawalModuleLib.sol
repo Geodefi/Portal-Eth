@@ -60,11 +60,11 @@ import {Validator} from "../../StakeModule/structs/utils.sol";
  * 1. We derisk the Request when it is enqueued:
  * * This would cause 2 issues:
  * * a. Best case, we would prevent the queued Request from profiting while they are in the queue.
- * * b. Since there is a slashing risk, we can not promise a fixed Ether amount without knowing what would be the future price.
+ * * b. Since there is a slashing risk, we cannot promise a fixed Ether amount without knowing what would be the future price.
  * 2. We derisk the Request when validators are processed, with the latest price for the derivative:
  * * This is the correct approach as we REALIZE the price at this exact point: by increasing the cumulative claimable gETH.
  * * However, we would need to insert an 'unbound for loop' through 'realized' Requests, when a 'processValidators' operation is finalized.
- * * We can not, nor should, enforce an 'unbound for loop' on requests array.
+ * * We cannot, nor should, enforce an 'unbound for loop' on requests array.
  * 3. We derisk the Request when it is dequeued:
  * * Simply, price changes would have unpredictable effects on the Queue: A request can be claimable now, but might become unclaimable later.
  * * Derisked Requests that are waiting to be claimed, would hijack the real stakers' APR, while sitting on top of some allocated Ether.
@@ -284,7 +284,7 @@ library WithdrawalModuleLib {
     address owner
   ) internal returns (uint256 index) {
     require(size >= MIN_REQUEST_SIZE, "WML:min 0.05 gETH");
-    require(owner != address(0), "WML:owner can not be zero address");
+    require(owner != address(0), "WML:owner cannot be zero address");
 
     self.requests.push(
       Request({owner: owner, trigger: trigger, size: size, fulfilled: 0, claimableEther: 0})
@@ -542,7 +542,7 @@ library WithdrawalModuleLib {
    * @dev only owner can call this function
    */
   function dequeue(WithdrawalModuleStorage storage self, uint256 index, address receiver) external {
-    require(receiver != address(0), "WML:receiver can not be zero address");
+    require(receiver != address(0), "WML:receiver cannot be zero address");
 
     _fulfill(self, index);
     uint256 claimableETH = _dequeue(self, index);
@@ -560,7 +560,7 @@ library WithdrawalModuleLib {
     uint256[] calldata indexes,
     address receiver
   ) external {
-    require(receiver != address(0), "WML:receiver can not be zero address");
+    require(receiver != address(0), "WML:receiver cannot be zero address");
 
     _fulfillBatch(
       self,
@@ -597,7 +597,7 @@ library WithdrawalModuleLib {
    * @param pubkey public key of the given validator.
    * @param reportedWithdrawn withdrawn Ether amount according to the fresh Merkle root.
    * @param processedWithdrawn previously reported withdrawn amount.
-   * @dev can not overflow since max fee is 10%, if we change fee structure ever, we need to reconsider the math there! 
+   * @dev cannot overflow since max fee is 10%, if we change fee structure ever, we need to reconsider the math there! 
    * * Note that if a validator is EXITED, we would assume 32 ETH that the pool put is also accounted for.
    @return extra calculated profit since the last time validator was processed
    */
@@ -655,7 +655,7 @@ library WithdrawalModuleLib {
   /**
    * @notice main function of this library, processing given information about the provided validators.
    * @dev not all validators need to be processed all the time, process them as you need.
-   * @dev We do NOT check if validators should be processed at all.
+   * @dev We do not check if validators should be processed at all.
    * Because its up to user if they want to pay extra for unnecessary operations.
    * We should not be charging others extra to save their gas.
    */
@@ -691,7 +691,7 @@ library WithdrawalModuleLib {
         );
         require(
           MerkleProof.verify(balanceProofs[i], balanceMerkleRoot, leaf),
-          "WML:NOT all proofs are valid"
+          "WML:not all proofs are valid"
         );
 
         unchecked {

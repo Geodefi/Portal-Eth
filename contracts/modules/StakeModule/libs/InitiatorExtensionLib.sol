@@ -75,8 +75,8 @@ library InitiatorExtensionLib {
     address maintainer
   ) external {
     require(DATASTORE.readUint(id, rks.initiated) == 0, "SML:already initiated");
-    require(DATASTORE.readUint(id, rks.TYPE) == ID_TYPE.OPERATOR, "SML:TYPE NOT allowed");
-    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender NOT CONTROLLER");
+    require(DATASTORE.readUint(id, rks.TYPE) == ID_TYPE.OPERATOR, "SML:TYPE not allowed");
+    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender not CONTROLLER");
 
     DATASTORE.writeUint(id, rks.initiated, block.timestamp);
 
@@ -191,8 +191,8 @@ library InitiatorExtensionLib {
    * @param _id gETH id, also required for IgETHMiddleware.initialize
    * @param _versionId provided version id, can use any as a middleware if allowed for TYPE = MIDDLEWARE_GETH
    * @param _middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
-   * @dev currrently, can NOT deploy a middleware after initiation, thus only used by the initiator.
-   * @dev currrently, can NOT unset a middleware.
+   * @dev currrently, cannot deploy a middleware after initiation, thus only used by the initiator.
+   * @dev currrently, cannot unset a middleware.
    */
   function _deploygETHMiddleware(
     StakeModuleStorage storage self,

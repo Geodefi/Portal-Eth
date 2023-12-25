@@ -35,7 +35,7 @@ pragma solidity =0.8.20;
 //    * @custom:section                           ** MODIFIERS **
 //    */
 //   modifier onlyGovernance() {
-//     require(msg.sender == GEODE.GOVERNANCE, "PORTAL:sender NOT governance");
+//     require(msg.sender == GEODE.GOVERNANCE, "PORTAL:sender not governance");
 //     _;
 //   }
 

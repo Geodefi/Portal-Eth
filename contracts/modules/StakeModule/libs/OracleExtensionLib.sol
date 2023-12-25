@@ -100,7 +100,7 @@ library OracleExtensionLib {
    * @custom:section                           ** MODIFIERS **
    */
   modifier onlyOracle(StakeModuleStorage storage self) {
-    require(msg.sender == self.ORACLE_POSITION, "OEL:sender NOT ORACLE");
+    require(msg.sender == self.ORACLE_POSITION, "OEL:sender not ORACLE");
     _;
   }
 
@@ -127,7 +127,7 @@ library OracleExtensionLib {
     require(self.validators[_pk].index <= verificationIndex, "OEL:unexpected index");
     require(
       self.validators[_pk].state == VALIDATOR_STATE.PROPOSED,
-      "OEL:NOT all pubkeys are pending"
+      "OEL:not all pubkeys are pending"
     );
 
     uint256 operatorId = self.validators[_pk].operatorId;
@@ -229,7 +229,7 @@ library OracleExtensionLib {
     DataStoreModuleStorage storage DATASTORE,
     bytes calldata pk
   ) external {
-    require(self._canStake(pk, self.VERIFICATION_INDEX), "OEL:can not blame proposal");
+    require(self._canStake(pk, self.VERIFICATION_INDEX), "OEL:cannot blame proposal");
     require(
       block.timestamp > self.validators[pk].createdAt + MAX_BEACON_DELAY,
       "OEL:acceptable delay"
@@ -398,7 +398,7 @@ library OracleExtensionLib {
     bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(_poolId, _price))));
     require(
       MerkleProof.verify(_priceProof, self.PRICE_MERKLE_ROOT, leaf),
-      "OEL:NOT all proofs are valid"
+      "OEL:not all proofs are valid"
     );
 
     _sanityCheck(self, DATASTORE, _poolId, _price);

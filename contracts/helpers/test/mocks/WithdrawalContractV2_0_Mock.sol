@@ -41,7 +41,7 @@ pragma solidity =0.8.20;
 //    */
 
 //   modifier onlyOwner() {
-//     require(msg.sender == GEODE.SENATE, "WCP:sender NOT owner");
+//     require(msg.sender == GEODE.SENATE, "WCP:sender not owner");
 //     _;
 //   }
 
@@ -57,8 +57,8 @@ pragma solidity =0.8.20;
 //    * and fetch when needed on initialization.
 //    */
 //   constructor(address _gETHPos, address _portalPos) {
-//     require(_gETHPos != address(0), "WCP:_gETHPos can not be zero");
-//     require(_portalPos != address(0), "WCP:_portalPos can not be zero");
+//     require(_gETHPos != address(0), "WCP:_gETHPos cannot be zero");
+//     require(_portalPos != address(0), "WCP:_portalPos cannot be zero");
 
 //     gETHPos = _gETHPos;
 //     portalPos = _portalPos;

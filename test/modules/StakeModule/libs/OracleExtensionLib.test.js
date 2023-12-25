@@ -211,11 +211,11 @@ contract("OracleExtensionLib", function (accounts) {
       it("reverts if validator is not PROPOSED", async function () {
         await expectRevert(
           this.contract.$_alienateValidator(ZERO_BYTES32),
-          "OEL:NOT all pubkeys are pending"
+          "OEL:not all pubkeys are pending"
         );
         await expectRevert(
           this.contract.$_alienateValidator(wrongPubkey),
-          "OEL:NOT all pubkeys are pending"
+          "OEL:not all pubkeys are pending"
         );
       });
       context("success", function () {
@@ -282,7 +282,7 @@ contract("OracleExtensionLib", function (accounts) {
     });
     describe("updateVerificationIndex", function () {
       it("reverts if not Oracle", async function () {
-        await expectRevert(this.contract.updateVerificationIndex(10, []), "OEL:sender NOT ORACLE");
+        await expectRevert(this.contract.updateVerificationIndex(10, []), "OEL:sender not ORACLE");
       });
       it("reverts if high verificationIndex", async function () {
         await expectRevert(
@@ -327,7 +327,7 @@ contract("OracleExtensionLib", function (accounts) {
     it("reverts if not Oracle", async function () {
       await expectRevert(
         this.contract.regulateOperators([operatorIds[0]], ["0xffffff"]),
-        "OEL:sender NOT ORACLE"
+        "OEL:sender not ORACLE"
       );
     });
     it("reverts if lengths don't match", async function () {
@@ -431,7 +431,7 @@ contract("OracleExtensionLib", function (accounts) {
             strToBytes32("balanceMerkleRoot"),
             50000
           ),
-          "OEL:sender NOT ORACLE"
+          "OEL:sender not ORACLE"
         );
       });
       it("reverts if low allValidatorsCount", async function () {
@@ -519,7 +519,7 @@ contract("OracleExtensionLib", function (accounts) {
           await setTimestamp(ts.add(DAY).toNumber());
           await expectRevert(
             this.contract.priceSync(poolIds[1], prices[1], tree.getProof(2)),
-            "OEL:NOT all proofs are valid"
+            "OEL:not all proofs are valid"
           );
         });
         it("success: sets PricePerShare", async function () {

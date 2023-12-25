@@ -97,7 +97,7 @@ contract("LiquidityPool", function (accounts) {
         LiquidityPool.new(ZERO_ADDRESS, this.portal.address, this.lpImp.address, {
           from: deployer,
         }),
-        "LPP:_gETHPos can not be zero"
+        "LPP:_gETHPos cannot be zero"
       );
     });
     it("reverts if _portalPos is zero", async function () {
@@ -105,7 +105,7 @@ contract("LiquidityPool", function (accounts) {
         LiquidityPool.new(this.gETH.address, ZERO_ADDRESS, this.lpImp.address, {
           from: deployer,
         }),
-        "LPP:_portalPos can not be zero"
+        "LPP:_portalPos cannot be zero"
       );
     });
     it("reverts if _LPTokenRef is zero", async function () {
@@ -113,7 +113,7 @@ contract("LiquidityPool", function (accounts) {
         LiquidityPool.new(this.gETH.address, this.portal.address, ZERO_ADDRESS, {
           from: deployer,
         }),
-        "LPP:_LPTokenRef can not be zero"
+        "LPP:_LPTokenRef cannot be zero"
       );
     });
   });
@@ -134,28 +134,28 @@ contract("LiquidityPool", function (accounts) {
 
   describe("reverts for onlyOwner", function () {
     it("pause", async function () {
-      await expectRevert(this.contract.pause(), "LPP:sender NOT owner");
+      await expectRevert(this.contract.pause(), "LPP:sender not owner");
       await this.contract.pause({ from: owner });
     });
     it("unpause", async function () {
       await this.contract.pause({ from: owner });
-      await expectRevert(this.contract.unpause(), "LPP:sender NOT owner");
+      await expectRevert(this.contract.unpause(), "LPP:sender not owner");
       await this.contract.unpause({ from: owner });
     });
     it("setSwapFee", async function () {
-      await expectRevert(this.contract.setSwapFee(0), "LPP:sender NOT owner");
+      await expectRevert(this.contract.setSwapFee(0), "LPP:sender not owner");
       await this.contract.setSwapFee(1, { from: owner });
     });
     it("setAdminFee", async function () {
-      await expectRevert(this.contract.setAdminFee(0), "LPP:sender NOT owner");
+      await expectRevert(this.contract.setAdminFee(0), "LPP:sender not owner");
       await this.contract.setAdminFee(1, { from: owner });
     });
     it("withdrawAdminFees", async function () {
-      await expectRevert(this.contract.withdrawAdminFees(ZERO_ADDRESS), "LPP:sender NOT owner");
+      await expectRevert(this.contract.withdrawAdminFees(ZERO_ADDRESS), "LPP:sender not owner");
       await this.contract.withdrawAdminFees(owner, { from: owner });
     });
     it("rampA", async function () {
-      await expectRevert(this.contract.rampA(0, 0), "LPP:sender NOT owner");
+      await expectRevert(this.contract.rampA(0, 0), "LPP:sender not owner");
       await this.contract.rampA(100, (await getBlockTimestamp()).add(DAY.muln(14).addn(1)), {
         from: owner,
       });
@@ -164,7 +164,7 @@ contract("LiquidityPool", function (accounts) {
       await this.contract.rampA(100, (await getBlockTimestamp()).add(DAY.muln(14).addn(1)), {
         from: owner,
       });
-      await expectRevert(this.contract.stopRampA(), "LPP:sender NOT owner");
+      await expectRevert(this.contract.stopRampA(), "LPP:sender not owner");
       await this.contract.stopRampA({ from: owner });
     });
   });
@@ -195,7 +195,7 @@ contract("LiquidityPool", function (accounts) {
 
   describe("pullUpgrade", function () {
     it("reverts if not owner", async function () {
-      await expectRevert(this.contract.pullUpgrade(), "LPP:sender NOT owner");
+      await expectRevert(this.contract.pullUpgrade(), "LPP:sender not owner");
     });
     it("reverts if portal is in isolation", async function () {
       await setTimestamp((await getBlockTimestamp()).add(DAY.muln(366)).toNumber());
@@ -229,7 +229,7 @@ contract("LiquidityPool", function (accounts) {
           await generateId(strToBytes("othername"), 10021)
         );
       });
-      it("can not pull again", async function () {
+      it("cannot pull again", async function () {
         await expectRevert(this.contract.pullUpgrade({ from: owner }), "LPP:no upgrades");
       });
     });

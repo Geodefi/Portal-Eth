@@ -73,7 +73,7 @@ pragma solidity =0.8.20;
 //    */
 
 //   modifier onlyOwner() {
-//     require(msg.sender == GEODE.SENATE, "LPP:sender NOT owner");
+//     require(msg.sender == GEODE.SENATE, "LPP:sender not owner");
 //     _;
 //   }
 
@@ -85,9 +85,9 @@ pragma solidity =0.8.20;
 //    * @custom:oz-upgrades-unsafe-allow constructor
 //    */
 //   constructor(address _gETHPos, address _portalPos, address _LPTokenRef) {
-//     require(_gETHPos != address(0), "LPP:_gETHPos can not be zero");
-//     require(_portalPos != address(0), "LPP:_portalPos can not be zero");
-//     require(_LPTokenRef != address(0), "LPP:_LPTokenRef can not be zero");
+//     require(_gETHPos != address(0), "LPP:_gETHPos cannot be zero");
+//     require(_portalPos != address(0), "LPP:_portalPos cannot be zero");
+//     require(_LPTokenRef != address(0), "LPP:_LPTokenRef cannot be zero");
 
 //     gETHPos = _gETHPos;
 //     portalPos = _portalPos;
