@@ -145,6 +145,10 @@ library WithdrawalModuleLib {
     }
 
     Validator memory val = _getPortal(self).getValidator(pubkey);
+
+    // check pubkey belong to this pool
+    require(val.poolId == self.POOL_ID, "WML:validator for an unknown pool");
+
     if (val.state != VALIDATOR_STATE.ACTIVE && val.state != VALIDATOR_STATE.EXIT_REQUESTED) {
       return false;
     }
