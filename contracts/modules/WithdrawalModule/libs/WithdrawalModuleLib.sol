@@ -115,6 +115,7 @@ library WithdrawalModuleLib {
   event NewExitThreshold(uint256 threshold);
   event Enqueue(uint256 indexed index, address owner);
   event RequestTransfer(uint256 indexed index, address oldOwner, address newOwner);
+  event Fulfill(uint256 indexed index, uint256 fulfillAmount, uint256 claimableETH);
   event Dequeue(uint256 indexed index, uint256 claim);
 
   /**
@@ -452,6 +453,8 @@ library WithdrawalModuleLib {
       self.queue.fulfilledEtherBalance += claimableETH;
 
       self.gETH.burn(address(this), self.POOL_ID, toFulfill);
+
+      emit Fulfill(index, toFulfill, claimableETH);
     }
   }
 
@@ -480,6 +483,8 @@ library WithdrawalModuleLib {
         self.requests[indexes[i]].fulfilled += toFulfill;
         qFulfilled += toFulfill;
         qfulfilledEtherBalance += claimableETH;
+
+        emit Fulfill(indexes[i], toFulfill, claimableETH);
       }
 
       unchecked {
