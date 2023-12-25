@@ -899,8 +899,11 @@ contract("WithdrawalModuleLib", function (accounts) {
         });
         ts = new BN((await getReceiptTimestamp(tx)).toString());
       });
-      it("returns false if validator not exists", async function () {
-        expect(await this.contract.$canFinalizeExit(pubkeyNotExists)).to.be.equal(false);
+      it("reverts if validator not exists or not belong to that pool", async function () {
+        await expectRevert(
+          this.contract.$canFinalizeExit(pubkeyNotExists),
+          "WML:validator for an unknown pool"
+        );
       });
       it("returns false if validator in PROPOSE_STAKE state", async function () {
         expect(await this.contract.$canFinalizeExit(pubkey1)).to.be.equal(false);
