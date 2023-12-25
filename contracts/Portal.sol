@@ -245,7 +245,7 @@ contract Portal is IPortal, GeodeModule, StakeModule {
   }
 
   /**
-   * @notice fallback functions
+   * @notice fallback functions: receive
    */
 
   receive() external payable {}

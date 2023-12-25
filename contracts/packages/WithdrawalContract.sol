@@ -216,7 +216,7 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
   }
 
   /**
-   * @notice fallback functions
+   * @notice fallback functions: receive
    */
 
   receive() external payable {}

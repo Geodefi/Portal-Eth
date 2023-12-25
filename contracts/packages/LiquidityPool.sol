@@ -273,7 +273,7 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
   }
 
   /**
-   * @notice fallback functions
+   * @notice fallback functions: receive
    */
 
   receive() external payable {}
