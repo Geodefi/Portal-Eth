@@ -105,7 +105,7 @@ library WithdrawalModuleLib {
    * @custom:section                           ** CONSTANTS **
    */
   /// @notice EXIT_THRESHOLD should be at least 60% and at most 100%
-  uint256 internal constant MIN_EXIT_THRESHOLD = (6 * PERCENTAGE_DENOMINATOR) / 10;
+  uint256 internal constant MIN_EXIT_THRESHOLD = 6e9; // (6 * PERCENTAGE_DENOMINATOR) / 10;
   // minimum withdrawal request is 0.05 ETH
   uint256 internal constant MIN_REQUEST_SIZE = 5e16;
 

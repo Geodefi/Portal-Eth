@@ -72,7 +72,7 @@ library OracleExtensionLib {
    * @custom:section                           ** CONSTANTS **
    */
   /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators: Set to 1%
-  uint256 internal constant MONOPOLY_RATIO = PERCENTAGE_DENOMINATOR / 100;
+  uint256 internal constant MONOPOLY_RATIO = 1e8; // PERCENTAGE_DENOMINATOR / 100;
 
   /// @notice sensible value for the minimum beacon chain validators. No reasoning.
   uint256 internal constant MIN_VALIDATOR_COUNT = 50000;
