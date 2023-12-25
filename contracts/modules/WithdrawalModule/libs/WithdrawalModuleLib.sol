@@ -662,6 +662,9 @@ library WithdrawalModuleLib {
    * @dev We do not check if validators should be processed at all.
    * Because its up to user if they want to pay extra for unnecessary operations.
    * We should not be charging others extra to save their gas.
+   * @dev It is advised to sort the pks according to the time passed, or remaining, to ensure that
+   * the preferred validators are prioritized in a case
+   * when the subset of given validators are not called for an exit.
    */
   function processValidators(
     WithdrawalModuleStorage storage self,
