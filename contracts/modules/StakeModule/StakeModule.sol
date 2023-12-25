@@ -372,9 +372,14 @@ abstract contract StakeModule is
     $.blameProposal(_getDataStoreModuleStorage(), pk);
   }
 
-  function blameExit(bytes calldata pk) external virtual override whenNotPaused {
+  function blameExit(
+    bytes calldata pk,
+    uint256 beaconBalance,
+    uint256 withdrawnBalance,
+    bytes32[] calldata balanceProof
+  ) external virtual override whenNotPaused {
     StakeModuleStorage storage $ = _getStakeModuleStorage();
-    $.blameExit(_getDataStoreModuleStorage(), pk);
+    $.blameExit(_getDataStoreModuleStorage(), pk, beaconBalance, withdrawnBalance, balanceProof);
   }
 
   /**

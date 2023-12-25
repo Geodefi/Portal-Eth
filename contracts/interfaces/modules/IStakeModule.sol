@@ -73,7 +73,12 @@ interface IStakeModule is IDataStoreModule {
 
   function isPrisoned(uint256 operatorId) external view returns (bool);
 
-  function blameExit(bytes calldata pk) external;
+  function blameExit(
+    bytes calldata pk,
+    uint256 beaconBalance,
+    uint256 withdrawnBalance,
+    bytes32[] calldata balanceProof
+  ) external;
 
   function blameProposal(bytes calldata pk) external;
 

@@ -271,6 +271,7 @@ contract("StakeModuleLib", function (accounts) {
         "EnforcedPause"
       );
     });
+    // TODO: this blameExit test is passing but parameters are missing, fix this
     it("blameExit", async function () {
       await expectCustomError(this.contract.blameExit("0x"), this.contract, "EnforcedPause");
     });
@@ -2282,7 +2283,10 @@ contract("StakeModuleLib", function (accounts) {
             });
 
             it("blameExit reverts when still active", async function () {
-              await expectRevert(this.contract.blameExit(pubkey0), "OEL:validator is active");
+              await expectRevert(
+                this.contract.blameExit(pubkey0),
+                "OEL:validator is active or acceptable delay"
+              );
             });
 
             describe("all staked", function () {

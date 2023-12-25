@@ -243,19 +243,38 @@ library OracleExtensionLib {
    * @notice imprisoning an Operator if the validator have not been exited until expected exit
    * @dev normally, oracle should verify the signed exit request on beacon chain for a (deterministic) epoch
    * * before approval. This function enforces it further for the stakers.
-   * @dev anyone can call this function while the state is ACTIVE
+   * @dev anyone can call this function while the state is ACTIVE or EXIT_REQUESTED
    * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
    */
   function blameExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
-    bytes calldata pk
+    bytes calldata pk,
+    uint256 beaconBalance,
+    uint256 withdrawnBalance,
+    bytes32[] calldata balanceProof
   ) external {
-    require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "OEL:unexpected validator state");
+    uint64 state = self.validators[pk].state;
     require(
-      block.timestamp > self.validators[pk].createdAt + self.validators[pk].period,
-      "OEL:validator is active"
+      state == VALIDATOR_STATE.ACTIVE || state == VALIDATOR_STATE.EXIT_REQUESTED,
+      "OEL:unexpected validator state"
     );
+    require(
+      block.timestamp >
+        self.validators[pk].createdAt + self.validators[pk].period + MAX_BEACON_DELAY,
+      "OEL:validator is active or acceptable delay"
+    );
+
+    // verify balances
+    bytes32 leaf = keccak256(
+      bytes.concat(keccak256(abi.encode(pk, beaconBalance, withdrawnBalance)))
+    );
+    require(
+      MerkleProof.verify(balanceProof, self.BALANCE_MERKLE_ROOT, leaf),
+      "OEL:proof not valid"
+    );
+
+    require(beaconBalance != 0, "OEL:alreadt exited");
 
     _imprison(DATASTORE, self.validators[pk].operatorId, pk);
   }
