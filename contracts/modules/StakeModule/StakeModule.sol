@@ -95,6 +95,7 @@ abstract contract StakeModule is
   event Alienated(bytes pubkey);
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
   event FeeTheft(uint256 indexed id, bytes proofs);
+  event YieldDistributed(uint256 indexed poolId, uint256 amount);
   event OracleReported(
     bytes32 priceMerkleRoot,
     bytes32 balanceMerkleRoot,

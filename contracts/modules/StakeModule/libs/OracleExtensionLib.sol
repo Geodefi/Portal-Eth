@@ -90,6 +90,7 @@ library OracleExtensionLib {
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
   event FeeTheft(uint256 indexed id, bytes proofs);
   event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
+  event YieldDistributed(uint256 indexed poolId, uint256 amount);
   event OracleReported(
     bytes32 priceMerkleRoot,
     bytes32 balanceMerkleRoot,
@@ -434,6 +435,7 @@ library OracleExtensionLib {
           gETH_DENOMINATOR;
         self.gETH.mint(address(this), _poolId, supplyDiff, "");
         self.gETH.safeTransferFrom(address(this), yieldReceiver, _poolId, supplyDiff, "");
+        emit YieldDistributed(_poolId, supplyDiff);
       } else {
         self.gETH.setPricePerShare(_price, _poolId);
       }
