@@ -2366,7 +2366,7 @@ contract("StakeModuleLib", function (accounts) {
                     new BN(String(34)),
                     proofs[2]
                   ),
-                  "OEL:alreadt exited"
+                  "OEL:already exited"
                 );
               });
 
