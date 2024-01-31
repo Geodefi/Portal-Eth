@@ -275,7 +275,7 @@ library OracleExtensionLib {
       "OEL:proof not valid"
     );
 
-    require(beaconBalance != 0, "OEL:alreadt exited");
+    require(beaconBalance != 0, "OEL:already exited");
 
     _imprison(DATASTORE, self.validators[pk].operatorId, pk);
   }
