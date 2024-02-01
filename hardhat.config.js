@@ -1,6 +1,12 @@
 require("dotenv").config();
 
-require("@openzeppelin/hardhat-upgrades");
+require("ethers");
+require("@nomiclabs/hardhat-web3");
+require("@nomiclabs/hardhat-truffle5");
+require("@nomicfoundation/hardhat-verify");
+require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-chai-matchers");
+require("@nomicfoundation/hardhat-network-helpers");
 
 require("hardhat-deploy");
 require("hardhat-deploy-ethers");
@@ -9,11 +15,7 @@ require("hardhat-gas-reporter");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
 
-require("@nomiclabs/hardhat-web3");
-require("@nomiclabs/hardhat-truffle5");
-require("@nomicfoundation/hardhat-verify");
-require("@nomicfoundation/hardhat-ethers");
-require("ethers");
+require("@openzeppelin/hardhat-upgrades");
 
 require("./scripts");
 
@@ -29,7 +31,8 @@ const config = {
   solidity: {
     compilers: [
       {
-        version: "0.8.19",
+        version: "0.8.20",
+        evmVersion: "shanghai", // if the blockchain is not supporting PUSH0: paris.
         settings: {
           // viaIR: false,
           optimizer: {
@@ -51,7 +54,7 @@ const config = {
       deploy: ["./deploy"],
       forking: FORK_MAINNET
         ? {
-            url: process.env.GOERLI_URL,
+            url: process.env.HOLESKY_URL,
           }
         : undefined,
       accounts: {
@@ -63,6 +66,12 @@ const config = {
       url: process.env.GOERLI_URL,
       deploy: ["./deploy"],
       chainId: 5,
+      gasPrice: 1e10, // 10 gwei
+    },
+    holesky: {
+      url: process.env.HOLESKY_URL,
+      deploy: ["./deploy"],
+      chainId: 17000,
       gasPrice: 1e10, // 10 gwei
     },
   },
@@ -89,6 +98,7 @@ const config = {
   etherscan: {
     apiKey: {
       goerli: process.env.ETHERSCAN_API_KEY,
+      holesky: process.env.ETHERSCAN_API_KEY,
     },
   },
 };
@@ -97,6 +107,10 @@ if (process.env.ACCOUNT_PRIVATE_KEYS) {
     ...config.networks,
     goerli: {
       ...config.networks?.goerli,
+      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),
+    },
+    holesky: {
+      ...config.networks?.holesky,
       accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),
     },
   };

@@ -1,5 +1,7 @@
 const { expect } = require("chai");
-const { expectRevert, expectEvent, constants, BN, balance } = require("@openzeppelin/test-helpers");
+const { expectRevert, constants, BN, balance } = require("@openzeppelin/test-helpers");
+const { expectEvent, expectCustomError } = require("../../utils/helpers");
+
 const {
   getBlockTimestamp,
   forceAdvanceOneBlock,
@@ -99,7 +101,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_gETH_position can not be zero"
+        "LM:_gETH_position cannot be zero"
       );
     });
     it("reverts if _lpToken_referance is zero", async function () {
@@ -112,7 +114,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_lpToken_referance can not be zero"
+        "LM:_lpToken_referance cannot be zero"
       );
     });
     it("reverts if _pooledTokenId is zero", async function () {
@@ -125,7 +127,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_pooledTokenId can not be zero"
+        "LM:_pooledTokenId cannot be zero"
       );
     });
     it("reverts if _initialA is zero", async function () {
@@ -138,7 +140,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_A can not be zero"
+        "LM:_A cannot be zero"
       );
     });
     it("reverts if _initialA exceeds maximum", async function () {
@@ -571,9 +573,9 @@ contract("LiquidityModule", function (accounts) {
     context("Fee", function () {
       describe("setSwapFee", function () {
         it("Emits NewSwapFee event", async function () {
-          expectEvent(await this.contract.setSwapFee(MAX_SWAP_FEE), "NewSwapFee", {
-            newSwapFee: MAX_SWAP_FEE,
-          });
+          expectEvent(await this.contract.setSwapFee(MAX_SWAP_FEE), this.contract, "NewSwapFee", [
+            MAX_SWAP_FEE,
+          ]);
         });
 
         it("Reverts when fee is higher than the limit", async function () {
@@ -590,9 +592,12 @@ contract("LiquidityModule", function (accounts) {
 
       describe("setAdminFee", function () {
         it("Emits NewAdminFee event", async function () {
-          expectEvent(await this.contract.setAdminFee(MAX_ADMIN_FEE), "NewAdminFee", {
-            newAdminFee: MAX_ADMIN_FEE,
-          });
+          expectEvent(
+            await this.contract.setAdminFee(MAX_ADMIN_FEE),
+            this.contract,
+            "NewAdminFee",
+            [MAX_ADMIN_FEE]
+          );
         });
 
         it("Reverts when adminFee is higher than the limit", async function () {
@@ -711,7 +716,7 @@ contract("LiquidityModule", function (accounts) {
 
         it("Emits RampA event", async function () {
           const endTimestamp = (await getBlockTimestamp()).add(DAY.muln(14).addn(1));
-          expectEvent(await this.contract.rampA(100, endTimestamp), "RampA");
+          expectEvent(await this.contract.rampA(100, endTimestamp), this.contract, "RampA");
         });
 
         it("Succeeds to ramp upwards", async function () {
@@ -829,7 +834,7 @@ contract("LiquidityModule", function (accounts) {
         });
 
         it("Emits StopRampA event", async function () {
-          expectEvent(await this.contract.stopRampA(), "StopRampA");
+          expectEvent(await this.contract.stopRampA(), this.contract, "StopRampA");
         });
 
         it("Stop ramp succeeds", async function () {
@@ -865,12 +870,13 @@ contract("LiquidityModule", function (accounts) {
       it("Reverts when contract is paused", async function () {
         const beforePoolTokenAmount = await this.lpToken.balanceOf(user1);
         await this.contract.pause();
-        await expectRevert(
+        await expectCustomError(
           this.contract.addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256, {
             value: ethers.parseEther("1").toString(),
             from: user1,
           }),
-          "Pausable: paused"
+          this.contract,
+          "EnforcedPause"
         );
         const afterPoolTokenAmount = await this.lpToken.balanceOf(user1);
 
@@ -1003,7 +1009,7 @@ contract("LiquidityModule", function (accounts) {
         const finalBal = await this.lpToken.balanceOf(user1);
         const expMint = finalBal.sub(initBal);
 
-        expectEvent(receipt, "return$addLiquidity", { ret0: expMint });
+        expectEvent(receipt, this.contract, "return$addLiquidity", [expMint]);
       });
 
       it("Reverts when minToMint is not reached due to front running", async function () {
@@ -1067,6 +1073,7 @@ contract("LiquidityModule", function (accounts) {
             MAX_UINT256,
             { value: ethers.parseEther("0.01").toString(), from: user1 }
           ),
+          this.contract,
           "AddLiquidity"
         );
       });
@@ -1173,6 +1180,7 @@ contract("LiquidityModule", function (accounts) {
             await this.contract.removeLiquidity(currentUser1Balance, [0, 0], MAX_UINT256, {
               from: user1,
             }),
+            this.contract,
             "RemoveLiquidity"
           );
         });
@@ -1185,7 +1193,7 @@ contract("LiquidityModule", function (accounts) {
           // Owner pauses the contract
           await this.contract.pause();
 
-          await expectRevert(
+          await expectCustomError(
             this.contract.removeLiquidityImbalance(
               [String(1e18), String(1e16)],
               currentUser1Balance,
@@ -1194,7 +1202,8 @@ contract("LiquidityModule", function (accounts) {
                 from: user1,
               }
             ),
-            "Pausable: paused"
+            this.contract,
+            "EnforcedPause"
           );
         });
 
@@ -1277,9 +1286,9 @@ contract("LiquidityModule", function (accounts) {
 
           const futureUser1Balance = await this.lpToken.balanceOf(user1);
 
-          expectEvent(receipt, "return$removeLiquidityImbalance", {
-            ret0: currentUser1Balance.sub(futureUser1Balance),
-          });
+          expectEvent(receipt, this.contract, "return$removeLiquidityImbalance", [
+            currentUser1Balance.sub(futureUser1Balance),
+          ]);
         });
 
         it("Reverts when user tries to burn more LP tokens than they own", async function () {
@@ -1359,6 +1368,7 @@ contract("LiquidityModule", function (accounts) {
               MAX_UINT256,
               { from: user1 }
             ),
+            this.contract,
             "RemoveLiquidityImbalance"
           );
         });
@@ -1369,11 +1379,12 @@ contract("LiquidityModule", function (accounts) {
           // Owner pauses the contract
           await this.contract.pause();
 
-          await expectRevert(
+          await expectCustomError(
             this.contract.removeLiquidityOneToken(currentUser1Balance, 0, 0, MAX_UINT256, {
               from: user1,
             }),
-            "Pausable: paused"
+            this.contract,
+            "EnforcedPause"
           );
         });
 
@@ -1467,9 +1478,9 @@ contract("LiquidityModule", function (accounts) {
             }
           );
 
-          expectEvent(receipt, "return$removeLiquidityOneToken", {
-            ret0: new BN("1000940086154542003"),
-          });
+          expectEvent(receipt, this.contract, "return$removeLiquidityOneToken", [
+            new BN("1000940086154542003"),
+          ]);
         });
 
         it("Reverts when user tries to burn more LP tokens than they own", async function () {
@@ -1533,6 +1544,7 @@ contract("LiquidityModule", function (accounts) {
             await this.contract.removeLiquidityOneToken(currentUser1Balance, 0, 0, MAX_UINT256, {
               from: user1,
             }),
+            this.contract,
             "RemoveLiquidityOne"
           );
         });
@@ -1542,12 +1554,13 @@ contract("LiquidityModule", function (accounts) {
     describe("swap", function () {
       it("Reverts when contract is paused", async function () {
         await this.contract.pause();
-        await expectRevert(
+        await expectCustomError(
           this.contract.swap(0, 1, String(1e16), 0, MAX_UINT256, {
             value: ethers.parseEther("0.01").toString(),
             from: user1,
           }),
-          "Pausable: paused"
+          this.contract,
+          "EnforcedPause"
         );
       });
 
@@ -1752,18 +1765,14 @@ contract("LiquidityModule", function (accounts) {
         const receipt = await this.contract.swap(0, 1, String(1e18), 0, MAX_UINT256, {
           value: ethers.parseEther("1").toString(),
         });
-        expectEvent(receipt, "return$swap", {
-          ret0: new BN("916300000000000000"),
-        });
+        expectEvent(receipt, this.contract, "return$swap", [new BN("916300000000000000")]);
       });
 
       it("Returns correct amount of received token gEther => Ether", async function () {
         const receipt = await this.contract.swap(1, 0, String(1e18), 0, MAX_UINT256, {
           value: ethers.parseEther("1").toString(),
         });
-        expectEvent(receipt, "return$swap", {
-          ret0: new BN("916300000000000000"),
-        });
+        expectEvent(receipt, this.contract, "return$swap", [new BN("916300000000000000")]);
       });
 
       it("Reverts when block is mined after deadline", async function () {
@@ -1784,6 +1793,7 @@ contract("LiquidityModule", function (accounts) {
             from: user1,
             value: ethers.parseEther("0.1").toString(),
           }),
+          this.contract,
           "TokenSwap"
         );
       });

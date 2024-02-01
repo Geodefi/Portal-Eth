@@ -78,6 +78,9 @@ module.exports.impersonate = async function (address, balance) {
     method: "hardhat_setBalance",
     params: [address, web3.utils.toHex(balance)],
   });
+
+  // Note : If you are using  hardhat-ethers call getSigner after impersonating the account
+  return await ethers.getSigner(address);
 };
 
 module.exports.delay = function (time) {

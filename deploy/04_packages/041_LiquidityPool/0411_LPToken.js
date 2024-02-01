@@ -3,11 +3,12 @@ const func = async function (hre) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("LPToken", {
-    from: deployer,
-    log: true,
-    skipIfAlreadyDeployed: true,
-  });
+  console.log("LPToken WILL NOT BE DEPLOYED");
+  // await deploy("LPToken", {
+  //   from: deployer,
+  //   log: true,
+  //   skipIfAlreadyDeployed: true,
+  // });
 };
 
 module.exports = func;

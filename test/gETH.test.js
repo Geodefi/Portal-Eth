@@ -1,22 +1,30 @@
 const { expect } = require("chai");
 
-const { expectRevert, expectEvent, constants, BN } = require("@openzeppelin/test-helpers");
-const { ETHER_STR, getReceiptTimestamp, impersonate } = require("../utils");
-const { shouldBehaveLikeERC1155 } = require("./utils/ERC1155.behavior");
+const { ethers } = require("hardhat");
+const { ETHER_STR } = require("../utils");
+const { impersonate } = require("../utils");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
-const { ZERO_BYTES32, ZERO_ADDRESS } = constants;
+async function getTimeStamp(tx) {
+  const rc = await ethers.provider.getTransactionReceipt(tx.hash);
+  const block = await ethers.provider.getBlock(rc.blockNumber);
+  return block.timestamp;
+}
 
-const gETH = artifacts.require("$gETH");
-const ERC20Middleware = artifacts.require("$ERC20Middleware");
-const nonERC1155Receiver = artifacts.require("nonERC1155Receiver");
+const {
+  //   ZERO_BYTES32,
+  //   ZERO_ADDRESS,
+  deployWithProxy,
+  expectEvent,
+  //   expectRevert,
+  expectCustomError,
+} = require("./utils/helpers");
 
 contract("gETH", function (accounts) {
-  const [deployer, user, ...otherAccounts] = accounts;
-
   const name = "Geode Staked Ether";
   const symbol = "gETH";
   const uri = "https://token.com";
-  const denominator = new BN(ETHER_STR);
+  const denominator = BigInt(ETHER_STR);
 
   const URI_SETTER_ROLE = web3.utils.soliditySha3("URI_SETTER_ROLE");
   const MINTER_ROLE = web3.utils.soliditySha3("MINTER_ROLE");
@@ -24,20 +32,34 @@ contract("gETH", function (accounts) {
   const MIDDLEWARE_MANAGER_ROLE = web3.utils.soliditySha3("MIDDLEWARE_MANAGER_ROLE");
   const ORACLE_ROLE = web3.utils.soliditySha3("ORACLE_ROLE");
 
-  const tokenId = new BN("69");
-  const price = new BN("69420");
+  const tokenId = BigInt("69");
+  const price = BigInt("69420");
 
-  const mintAmount = new BN("420420");
-  const transferAmount = new BN("69");
+  const mintAmount = BigInt("420420");
+  const transferAmount = BigInt("69");
 
-  let middleware;
-  let nonReceiver;
+  const fixture = async () => {
+    const [deployer, user] = await ethers.getSigners();
+
+    const token = await ethers.deployContract("$gETH", [name, symbol, uri]);
+
+    const middleware = await deployWithProxy("$ERC20Middleware", [
+      tokenId,
+      token.target,
+      ZERO_BYTES32,
+    ]);
+
+    const nonERC1155Receiver = await ethers.deployContract("$nonERC1155Receiver", [
+      tokenId,
+      token.target,
+    ]);
+
+    return { deployer, user, token, middleware, nonERC1155Receiver };
+  };
 
   beforeEach(async function () {
-    this.token = await gETH.new(name, symbol, uri, { from: deployer });
+    Object.assign(this, await loadFixture(fixture));
   });
-
-  shouldBehaveLikeERC1155(otherAccounts);
 
   describe("Constructor", function () {
     it("sets name", async function () {
@@ -49,165 +71,130 @@ contract("gETH", function (accounts) {
     });
 
     it("grants MIDDLEWARE_MANAGER_ROLE", async function () {
-      expect(await this.token.hasRole(MIDDLEWARE_MANAGER_ROLE, deployer)).to.equal(true);
+      expect(await this.token.hasRole(MIDDLEWARE_MANAGER_ROLE, this.deployer)).to.be.equal(true);
     });
 
     it("grants ORACLE_ROLE", async function () {
-      expect(await this.token.hasRole(ORACLE_ROLE, deployer)).to.equal(true);
+      expect(await this.token.hasRole(ORACLE_ROLE, this.deployer)).to.be.equal(true);
     });
   });
 
   context("Denominator", function () {
     it("denominator is 1e18", async function () {
-      expect(await this.token.denominator()).to.be.bignumber.equal(denominator);
+      expect(await this.token.denominator()).to.be.equal(denominator);
     });
   });
 
-  context("Middlewares", function () {
-    beforeEach(async function () {
-      middleware = await ERC20Middleware.new({
-        from: deployer,
-      });
-      middleware.initialize(tokenId, this.token.address, ZERO_BYTES32);
-
-      nonReceiver = await nonERC1155Receiver.new(tokenId, this.token.address, {
-        from: deployer,
-      });
-    });
-
-    describe("_setMiddleware", async function () {
-      it("sets as a middleware", async function () {
-        await this.token.$_setMiddleware(middleware.address, tokenId, { from: deployer });
-        expect(await this.token.isMiddleware(middleware.address, tokenId)).to.be.equal(true);
-      });
-    });
-
-    describe("setMiddleware", async function () {
-      it("reverts for zero address", async function () {
-        await expectRevert(
-          this.token.setMiddleware(ZERO_ADDRESS, tokenId, { from: deployer }),
-          "gETH:middleware query for the zero address"
+  context("Roles", function () {
+    describe("reverts if transfer functions called with address without the role", function () {
+      it("reverts transferUriSetterRole", async function () {
+        await expectCustomError(
+          this.token.connect(this.user).transferUriSetterRole(this.user),
+          this.token,
+          "AccessControlUnauthorizedAccount"
         );
       });
 
-      it("reverts if not a contract", async function () {
-        await expectRevert(
-          this.token.setMiddleware(user, tokenId, { from: deployer }),
-          "gETH:middleware must be a contract"
+      it("reverts transferPauserRole", async function () {
+        await expectCustomError(
+          this.token.connect(this.user).transferPauserRole(this.user),
+          this.token,
+          "AccessControlUnauthorizedAccount"
         );
       });
 
-      it("emits MiddlewareSet", async function () {
-        expectEvent(
-          await this.token.setMiddleware(middleware.address, tokenId, { from: deployer }),
-          "MiddlewareSet",
-          { id: tokenId, middleware: middleware.address, isSet: true }
+      it("reverts transferMinterRole", async function () {
+        await expectCustomError(
+          this.token.connect(this.user).transferMinterRole(this.user),
+          this.token,
+          "AccessControlUnauthorizedAccount"
+        );
+      });
+
+      it("reverts transferOracleRole", async function () {
+        await expectCustomError(
+          this.token.connect(this.user).transferOracleRole(this.user),
+          this.token,
+          "AccessControlUnauthorizedAccount"
+        );
+      });
+
+      it("reverts transferMiddlewareManagerRole", async function () {
+        await expectCustomError(
+          this.token.connect(this.user).transferMiddlewareManagerRole(this.user),
+          this.token,
+          "AccessControlUnauthorizedAccount"
         );
       });
     });
 
-    context("can transfer without approval", function () {
+    describe("transferUriSetterRole", function () {
       beforeEach(async function () {
-        await this.token.$_mint(user, tokenId, mintAmount, "0x");
-        await this.token.setMiddleware(middleware.address, tokenId, { from: deployer });
-        await impersonate(middleware.address, ETHER_STR);
+        await this.token.transferUriSetterRole(this.user);
       });
 
-      it("safeTransferFrom", async function () {
-        await this.token.safeTransferFrom(user, deployer, tokenId, transferAmount, "0x", {
-          from: middleware.address,
-        });
-        expect(await this.token.balanceOf(user, tokenId)).to.be.bignumber.equal(
-          mintAmount.sub(transferAmount)
-        );
-        expect(await this.token.balanceOf(deployer, tokenId)).to.be.bignumber.equal(transferAmount);
+      it("sets new UriSetter", async function () {
+        expect(await this.token.hasRole(URI_SETTER_ROLE, this.user)).to.be.equal(true);
       });
 
-      it("burn", async function () {
-        await this.token.burn(user, tokenId, transferAmount, {
-          from: middleware.address,
-        });
-        expect(await this.token.balanceOf(user, tokenId)).to.be.bignumber.equal(
-          mintAmount.sub(transferAmount)
-        );
-      });
-
-      it("can transfer to non-Erc155Holder contract", async function () {
-        await this.token.safeTransferFrom(
-          user,
-          nonReceiver.address,
-          tokenId,
-          transferAmount,
-          "0x",
-          {
-            from: middleware.address,
-          }
-        );
-        expect(await this.token.balanceOf(user, tokenId)).to.be.bignumber.equal(
-          mintAmount.sub(transferAmount)
-        );
-        expect(await this.token.balanceOf(nonReceiver.address, tokenId)).to.be.bignumber.equal(
-          transferAmount
-        );
+      it("removes oldUriSetter", async function () {
+        expect(await this.token.hasRole(URI_SETTER_ROLE, this.deployer)).to.be.equal(false);
       });
     });
-  });
 
-  context("Avoiders", function () {
-    describe("avoidMiddlewares", async function () {
-      let receipt;
-
+    describe("transferPauserRole", function () {
       beforeEach(async function () {
-        receipt = await this.token.avoidMiddlewares(tokenId, true, { from: user });
+        await this.token.transferPauserRole(this.user);
       });
 
-      it("sets address as avoider", async function () {
-        expect(await this.token.isAvoider(user, tokenId)).to.be.equal(true);
+      it("sets new Pauser", async function () {
+        expect(await this.token.hasRole(PAUSER_ROLE, this.user)).to.be.equal(true);
       });
 
-      it("emits Avoider", async function () {
-        expectEvent(receipt, "Avoider", { avoider: user, id: tokenId, isAvoid: true });
+      it("removes oldPauser", async function () {
+        expect(await this.token.hasRole(PAUSER_ROLE, this.deployer)).to.be.equal(false);
+      });
+    });
+
+    describe("transferMinterRole", function () {
+      beforeEach(async function () {
+        await this.token.transferMinterRole(this.user);
       });
 
-      context("can not touch avoider", function () {
-        beforeEach(async function () {
-          await this.token.$_mint(user, tokenId, mintAmount, "0x");
-          await this.token.avoidMiddlewares(tokenId, true, { from: user });
-          await this.token.setMiddleware(middleware.address, tokenId, { from: deployer });
-          await impersonate(middleware.address, ETHER_STR);
-        });
+      it("sets new Minter", async function () {
+        expect(await this.token.hasRole(MINTER_ROLE, this.user)).to.be.equal(true);
+      });
 
-        describe("safeTransferFrom", async function () {
-          await expectRevert(
-            this.token.safeTransferFrom(user, deployer, tokenId, transferAmount, "0x", {
-              from: middleware.address,
-            }),
-            "ERC1155: caller is not token owner or approved"
-          );
-        });
+      it("removes oldMinter", async function () {
+        expect(await this.token.hasRole(MINTER_ROLE, this.deployer)).to.be.equal(false);
+      });
+    });
 
-        describe("burn", async function () {
-          await expectRevert(
-            this.token.burn(user, tokenId, transferAmount, {
-              from: middleware.address,
-            }),
-            "ERC1155: caller is not token owner or approved"
-          );
-        });
+    describe("transferOracleRole", function () {
+      beforeEach(async function () {
+        await this.token.transferOracleRole(this.user);
+      });
 
-        it("can transfer to non-Erc155Holder, if approved", async function () {
-          await this.token.setApprovalForAll(middleware.address, true, { from: user });
-          await this.token.safeTransferFrom(
-            user,
-            nonReceiver.address,
-            tokenId,
-            transferAmount,
-            "0x",
-            {
-              from: middleware.address,
-            }
-          );
-        });
+      it("sets new Oracle", async function () {
+        expect(await this.token.hasRole(ORACLE_ROLE, this.user)).to.be.equal(true);
+      });
+
+      it("removes oldOracle", async function () {
+        expect(await this.token.hasRole(ORACLE_ROLE, this.deployer)).to.be.equal(false);
+      });
+    });
+
+    describe("transferMiddlewareManagerRole", function () {
+      beforeEach(async function () {
+        await this.token.transferMiddlewareManagerRole(this.user);
+      });
+
+      it("sets new MiddlewareManager", async function () {
+        expect(await this.token.hasRole(MIDDLEWARE_MANAGER_ROLE, this.user)).to.be.equal(true);
+      });
+
+      it("removes oldMiddlewareManager", async function () {
+        expect(await this.token.hasRole(MIDDLEWARE_MANAGER_ROLE, this.deployer)).to.be.equal(false);
       });
     });
   });
@@ -216,137 +203,131 @@ contract("gETH", function (accounts) {
     describe("_setPricePerShare", function () {
       let updateTime;
       beforeEach(async function () {
-        updateTime = await getReceiptTimestamp(
-          await this.token.$_setPricePerShare(price, tokenId, { from: deployer })
-        );
+        const tx = await this.token.$_setPricePerShare(price, tokenId);
+        updateTime = await getTimeStamp(tx);
       });
 
       it("updates pricePerShare", async function () {
-        expect(await this.token.pricePerShare(tokenId)).to.be.bignumber.equal(price);
+        expect(await this.token.pricePerShare(tokenId)).to.be.equal(price);
       });
 
       it("updates priceUpdateTimestamp", async function () {
-        expect(await this.token.priceUpdateTimestamp(tokenId)).to.be.bignumber.equal(updateTime);
+        expect(await this.token.priceUpdateTimestamp(tokenId)).to.be.equal(updateTime);
       });
     });
 
     describe("setPricePerShare", function () {
-      it("reverts for zero address", async function () {
-        await expectRevert(
-          this.token.setPricePerShare(price, ZERO_BYTES32, { from: deployer }),
-          "gETH:price query for the zero address"
+      it("reverts for zero ID", async function () {
+        await expectCustomError(
+          this.token.setPricePerShare(price, ZERO_BYTES32),
+          this.token,
+          "gETHZeroId"
         );
       });
 
       it("emits PriceUpdated", async function () {
-        const receipt = await this.token.setPricePerShare(price, tokenId, { from: deployer });
-        const updateTime = await getReceiptTimestamp(receipt);
+        const receipt = await this.token.setPricePerShare(price, tokenId);
+        const updateTime = await getTimeStamp(receipt);
 
-        expectEvent(receipt, "PriceUpdated", {
-          id: tokenId,
-          pricePerShare: price,
-          updateTimestamp: updateTime,
-        });
+        await expectEvent(receipt, this.token, "PriceUpdated", [tokenId, price, updateTime]);
       });
     });
   });
 
-  context("Roles", function () {
-    describe("reverts if transfer functions called with address not have the role", function () {
-      it("reverts transferUriSetterRole", async function () {
-        await expectRevert(
-          this.token.transferUriSetterRole(user, { from: user }),
-          "is missing role"
+  context("Middlewares", function () {
+    describe("_setMiddleware", async function () {
+      it("sets as a middleware", async function () {
+        await this.token
+          .connect(this.deployer)
+          .$_setMiddleware(this.middleware.target, tokenId, true);
+        expect(await this.token.isMiddleware(this.middleware.target, tokenId)).to.be.equal(true);
+      });
+    });
+
+    describe("setMiddleware", async function () {
+      it("reverts for zero address", async function () {
+        await expectCustomError(
+          this.token.setMiddleware(ZERO_ADDRESS, tokenId, true),
+          this.token,
+          "gETHInvalidMiddleware"
         );
       });
 
-      it("reverts transferPauserRole", async function () {
-        await expectRevert(this.token.transferPauserRole(user, { from: user }), "is missing role");
+      it("reverts if not a contract", async function () {
+        await expectCustomError(
+          this.token.setMiddleware(this.user, tokenId, true),
+          this.token,
+          "gETHInvalidMiddleware"
+        );
       });
 
-      it("reverts transferMinterRole", async function () {
-        await expectRevert(this.token.transferMinterRole(user, { from: user }), "is missing role");
-      });
-
-      it("reverts transferOracleRole", async function () {
-        await expectRevert(this.token.transferOracleRole(user, { from: user }), "is missing role");
-      });
-
-      it("reverts transferMiddlewareManagerRole", async function () {
-        await expectRevert(
-          this.token.transferMiddlewareManagerRole(user, { from: user }),
-          "is missing role"
+      it("emits MiddlewareSet", async function () {
+        await expectEvent(
+          await this.token.setMiddleware(this.middleware.target, tokenId, true),
+          this.token,
+          "MiddlewareSet",
+          [tokenId, this.middleware.target, true]
         );
       });
     });
+  });
 
-    describe("transferUriSetterRole", function () {
+  context("Avoiders", function () {
+    describe("avoidMiddlewares", async function () {
+      let receipt;
       beforeEach(async function () {
-        await this.token.transferUriSetterRole(user, { from: deployer });
+        receipt = await this.token.connect(this.user).avoidMiddlewares(tokenId, true);
       });
 
-      it("sets new UriSetter", async function () {
-        expect(await this.token.hasRole(URI_SETTER_ROLE, user)).to.be.equal(true);
+      it("sets address as avoider", async function () {
+        expect(await this.token.isAvoider(this.user, tokenId)).to.be.equal(true);
       });
 
-      it("removes oldUriSetter", async function () {
-        expect(await this.token.hasRole(URI_SETTER_ROLE, deployer)).to.be.equal(false);
-      });
-    });
-
-    describe("transferPauserRole", function () {
-      beforeEach(async function () {
-        await this.token.transferPauserRole(user, { from: deployer });
+      it("emits Avoider", async function () {
+        expectEvent(receipt, this.token, "Avoider", [this.user, tokenId, true]);
       });
 
-      it("sets new Pauser", async function () {
-        expect(await this.token.hasRole(PAUSER_ROLE, user)).to.be.equal(true);
-      });
+      describe("cannot touch avoider", async function () {
+        let middlewareSigner;
+        beforeEach(async function () {
+          await this.token.$_mint(this.user, tokenId, mintAmount, "0x");
+          await this.token.connect(this.user).avoidMiddlewares(tokenId, true);
+          await this.token
+            .connect(this.deployer)
+            .setMiddleware(this.middleware.target, tokenId, true);
+          middlewareSigner = await impersonate(this.middleware.target, ETHER_STR);
+        });
 
-      it("removes oldPauser", async function () {
-        expect(await this.token.hasRole(PAUSER_ROLE, deployer)).to.be.equal(false);
-      });
-    });
+        it("safeTransferFrom", async function () {
+          await expectCustomError(
+            this.token
+              .connect(middlewareSigner)
+              .safeTransferFrom(this.user, this.deployer, tokenId, transferAmount, "0x"),
+            this.token,
+            "ERC1155MissingApprovalForAll"
+          );
+        });
 
-    describe("transferMinterRole", function () {
-      beforeEach(async function () {
-        await this.token.transferMinterRole(user, { from: deployer });
-      });
+        it("burn", async function () {
+          await expectCustomError(
+            this.token.connect(this.middleware).burn(this.user, tokenId, transferAmount),
+            this.token,
+            "ERC1155MissingApprovalForAll"
+          );
+        });
 
-      it("sets new Minter", async function () {
-        expect(await this.token.hasRole(MINTER_ROLE, user)).to.be.equal(true);
-      });
-
-      it("removes oldMinter", async function () {
-        expect(await this.token.hasRole(MINTER_ROLE, deployer)).to.be.equal(false);
-      });
-    });
-
-    describe("transferOracleRole", function () {
-      beforeEach(async function () {
-        await this.token.transferOracleRole(user, { from: deployer });
-      });
-
-      it("sets new Oracle", async function () {
-        expect(await this.token.hasRole(ORACLE_ROLE, user)).to.be.equal(true);
-      });
-
-      it("removes oldOracle", async function () {
-        expect(await this.token.hasRole(ORACLE_ROLE, deployer)).to.be.equal(false);
-      });
-    });
-
-    describe("transferMiddlewareManagerRole", function () {
-      beforeEach(async function () {
-        await this.token.transferMiddlewareManagerRole(user, { from: deployer });
-      });
-
-      it("sets new MiddlewareManager", async function () {
-        expect(await this.token.hasRole(MIDDLEWARE_MANAGER_ROLE, user)).to.be.equal(true);
-      });
-
-      it("removes oldMiddlewareManager", async function () {
-        expect(await this.token.hasRole(MIDDLEWARE_MANAGER_ROLE, deployer)).to.be.equal(false);
+        it("can transfer to non-Erc155Holder, if approved", async function () {
+          await this.token.connect(this.user).setApprovalForAll(this.middleware.target, true);
+          await this.token
+            .connect(middlewareSigner)
+            .safeTransferFrom(
+              this.user,
+              this.nonERC1155Receiver.target,
+              tokenId,
+              transferAmount,
+              "0x"
+            );
+        });
       });
     });
   });

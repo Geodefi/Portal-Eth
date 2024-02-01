@@ -10,14 +10,14 @@ In-depth understanding of EVM suggests that Ethereum is just a distributed compu
 
 To achieve this, Portal utilizes a version management pattern, LUP (Limited Upgradability Pattern), which is built on top of UUPS:
 
-* User can deploy an UUPS proxy using a Remote Contract.
-* Newly deployed contract delegates its functionality to the latest implementation contract.
-* Newly deployed contract is used and controlled by the user.
-* Remote Contract points to a referance of the latest version of the implementation contract.
-* Parent can release a new version.
-* Upgrading an instance is not mandatory.
-* Owner can upgrade the code of the contract by pulling the address of the new implementation contract from the Remote Contract.
-* However, Owner can not change the code randomly.
+- User can deploy an UUPS proxy using a Remote Contract.
+- Newly deployed contract delegates its functionality to the latest implementation contract.
+- Newly deployed contract is used and controlled by the user.
+- Remote Contract points to a referance of the latest version of the implementation contract.
+- Parent can release a new version.
+- Upgrading an instance is not mandatory.
+- Owner can upgrade the code of the contract by pulling the address of the new implementation contract from the Remote Contract.
+- However, Owner cannot change the code randomly.
 
 In conclusion, Portal aims to make all functionality related to staking available on demand, easily accessible. Thus, Geode aims to remove the need for centralized or decentralized intermediaries that are surfaced as an undesired outcome of the lack of functionality on the Execution Layer.
 
@@ -27,7 +27,7 @@ In conclusion, Portal aims to make all functionality related to staking availabl
 
 A better, cleaner and safer development environment with Modular Architecture.
 
-The Staking Library utilizes a Modular Architecture. Meaning all functionality is isolated within modules, to be used, inherited and combined by the packages. Modules also do not contain much functionality as they delegate to libraries. Making sure that shared logic among between package are compatible. Because, modules are abstract contracts that can not be deployed and delegated, but libraries are.
+The Staking Library utilizes a Modular Architecture. Meaning all functionality is isolated within modules, to be used, inherited and combined by the packages. Modules also do not contain much functionality as they delegate to libraries. Making sure that shared logic among between package are compatible. Because, modules are abstract contracts that cannot be deployed and delegated, but libraries are.
 
 ![](./docs/images/contracts.png)
 
@@ -35,7 +35,7 @@ The Staking Library utilizes a Modular Architecture. Meaning all functionality i
 
 Additionally there are other contracts such as gETH, an ERC1155 contract, and its middlewares allowing every ID to have its own functionality.
 
-> For more information on the architecture of the smart contracts please see [this document](./contracts/Portal/Readme.md).
+> For more information on the architecture of the smart contracts please see [this document](./contracts/Readme.md).
 
 ## Development
 
@@ -98,7 +98,7 @@ npx hardhat coverage
 
 ### Deployments
 
-Deployments for Goerli can be found [here](./releases/5/).
+Deployments can be found [here](./releases/5/).
 
 ## Contributing
 
@@ -110,28 +110,28 @@ See our [ChangeLOG](./audits/CHANGELOG.md).
 
 It is advised to audit these smart contracts with the order of:
 
-1. [gETH](./contracts/Portal/gETH.sol)
-2. [Middlewares](./contracts/Portal/middlewares/)
+1. [gETH](./contracts/gETH.sol)
+2. [Middlewares](./contracts/middlewares/)
 3. Modules
    1. DataStore Module
-      1. [DataStoreModuleLib](./contracts/Portal/modules/DataStoreModule/libs/DataStoreModuleLib.sol)
-      2. [DataStoreModule](./contracts/Portal/modules/DataStoreModule/DataStoreModule.sol)
+      1. [DataStoreModuleLib](./contracts/modules/DataStoreModule/libs/DataStoreModuleLib.sol)
+      2. [DataStoreModule](./contracts/modules/DataStoreModule/DataStoreModule.sol)
    2. Geode Module
-      1. [GeodeModuleLib](./contracts/Portal/modules/GeodeModule/libs/GeodeModuleLib.sol)
-      2. [GeodeModule](./contracts/Portal/modules/GeodeModule/GeodeModule.sol)
+      1. [GeodeModuleLib](./contracts/modules/GeodeModule/libs/GeodeModuleLib.sol)
+      2. [GeodeModule](./contracts/modules/GeodeModule/GeodeModule.sol)
    3. Stake Module
-      1. [DepositContractLib](./contracts/Portal/modules/StakeModule/libs/DepositContractLib.sol)
-      2. [StakeModuleLib](./contracts/Portal/modules/StakeModule/libs/StakeModuleLib.sol)
-      3. [OracleExtensionLib](./contracts/Portal/modules/StakeModule/libs/OracleExtensionLib.sol)
-      4. [StakeModule](./contracts/Portal/modules/StakeModule/StakeModule.sol)
+      1. [DepositContractLib](./contracts/modules/StakeModule/libs/DepositContractLib.sol)
+      2. [StakeModuleLib](./contracts/modules/StakeModule/libs/StakeModuleLib.sol)
+      3. [OracleExtensionLib](./contracts/modules/StakeModule/libs/OracleExtensionLib.sol)
+      4. [StakeModule](./contracts/modules/StakeModule/StakeModule.sol)
    4. Liquidity Module
-      1. [LiquidityModuleLib](./contracts/Portal/modules/LiquidityModule/libs/LiquidityModuleLib.sol)
-      2. [AmplificationLib](./contracts/Portal/modules/LiquidityModule/libs/AmplificationLib.sol)
-      3. [LiquidityModule](./contracts/Portal/modules/GeodeModule/GeodeModule.sol)
+      1. [LiquidityModuleLib](./contracts/modules/LiquidityModule/libs/LiquidityModuleLib.sol)
+      2. [AmplificationLib](./contracts/modules/LiquidityModule/libs/AmplificationLib.sol)
+      3. [LiquidityModule](./contracts/modules/GeodeModule/GeodeModule.sol)
 4. Packages
-   1. [Liquidity Pool Package](./contracts/Portal/packages/LiquidityPool.sol)
-   2. [Withdrawal Contract Package](./contracts/Portal/packages/WithdrawalContract.sol)
-5. [Portal](./contracts/Portal/Portal.sol)
+   1. [Liquidity Pool Package](./contracts/packages/LiquidityPool.sol)
+   2. [Withdrawal Contract Package](./contracts/packages/WithdrawalContract.sol)
+5. [Portal](./contracts/Portal.sol)
 
 ## Licensing
 

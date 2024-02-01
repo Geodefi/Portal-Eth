@@ -1,7 +1,9 @@
 const { expect } = require("chai");
 
 const { StandardMerkleTree } = require("@openzeppelin/merkle-tree");
-const { expectRevert, expectEvent, constants, BN } = require("@openzeppelin/test-helpers");
+const { expectRevert, constants, BN } = require("@openzeppelin/test-helpers");
+const { expectEvent } = require("../../../utils/helpers");
+
 const { ZERO_BYTES32, MAX_UINT256 } = constants;
 
 const {
@@ -11,6 +13,7 @@ const {
   strToBytes,
   strToBytes32,
 } = require("../../../../utils");
+const { ethers } = require("hardhat");
 
 const gETH = artifacts.require("gETH");
 const StakeModuleLib = artifacts.require("StakeModuleLib");
@@ -208,11 +211,11 @@ contract("OracleExtensionLib", function (accounts) {
       it("reverts if validator is not PROPOSED", async function () {
         await expectRevert(
           this.contract.$_alienateValidator(ZERO_BYTES32),
-          "OEL:NOT all pubkeys are pending"
+          "OEL:not all pubkeys are pending"
         );
         await expectRevert(
           this.contract.$_alienateValidator(wrongPubkey),
-          "OEL:NOT all pubkeys are pending"
+          "OEL:not all pubkeys are pending"
         );
       });
       context("success", function () {
@@ -273,13 +276,13 @@ contract("OracleExtensionLib", function (accounts) {
           expect((await this.contract.getValidator(pubkeys[0])).state).to.be.bignumber.equal("69");
         });
         it("emits Alienated", async function () {
-          await expectEvent(tx, "Alienated", { pubkey: pubkeys[0] });
+          await expectEvent(tx, this.contract, "Alienated", [pubkeys[0]]);
         });
       });
     });
     describe("updateVerificationIndex", function () {
       it("reverts if not Oracle", async function () {
-        await expectRevert(this.contract.updateVerificationIndex(10, []), "OEL:sender NOT ORACLE");
+        await expectRevert(this.contract.updateVerificationIndex(10, []), "OEL:sender not ORACLE");
       });
       it("reverts if high verificationIndex", async function () {
         await expectRevert(
@@ -314,7 +317,7 @@ contract("OracleExtensionLib", function (accounts) {
           expect((await this.contract.StakeParams()).verificationIndex).to.be.bignumber.equal("10");
         });
         it("emit VerificationIndexUpdated", async function () {
-          await expectEvent(tx, "VerificationIndexUpdated", { validatorVerificationIndex: "10" });
+          await expectEvent(tx, this.contract, "VerificationIndexUpdated", ["10"]);
         });
       });
     });
@@ -324,7 +327,7 @@ contract("OracleExtensionLib", function (accounts) {
     it("reverts if not Oracle", async function () {
       await expectRevert(
         this.contract.regulateOperators([operatorIds[0]], ["0xffffff"]),
-        "OEL:sender NOT ORACLE"
+        "OEL:sender not ORACLE"
       );
     });
     it("reverts if lengths don't match", async function () {
@@ -345,7 +348,7 @@ contract("OracleExtensionLib", function (accounts) {
         expect(await this.contract.isPrisoned(operatorIds[0])).to.be.equal(true);
       });
       it("emits FeeTheft", async function () {
-        expectEvent(tx, "FeeTheft", { id: operatorIds[0], proofs: "0xffffff" });
+        expectEvent(tx, this.contract, "FeeTheft", [operatorIds[0], "0xffffff"]);
       });
     });
   });
@@ -428,7 +431,7 @@ contract("OracleExtensionLib", function (accounts) {
             strToBytes32("balanceMerkleRoot"),
             50000
           ),
-          "OEL:sender NOT ORACLE"
+          "OEL:sender not ORACLE"
         );
       });
       it("reverts if low allValidatorsCount", async function () {
@@ -471,11 +474,11 @@ contract("OracleExtensionLib", function (accounts) {
           expect(params.oracleUpdateTimestamp).to.be.bignumber.equal(ts);
         });
         it("emits OracleReported", async function () {
-          await expectEvent(tx, "OracleReported", {
-            priceMerkleRoot: strToBytes32("priceMerkleRoot"),
-            balanceMerkleRoot: strToBytes32("balanceMerkleRoot"),
-            monopolyThreshold: "505",
-          });
+          await expectEvent(tx, this.contract, "OracleReported", [
+            strToBytes32("priceMerkleRoot"),
+            strToBytes32("balanceMerkleRoot"),
+            "505",
+          ]);
         });
       });
     });
@@ -516,7 +519,7 @@ contract("OracleExtensionLib", function (accounts) {
           await setTimestamp(ts.add(DAY).toNumber());
           await expectRevert(
             this.contract.priceSync(poolIds[1], prices[1], tree.getProof(2)),
-            "OEL:NOT all proofs are valid"
+            "OEL:not all proofs are valid"
           );
         });
         it("success: sets PricePerShare", async function () {
@@ -570,9 +573,12 @@ contract("OracleExtensionLib", function (accounts) {
           // pool 2
           prevPricePerShare = await this.gETH.pricePerShare(poolIds[2]);
           prevgETHBalance = await this.gETH.balanceOf(yieldReceivers[2], poolIds[2]);
+
           requiredBalanceDiff =
-            ((await this.gETH.totalSupply(poolIds[2])) * (prices[2] - prevPricePerShare)) /
+            ((await this.gETH.methods["totalSupply(uint256)"](poolIds[2])) *
+              (prices[2] - prevPricePerShare)) /
             (await this.gETH.denominator()).subn(prevgETHBalance.toNumber());
+
           await this.contract.priceSync(poolIds[2], prices[2], tree.getProof(2));
           expect(await this.gETH.pricePerShare(poolIds[2])).to.be.bignumber.eq(prevPricePerShare);
           expect(await this.gETH.balanceOf(yieldReceivers[2], poolIds[2])).to.be.bignumber.eq(
@@ -591,7 +597,8 @@ contract("OracleExtensionLib", function (accounts) {
           prevPricePerShare = await this.gETH.pricePerShare(poolIds[3]);
           prevgETHBalance = await this.gETH.balanceOf(yieldReceivers[3], poolIds[3]);
           requiredBalanceDiff =
-            ((await this.gETH.totalSupply(poolIds[3])) * (prices[3] - prevPricePerShare)) /
+            ((await this.gETH.methods["totalSupply(uint256)"](poolIds[3])) *
+              (prices[3] - prevPricePerShare)) /
             (await this.gETH.denominator()).subn(prevgETHBalance.toNumber());
           await this.contract.priceSync(poolIds[3], prices[3], tree.getProof(3));
           expect(await this.gETH.pricePerShare(poolIds[3])).to.be.bignumber.eq(prevPricePerShare);
@@ -611,7 +618,8 @@ contract("OracleExtensionLib", function (accounts) {
           prevPricePerShare = await this.gETH.pricePerShare(poolIds[4]);
           prevgETHBalance = await this.gETH.balanceOf(yieldReceivers[4], poolIds[4]);
           requiredBalanceDiff =
-            ((await this.gETH.totalSupply(poolIds[4])) * (prices[4] - prevPricePerShare)) /
+            ((await this.gETH.methods["totalSupply(uint256)"](poolIds[4])) *
+              (prices[4] - prevPricePerShare)) /
             (await this.gETH.denominator()).subn(prevgETHBalance.toNumber());
           await this.contract.priceSync(poolIds[4], prices[4], tree.getProof(4));
           expect(await this.gETH.pricePerShare(poolIds[4])).to.be.bignumber.eq(prevPricePerShare);

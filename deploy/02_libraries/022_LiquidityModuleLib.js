@@ -3,11 +3,12 @@ const func = async function (hre) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("LiquidityModuleLib", {
-    from: deployer,
-    log: true,
-    skipIfAlreadyDeployed: true,
-  });
+  console.log("LiquidityModuleLib WILL NOT BE DEPLOYED");
+  // await deploy("LiquidityModuleLib", {
+  //   from: deployer,
+  //   log: true,
+  //   skipIfAlreadyDeployed: true,
+  // });
 };
 
 module.exports = func;

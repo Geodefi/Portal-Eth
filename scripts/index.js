@@ -1,10 +1,16 @@
 const { task, types } = require("hardhat/config");
+const slot = require("./tasks/slot");
 
 const propose = require("./tasks/propose");
 const approveProposal = require("./tasks/approveProposal");
 
 const initiateOperator = require("./tasks/initiateOperator");
 const initiatePool = require("./tasks/initiatePool");
+
+// utils
+task("get-7201-slot", "returns the calculated slot for erc7201 standard")
+  .addParam("label", "label of the storage")
+  .setAction(slot);
 
 // proposals
 task("propose", "Creates a proposal with desired parameters")

@@ -1,9 +1,11 @@
 const { expect } = require("chai");
-const { constants, expectRevert, time, BN } = require("@openzeppelin/test-helpers");
+const { constants, time, BN } = require("@openzeppelin/test-helpers");
 const { MAX_UINT256 } = constants;
 const { silenceWarnings } = require("@openzeppelin/upgrades-core");
 
 const { strToBytes, intToBytes32 } = require("../../utils");
+
+const { expectCustomError } = require("../utils/helpers");
 
 const ERC20PermitMiddleware = artifacts.require("$ERC20PermitMiddleware");
 const gETH = artifacts.require("gETH");
@@ -149,9 +151,10 @@ contract("ERC20PermitMiddleware", function (accounts) {
 
       await this.token.permit(owner, spender, value, maxDeadline, v, r, s);
 
-      await expectRevert(
+      await expectCustomError(
         this.token.permit(owner, spender, value, maxDeadline, v, r, s),
-        "ERC20Permit: invalid signature"
+        this.token,
+        "ERC2612InvalidSigner"
       );
     });
 
@@ -161,9 +164,10 @@ contract("ERC20PermitMiddleware", function (accounts) {
       const signature = ethSigUtil.signTypedMessage(otherWallet.getPrivateKey(), { data });
       const { v, r, s } = fromRpcSig(signature);
 
-      await expectRevert(
+      await expectCustomError(
         this.token.permit(owner, spender, value, maxDeadline, v, r, s),
-        "ERC20Permit: invalid signature"
+        this.token,
+        "ERC2612InvalidSigner"
       );
     });
 
@@ -174,9 +178,10 @@ contract("ERC20PermitMiddleware", function (accounts) {
       const signature = ethSigUtil.signTypedMessage(wallet.getPrivateKey(), { data });
       const { v, r, s } = fromRpcSig(signature);
 
-      await expectRevert(
+      await expectCustomError(
         this.token.permit(owner, spender, value, deadline, v, r, s),
-        "ERC20Permit: expired deadline"
+        this.token,
+        "ERC2612ExpiredSignature"
       );
     });
   });

@@ -9,18 +9,20 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.9.3",
-    "@openzeppelin/contracts-upgradeable": "^4.9.3",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
     "@openzeppelin/merkle-tree": "^1.0.5",
+    "@openzeppelin/test-helpers": "^0.5.16",
     "hardhat-exposed": "^0.3.13"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^3.0.4",
-    "@nomicfoundation/hardhat-verify": "^1.1.1",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-verify": "^2.0.4",
     "@nomiclabs/hardhat-truffle5": "^2.0.7",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/hardhat-upgrades": "^2.3.1",
-    "@openzeppelin/test-helpers": "^0.5.16",
     "chai": "^4.3.10",
     "dotenv": "^16.3.1",
     "eslint": "^7.32.0",
@@ -34,7 +36,7 @@
     "ethereum-waffle": "^3.4.4",
     "ethereumjs-wallet": "^1.0.2",
     "ethers": "^6.7.1",
-    "hardhat": "^2.18.0",
+    "hardhat": "^2.19.5",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-deploy": "^0.11.37",
     "hardhat-deploy-ethers": "^0.4.1",
@@ -42,7 +44,7 @@
     "keccak256": "^1.0.6",
     "prettier": "^2.6.2",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
-    "solhint": "^3.6.2",
+    "solhint": "^4.0.0",
     "solidity-coverage": "^0.8.5",
     "web3": "^1.7.3"
   },
