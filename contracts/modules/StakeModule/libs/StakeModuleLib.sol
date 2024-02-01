@@ -173,7 +173,9 @@ library StakeModuleLib {
   /**
    * @notice Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
    * @dev Changing the Staking Pool fee, only applies to the newly created validators.
-   * @dev advise that 100% == PERCENTAGE_DENOMINATOR
+   * @dev advise that there can be other fees within the package, thus we will never allow
+   * * governance to take more than x%, while x<80(at least). For now, 50% limit on all fees
+   * * makes sense to us. However, it can be adjusted to any value between 0-80 in the future.
    */
   function setInfrastructureFee(
     StakeModuleStorage storage self,
@@ -183,7 +185,7 @@ library StakeModuleLib {
     if (_type == ID_TYPE.POOL) {
       require(fee <= MAX_POOL_INFRASTRUCTURE_FEE, "PORTAL:> MAX");
     } else {
-      require(fee < PERCENTAGE_DENOMINATOR, "SML:> 100%");
+      require(fee < PERCENTAGE_DENOMINATOR / 2, "SML:> 50%");
     }
 
     self.infrastructureFees[_type] = fee;
