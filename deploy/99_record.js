@@ -22,7 +22,7 @@ const func = async function (hre) {
     const releaseId = keccak256(data.map(({ Proof }) => [Proof]).join()).toString("hex");
 
     fs.writeFileSync(
-      `./releases/${chainId}/${releaseId}.txt`,
+      `./releases/${chainId}/${Date.now() + "_" + releaseId}.txt`,
       table([["Contract", "Address", "Proof"]].concat(releaseData)),
       "utf8"
     );
