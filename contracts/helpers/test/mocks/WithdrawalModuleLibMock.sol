@@ -159,7 +159,7 @@ contract WithdrawalModuleLibMock is WithdrawalModule {
     bytes calldata pubkey,
     uint256 commonPoll
   ) external returns (uint256) {
-    return _getWithdrawalModuleStorage().checkAndRequestExit(pubkey, commonPoll);
+    return _getWithdrawalModuleStorage()._checkAndRequestExit(pubkey, commonPoll);
   }
 
   function $_vote(bytes calldata pubkey, uint256 size) external {

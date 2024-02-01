@@ -83,7 +83,7 @@ import {DepositContractLib as DCL} from "./DepositContractLib.sol";
  * @dev Middlewares:
  * Can support many different versions that can be utilized by the Pool Owners.
  * No particular way to build one.
- * Can not be upgraded.
+ * Cannot be upgraded.
  * Currently only gETHMiddlewares.
  *
  * Type 20011 : gETHMiddleware
@@ -107,13 +107,13 @@ library StakeModuleLib {
    */
 
   /// @notice limiting the GOVERNANCE_FEE to 5%
-  uint256 internal constant MAX_POOL_INFRASTRUCTURE_FEE = (PERCENTAGE_DENOMINATOR * 5) / 100;
+  uint256 internal constant MAX_POOL_INFRASTRUCTURE_FEE = 5e8; // (PERCENTAGE_DENOMINATOR * 5) / 100;
 
-  /// @notice starting time of the GOVERNANCE_FEE
-  uint256 internal constant GOVERNANCE_FEE_COMMENCEMENT = 1714514461;
+  /// @notice limit the beacon delays on entry and exit since it can be adjusted by the governance.
+  uint256 internal constant MAX_BEACON_DELAY = 90 days; // = MIN_VALIDATOR_PERIOD
 
   /// @notice limiting the pool and operator maintenance fee, 10%
-  uint256 internal constant MAX_MAINTENANCE_FEE = (PERCENTAGE_DENOMINATOR * 10) / 100;
+  uint256 internal constant MAX_MAINTENANCE_FEE = 1e9; // (PERCENTAGE_DENOMINATOR * 10) / 100;
 
   /// @notice effective on allowance per operator, prevents overflow. Exclusive, save gas with +1.
   uint256 internal constant MAX_ALLOWANCE = 1e6;
@@ -125,8 +125,8 @@ library StakeModuleLib {
   uint256 internal constant IGNORABLE_DEBT = 1 ether;
 
   /// @notice limiting the operator.validatorPeriod, between 3 months to 2 years
-  uint256 internal constant MIN_VALIDATOR_PERIOD = 3 * 30 days;
-  uint256 internal constant MAX_VALIDATOR_PERIOD = 2 * 365 days;
+  uint256 internal constant MIN_VALIDATOR_PERIOD = 90 days; // 3 * 30 days
+  uint256 internal constant MAX_VALIDATOR_PERIOD = 730 days; // 2 * 365 days
 
   /// @notice some parameter changes are effective after a delay
   uint256 internal constant SWITCH_LATENCY = 3 days;
@@ -134,6 +134,8 @@ library StakeModuleLib {
   /**
    * @custom:section                           ** EVENTS **
    */
+  event InfrastructureFeeSet(uint256 _type, uint256 fee);
+  event BeaconDelaySet(uint256 entryDelay, uint256 exitDelay);
   event VisibilitySet(uint256 id, bool isPrivate);
   event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
@@ -148,6 +150,49 @@ library StakeModuleLib {
   event Exit(bytes pubkey);
 
   /**
+   * @custom:section                           ** GOVERNING **
+   *
+   * @custom:visibility -> external
+   * @dev IMPORTANT! These functions should be governed by a governance! Which is not done here!
+   */
+
+  /**
+   * @notice Set the maxiumum allowed beacon delay for blaming validators on creation and exit.
+   * @dev high beacon delays will affect the ux negatively, low delays can cause issues for operators.
+   */
+  function setBeaconDelays(StakeModuleStorage storage self, uint256 entry, uint256 exit) external {
+    require(entry < MAX_BEACON_DELAY, "SML:> MAX");
+    require(exit < MAX_BEACON_DELAY, "SML:> MAX");
+
+    self.BEACON_DELAY_ENTRY = entry;
+    self.BEACON_DELAY_EXIT = exit;
+
+    emit BeaconDelaySet(entry, exit);
+  }
+
+  /**
+   * @notice Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
+   * @dev Changing the Staking Pool fee, only applies to the newly created validators.
+   * @dev advise that there can be other fees within the package, thus we will never allow
+   * * governance to take more than x%, while x<80(at least). For now, 50% limit on all fees
+   * * makes sense to us. However, it can be adjusted to any value between 0-80 in the future.
+   */
+  function setInfrastructureFee(
+    StakeModuleStorage storage self,
+    uint256 _type,
+    uint256 fee
+  ) external {
+    if (_type == ID_TYPE.POOL) {
+      require(fee <= MAX_POOL_INFRASTRUCTURE_FEE, "PORTAL:> MAX");
+    } else {
+      require(fee < PERCENTAGE_DENOMINATOR / 2, "SML:> 50%");
+    }
+
+    self.infrastructureFees[_type] = fee;
+    emit InfrastructureFeeSet(_type, fee);
+  }
+
+  /**
    * @custom:section                           ** AUTHENTICATION **
    *
    * @custom:visibility -> view-internal
@@ -160,7 +205,7 @@ library StakeModuleLib {
    * @param _restrictionMap Restricts which TYPEs can pass the authentication.
    * * [0: Operator = TYPE(4), 1: Pool = TYPE(5)]
    * @dev can only be used after an ID is initiated
-   * @dev CONTROLLERS and maintainers of the Prisoned Operators can not access.
+   * @dev CONTROLLERS and maintainers of the Prisoned Operators cannot access.
    */
   function _authenticate(
     DataStoreModuleStorage storage DATASTORE,
@@ -174,12 +219,12 @@ library StakeModuleLib {
     uint256 typeOfId = DATASTORE.readUint(_id, rks.TYPE);
 
     if (typeOfId == ID_TYPE.OPERATOR) {
-      require(_restrictionMap[0], "SML:TYPE NOT allowed");
+      require(_restrictionMap[0], "SML:TYPE not allowed");
       if (_expectCONTROLLER || _expectMaintainer) {
         require(!isPrisoned(DATASTORE, _id), "SML:prisoned, get in touch with governance");
       }
     } else if (typeOfId == ID_TYPE.POOL) {
-      require(_restrictionMap[1], "SML:TYPE NOT allowed");
+      require(_restrictionMap[1], "SML:TYPE not allowed");
     } else {
       revert("SML:invalid TYPE");
     }
@@ -187,7 +232,7 @@ library StakeModuleLib {
     if (_expectMaintainer) {
       require(
         msg.sender == DATASTORE.readAddress(_id, rks.maintainer),
-        "SML:sender NOT maintainer"
+        "SML:sender not maintainer"
       );
       return;
     }
@@ -195,7 +240,7 @@ library StakeModuleLib {
     if (_expectCONTROLLER) {
       require(
         msg.sender == DATASTORE.readAddress(_id, rks.CONTROLLER),
-        "SML:sender NOT CONTROLLER"
+        "SML:sender not CONTROLLER"
       );
       return;
     }
@@ -340,7 +385,7 @@ library StakeModuleLib {
     uint256 _id,
     address _newMaintainer
   ) internal {
-    require(_newMaintainer != address(0), "SML:maintainer can NOT be zero");
+    require(_newMaintainer != address(0), "SML:maintainer cannot be zero");
 
     DATASTORE.writeAddress(_id, rks.maintainer, _newMaintainer);
     emit MaintainerChanged(_id, _newMaintainer);
@@ -363,7 +408,7 @@ library StakeModuleLib {
     address newMaintainer
   ) external {
     require(DATASTORE.readUint(id, rks.initiated) != 0, "SML:ID is not initiated");
-    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender NOT CONTROLLER");
+    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender not CONTROLLER");
     uint256 typeOfId = DATASTORE.readUint(id, rks.TYPE);
     require(typeOfId == ID_TYPE.OPERATOR || typeOfId == ID_TYPE.POOL, "SML:invalid TYPE");
 
@@ -371,7 +416,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:subsection                           ** FEE **
+   * @custom:subsection                           ** MAINTENANCE FEE **
    */
 
   /**
@@ -400,22 +445,6 @@ library StakeModuleLib {
    */
 
   /**
-   * @notice Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
-   * @dev Changing the Staking Pool fee, only applies to the newly created validators.
-   * @dev advise that 100% == PERCENTAGE_DENOMINATOR
-   * @dev IMPORTANT! This function should be governed by a mechanism! It is not here!
-   */
-  function setInfrastructureFee(
-    StakeModuleStorage storage self,
-    uint256 _type,
-    uint256 _fee
-  ) external {
-    require(_fee < PERCENTAGE_DENOMINATOR / 2, "SML:> 50%");
-
-    self.infrastructureFees[_type] = _fee;
-  }
-
-  /**
    * @notice internal function to set fee with NO DELAY
    */
   function _setMaintenanceFee(
@@ -433,7 +462,7 @@ library StakeModuleLib {
 
   /**
    * @notice Changes the fee that is applied to the newly created validators, with A DELAY OF SWITCH_LATENCY.
-   * @dev Can NOT be called again while its currently switching.
+   * @dev Cannot be called again while its currently switching.
    * @dev advise that 100% == PERCENTAGE_DENOMINATOR
    */
   function switchMaintenanceFee(
@@ -623,7 +652,7 @@ library StakeModuleLib {
 
   /**
    * @notice maximum number of remaining operator allowance that the given Operator is allowed to create for given Pool
-   * @dev an operator can not create new validators if:
+   * @dev an operator cannot create new validators if:
    * * 1. operator is a monopoly
    * * 2. allowance is filled
    * * * But if operator is set as a fallback, it can if set fallbackThreshold is reached on all allowances.
@@ -719,7 +748,7 @@ library StakeModuleLib {
    * @param operatorIds array of Operator IDs to allow them create validators
    * @param allowances the MAX number of validators that can be created by the Operator, for given Pool
    * @dev When decreased the approved validator count below current active+proposed validators,
-   * operator can NOT create new validators.
+   * operator cannot create new validators.
    */
   function delegate(
     DataStoreModuleStorage storage DATASTORE,
@@ -978,7 +1007,7 @@ library StakeModuleLib {
     require(receiver != address(0), "SML:receiver is zero address");
 
     if (isPrivatePool(DATASTORE, poolId)) {
-      require(isWhitelisted(DATASTORE, poolId, msg.sender), "SML:sender NOT whitelisted");
+      require(isWhitelisted(DATASTORE, poolId, msg.sender), "SML:sender not whitelisted");
     }
 
     uint256 remEth = msg.value;
@@ -1094,7 +1123,7 @@ library StakeModuleLib {
 
     require(
       DATASTORE.readUint(poolId, rks.surplus) >= DCL.DEPOSIT_AMOUNT * pkLen,
-      "SML:NOT enough surplus"
+      "SML:not enough surplus"
     );
 
     _decreaseWalletBalance(DATASTORE, operatorId, (pkLen * DCL.DEPOSIT_AMOUNT_PRESTAKE));
@@ -1196,12 +1225,12 @@ library StakeModuleLib {
       for (uint256 j; j < pubkeysLen; ) {
         require(
           _canStake(self, pubkeys[j], _verificationIndex),
-          "SML:NOT all pubkeys are stakeable"
+          "SML:not all pubkeys are stakeable"
         );
 
         require(
           self.validators[pubkeys[j]].operatorId == operatorId,
-          "SML:NOT all pubkeys belong to operator"
+          "SML:not all pubkeys belong to operator"
         );
 
         unchecked {
@@ -1272,8 +1301,11 @@ library StakeModuleLib {
    */
 
   /**
-    @notice todo
-  */
+   * @notice Notifies the node operator with ExitRequest event
+   * @dev Prevents the request if validator is still within the MIN_VALIDATOR_PERIOD
+   * @dev Only the active validators can be called for an exit
+   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   */
   function requestExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
@@ -1286,7 +1318,7 @@ library StakeModuleLib {
     );
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is NOT withdrawal contract"
+      "SML:sender is not withdrawal contract"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
     require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "SML:not an active validator");
@@ -1297,8 +1329,11 @@ library StakeModuleLib {
   }
 
   /**
-    @notice todo
-  */
+   * @notice Finalizes the exit process for a validator.
+   * @dev Strongly advised to be called right after the exiting process is over.
+   * @dev Operators can exit at any time they want.
+   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   */
   function finalizeExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
@@ -1307,7 +1342,7 @@ library StakeModuleLib {
   ) external {
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is NOT withdrawal contract"
+      "SML:sender is not withdrawal contract"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
 

@@ -26,7 +26,7 @@ pragma solidity =0.8.20;
  *
  * Middlewares: (hosted on StakeModuleLib)
  * * An ID can point to multiple Middleware version' implementation address at the same time.
- * * Can not be upgraded.
+ * * Cannot be upgraded.
  * * Do not have any guides to build really.
  * * Currently only gETHMiddlewares
  *

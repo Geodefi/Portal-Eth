@@ -287,7 +287,7 @@ contract("gETH", function (accounts) {
         expectEvent(receipt, this.token, "Avoider", [this.user, tokenId, true]);
       });
 
-      describe("can not touch avoider", async function () {
+      describe("cannot touch avoider", async function () {
         let middlewareSigner;
         beforeEach(async function () {
           await this.token.$_mint(this.user, tokenId, mintAmount, "0x");

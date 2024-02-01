@@ -9,8 +9,8 @@ pragma solidity =0.8.20;
  * * This slot can refer to the controller of an id, a new implementation contract, a new Senate etc.
  * @param NAME: DataStore generates ID by keccak(name, type)
  * @param deadline: refers to last timestamp until a proposal expires, limited by MAX_PROPOSAL_DURATION
- * * Expired proposals can not be approved by Senate
- * * Expired proposals can not be overriden by new proposals
+ * * Expired proposals cannot be approved by Senate
+ * * Expired proposals cannot be overriden by new proposals
  **/
 struct Proposal {
   address CONTROLLER;

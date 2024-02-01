@@ -62,25 +62,26 @@ const func = async (hre) => {
     }
 
     // LIQUIDITY POOL
-    const lpType = 10021;
+    console.log("LiquidityPool Package WILL NOT BE SETUP");
+    // const lpType = 10021;
 
-    const lpAddress = (await get("LiquidityPool")).address;
-    const expectedLPPVersion = (await generateId(strToBytes("v1"), lpType)).toString();
-    if ((await read("Portal", "getPackageVersion", lpType)).toString() === expectedLPPVersion) {
-      console.log("Liquidity Pool Package is ALREADY released\n");
-    } else {
-      await execute(
-        "Portal",
-        { from: deployer, log: true },
-        "propose",
-        lpAddress,
-        lpType,
-        strToBytes("v1"),
-        DAY
-      );
-      await execute("Portal", { from: deployer, log: true }, "approveProposal", expectedLPPVersion);
-      console.log("Liquidity Pool Package is released\n");
-    }
+    // const lpAddress = (await get("LiquidityPool")).address;
+    // const expectedLPPVersion = (await generateId(strToBytes("v1"), lpType)).toString();
+    // if ((await read("Portal", "getPackageVersion", lpType)).toString() === expectedLPPVersion) {
+    //   console.log("Liquidity Pool Package is ALREADY released\n");
+    // } else {
+    //   await execute(
+    //     "Portal",
+    //     { from: deployer, log: true },
+    //     "propose",
+    //     lpAddress,
+    //     lpType,
+    //     strToBytes("v1"),
+    //     DAY
+    //   );
+    //   await execute("Portal", { from: deployer, log: true }, "approveProposal", expectedLPPVersion);
+    //   console.log("Liquidity Pool Package is released\n");
+    // }
 
     // MIDDLEWARES
     const middlewareType = 20011;

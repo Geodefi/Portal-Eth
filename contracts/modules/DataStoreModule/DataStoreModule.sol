@@ -23,7 +23,7 @@ import {DataStoreModuleLib as DSML} from "./libs/DataStoreModuleLib.sol";
  *
  * @dev NO function needs to be overriden when inherited.
  *
- * @dev __DataStoreModule_init (or _unchained) call is NOT NECESSARY when inherited.
+ * @dev __DataStoreModule_init (or _unchained) call is not necessary when inherited.
  *
  * @dev No storage-altering external/public functions are exposed here, only view/pure external functions.
  *
@@ -35,7 +35,7 @@ abstract contract DataStoreModule is IDataStoreModule, Initializable {
   /**
    * @custom:section                           ** VARIABLES **
    *
-   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * @dev Do not add any other variables here. Modules do not have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
 

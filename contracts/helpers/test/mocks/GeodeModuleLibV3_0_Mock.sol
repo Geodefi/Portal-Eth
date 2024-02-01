@@ -19,7 +19,7 @@ import {Proposal} from "../../../modules/GeodeModule/structs/utils.sol";
  * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
  * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
  * @param PACKAGE_TYPE every package has a specific TYPE. Defined in globals/id_type.sol
- * @param CONTRACT_VERSION always refers to the upgrade proposal ID. Does NOT increase uniformly like one might expect.
+ * @param CONTRACT_VERSION always refers to the upgrade proposal ID. Does not increase uniformly like one might expect.
  * @param proposals till approved, proposals are kept separated from the Isolated Storage
  * @param __gap keep the struct size at 16
  **/
@@ -189,7 +189,7 @@ library GeodeModuleLibV3_0_Mock {
 
     require(self.proposals[id].deadline == 0, "GML:already proposed");
     require((DATASTORE.readBytes(id, rks.NAME)).length == 0, "GML:ID already exist");
-    require(_CONTROLLER != address(0), "GML:CONTROLLER can NOT be ZERO");
+    require(_CONTROLLER != address(0), "GML:CONTROLLER cannot be ZERO");
     require((_TYPE != ID_TYPE.NONE) && (_TYPE != ID_TYPE.POOL), "GML:TYPE is NONE or POOL");
     require(
       (duration >= MIN_PROPOSAL_DURATION) && (duration <= MAX_PROPOSAL_DURATION),
@@ -247,7 +247,7 @@ library GeodeModuleLibV3_0_Mock {
     DataStoreModuleStorage storage DATASTORE,
     uint256 id
   ) external onlySenate(self) returns (address _controller, uint256 _type, bytes memory _name) {
-    require(self.proposals[id].deadline > block.timestamp, "GML:NOT an active proposal");
+    require(self.proposals[id].deadline > block.timestamp, "GML:not an active proposal");
 
     _controller = self.proposals[id].CONTROLLER;
     _type = self.proposals[id].TYPE;
@@ -289,20 +289,20 @@ library GeodeModuleLibV3_0_Mock {
 
   /**
    * @notice change the CONTROLLER of an ID
-   * @dev this operation can not be reverted by the old CONTROLLER!!!
-   * @dev can not provide address(0), try 0x000000000000000000000000000000000000dEaD
+   * @dev this operation cannot be reverted by the old CONTROLLER!!!
+   * @dev cannot provide address(0), try 0x000000000000000000000000000000000000dEaD
    */
   function changeIdCONTROLLER(
     DataStoreModuleStorage storage DATASTORE,
     uint256 id,
     address newCONTROLLER
   ) external onlyController(DATASTORE, id) {
-    require(newCONTROLLER != address(0), "GML:CONTROLLER can not be zero");
+    require(newCONTROLLER != address(0), "GML:CONTROLLER cannot be zero");
 
     uint256 typeOfId = DATASTORE.readUint(id, rks.TYPE);
     require(
       typeOfId > ID_TYPE.LIMIT_MIN_USER && typeOfId < ID_TYPE.LIMIT_MAX_USER,
-      "GML:ID TYPE is NOT user"
+      "GML:ID TYPE is not user"
     );
 
     DATASTORE.writeAddress(id, rks.CONTROLLER, newCONTROLLER);

@@ -13,7 +13,7 @@ import {Proposal} from "./utils.sol";
  * @param APPROVED_UPGRADE only 1 implementation contract SHOULD be "approved" at any given time.
  * @param SENATE_EXPIRY refers to the last timestamp that SENATE can continue operating. Might not be utilized. Limited by MAX_SENATE_PERIOD
  * @param PACKAGE_TYPE every package has a specific TYPE. Defined in globals/id_type.sol
- * @param CONTRACT_VERSION always refers to the upgrade proposal ID. Does NOT increase uniformly like one might expect.
+ * @param CONTRACT_VERSION always refers to the upgrade proposal ID. Does not increase uniformly like one might expect.
  * @param proposals till approved, proposals are kept separated from the Isolated Storage
  *
  * @dev normally we would put custom:storage-location erc7201:geode.storage.GeodeModule

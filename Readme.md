@@ -10,14 +10,14 @@ In-depth understanding of EVM suggests that Ethereum is just a distributed compu
 
 To achieve this, Portal utilizes a version management pattern, LUP (Limited Upgradability Pattern), which is built on top of UUPS:
 
-* User can deploy an UUPS proxy using a Remote Contract.
-* Newly deployed contract delegates its functionality to the latest implementation contract.
-* Newly deployed contract is used and controlled by the user.
-* Remote Contract points to a referance of the latest version of the implementation contract.
-* Parent can release a new version.
-* Upgrading an instance is not mandatory.
-* Owner can upgrade the code of the contract by pulling the address of the new implementation contract from the Remote Contract.
-* However, Owner can not change the code randomly.
+- User can deploy an UUPS proxy using a Remote Contract.
+- Newly deployed contract delegates its functionality to the latest implementation contract.
+- Newly deployed contract is used and controlled by the user.
+- Remote Contract points to a referance of the latest version of the implementation contract.
+- Parent can release a new version.
+- Upgrading an instance is not mandatory.
+- Owner can upgrade the code of the contract by pulling the address of the new implementation contract from the Remote Contract.
+- However, Owner cannot change the code randomly.
 
 In conclusion, Portal aims to make all functionality related to staking available on demand, easily accessible. Thus, Geode aims to remove the need for centralized or decentralized intermediaries that are surfaced as an undesired outcome of the lack of functionality on the Execution Layer.
 
@@ -27,7 +27,7 @@ In conclusion, Portal aims to make all functionality related to staking availabl
 
 A better, cleaner and safer development environment with Modular Architecture.
 
-The Staking Library utilizes a Modular Architecture. Meaning all functionality is isolated within modules, to be used, inherited and combined by the packages. Modules also do not contain much functionality as they delegate to libraries. Making sure that shared logic among between package are compatible. Because, modules are abstract contracts that can not be deployed and delegated, but libraries are.
+The Staking Library utilizes a Modular Architecture. Meaning all functionality is isolated within modules, to be used, inherited and combined by the packages. Modules also do not contain much functionality as they delegate to libraries. Making sure that shared logic among between package are compatible. Because, modules are abstract contracts that cannot be deployed and delegated, but libraries are.
 
 ![](./docs/images/contracts.png)
 

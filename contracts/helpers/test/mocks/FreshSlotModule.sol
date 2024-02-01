@@ -14,7 +14,7 @@ abstract contract FreshSlotModule is IFreshSlotModule, UUPSUpgradeable, Pausable
   /**
    * @custom:section                           ** VARIABLES **
    *
-   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * @dev Do not add any other variables here. Modules do not have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
   FreshSlotStruct internal FRESH_STRUCT;

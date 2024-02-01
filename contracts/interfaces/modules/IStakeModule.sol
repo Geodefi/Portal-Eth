@@ -11,6 +11,10 @@ interface IStakeModule is IDataStoreModule {
 
   function setInfrastructureFee(uint256 _type, uint256 fee) external;
 
+  function setBeaconDelays(uint256 entry, uint256 exit) external;
+
+  function setInitiationDeposit(uint256 newInitiationDeposit) external;
+
   function StakeParams()
     external
     view
@@ -20,6 +24,9 @@ interface IStakeModule is IDataStoreModule {
       uint256 validatorsIndex,
       uint256 verificationIndex,
       uint256 monopolyThreshold,
+      uint256 beaconDelayEntry,
+      uint256 beaconDelayExit,
+      uint256 initiationDeposit,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
       uint256 dailyPriceDecreaseLimit
@@ -73,7 +80,12 @@ interface IStakeModule is IDataStoreModule {
 
   function isPrisoned(uint256 operatorId) external view returns (bool);
 
-  function blameExit(bytes calldata pk) external;
+  function blameExit(
+    bytes calldata pk,
+    uint256 beaconBalance,
+    uint256 withdrawnBalance,
+    bytes32[] calldata balanceProof
+  ) external;
 
   function blameProposal(bytes calldata pk) external;
 

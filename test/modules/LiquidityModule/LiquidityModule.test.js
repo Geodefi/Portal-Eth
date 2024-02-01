@@ -101,7 +101,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_gETH_position can not be zero"
+        "LM:_gETH_position cannot be zero"
       );
     });
     it("reverts if _lpToken_referance is zero", async function () {
@@ -114,7 +114,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_lpToken_referance can not be zero"
+        "LM:_lpToken_referance cannot be zero"
       );
     });
     it("reverts if _pooledTokenId is zero", async function () {
@@ -127,7 +127,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_pooledTokenId can not be zero"
+        "LM:_pooledTokenId cannot be zero"
       );
     });
     it("reverts if _initialA is zero", async function () {
@@ -140,7 +140,7 @@ contract("LiquidityModule", function (accounts) {
           SWAP_FEE,
           poolName
         ),
-        "LM:_A can not be zero"
+        "LM:_A cannot be zero"
       );
     });
     it("reverts if _initialA exceeds maximum", async function () {

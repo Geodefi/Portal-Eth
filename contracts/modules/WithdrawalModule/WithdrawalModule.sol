@@ -51,7 +51,7 @@ abstract contract WithdrawalModule is
   /**
    * @custom:section                           ** VARIABLES **
    *
-   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * @dev Do not add any other variables here. Modules do not have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
   // keccak256(abi.encode(uint256(keccak256("geode.storage.WithdrawalModuleStorage")) - 1)) & ~bytes32(uint256(0xff))
@@ -70,6 +70,7 @@ abstract contract WithdrawalModule is
   event NewExitThreshold(uint256 threshold);
   event Enqueue(uint256 indexed index, address owner);
   event RequestTransfer(uint256 indexed index, address oldOwner, address newOwner);
+  event Fulfill(uint256 indexed index, uint256 fulfillAmount, uint256 claimableETH);
   event Dequeue(uint256 indexed index, uint256 claim);
 
   /**
@@ -217,13 +218,13 @@ abstract contract WithdrawalModule is
   /**
    * @custom:visibility -> view
    */
-  function canFinalizeExit(bytes memory pubkey) external view virtual override returns (bool) {
+  function canFinalizeExit(bytes calldata pubkey) external view virtual override returns (bool) {
     WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
     return $.canFinalizeExit(pubkey);
   }
 
   function validatorThreshold(
-    bytes memory pubkey
+    bytes calldata pubkey
   ) external view virtual override returns (uint256 threshold) {
     WithdrawalModuleStorage storage $ = _getWithdrawalModuleStorage();
     (threshold, ) = $.getValidatorThreshold(pubkey);

@@ -4,6 +4,7 @@ pragma solidity =0.8.20;
 import {DataStoreModuleStorage} from "../../../modules/DataStoreModule/structs/storage.sol";
 import {StakeModuleStorage} from "../../../modules/StakeModule/structs/storage.sol";
 import {StakeModule} from "../../../modules/StakeModule/StakeModule.sol";
+import {InitiatorExtensionLib} from "../../../modules/StakeModule/libs/InitiatorExtensionLib.sol";
 import {StakeModuleLib} from "../../../modules/StakeModule/libs/StakeModuleLib.sol";
 import {OracleExtensionLib} from "../../../modules/StakeModule/libs/OracleExtensionLib.sol";
 import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStoreModuleLib.sol";
@@ -11,6 +12,7 @@ import {DataStoreModuleLib} from "../../../modules/DataStoreModule/libs/DataStor
 contract OracleExtensionLibMock is StakeModule {
   using StakeModuleLib for StakeModuleStorage;
   using OracleExtensionLib for StakeModuleStorage;
+  using InitiatorExtensionLib for StakeModuleStorage;
   using DataStoreModuleLib for DataStoreModuleStorage;
 
   function initialize(address _gETH_position, address _oracle_position) external initializer {
@@ -27,6 +29,14 @@ contract OracleExtensionLibMock is StakeModule {
 
   function setInfrastructureFee(uint256 _type, uint256 fee) external virtual override {
     _getStakeModuleStorage().setInfrastructureFee(_type, fee);
+  }
+
+  function setBeaconDelays(uint256 entry, uint256 exit) external virtual override {
+    _getStakeModuleStorage().setBeaconDelays(entry, exit);
+  }
+
+  function setInitiationDeposit(uint256 newInitiationDeposit) external virtual override {
+    _getStakeModuleStorage().setInitiationDeposit(newInitiationDeposit);
   }
 
   /**

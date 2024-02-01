@@ -12,12 +12,12 @@ We isolate the functionalities within Packages with Modules. We then, isolate th
 > ![modules](../../../docs/images/modules.png)
 
 - A Module contains a predefined set of an isolated functionality that will be utilized by [Packages](../packages/).
-- Modules can not have storage variables other than its main struct which is defined within the its main library.
+- Modules cannot have storage variables other than its main struct which is defined within the its main library.
 - Modules are not solely built for Packages, a Module can be built on top of other Modules.
 - Modules should inherit the corresponding interface from [interfaces folder](../interfaces/).
-- Module contracts are **abstract** meaning they can contain functions that are not implemented, and can not be deployed without being used within a package.
+- Module contracts are **abstract** meaning they can contain functions that are not implemented, and cannot be deployed without being used within a package.
 - Module contracts should not contain functionalities. Instead it should delegate all its functionality to the libraries. However, there can be some exceptions:
-  - Geode Module is built on top of UUPS. Managing the UUPS logic can not be delegated to the library.
+  - Geode Module is built on top of UUPS. Managing the UUPS logic cannot be delegated to the library.
   - Stake Module combines StakeModuleLib and OracleExtensionLib. To provide some combined functionality, it modifies the `deposit` function.
 
 ---
@@ -72,7 +72,7 @@ We will review this logic by dividing it into 6 sections:
 
 ### Staking Pool Initiation
 
-An already claimed ID can not be initiated as a POOL. It is also practically impossible to brute force an ID that is not claimed, but in use.
+An already claimed ID cannot be initiated as a POOL. It is also practically impossible to brute force an ID that is not claimed, but in use.
 
 > Initiating a Pool requires 1 validator worth of Ether to be deposited in the pool. This prevents spam.
 

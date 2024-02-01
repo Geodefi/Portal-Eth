@@ -46,9 +46,32 @@ library InitiatorExtensionLib {
   /**
    * @custom:section                           ** EVENTS **
    */
+  event InitiationDepositSet(uint256 initiationDeposit);
   event IdInitiated(uint256 id, uint256 indexed TYPE);
   event MiddlewareDeployed(uint256 poolId, uint256 version);
   event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
+
+  /**
+   * @custom:section                           ** GOVERNING **
+   *
+   * @custom:visibility -> external
+   * @dev IMPORTANT! These functions should be governed by a governance! Which is not done here!
+   */
+
+  /**
+   * @notice Set the required amount for a pool initiation.
+   * @dev note that, could have been used to prevent pool creation if there were no limits.
+   */
+  function setInitiationDeposit(
+    StakeModuleStorage storage self,
+    uint256 initiationDeposit
+  ) external {
+    require(initiationDeposit <= DCL.DEPOSIT_AMOUNT);
+
+    self.INITIATION_DEPOSIT = initiationDeposit;
+
+    emit InitiationDepositSet(initiationDeposit);
+  }
 
   /**
    * @custom:section                           ** OPERATOR INITIATOR **
@@ -75,8 +98,8 @@ library InitiatorExtensionLib {
     address maintainer
   ) external {
     require(DATASTORE.readUint(id, rks.initiated) == 0, "SML:already initiated");
-    require(DATASTORE.readUint(id, rks.TYPE) == ID_TYPE.OPERATOR, "SML:TYPE NOT allowed");
-    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender NOT CONTROLLER");
+    require(DATASTORE.readUint(id, rks.TYPE) == ID_TYPE.OPERATOR, "SML:TYPE not allowed");
+    require(msg.sender == DATASTORE.readAddress(id, rks.CONTROLLER), "SML:sender not CONTROLLER");
 
     DATASTORE.writeUint(id, rks.initiated, block.timestamp);
 
@@ -103,7 +126,7 @@ library InitiatorExtensionLib {
    * @param middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
    * @param config array(3)= [private(true) or public(false), deploy a middleware(if true), deploy liquidity pool(if true)]
    * @dev checking only initiated is enough to validate that ID is not used. no need to check TYPE, CONTROLLER etc.
-   * @dev requires exactly 1 validator worth of funds to be deposited on initiation, prevent sybil attacks.
+   * @dev requires INITIATION_DEPOSIT worth of funds (currently 1 validator) to be deposited on initiation, prevent sybil attacks.
    */
   function initiatePool(
     StakeModuleStorage storage self,
@@ -115,11 +138,11 @@ library InitiatorExtensionLib {
     bytes calldata middleware_data,
     bool[3] calldata config
   ) external returns (uint256 poolId) {
-    require(msg.value == DCL.DEPOSIT_AMOUNT, "SML:need 1 validator worth of funds");
+    require(msg.value == self.INITIATION_DEPOSIT, "SML:need 1 validator worth of funds");
 
     poolId = DSML.generateId(name, ID_TYPE.POOL);
     require(DATASTORE.readUint(poolId, rks.initiated) == 0, "SML:already initiated");
-    require(poolId > 1e9, "SML:Wow! Low pool id");
+    require(poolId > 1e9, "SML:Wow! Low poolId");
 
     DATASTORE.writeUint(poolId, rks.initiated, block.timestamp);
 
@@ -144,7 +167,7 @@ library InitiatorExtensionLib {
     }
     if (config[2]) {
       // deploy a bound liquidity pool - optional
-      deployLiquidityPool(self, DATASTORE, poolId);
+      _deployLiquidityPool(self, DATASTORE, poolId);
     }
 
     // initially 1 ETHER = 1 ETHER
@@ -191,15 +214,15 @@ library InitiatorExtensionLib {
    * @param _id gETH id, also required for IgETHMiddleware.initialize
    * @param _versionId provided version id, can use any as a middleware if allowed for TYPE = MIDDLEWARE_GETH
    * @param _middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
-   * @dev currrently, can NOT deploy a middleware after initiation, thus only used by the initiator.
-   * @dev currrently, can NOT unset a middleware.
+   * @dev currrently, cannot deploy a middleware after initiation, thus only used by the initiator.
+   * @dev currrently, cannot unset a middleware.
    */
   function _deploygETHMiddleware(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 _id,
     uint256 _versionId,
-    bytes memory _middleware_data
+    bytes calldata _middleware_data
   ) internal {
     require(_versionId > 0, "SML:versionId cannot be 0");
     require(self.middlewares[ID_TYPE.MIDDLEWARE_GETH][_versionId], "SML:not a middleware");
@@ -291,7 +314,7 @@ library InitiatorExtensionLib {
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 poolId
-  ) public {
+  ) internal {
     address lp = _deployGeodePackage(
       self,
       DATASTORE,

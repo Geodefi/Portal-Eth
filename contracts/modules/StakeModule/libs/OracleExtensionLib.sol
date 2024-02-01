@@ -72,16 +72,13 @@ library OracleExtensionLib {
    * @custom:section                           ** CONSTANTS **
    */
   /// @notice effective on MONOPOLY_THRESHOLD, limiting the active validators: Set to 1%
-  uint256 internal constant MONOPOLY_RATIO = PERCENTAGE_DENOMINATOR / 100;
+  uint256 internal constant MONOPOLY_RATIO = 1e8; // PERCENTAGE_DENOMINATOR / 100;
 
   /// @notice sensible value for the minimum beacon chain validators. No reasoning.
   uint256 internal constant MIN_VALIDATOR_COUNT = 50000;
 
   /// @notice limiting the access for Operators in case of bad/malicious/faulty behaviour
   uint256 internal constant PRISON_SENTENCE = 14 days;
-
-  /// @notice maximum delay between the creation of an (approved) proposal and stake() call.
-  uint256 internal constant MAX_BEACON_DELAY = 14 days;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -90,6 +87,7 @@ library OracleExtensionLib {
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
   event FeeTheft(uint256 indexed id, bytes proofs);
   event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
+  event YieldDistributed(uint256 indexed poolId, uint256 amount);
   event OracleReported(
     bytes32 priceMerkleRoot,
     bytes32 balanceMerkleRoot,
@@ -100,7 +98,7 @@ library OracleExtensionLib {
    * @custom:section                           ** MODIFIERS **
    */
   modifier onlyOracle(StakeModuleStorage storage self) {
-    require(msg.sender == self.ORACLE_POSITION, "OEL:sender NOT ORACLE");
+    require(msg.sender == self.ORACLE_POSITION, "OEL:sender not ORACLE");
     _;
   }
 
@@ -127,7 +125,7 @@ library OracleExtensionLib {
     require(self.validators[_pk].index <= verificationIndex, "OEL:unexpected index");
     require(
       self.validators[_pk].state == VALIDATOR_STATE.PROPOSED,
-      "OEL:NOT all pubkeys are pending"
+      "OEL:not all pubkeys are pending"
     );
 
     uint256 operatorId = self.validators[_pk].operatorId;
@@ -220,8 +218,8 @@ library OracleExtensionLib {
   /**
    * @notice imprisoning an Operator if the validator proposal is approved but have not been executed.
    * @dev anyone can call this function while the state is PROPOSED
-   * @dev this check can be problematic in the case the beaconchain deposit delay is > MAX_BEACON_DELAY,
-   * * depending on the expected delay of telescope approvals.
+   * @dev this check can be problematic in the case the beaconchain deposit delay is > BEACON_DELAY_ENTRY,
+   * * depending on the expected delay of telescope approvals. However, BEACON_DELAY_ENTRY can be adjusted by the Governance.
    * @dev _canStake checks == VALIDATOR_STATE.PROPOSED.
    */
   function blameProposal(
@@ -229,32 +227,52 @@ library OracleExtensionLib {
     DataStoreModuleStorage storage DATASTORE,
     bytes calldata pk
   ) external {
-    require(self._canStake(pk, self.VERIFICATION_INDEX), "OEL:can not blame proposal");
+    uint256 verificationIndex = self.VERIFICATION_INDEX;
+    require(self._canStake(pk, verificationIndex), "OEL:cannot blame proposal");
     require(
-      block.timestamp > self.validators[pk].createdAt + MAX_BEACON_DELAY,
+      block.timestamp > self.validators[pk].createdAt + self.BEACON_DELAY_ENTRY,
       "OEL:acceptable delay"
     );
 
-    _imprison(DATASTORE, self.validators[pk].operatorId, pk);
+    _alienateValidator(self, DATASTORE, verificationIndex, pk);
   }
 
   /**
    * @notice imprisoning an Operator if the validator have not been exited until expected exit
    * @dev normally, oracle should verify the signed exit request on beacon chain for a (deterministic) epoch
    * * before approval. This function enforces it further for the stakers.
-   * @dev anyone can call this function while the state is ACTIVE
+   * @dev anyone can call this function while the state is ACTIVE or EXIT_REQUESTED
    * @dev if operator has given enough allowance, they SHOULD rotate the validators to avoid being prisoned
    */
   function blameExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
-    bytes calldata pk
+    bytes calldata pk,
+    uint256 beaconBalance,
+    uint256 withdrawnBalance,
+    bytes32[] calldata balanceProof
   ) external {
-    require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "OEL:unexpected validator state");
+    uint64 state = self.validators[pk].state;
     require(
-      block.timestamp > self.validators[pk].createdAt + self.validators[pk].period,
-      "OEL:validator is active"
+      state == VALIDATOR_STATE.ACTIVE || state == VALIDATOR_STATE.EXIT_REQUESTED,
+      "OEL:unexpected validator state"
     );
+    require(
+      block.timestamp >
+        self.validators[pk].createdAt + self.validators[pk].period + self.BEACON_DELAY_EXIT,
+      "OEL:validator is active or acceptable delay"
+    );
+
+    // verify balances
+    bytes32 leaf = keccak256(
+      bytes.concat(keccak256(abi.encode(pk, beaconBalance, withdrawnBalance)))
+    );
+    require(
+      MerkleProof.verify(balanceProof, self.BALANCE_MERKLE_ROOT, leaf),
+      "OEL:proof not valid"
+    );
+
+    require(beaconBalance != 0, "OEL:already exited");
 
     _imprison(DATASTORE, self.validators[pk].operatorId, pk);
   }
@@ -398,7 +416,7 @@ library OracleExtensionLib {
     bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(_poolId, _price))));
     require(
       MerkleProof.verify(_priceProof, self.PRICE_MERKLE_ROOT, leaf),
-      "OEL:NOT all proofs are valid"
+      "OEL:not all proofs are valid"
     );
 
     _sanityCheck(self, DATASTORE, _poolId, _price);
@@ -414,6 +432,7 @@ library OracleExtensionLib {
           gETH_DENOMINATOR;
         self.gETH.mint(address(this), _poolId, supplyDiff, "");
         self.gETH.safeTransferFrom(address(this), yieldReceiver, _poolId, supplyDiff, "");
+        emit YieldDistributed(_poolId, supplyDiff);
       } else {
         self.gETH.setPricePerShare(_price, _poolId);
       }

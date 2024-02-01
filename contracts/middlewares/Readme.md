@@ -18,13 +18,13 @@ gETH Middlewares provides a never seen flexibility: allowing every single ID of 
 
 ## Middlewares vs Packages
 
-| Middlewares | Packages |
-|---|---|
-| Can not be upgraded.  | Limited Upgradability.  |
-| No standard way to build, except the `initialize` function. | Built by utilizing the Modules. |
-| Portal supports multiple versions. | Portal supports the latest version. |
+| Middlewares                                                 | Packages                            |
+| ----------------------------------------------------------- | ----------------------------------- |
+| Cannot be upgraded.                                         | Limited Upgradability.              |
+| No standard way to build, except the `initialize` function. | Built by utilizing the Modules.     |
+| Portal supports multiple versions.                          | Portal supports the latest version. |
 
 ## Contents
 
-* **ERC20Middleware**: Allowing an ID to behave like a plain ERC20 token.
-* **ERC20PermitMiddleware**: Inherits ERC20Middleware, provides eip-2612. No functional differences between Openzeppelin's implementation of ERC20Permit.
+- **ERC20Middleware**: Allowing an ID to behave like a plain ERC20 token.
+- **ERC20PermitMiddleware**: Inherits ERC20Middleware, provides eip-2612. No functional differences between Openzeppelin's implementation of ERC20Permit.

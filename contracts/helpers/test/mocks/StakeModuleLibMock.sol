@@ -39,6 +39,14 @@ contract StakeModuleLibMock is StakeModule {
     _getStakeModuleStorage().setInfrastructureFee(_type, fee);
   }
 
+  function setBeaconDelays(uint256 entry, uint256 exit) external virtual override {
+    _getStakeModuleStorage().setBeaconDelays(entry, exit);
+  }
+
+  function setInitiationDeposit(uint256 newInitiationDeposit) external virtual override {
+    _getStakeModuleStorage().setInitiationDeposit(newInitiationDeposit);
+  }
+
   /**
    * @custom:section                           ** DATA MANIPULATORS **
    */
@@ -104,7 +112,7 @@ contract StakeModuleLibMock is StakeModule {
   function $_deploygETHMiddleware(
     uint256 _id,
     uint256 _versionId,
-    bytes memory _middleware_data
+    bytes calldata _middleware_data
   ) external {
     _getStakeModuleStorage()._deploygETHMiddleware(
       _getDataStoreModuleStorage(),

@@ -39,7 +39,7 @@ import {DataStoreModule} from "../DataStoreModule/DataStoreModule.sol";
  * * However, this module inherits and implements nonReentrant & whenNotPaused modifiers.
  * * SM has pausability and expects inheriting contract to provide the access control mechanism.
  *
- * @dev 3 functions need to be overriden when inherited: pause, unpause, setInfrastructureFee
+ * @dev 4 functions need to be overriden when inherited: pause, unpause, setInfrastructureFee, setBeaconDelays.
  *
  * @dev __StakeModule_init (or _unchained) call is NECESSARY when inherited.
  *
@@ -61,7 +61,7 @@ abstract contract StakeModule is
   /**
    * @custom:section                           ** VARIABLES **
    *
-   * @dev Do not add any other variables here. Modules do NOT have a gap.
+   * @dev Do not add any other variables here. Modules do not have a gap.
    * Library's main struct has a gap, providing up to 16 storage slots for this module.
    */
   // keccak256(abi.encode(uint256(keccak256("geode.storage.StakeModuleStorage")) - 1)) & ~bytes32(uint256(0xff))
@@ -80,6 +80,9 @@ abstract contract StakeModule is
   event IdInitiated(uint256 id, uint256 indexed TYPE);
   event MiddlewareDeployed(uint256 poolId, uint256 version);
   event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
+  event InfrastructureFeeSet(uint256 _type, uint256 fee);
+  event BeaconDelaySet(uint256 entryDelay, uint256 exitDelay);
+  event InitiationDepositSet(uint256 initiationDeposit);
   event VisibilitySet(uint256 id, bool isPrivate);
   event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
@@ -95,6 +98,7 @@ abstract contract StakeModule is
   event Alienated(bytes pubkey);
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
   event FeeTheft(uint256 indexed id, bytes proofs);
+  event YieldDistributed(uint256 indexed poolId, uint256 amount);
   event OracleReported(
     bytes32 priceMerkleRoot,
     bytes32 balanceMerkleRoot,
@@ -109,6 +113,10 @@ abstract contract StakeModule is
   function unpause() external virtual override;
 
   function setInfrastructureFee(uint256 _type, uint256 fee) external virtual override;
+
+  function setBeaconDelays(uint256 _type, uint256 fee) external virtual override;
+
+  function setInitiationDeposit(uint256 newInitiationDeposit) external virtual override;
 
   /**
    * @custom:section                           ** INITIALIZING **
@@ -129,8 +137,15 @@ abstract contract StakeModule is
     require(_oracle_position != address(0), "SM:oracle cannot be zero address");
 
     StakeModuleStorage storage $ = _getStakeModuleStorage();
+
     $.gETH = IgETH(_gETH);
     $.ORACLE_POSITION = _oracle_position;
+
+    $.BEACON_DELAY_ENTRY = 14 days;
+    $.BEACON_DELAY_EXIT = 14 days;
+
+    $.INITIATION_DEPOSIT = 32 ether; // initially 32 eth
+
     $.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
     $.DAILY_PRICE_DECREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
   }
@@ -152,6 +167,9 @@ abstract contract StakeModule is
       uint256 validatorsIndex,
       uint256 verificationIndex,
       uint256 monopolyThreshold,
+      uint256 beaconDelayEntry,
+      uint256 beaconDelayExit,
+      uint256 initiationDeposit,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
       uint256 dailyPriceDecreaseLimit
@@ -163,6 +181,9 @@ abstract contract StakeModule is
     validatorsIndex = $.VALIDATORS_INDEX;
     verificationIndex = $.VERIFICATION_INDEX;
     monopolyThreshold = $.MONOPOLY_THRESHOLD;
+    beaconDelayEntry = $.BEACON_DELAY_ENTRY;
+    beaconDelayExit = $.BEACON_DELAY_EXIT;
+    initiationDeposit = $.INITIATION_DEPOSIT;
     oracleUpdateTimestamp = $.ORACLE_UPDATE_TIMESTAMP;
     dailyPriceIncreaseLimit = $.DAILY_PRICE_INCREASE_LIMIT;
     dailyPriceDecreaseLimit = $.DAILY_PRICE_DECREASE_LIMIT;
@@ -372,9 +393,14 @@ abstract contract StakeModule is
     $.blameProposal(_getDataStoreModuleStorage(), pk);
   }
 
-  function blameExit(bytes calldata pk) external virtual override whenNotPaused {
+  function blameExit(
+    bytes calldata pk,
+    uint256 beaconBalance,
+    uint256 withdrawnBalance,
+    bytes32[] calldata balanceProof
+  ) external virtual override whenNotPaused {
     StakeModuleStorage storage $ = _getStakeModuleStorage();
-    $.blameExit(_getDataStoreModuleStorage(), pk);
+    $.blameExit(_getDataStoreModuleStorage(), pk, beaconBalance, withdrawnBalance, balanceProof);
   }
 
   /**
@@ -516,7 +542,7 @@ abstract contract StakeModule is
 
   function requestExit(
     uint256 poolId,
-    bytes memory pk
+    bytes calldata pk
   ) external virtual override nonReentrant whenNotPaused {
     StakeModuleStorage storage $ = _getStakeModuleStorage();
     $.requestExit(_getDataStoreModuleStorage(), poolId, pk);
@@ -524,7 +550,7 @@ abstract contract StakeModule is
 
   function finalizeExit(
     uint256 poolId,
-    bytes memory pk
+    bytes calldata pk
   ) external virtual override nonReentrant whenNotPaused {
     StakeModuleStorage storage $ = _getStakeModuleStorage();
     $.finalizeExit(_getDataStoreModuleStorage(), poolId, pk);

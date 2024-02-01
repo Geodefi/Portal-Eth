@@ -14,6 +14,9 @@ import {Validator} from "./utils.sol";
  * * Includes all validators: proposed, active, alienated, exited.
  * @param VERIFICATION_INDEX the highest index of the validators that are verified (as not alien) by the Holy Oracle.
  * @param MONOPOLY_THRESHOLD max number of validators 1 operator is allowed to operate, updated by the Holy Oracle.
+ * @param BEACON_DELAY_ENTRY allowed max delay between the creation of an (approved) proposal and stake() call, per the beaconchain entry queue.
+ * @param BEACON_DELAY_EXIT allowed max delay between an exit request and its finalization with finalizeExit() call, per the beaconchain exit queue.
+ * @param INITIATION_DEPOSIT the initial deposit amount that is required for a name to be reserved by the pool, prevents sybil attacks.
  * @param ORACLE_UPDATE_TIMESTAMP timestamp of the latest oracle update
  * @param DAILY_PRICE_DECREASE_LIMIT limiting the price decreases for one oracle period, 24h. Effective for any time interval, per second.
  * @param DAILY_PRICE_INCREASE_LIMIT limiting the price increases for one oracle period, 24h. Effective for any time interval, per second.
@@ -37,6 +40,9 @@ struct StakeModuleStorage {
   uint256 VALIDATORS_INDEX;
   uint256 VERIFICATION_INDEX;
   uint256 MONOPOLY_THRESHOLD;
+  uint256 BEACON_DELAY_ENTRY;
+  uint256 BEACON_DELAY_EXIT;
+  uint256 INITIATION_DEPOSIT;
   uint256 ORACLE_UPDATE_TIMESTAMP;
   uint256 DAILY_PRICE_INCREASE_LIMIT;
   uint256 DAILY_PRICE_DECREASE_LIMIT;

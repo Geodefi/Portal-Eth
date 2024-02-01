@@ -16,7 +16,7 @@ import {ERC1155, ERC1155Burnable, ERC1155PausableBurnableSupply} from "./helpers
  *
  * @dev gETH is chain-agnostic, meaning it can be used on any evm chain (given the correct name and symbol).
  *
- * @dev gETH is immutable, it can not be upgraded.
+ * @dev gETH is immutable, it cannot be upgraded.
  *
  * @dev gETH is a special ERC1155 contract with additional functionalities:
  * gETHMiddlewares:

@@ -37,13 +37,13 @@ library LiquidityModuleLib {
    */
 
   /// @notice Max swap fee is 1% or 100bps of each swap
-  uint256 internal constant MAX_SWAP_FEE = PERCENTAGE_DENOMINATOR / 100;
+  uint256 internal constant MAX_SWAP_FEE = 1e8; // PERCENTAGE_DENOMINATOR / 100;
 
   /// @notice Max adminFee is 50% of the swapFee
   /// adminFee does not add additional fee on top of swapFee
   /// instead it takes a certain percentage of the swapFee.
   /// Therefore it has no impact on users but only on the earnings of LPs
-  uint256 internal constant MAX_ADMIN_FEE = (50 * PERCENTAGE_DENOMINATOR) / 100;
+  uint256 internal constant MAX_ADMIN_FEE = 5e9; // (50 * PERCENTAGE_DENOMINATOR) / 100;
 
   /// @notice Constant value used as max loop limit
   uint256 internal constant MAX_LOOP_LIMIT = 256;

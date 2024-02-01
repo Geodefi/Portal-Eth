@@ -19,7 +19,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
     "@nomicfoundation/hardhat-ethers": "^3.0.5",
-    "@nomicfoundation/hardhat-verify": "^1.1.1",
+    "@nomicfoundation/hardhat-verify": "^2.0.4",
     "@nomiclabs/hardhat-truffle5": "^2.0.7",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/hardhat-upgrades": "^2.3.1",
@@ -36,7 +36,7 @@
     "ethereum-waffle": "^3.4.4",
     "ethereumjs-wallet": "^1.0.2",
     "ethers": "^6.7.1",
-    "hardhat": "^2.18.0",
+    "hardhat": "^2.19.5",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-deploy": "^0.11.37",
     "hardhat-deploy-ethers": "^0.4.1",
