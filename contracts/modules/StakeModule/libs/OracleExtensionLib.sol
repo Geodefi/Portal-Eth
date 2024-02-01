@@ -80,9 +80,6 @@ library OracleExtensionLib {
   /// @notice limiting the access for Operators in case of bad/malicious/faulty behaviour
   uint256 internal constant PRISON_SENTENCE = 14 days;
 
-  /// @notice maximum delay between the creation of an (approved) proposal and stake() call.
-  uint256 internal constant MAX_BEACON_DELAY = 14 days;
-
   /**
    * @custom:section                           ** EVENTS **
    */
@@ -221,8 +218,8 @@ library OracleExtensionLib {
   /**
    * @notice imprisoning an Operator if the validator proposal is approved but have not been executed.
    * @dev anyone can call this function while the state is PROPOSED
-   * @dev this check can be problematic in the case the beaconchain deposit delay is > MAX_BEACON_DELAY,
-   * * depending on the expected delay of telescope approvals.
+   * @dev this check can be problematic in the case the beaconchain deposit delay is > BEACON_DELAY_ENTRY,
+   * * depending on the expected delay of telescope approvals. However, BEACON_DELAY_ENTRY can be adjusted by the Governance.
    * @dev _canStake checks == VALIDATOR_STATE.PROPOSED.
    */
   function blameProposal(
@@ -233,7 +230,7 @@ library OracleExtensionLib {
     uint256 verificationIndex = self.VERIFICATION_INDEX;
     require(self._canStake(pk, verificationIndex), "OEL:cannot blame proposal");
     require(
-      block.timestamp > self.validators[pk].createdAt + MAX_BEACON_DELAY,
+      block.timestamp > self.validators[pk].createdAt + self.BEACON_DELAY_ENTRY,
       "OEL:acceptable delay"
     );
 
@@ -262,7 +259,7 @@ library OracleExtensionLib {
     );
     require(
       block.timestamp >
-        self.validators[pk].createdAt + self.validators[pk].period + MAX_BEACON_DELAY,
+        self.validators[pk].createdAt + self.validators[pk].period + self.BEACON_DELAY_EXIT,
       "OEL:validator is active or acceptable delay"
     );
 

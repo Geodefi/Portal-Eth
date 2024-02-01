@@ -29,6 +29,10 @@ contract OracleExtensionLibMock is StakeModule {
     _getStakeModuleStorage().setInfrastructureFee(_type, fee);
   }
 
+  function setBeaconDelays(uint256 entry, uint256 exit) external virtual override {
+    _getStakeModuleStorage().setBeaconDelays(entry, exit);
+  }
+
   /**
    * @custom:section                           ** DATA MANIPULATORS **
    */

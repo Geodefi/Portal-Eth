@@ -57,7 +57,7 @@ import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
  * * GeodeModule has OnlyGovernance, OnlySenate and OnlyController checks with modifiers.
  * * StakeModuleLib has "authenticate()" function which checks for Maintainers, Controllers, and TYPE.
  * * OracleModuleLib has OnlyOracle checks with a modifier.
- * * Portal has an OnlyGovernance check on : pause, unpause, pausegETH, unpausegETH, setInfrastructureFee, releasePrisoned.
+ * * Portal has an OnlyGovernance check on : pause, unpause, pausegETH, unpausegETH, setInfrastructureFee, setBeaconDelays, releasePrisoned.
  *
  * @author Ice Bear & Crash Bandicoot
  */
@@ -70,7 +70,6 @@ contract Portal is IPortal, GeodeModule, StakeModule {
    * @custom:section                           ** EVENTS **
    */
   event Released(uint256 operatorId);
-  event InfrastructureFeeSet(uint256 _type, uint256 fee);
 
   /**
    * @custom:section                           ** MODIFIERS **
@@ -174,13 +173,14 @@ contract Portal is IPortal, GeodeModule, StakeModule {
     uint256 _type,
     uint256 fee
   ) external virtual override(StakeModule, IStakeModule) onlyGovernance {
-    if (_type == ID_TYPE.POOL) {
-      require(fee <= SML.MAX_POOL_INFRASTRUCTURE_FEE, "PORTAL:> MAX");
-    }
-
     _getStakeModuleStorage().setInfrastructureFee(_type, fee);
+  }
 
-    emit InfrastructureFeeSet(_type, fee);
+  function setBeaconDelays(
+    uint256 entry,
+    uint256 exit
+  ) external virtual override(StakeModule, IStakeModule) onlyGovernance {
+    _getStakeModuleStorage().setBeaconDelays(entry, exit);
   }
 
   /**

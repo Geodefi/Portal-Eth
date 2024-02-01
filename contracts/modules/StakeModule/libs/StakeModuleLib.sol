@@ -109,8 +109,8 @@ library StakeModuleLib {
   /// @notice limiting the GOVERNANCE_FEE to 5%
   uint256 internal constant MAX_POOL_INFRASTRUCTURE_FEE = 5e8; // (PERCENTAGE_DENOMINATOR * 5) / 100;
 
-  /// @notice starting time of the GOVERNANCE_FEE
-  uint256 internal constant GOVERNANCE_FEE_COMMENCEMENT = 1714514461;
+  /// @notice limit the beacon delays on entry and exit since it can be adjusted by the governance.
+  uint256 internal constant MAX_BEACON_DELAY = 90 days; // = MIN_VALIDATOR_PERIOD
 
   /// @notice limiting the pool and operator maintenance fee, 10%
   uint256 internal constant MAX_MAINTENANCE_FEE = 1e9; // (PERCENTAGE_DENOMINATOR * 10) / 100;
@@ -125,8 +125,8 @@ library StakeModuleLib {
   uint256 internal constant IGNORABLE_DEBT = 1 ether;
 
   /// @notice limiting the operator.validatorPeriod, between 3 months to 2 years
-  uint256 internal constant MIN_VALIDATOR_PERIOD = 90 days; // 3 * 30 days;
-  uint256 internal constant MAX_VALIDATOR_PERIOD = 730 days; // 2 * 365 days;
+  uint256 internal constant MIN_VALIDATOR_PERIOD = 90 days; // 3 * 30 days
+  uint256 internal constant MAX_VALIDATOR_PERIOD = 730 days; // 2 * 365 days
 
   /// @notice some parameter changes are effective after a delay
   uint256 internal constant SWITCH_LATENCY = 3 days;
@@ -134,6 +134,8 @@ library StakeModuleLib {
   /**
    * @custom:section                           ** EVENTS **
    */
+  event InfrastructureFeeSet(uint256 _type, uint256 fee);
+  event BeaconDelaySet(uint256 entryDelay, uint256 exitDelay);
   event VisibilitySet(uint256 id, bool isPrivate);
   event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
@@ -146,6 +148,49 @@ library StakeModuleLib {
   event Stake(bytes[] pubkeys);
   event ExitRequest(bytes pubkey);
   event Exit(bytes pubkey);
+
+  /**
+   * @custom:section                           ** GOVERNING **
+   *
+   * @custom:visibility -> external
+   * @dev IMPORTANT! These functions should be governed by a governance! Which is not done here!
+   */
+
+  /**
+   * @notice  TODO Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
+   * @dev Changing the Staking Pool fee, only applies to the newly created validators.
+   * @dev advise that 100% == PERCENTAGE_DENOMINATOR
+   * @dev IMPORTANT! This function should be governed by a mechanism! It is not here!
+   */
+  function setBeaconDelays(StakeModuleStorage storage self, uint256 entry, uint256 exit) external {
+    require(entry < MIN_VALIDATOR_PERIOD, "SML:> MAX");
+    require(exit < MIN_VALIDATOR_PERIOD, "SML:> MAX");
+
+    self.BEACON_DELAY_ENTRY = entry;
+    self.BEACON_DELAY_EXIT = exit;
+
+    emit BeaconDelaySet(entry, exit);
+  }
+
+  /**
+   * @notice Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
+   * @dev Changing the Staking Pool fee, only applies to the newly created validators.
+   * @dev advise that 100% == PERCENTAGE_DENOMINATOR
+   */
+  function setInfrastructureFee(
+    StakeModuleStorage storage self,
+    uint256 _type,
+    uint256 fee
+  ) external {
+    if (_type == ID_TYPE.POOL) {
+      require(fee <= MAX_POOL_INFRASTRUCTURE_FEE, "PORTAL:> MAX");
+    } else {
+      require(fee < PERCENTAGE_DENOMINATOR, "SML:> 100%");
+    }
+
+    self.infrastructureFees[_type] = fee;
+    emit InfrastructureFeeSet(_type, fee);
+  }
 
   /**
    * @custom:section                           ** AUTHENTICATION **
@@ -371,7 +416,7 @@ library StakeModuleLib {
   }
 
   /**
-   * @custom:subsection                           ** FEE **
+   * @custom:subsection                           ** MAINTENANCE FEE **
    */
 
   /**
@@ -398,22 +443,6 @@ library StakeModuleLib {
   /**
    * @custom:visibility -> internal
    */
-
-  /**
-   * @notice Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
-   * @dev Changing the Staking Pool fee, only applies to the newly created validators.
-   * @dev advise that 100% == PERCENTAGE_DENOMINATOR
-   * @dev IMPORTANT! This function should be governed by a mechanism! It is not here!
-   */
-  function setInfrastructureFee(
-    StakeModuleStorage storage self,
-    uint256 _type,
-    uint256 _fee
-  ) external {
-    require(_fee < PERCENTAGE_DENOMINATOR / 2, "SML:> 50%");
-
-    self.infrastructureFees[_type] = _fee;
-  }
 
   /**
    * @notice internal function to set fee with NO DELAY

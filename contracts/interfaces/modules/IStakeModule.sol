@@ -11,6 +11,8 @@ interface IStakeModule is IDataStoreModule {
 
   function setInfrastructureFee(uint256 _type, uint256 fee) external;
 
+  function setBeaconDelays(uint256 entry, uint256 exit) external;
+
   function StakeParams()
     external
     view
@@ -20,6 +22,8 @@ interface IStakeModule is IDataStoreModule {
       uint256 validatorsIndex,
       uint256 verificationIndex,
       uint256 monopolyThreshold,
+      uint256 beaconDelayEntry,
+      uint256 beaconDelayExit,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
       uint256 dailyPriceDecreaseLimit
