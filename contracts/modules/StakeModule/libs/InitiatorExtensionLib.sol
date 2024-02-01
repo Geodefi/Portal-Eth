@@ -59,13 +59,15 @@ library InitiatorExtensionLib {
    */
 
   /**
-   * @notice  TODO Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
-   * @dev Changing the Initiation Deposit only applies to the newly created pools.
+   * @notice Set the required amount for a pool initiation.
+   * @dev note that, could have been used to prevent pool creation if there were no limits.
    */
   function setInitiationDeposit(
     StakeModuleStorage storage self,
     uint256 initiationDeposit
   ) external {
+    require(initiationDeposit <= DCL.DEPOSIT_AMOUNT);
+
     self.INITIATION_DEPOSIT = initiationDeposit;
 
     emit InitiationDepositSet(initiationDeposit);

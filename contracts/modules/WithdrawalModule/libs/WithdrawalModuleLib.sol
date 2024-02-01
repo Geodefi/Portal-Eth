@@ -88,7 +88,7 @@ import {Validator} from "../../StakeModule/structs/utils.sol";
  * None of these approaches will be expensive, nor will disrupt the internal pricing for the latter requests.
  *
  * @dev while conducting the price calculations, a part of the balance within this contract should be taken into consideration.
- * This ETH amount can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - [fulfilledEtherBalance] -> ? todo for oracle.
+ * This ETH amount can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - [fulfilledEtherBalance] (todo for the telescope).
  * Note that, this is because: a price of the derivative is = total ETH / total Supply, and total ETH should include the balance within WC.
  *
  * @dev Contracts relying on this library must initialize WithdrawalModuleLib.WithdrawalModuleStorage

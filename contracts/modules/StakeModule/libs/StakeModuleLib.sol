@@ -157,14 +157,12 @@ library StakeModuleLib {
    */
 
   /**
-   * @notice  TODO Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
-   * @dev Changing the Staking Pool fee, only applies to the newly created validators.
-   * @dev advise that 100% == PERCENTAGE_DENOMINATOR
-   * @dev IMPORTANT! This function should be governed by a mechanism! It is not here!
+   * @notice Set the maxiumum allowed beacon delay for blaming validators on creation and exit.
+   * @dev high beacon delays will affect the ux negatively, low delays can cause issues for operators.
    */
   function setBeaconDelays(StakeModuleStorage storage self, uint256 entry, uint256 exit) external {
-    require(entry < MIN_VALIDATOR_PERIOD, "SML:> MAX");
-    require(exit < MIN_VALIDATOR_PERIOD, "SML:> MAX");
+    require(entry < MAX_BEACON_DELAY, "SML:> MAX");
+    require(exit < MAX_BEACON_DELAY, "SML:> MAX");
 
     self.BEACON_DELAY_ENTRY = entry;
     self.BEACON_DELAY_EXIT = exit;
@@ -1301,8 +1299,11 @@ library StakeModuleLib {
    */
 
   /**
-    @notice todo
-  */
+   * @notice Notifies the node operator with ExitRequest event
+   * @dev Prevents the request if validator is still within the MIN_VALIDATOR_PERIOD
+   * @dev Only the active validators can be called for an exit
+   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   */
   function requestExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
@@ -1326,8 +1327,11 @@ library StakeModuleLib {
   }
 
   /**
-    @notice todo
-  */
+   * @notice Finalizes the exit process for a validator.
+   * @dev Strongly advised to be called right after the exiting process is over.
+   * @dev Operators can exit at any time they want.
+   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   */
   function finalizeExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
