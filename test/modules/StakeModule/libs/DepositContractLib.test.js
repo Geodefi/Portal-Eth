@@ -18,6 +18,8 @@ contract("DepositContractLib", function () {
         ? "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b"
         : chainId === 1
         ? "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+        : chainId === 17000
+        ? "0x4242424242424242424242424242424242424242"
         : 0;
 
     expect(response).to.be.equal(depositContract);
