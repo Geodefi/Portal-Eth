@@ -25,6 +25,7 @@ import {StakeModuleStorage} from "./modules/StakeModule/structs/storage.sol";
 import {DataStoreModuleLib as DSML} from "./modules/DataStoreModule/libs/DataStoreModuleLib.sol";
 import {GeodeModuleLib as GML} from "./modules/GeodeModule/libs/GeodeModuleLib.sol";
 import {StakeModuleLib as SML} from "./modules/StakeModule/libs/StakeModuleLib.sol";
+import {InitiatorExtensionLib as IEL} from "./modules/StakeModule/libs/InitiatorExtensionLib.sol";
 // internal - contracts
 import {GeodeModule} from "./modules/GeodeModule/GeodeModule.sol";
 import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
@@ -57,7 +58,7 @@ import {StakeModule} from "./modules/StakeModule/StakeModule.sol";
  * * GeodeModule has OnlyGovernance, OnlySenate and OnlyController checks with modifiers.
  * * StakeModuleLib has "authenticate()" function which checks for Maintainers, Controllers, and TYPE.
  * * OracleModuleLib has OnlyOracle checks with a modifier.
- * * Portal has an OnlyGovernance check on : pause, unpause, pausegETH, unpausegETH, setInfrastructureFee, setBeaconDelays, releasePrisoned.
+ * * Portal has OnlyGovernance checks on : pause, unpause, pausegETH, unpausegETH, setInfrastructureFee, setBeaconDelays, setInitiationDeposit, releasePrisoned.
  *
  * @author Ice Bear & Crash Bandicoot
  */
@@ -65,6 +66,7 @@ contract Portal is IPortal, GeodeModule, StakeModule {
   using DSML for DataStoreModuleStorage;
   using GML for GeodeModuleStorage;
   using SML for StakeModuleStorage;
+  using IEL for StakeModuleStorage;
 
   /**
    * @custom:section                           ** EVENTS **
@@ -181,6 +183,12 @@ contract Portal is IPortal, GeodeModule, StakeModule {
     uint256 exit
   ) external virtual override(StakeModule, IStakeModule) onlyGovernance {
     _getStakeModuleStorage().setBeaconDelays(entry, exit);
+  }
+
+  function setInitiationDeposit(
+    uint256 newInitiationDeposit
+  ) external virtual override(StakeModule, IStakeModule) onlyGovernance {
+    _getStakeModuleStorage().setInitiationDeposit(newInitiationDeposit);
   }
 
   /**

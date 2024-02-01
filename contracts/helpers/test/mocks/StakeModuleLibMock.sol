@@ -43,6 +43,10 @@ contract StakeModuleLibMock is StakeModule {
     _getStakeModuleStorage().setBeaconDelays(entry, exit);
   }
 
+  function setInitiationDeposit(uint256 newInitiationDeposit) external virtual override {
+    _getStakeModuleStorage().setInitiationDeposit(newInitiationDeposit);
+  }
+
   /**
    * @custom:section                           ** DATA MANIPULATORS **
    */

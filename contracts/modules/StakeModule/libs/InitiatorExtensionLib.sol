@@ -46,9 +46,30 @@ library InitiatorExtensionLib {
   /**
    * @custom:section                           ** EVENTS **
    */
+  event InitiationDepositSet(uint256 initiationDeposit);
   event IdInitiated(uint256 id, uint256 indexed TYPE);
   event MiddlewareDeployed(uint256 poolId, uint256 version);
   event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
+
+  /**
+   * @custom:section                           ** GOVERNING **
+   *
+   * @custom:visibility -> external
+   * @dev IMPORTANT! These functions should be governed by a governance! Which is not done here!
+   */
+
+  /**
+   * @notice  TODO Set a fee (denominated in PERCENTAGE_DENOMINATOR) for any given TYPE.
+   * @dev Changing the Initiation Deposit only applies to the newly created pools.
+   */
+  function setInitiationDeposit(
+    StakeModuleStorage storage self,
+    uint256 initiationDeposit
+  ) external {
+    self.INITIATION_DEPOSIT = initiationDeposit;
+
+    emit InitiationDepositSet(initiationDeposit);
+  }
 
   /**
    * @custom:section                           ** OPERATOR INITIATOR **
@@ -103,7 +124,7 @@ library InitiatorExtensionLib {
    * @param middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
    * @param config array(3)= [private(true) or public(false), deploy a middleware(if true), deploy liquidity pool(if true)]
    * @dev checking only initiated is enough to validate that ID is not used. no need to check TYPE, CONTROLLER etc.
-   * @dev requires exactly 1 validator worth of funds to be deposited on initiation, prevent sybil attacks.
+   * @dev requires INITIATION_DEPOSIT worth of funds (currently 1 validator) to be deposited on initiation, prevent sybil attacks.
    */
   function initiatePool(
     StakeModuleStorage storage self,
@@ -115,11 +136,11 @@ library InitiatorExtensionLib {
     bytes calldata middleware_data,
     bool[3] calldata config
   ) external returns (uint256 poolId) {
-    require(msg.value == DCL.DEPOSIT_AMOUNT, "SML:need 1 validator worth of funds");
+    require(msg.value == self.INITIATION_DEPOSIT, "SML:need 1 validator worth of funds");
 
     poolId = DSML.generateId(name, ID_TYPE.POOL);
     require(DATASTORE.readUint(poolId, rks.initiated) == 0, "SML:already initiated");
-    require(poolId > 1e9, "SML:Wow! Low pool id");
+    require(poolId > 1e9, "SML:Wow! Low poolId");
 
     DATASTORE.writeUint(poolId, rks.initiated, block.timestamp);
 

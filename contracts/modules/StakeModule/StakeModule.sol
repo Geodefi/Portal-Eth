@@ -82,6 +82,7 @@ abstract contract StakeModule is
   event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
   event InfrastructureFeeSet(uint256 _type, uint256 fee);
   event BeaconDelaySet(uint256 entryDelay, uint256 exitDelay);
+  event InitiationDepositSet(uint256 initiationDeposit);
   event VisibilitySet(uint256 id, bool isPrivate);
   event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
@@ -115,6 +116,8 @@ abstract contract StakeModule is
 
   function setBeaconDelays(uint256 _type, uint256 fee) external virtual override;
 
+  function setInitiationDeposit(uint256 newInitiationDeposit) external virtual override;
+
   /**
    * @custom:section                           ** INITIALIZING **
    */
@@ -141,6 +144,8 @@ abstract contract StakeModule is
     $.BEACON_DELAY_ENTRY = 14 days;
     $.BEACON_DELAY_EXIT = 14 days;
 
+    $.INITIATION_DEPOSIT = 32 ether; // initially 32 eth
+
     $.DAILY_PRICE_INCREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
     $.DAILY_PRICE_DECREASE_LIMIT = (7 * PERCENTAGE_DENOMINATOR) / 100;
   }
@@ -164,6 +169,7 @@ abstract contract StakeModule is
       uint256 monopolyThreshold,
       uint256 beaconDelayEntry,
       uint256 beaconDelayExit,
+      uint256 initiationDeposit,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
       uint256 dailyPriceDecreaseLimit
@@ -177,6 +183,7 @@ abstract contract StakeModule is
     monopolyThreshold = $.MONOPOLY_THRESHOLD;
     beaconDelayEntry = $.BEACON_DELAY_ENTRY;
     beaconDelayExit = $.BEACON_DELAY_EXIT;
+    initiationDeposit = $.INITIATION_DEPOSIT;
     oracleUpdateTimestamp = $.ORACLE_UPDATE_TIMESTAMP;
     dailyPriceIncreaseLimit = $.DAILY_PRICE_INCREASE_LIMIT;
     dailyPriceDecreaseLimit = $.DAILY_PRICE_DECREASE_LIMIT;

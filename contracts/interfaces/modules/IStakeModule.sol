@@ -13,6 +13,8 @@ interface IStakeModule is IDataStoreModule {
 
   function setBeaconDelays(uint256 entry, uint256 exit) external;
 
+  function setInitiationDeposit(uint256 newInitiationDeposit) external;
+
   function StakeParams()
     external
     view
@@ -24,6 +26,7 @@ interface IStakeModule is IDataStoreModule {
       uint256 monopolyThreshold,
       uint256 beaconDelayEntry,
       uint256 beaconDelayExit,
+      uint256 initiationDeposit,
       uint256 oracleUpdateTimestamp,
       uint256 dailyPriceIncreaseLimit,
       uint256 dailyPriceDecreaseLimit
