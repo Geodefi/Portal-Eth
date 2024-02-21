@@ -12,7 +12,7 @@ import {IgETH} from "./interfaces/IgETH.sol";
 import {ERC1155, ERC1155Burnable, ERC1155PausableBurnableSupply} from "./helpers/ERC1155PausableBurnableSupply.sol";
 
 /**
- * @title gETH : Geode Finance Liquid Staking Derivatives
+ * @title gETH : Geodefi Liquid Staking Derivatives
  *
  * @dev gETH is chain-agnostic, meaning it can be used on any evm chain (given the correct name and symbol).
  *
