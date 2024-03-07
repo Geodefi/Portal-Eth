@@ -7,7 +7,7 @@ const func = async function (hre) {
     from: deployer,
     log: true,
     skipIfAlreadyDeployed: true,
-    args: ["Geode Staked Ether", "gETH", "https://api.geode.fi/geth"],
+    args: ["Geodefi Staked Ether", "gETH", "https://api.geode.fi/geth"],
   });
 };
 
