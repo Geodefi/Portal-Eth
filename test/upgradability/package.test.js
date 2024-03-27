@@ -17,7 +17,7 @@
 // const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 
 // const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
-// const WithdrawalContract = artifacts.require("WithdrawalContract");
+// const WithdrawalPackage = artifacts.require("WithdrawalPackage");
 // const LiquidityPool = artifacts.require("LiquidityPool");
 
 // contract("UpgradePackages", function (accounts) {
@@ -48,7 +48,7 @@
 
 //   const setupWCTest = deployments.createFixture(async (hre) => {
 //     // set WC as middleware
-//     const wc = await WithdrawalContract.new(gETHContract.address, portal.address);
+//     const wc = await WithdrawalPackage.new(gETHContract.address, portal.address);
 //     await portal.propose(wc.address, 10011, strToBytes("name"), DAY, { from: deployer });
 //     await portal.approveProposal(await generateId(strToBytes("name"), 10011), {
 //       from: deployer,
@@ -61,22 +61,22 @@
 //     });
 
 //     // upgrade the WC with proposal on portal
-//     await deployments.fixture(["WithdrawalContract"]);
+//     await deployments.fixture(["WithdrawalPackage"]);
 //     await upgradePackage(hre, portal, "V2_0_Mock");
 
 //     // pull the upgrade
-//     const WCAddress = await portal.readAddress(tokenId, strToBytes32("withdrawalContract"));
-//     const poolWC = await ethers.getContractAt("WithdrawalContract", WCAddress);
+//     const WCAddress = await portal.readAddress(tokenId, strToBytes32("withdrawalPackage"));
+//     const poolWC = await ethers.getContractAt("WithdrawalPackage", WCAddress);
 //     await poolWC.connect(poolOwnerSigner).pullUpgrade();
 
 //     // set upgraded WC and initialize
-//     upgradedPoolWC = await ethers.getContractAt("WithdrawalContractV2_0_Mock", WCAddress);
+//     upgradedPoolWC = await ethers.getContractAt("WithdrawalPackageV2_0_Mock", WCAddress);
 //     await upgradedPoolWC.connect(poolOwnerSigner).initializeV2_0_Mock(8);
 //   });
 
 //   const setupLPTest = deployments.createFixture(async (hre) => {
 //     // set WC as middleware
-//     const wc = await WithdrawalContract.new(gETHContract.address, portal.address);
+//     const wc = await WithdrawalPackage.new(gETHContract.address, portal.address);
 //     await portal.propose(wc.address, 10011, strToBytes("name"), DAY, { from: deployer });
 //     await portal.approveProposal(await generateId(strToBytes("name"), 10011), {
 //       from: deployer,
@@ -133,8 +133,8 @@
 //     await LiquidityPool.link(this.GML);
 //     await LiquidityPool.link(this.LML);
 
-//     await WithdrawalContract.link(this.GML);
-//     await WithdrawalContract.link(this.WML);
+//     await WithdrawalPackage.link(this.GML);
+//     await WithdrawalPackage.link(this.WML);
 
 //     tokenId = await generateId(strToBytes("name"), 5);
 //   });

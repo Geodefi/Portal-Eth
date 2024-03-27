@@ -8,7 +8,7 @@ import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
 // internal - interfaces
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {IWithdrawalModule} from "../interfaces/modules/IWithdrawalModule.sol";
-import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
+import {IWithdrawalPackage} from "../interfaces/packages/IWithdrawalPackage.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
 // internal - structs
 import {GeodeModuleStorage} from "../modules/GeodeModule/structs/storage.sol";
@@ -19,7 +19,7 @@ import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/Withd
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
-contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModule {
+contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule {
   using WML for WithdrawalModuleStorage;
   /**
    * @custom:section                           ** VARIABLES **
@@ -71,10 +71,10 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
     bytes calldata versionName,
     bytes calldata data
   ) public virtual override initializer {
-    __WithdrawalContract_init(poolId, poolOwner, versionName);
+    __WithdrawalPackage_init(poolId, poolOwner, versionName);
   }
 
-  function __WithdrawalContract_init(
+  function __WithdrawalPackage_init(
     uint256 poolId,
     address poolOwner,
     bytes calldata versionName
@@ -87,10 +87,10 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
       versionName
     );
     __WithdrawalModule_init(gETHPos, portalPos, poolId);
-    __WithdrawalContract_init_unchained();
+    __WithdrawalPackage_init_unchained();
   }
 
-  function __WithdrawalContract_init_unchained() internal onlyInitializing {}
+  function __WithdrawalPackage_init_unchained() internal onlyInitializing {}
 
   function getPoolId() public view override returns (uint256) {
     return _getWithdrawalModuleStorage().POOL_ID;

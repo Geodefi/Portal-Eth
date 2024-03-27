@@ -25,7 +25,7 @@ import {Validator} from "./utils.sol";
  * @param BALANCE_MERKLE_ROOT merkle root of the balances and other validator related data, useful on withdrawals, updated by the Holy Oracle.
  * @param validators pubkey => Validator, contains all the data about proposed, alienated, active, exit-called and fully exited validators.
  * @param packages TYPE => version id, pointing to the latest versions of the given package.
- * * Like default Withdrawal Contract version.
+ * * Like default Withdrawal Package version.
  * @param middlewares TYPE => version id => isAllowed, useful to check if given version of the middleware can be used.
  * * Like all the whitelisted gETHMiddlewares.
  * @param fees TYPE->PERCENTAGE, we can set a fee for any defined TYPE then use it in related operations.

@@ -16,7 +16,7 @@ const StakeModuleLib = artifacts.require("StakeModuleLib");
 const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 
 const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
-const WithdrawalContract = artifacts.require("WithdrawalContract");
+const WithdrawalPackage = artifacts.require("WithdrawalPackage");
 const LiquidityPool = artifacts.require("LiquidityPool");
 
 contract("LiquidityPool", function (accounts) {
@@ -41,8 +41,8 @@ contract("LiquidityPool", function (accounts) {
     await LiquidityPool.link(this.GML);
     await LiquidityPool.link(this.LML);
 
-    await WithdrawalContract.link(this.GML);
-    await WithdrawalContract.link(this.WML);
+    await WithdrawalPackage.link(this.GML);
+    await WithdrawalPackage.link(this.WML);
 
     tokenId = await generateId(strToBytes("name"), 5);
   });
@@ -60,7 +60,7 @@ contract("LiquidityPool", function (accounts) {
     await this.gETH.transferMiddlewareManagerRole(this.portal.address);
     await this.gETH.transferOracleRole(this.portal.address);
 
-    const wc = await WithdrawalContract.new(this.gETH.address, this.portal.address);
+    const wc = await WithdrawalPackage.new(this.gETH.address, this.portal.address);
 
     await this.portal.propose(wc.address, 10011, strToBytes("name"), DAY, { from: deployer });
     await this.portal.approveProposal(await generateId(strToBytes("name"), 10011), {

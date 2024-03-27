@@ -22,7 +22,7 @@ const OracleExtensionLibMock = artifacts.require("$OracleExtensionLibMock");
 const GeodeModuleLib = artifacts.require("GeodeModuleLib");
 const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
-const WithdrawalContract = artifacts.require("WithdrawalContract");
+const WithdrawalPackage = artifacts.require("WithdrawalPackage");
 
 const pubkeys = [
   "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a",
@@ -75,9 +75,9 @@ contract("OracleExtensionLib", function (accounts) {
   let poolIds = [];
 
   const setWithdrawalPackage = async function () {
-    const wc = await WithdrawalContract.new(this.gETH.address, this.contract.address);
+    const wc = await WithdrawalPackage.new(this.gETH.address, this.contract.address);
     const packageType = new BN(10011);
-    const packageName = "WithdrawalContract";
+    const packageName = "WithdrawalPackage";
 
     const withdrawalPackageId = await this.contract.generateId(packageName, packageType);
 
@@ -87,7 +87,7 @@ contract("OracleExtensionLib", function (accounts) {
     await this.contract.$writeBytes(
       withdrawalPackageId,
       strToBytes32("NAME"),
-      strToBytes("WithdrawalContract")
+      strToBytes("WithdrawalPackage")
     );
 
     await this.contract.$set_package(packageType, withdrawalPackageId);
@@ -161,8 +161,8 @@ contract("OracleExtensionLib", function (accounts) {
     await OracleExtensionLibMock.link(OEL);
     await OracleExtensionLibMock.link(IEL);
 
-    await WithdrawalContract.link(GML);
-    await WithdrawalContract.link(WML);
+    await WithdrawalPackage.link(GML);
+    await WithdrawalPackage.link(WML);
 
     this.setWithdrawalPackage = setWithdrawalPackage;
     this.createOperator = createOperator;

@@ -3,7 +3,7 @@ pragma solidity =0.8.20;
 
 /**
  * @param beaconBalance  Beacon Chain balance of the validator (current).
- * @param withdrawnBalance  Representing any Ether sent from Beacon Chain to a withdrawal contract (cumulative).
+ * @param withdrawnBalance  Representing any Ether sent from Beacon Chain to a withdrawal package (cumulative).
  * @param poll size of the requests that specifically voted for given validator to exit. as in gETH.
  **/
 struct ValidatorData {

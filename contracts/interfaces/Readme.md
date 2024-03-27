@@ -47,6 +47,6 @@ The directory structure within the `/interfaces` directory corresponds to the `/
 - **Packages**:
   - [**IGeodePackage**](./packages/IGeodePackage.sol): As packages follow the Limited Upgradability Pattern, all packages except Portal are _GeodePackages_ and should inherit IGeodePackage instead of IGeodeModule. Inherits IGeodeModule with additional functions.
   - [**ILiquidityPool**](./packages/ILiquidityPool.sol): Inherits IGeodePackage and ILiquidityModule.
-  - [**IWithdrawalContract**](./packages/IWithdrawalContract.sol): **_To be implemented._**
+  - [**IWithdrawalPackage**](./packages/IWithdrawalPackage.sol): **_To be implemented._**
 - [**IgETH**](./IgETH.sol): Inherits IERC1155PausableBurnableSupply. Inherited by [gETH](../gETH.sol) contract.
 - [**IPortal**](./IPortal.sol):Inherits IGeodeModule and IStakeModule. Inherited by [Portal](../Portal.sol) contract.

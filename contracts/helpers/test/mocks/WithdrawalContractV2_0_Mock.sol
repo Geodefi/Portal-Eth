@@ -10,7 +10,7 @@ pragma solidity =0.8.20;
 // // interfaces
 // import {IPortal} from "../../../interfaces/IPortal.sol";
 // import {IGeodeModule} from "../../../interfaces/modules/IGeodeModule.sol";
-// import {IWithdrawalContractV2_0_Mock} from "./interfaces/IWithdrawalContractV2_0_Mock.sol";
+// import {IWithdrawalPackageV2_0_Mock} from "./interfaces/IWithdrawalPackageV2_0_Mock.sol";
 // import {IWithdrawalModule} from "../../../interfaces/modules/IWithdrawalModule.sol";
 // // libraries
 // import {WithdrawalModuleLib as WML} from "../../../modules/WithdrawalModule/libs/WithdrawalModuleLib.sol";
@@ -18,8 +18,8 @@ pragma solidity =0.8.20;
 // import {GeodeModule} from "../../../modules/GeodeModule/GeodeModule.sol";
 // import {WithdrawalModule} from "../../../modules/WithdrawalModule/WithdrawalModule.sol";
 
-// contract WithdrawalContractV2_0_Mock is
-//   IWithdrawalContractV2_0_Mock,
+// contract WithdrawalPackageV2_0_Mock is
+//   IWithdrawalPackageV2_0_Mock,
 //   GeodeModule,
 //   WithdrawalModule
 // {
@@ -76,14 +76,14 @@ pragma solidity =0.8.20;
 //     bytes calldata versionName,
 //     bytes calldata data
 //   ) public virtual override initializer {
-//     __WithdrawalContract_init(poolId, poolOwner, versionName);
+//     __WithdrawalPackage_init(poolId, poolOwner, versionName);
 //   }
 
 //   function initializeV2_0_Mock(uint256 _freshSlot) public virtual override reinitializer(2) {
 //     setFreshSlot(_freshSlot);
 //   }
 
-//   function __WithdrawalContract_init(
+//   function __WithdrawalPackage_init(
 //     uint256 poolId,
 //     address poolOwner,
 //     bytes calldata versionName
@@ -96,10 +96,10 @@ pragma solidity =0.8.20;
 //       versionName
 //     );
 //     __WithdrawalModule_init(gETHPos, portalPos, poolId);
-//     __WithdrawalContract_init_unchained();
+//     __WithdrawalPackage_init_unchained();
 //   }
 
-//   function __WithdrawalContract_init_unchained() internal onlyInitializing {}
+//   function __WithdrawalPackage_init_unchained() internal onlyInitializing {}
 
 //   function setFreshSlot(uint256 value) public virtual override {
 //     freshSlot = value;

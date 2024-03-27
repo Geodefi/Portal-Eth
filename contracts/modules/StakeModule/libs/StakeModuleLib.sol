@@ -55,7 +55,7 @@ import {DepositContractLib as DCL} from "./DepositContractLib.sol";
  * * Can utilize powers of packages and middlewares such as Bound Liquidity Pools, gETHMiddlewares etc.
  * * Can be public or private, can use a whitelist if private.
  * * Can utilize maintainers for validator distribution on Operator Marketplace.
- * * Uses a Withdrawal Contract to be given as withdrawalCredential on validator creation,
+ * * Uses a Withdrawal Package to be given as withdrawalCredential on validator creation,
  * * accruing rewards and keeping Staked Ether safe and isolated.
  *
  * @dev Packages:
@@ -64,12 +64,12 @@ import {DepositContractLib as DCL} from "./DepositContractLib.sol";
  * Can be upgraded by a dual governance, via pullUpgrade.
  * * A Package's dual governance consists of Portal(governance) and the pool owner(senate).
  *
- * Type 10011 : Withdrawal Contract
+ * Type 10011 : Withdrawal Package
  * * Mandatory.
  * * CONTROLLER is the implementation contract position (always)
  * * Version Release Requires the approval of Senate
  * * Upgrading to a new version is optional for pool owners.
- * * * Staking Pools are in "Isolation Mode" until their Withdrawal Contract is upgraded.
+ * * * Staking Pools are in "Isolation Mode" until their Withdrawal Package is upgraded.
  * * * Meaning, no more Depositing or Validator Proposal can happen.
  * * Custodian of the validator funds after creation, including any type of rewards and fees.
  *
@@ -524,7 +524,7 @@ library StakeModuleLib {
 
   /**
    * @notice external function to increase the internal wallet balance
-   * @dev anyone can increase the balance directly, useful for withdrawalContracts and fees etc.
+   * @dev anyone can increase the balance directly, useful for withdrawalPackages and fees etc.
    */
   function increaseWalletBalance(
     DataStoreModuleStorage storage DATASTORE,
@@ -896,7 +896,7 @@ library StakeModuleLib {
    * @notice checks if staking is allowed in given staking pool
    * @notice staking is not allowed if:
    * 1. Price is not valid
-   * 2. WithdrawalContract is in Isolation Mode, can have many reasons
+   * 2. WithdrawalPackage is in Isolation Mode, can have many reasons
    */
   function isMintingAllowed(
     StakeModuleStorage storage self,
@@ -905,7 +905,7 @@ library StakeModuleLib {
   ) public view returns (bool) {
     return
       (isPriceValid(self, poolId)) &&
-      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalContract)));
+      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalPackage)));
   }
 
   /**
@@ -1103,8 +1103,8 @@ library StakeModuleLib {
     _authenticate(DATASTORE, operatorId, false, true, [true, false]);
     _authenticate(DATASTORE, poolId, false, false, [false, true]);
     require(
-      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalContract))),
-      "SML:withdrawalContract is isolated"
+      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalPackage))),
+      "SML:withdrawalPackage is isolated"
     );
 
     uint256 pkLen = pubkeys.length;
@@ -1304,8 +1304,8 @@ library StakeModuleLib {
    * @notice Notifies the node operator with ExitRequest event
    * @dev Prevents the request if validator is still within the MIN_VALIDATOR_PERIOD
    * @dev Only the active validators can be called for an exit
-   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
-   * @dev fails in case the tx is submitted without a secure medium, withdrawal contract of the correct pool
+   * @dev Can only be called by the withdrawalPackage of the pool given validator belongs to.
+   * @dev fails in case the tx is submitted without a secure medium, withdrawal package of the correct pool
    * @return true if operation is successful, false if early exit.
    */
   function requestExit(
@@ -1319,8 +1319,8 @@ library StakeModuleLib {
     }
 
     require(
-      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is not withdrawal contract"
+      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalPackage),
+      "SML:sender is not withdrawal package"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
     require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "SML:not an active validator");
@@ -1334,7 +1334,7 @@ library StakeModuleLib {
    * @notice Finalizes the exit process for a validator.
    * @dev Strongly advised to be called right after the exiting process is over.
    * @dev Operators can exit at any time they want.
-   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   * @dev Can only be called by the withdrawalPackage of the pool given validator belongs to.
    */
   function finalizeExit(
     StakeModuleStorage storage self,
@@ -1343,8 +1343,8 @@ library StakeModuleLib {
     bytes calldata pk
   ) external {
     require(
-      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is not withdrawal contract"
+      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalPackage),
+      "SML:sender is not withdrawal package"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
 

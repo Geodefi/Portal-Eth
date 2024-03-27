@@ -31,7 +31,7 @@ import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
  * @dev review: StakeModuleLib for base staking logic.
  *
  * @dev This library utilizes the '_authenticate' function on the external deployLiquidityPool,
- *  Compared to gETHMiddleware(optional) and WithdrawalContract(mandatory), LP be activated after
+ *  Compared to gETHMiddleware(optional) and WithdrawalPackage(mandatory), LP be activated after
  * the pool initiation.
  *
  * @dev This is an external library, requires deployment.
@@ -154,8 +154,8 @@ library InitiatorExtensionLib {
     SML._setMaintainer(DATASTORE, poolId, maintainer);
     SML._setMaintenanceFee(DATASTORE, poolId, fee);
 
-    // deploy a withdrawal Contract - mandatory
-    _deployWithdrawalContract(self, DATASTORE, poolId);
+    // deploy a withdrawal package - mandatory
+    _deployWithdrawalPackage(self, DATASTORE, poolId);
 
     if (config[0]) {
       // set pool to private
@@ -271,16 +271,16 @@ library InitiatorExtensionLib {
   }
 
   /**
-   * @custom:subsection                        ** WITHDRAWAL CONTRACT **
+   * @custom:subsection                        ** WITHDRAWAL PACKAGE **
    *
    * @custom:visibility -> internal
    */
 
   /**
-   * @notice Deploys a Withdrawal Contract that will be used as a withdrawal credential on validator creation
-   * @dev every pool requires a Withdrawal Contract, thus this function is only used by the initiator
+   * @notice Deploys a Withdrawal Package that will be used as a withdrawal credential on validator creation
+   * @dev every pool requires a Withdrawal Package, thus this function is only used by the initiator
    */
-  function _deployWithdrawalContract(
+  function _deployWithdrawalPackage(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 _poolId
@@ -293,7 +293,7 @@ library InitiatorExtensionLib {
       bytes("")
     );
 
-    DATASTORE.writeAddress(_poolId, rks.withdrawalContract, wp);
+    DATASTORE.writeAddress(_poolId, rks.withdrawalPackage, wp);
     DATASTORE.writeBytes(_poolId, rks.withdrawalCredential, DCL.addressToWC(wp));
   }
 
@@ -307,7 +307,7 @@ library InitiatorExtensionLib {
   /**
    * @notice deploys a bound liquidity pool for a staking pool.
    * @dev gives full allowance to the pool (should not be a problem as Portal only temporarily holds gETH)
-   * @dev unlike withdrawal Contract, a controller can deploy a liquidity pool after initiation as well
+   * @dev unlike withdrawal package, a controller can deploy a liquidity pool after initiation as well
    * @dev _package_data of a liquidity pool is only the staking pool's name, used on LPToken.
    */
   function _deployLiquidityPool(

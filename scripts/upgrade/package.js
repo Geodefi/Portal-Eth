@@ -11,14 +11,14 @@ module.exports.upgradePackage = async function (hre, portal, version = "V1_0") {
     const { ethers, upgrades, deployments } = hre;
     const { get } = deployments;
 
-    const oldWCFactory = await ethers.getContractFactory("WithdrawalContract", {
+    const oldWCFactory = await ethers.getContractFactory("WithdrawalPackage", {
       libraries: {
         GeodeModuleLib: (await get("GeodeModuleLib")).address,
         WithdrawalModuleLib: (await get("WithdrawalModuleLib")).address,
       },
     });
 
-    const WCFactory = await ethers.getContractFactory("WithdrawalContract" + version, {
+    const WCFactory = await ethers.getContractFactory("WithdrawalPackage" + version, {
       libraries: {
         GeodeModuleLib: (await get("GeodeModuleLib")).address,
         WithdrawalModuleLib: (await get("WithdrawalModuleLib")).address,
@@ -27,7 +27,7 @@ module.exports.upgradePackage = async function (hre, portal, version = "V1_0") {
 
     const currentWC = await upgrades.forceImport(
       (
-        await get("WithdrawalContract")
+        await get("WithdrawalPackage")
       ).address,
       oldWCFactory,
       {

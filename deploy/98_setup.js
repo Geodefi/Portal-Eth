@@ -40,25 +40,25 @@ const func = async (hre) => {
     }
     console.log("Portal is now gETH minter\n");
 
-    // WITHDRAWAL CONTRACT
-    const wcType = 10011;
+    // WITHDRAWAL PACKAGE
+    const wpType = 10011;
 
-    const wcAddress = (await get("WithdrawalContract")).address;
-    const expectedWCPVersion = (await generateId(strToBytes("v1"), wcType)).toString();
-    if ((await read("Portal", "getPackageVersion", wcType)).toString() === expectedWCPVersion) {
-      console.log("Withdrawal Contract Package is ALREADY released\n");
+    const wpAddress = (await get("WithdrawalPackage")).address;
+    const expectedWPVersion = (await generateId(strToBytes("v1"), wcType)).toString();
+    if ((await read("Portal", "getPackageVersion", wpType)).toString() === expectedWPVersion) {
+      console.log("Withdrawal Package is ALREADY released\n");
     } else {
       await execute(
         "Portal",
         { from: deployer, log: true },
         "propose",
-        wcAddress,
-        wcType,
+        wpAddress,
+        wpType,
         strToBytes("v1"),
         DAY
       );
-      await execute("Portal", { from: deployer, log: true }, "approveProposal", expectedWCPVersion);
-      console.log("Withdrawal Contract Package is released\n");
+      await execute("Portal", { from: deployer, log: true }, "approveProposal", expectedWPVersion);
+      console.log("Withdrawal Package is released\n");
     }
 
     // LIQUIDITY POOL

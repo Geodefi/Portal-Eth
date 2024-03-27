@@ -24,7 +24,7 @@ const StakeModuleLibMock = artifacts.require("$StakeModuleLibMock");
 
 const gETH = artifacts.require("gETH");
 
-const WithdrawalContract = artifacts.require("WithdrawalContract");
+const WithdrawalPackage = artifacts.require("WithdrawalPackage");
 
 contract("WithdrawalModuleLib", function (accounts) {
   const [
@@ -45,9 +45,9 @@ contract("WithdrawalModuleLib", function (accounts) {
   const MONOPOLY_THRESHOLD = new BN("50000");
 
   const setWithdrawalPackage = async function () {
-    const wc = await WithdrawalContract.new(this.gETH.address, this.SMLM.address);
+    const wc = await WithdrawalPackage.new(this.gETH.address, this.SMLM.address);
     const packageType = new BN(10011);
-    const packageName = "WithdrawalContract";
+    const packageName = "WithdrawalPackage";
 
     const withdrawalPackageId = await this.SMLM.generateId(packageName, packageType);
 
@@ -57,7 +57,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     await this.SMLM.$writeBytes(
       withdrawalPackageId,
       strToBytes32("NAME"),
-      strToBytes("WithdrawalContract")
+      strToBytes("WithdrawalPackage")
     );
 
     await this.SMLM.$set_package(packageType, withdrawalPackageId);
@@ -101,8 +101,8 @@ contract("WithdrawalModuleLib", function (accounts) {
     const OEL = await OracleExtensionLib.new();
     const WML = await WithdrawalModuleLib.new();
 
-    await WithdrawalContract.link(GML);
-    await WithdrawalContract.link(WML);
+    await WithdrawalPackage.link(GML);
+    await WithdrawalPackage.link(WML);
 
     await StakeModuleLibMock.link(SML);
     await StakeModuleLibMock.link(OEL);
@@ -126,10 +126,7 @@ contract("WithdrawalModuleLib", function (accounts) {
     await this.gETH.transferMiddlewareManagerRole(this.SMLM.address, { from: deployer });
     await this.gETH.transferOracleRole(this.SMLM.address, { from: deployer });
 
-    this.WithdrawalContract = await WithdrawalContract.new(
-      this.gETH.address,
-      this.contract.address
-    );
+    this.WithdrawalPackage = await WithdrawalPackage.new(this.gETH.address, this.contract.address);
 
     await this.setWithdrawalPackage();
     this.poolId = await this.createPool("perfectPool");
@@ -886,10 +883,10 @@ contract("WithdrawalModuleLib", function (accounts) {
       let ts;
 
       beforeEach(async function () {
-        // set mock contract as withdrawalContract
+        // set mock contract as withdrawalPackage
         await this.SMLM.$writeAddress(
           this.poolId,
-          strToBytes32("withdrawalContract"),
+          strToBytes32("withdrawalPackage"),
           this.contract.address
         );
 
@@ -963,10 +960,10 @@ contract("WithdrawalModuleLib", function (accounts) {
         });
         ts = new BN((await getReceiptTimestamp(tx)).toString());
 
-        // set mock contract as withdrawalContract
+        // set mock contract as withdrawalPackage
         await this.SMLM.$writeAddress(
           this.poolId,
-          strToBytes32("withdrawalContract"),
+          strToBytes32("withdrawalPackage"),
           this.contract.address
         );
       });
@@ -1172,10 +1169,10 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        // set mock contract as withdrawalContract
+        // set mock contract as withdrawalPackage
         await this.SMLM.$writeAddress(
           this.poolId,
-          strToBytes32("withdrawalContract"),
+          strToBytes32("withdrawalPackage"),
           this.contract.address
         );
 
@@ -1258,10 +1255,10 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        // set mock contract as withdrawalContract
+        // set mock contract as withdrawalPackage
         await this.SMLM.$writeAddress(
           this.poolId,
-          strToBytes32("withdrawalContract"),
+          strToBytes32("withdrawalPackage"),
           this.contract.address
         );
 
@@ -1462,10 +1459,10 @@ contract("WithdrawalModuleLib", function (accounts) {
         const delay = DAY.muln(91);
         await setTimestamp(ts.add(delay).toNumber());
 
-        // set mock contract as withdrawalContract
+        // set mock contract as withdrawalPackage
         await this.SMLM.$writeAddress(
           this.poolId,
-          strToBytes32("withdrawalContract"),
+          strToBytes32("withdrawalPackage"),
           this.contract.address
         );
 
@@ -1590,10 +1587,10 @@ contract("WithdrawalModuleLib", function (accounts) {
         const delay = DAY.muln(91);
         await setTimestamp(ts.add(delay).toNumber());
 
-        // set mock contract as withdrawalContract
+        // set mock contract as withdrawalPackage
         await this.SMLM.$writeAddress(
           otherPoolId,
-          strToBytes32("withdrawalContract"),
+          strToBytes32("withdrawalPackage"),
           this.contract.address
         );
 

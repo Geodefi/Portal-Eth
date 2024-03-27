@@ -7,7 +7,7 @@ import {IgETH} from "../../../interfaces/IgETH.sol";
 import {Queue, Request, ValidatorData} from "./utils.sol";
 
 /**
- * @notice Storage struct for the Withdrawal Contract enabling the Queued Withdrawal Requests with instant run-off validator exit elections
+ * @notice Storage struct for the Withdrawal Package enabling the Queued Withdrawal Requests with instant run-off validator exit elections
  * @param gETH constant, ERC1155, all Geode Staking Derivatives.
  * @param PORTAL constant, address of the PORTAL.
  * @param POOL_ID constant, ID of the pool, also the token ID of represented gETH.
