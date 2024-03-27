@@ -51,7 +51,7 @@ interface IStakeModule is IDataStoreModule {
     address maintainer
   ) external payable;
 
-  function deployLiquidityPool(uint256 poolId) external;
+  function deployLiquidityPackage(uint256 poolId) external;
 
   function initiatePool(
     uint256 fee,

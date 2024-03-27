@@ -83,9 +83,9 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type address
-   * @custom:definition bound liquidity pool of a pool
+   * @custom:definition bound liquidity package of a staking pool
    */
-  bytes32 internal constant liquidityPool = "liquidityPool";
+  bytes32 internal constant liquidityPackage = "liquidityPackage";
 
   /**
    * @custom:type address

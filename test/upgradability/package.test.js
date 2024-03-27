@@ -2,7 +2,7 @@
 
 // const { BN } = require("@openzeppelin/test-helpers");
 // const { strToBytes, strToBytes32, generateId, DAY } = require("../../utils");
-// const { upgradePackage, upgradeLPPackage } = require("../../scripts/upgrade/package");
+// const { upgradePackage, upgradeLiquidityPackage } = require("../../scripts/upgrade/package");
 
 // const ERC1967Proxy = artifacts.require("ERC1967Proxy");
 
@@ -18,7 +18,7 @@
 
 // const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
 // const WithdrawalPackage = artifacts.require("WithdrawalPackage");
-// const LiquidityPool = artifacts.require("LiquidityPool");
+// const LiquidityPackage = artifacts.require("LiquidityPackage");
 
 // contract("UpgradePackages", function (accounts) {
 //   const [deployer, poolOwner] = accounts;
@@ -84,7 +84,7 @@
 
 //     // set LP as middleware
 //     const lpImp = await LPToken.new();
-//     const lp = await LiquidityPool.new(gETHContract.address, portal.address, lpImp.address);
+//     const lp = await LiquidityPackage.new(gETHContract.address, portal.address, lpImp.address);
 //     await portal.propose(lp.address, 10021, strToBytes("name"), DAY, {
 //       from: deployer,
 //     });
@@ -99,19 +99,19 @@
 //     });
 
 //     // deploy LP for pool
-//     await portal.deployLiquidityPool(tokenId, { from: poolOwner });
+//     await portal.deployLiquidityPackage(tokenId, { from: poolOwner });
 
 //     // upgrade the LP with proposal on portal
-//     await deployments.fixture(["LiquidityPool"]);
-//     await upgradeLPPackage(hre, portal, "V2_0_Mock");
+//     await deployments.fixture(["LiquidityPackage"]);
+//     await upgradeLiquidityPackage(hre, portal, "V2_0_Mock");
 
 //     // pull the upgrade
-//     const LPAddress = await portal.readAddress(tokenId, strToBytes32("liquidityPool"));
-//     const poolLP = await ethers.getContractAt("LiquidityPool", LPAddress);
+//     const LPAddress = await portal.readAddress(tokenId, strToBytes32("liquidityPackage"));
+//     const poolLP = await ethers.getContractAt("LiquidityPackage", LPAddress);
 //     await poolLP.connect(poolOwnerSigner).pullUpgrade();
 
 //     // set upgraded WC and initialize
-//     upgradedPoolLP = await ethers.getContractAt("LiquidityPoolV2_0_Mock", LPAddress);
+//     upgradedPoolLP = await ethers.getContractAt("LiquidityPackageV2_0_Mock", LPAddress);
 //     await upgradedPoolLP.connect(poolOwnerSigner).initializeV2_0_Mock(8);
 //   });
 
@@ -130,8 +130,8 @@
 //     await Portal.link(this.OEL);
 //     await Portal.link(this.IEL);
 
-//     await LiquidityPool.link(this.GML);
-//     await LiquidityPool.link(this.LML);
+//     await LiquidityPackage.link(this.GML);
+//     await LiquidityPackage.link(this.LML);
 
 //     await WithdrawalPackage.link(this.GML);
 //     await WithdrawalPackage.link(this.WML);

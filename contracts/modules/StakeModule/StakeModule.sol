@@ -291,12 +291,12 @@ abstract contract StakeModule is
   }
 
   /**
-   * @custom:subsection                           ** BOUND LIQUIDITY POOL **
+   * @custom:subsection                           ** BOUND LIQUIDITY PACKAGE **
    */
 
-  function deployLiquidityPool(uint256 poolId) external virtual override whenNotPaused {
+  function deployLiquidityPackage(uint256 poolId) external virtual override whenNotPaused {
     StakeModuleStorage storage $ = _getStakeModuleStorage();
-    $.deployLiquidityPool(_getDataStoreModuleStorage(), poolId);
+    $.deployLiquidityPackage(_getDataStoreModuleStorage(), poolId);
   }
 
   /**

@@ -25,12 +25,12 @@ import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
  * @notice This library is responsible from:
  * * 1. Node Operator Initiator for permissioned IDs
  * * 2. Configurable Staking Pools Initiator and its helpers.
- * * 3. Bound Liquidity Pool deployment after pool initiation.
+ * * 3. Bound Liquidity Package deployment after pool initiation.
  *
  * @dev review: DataStoreModule for the id based isolated storage logic.
  * @dev review: StakeModuleLib for base staking logic.
  *
- * @dev This library utilizes the '_authenticate' function on the external deployLiquidityPool,
+ * @dev This library utilizes the '_authenticate' function on the external deployLiquidityPackage,
  *  Compared to gETHMiddleware(optional) and WithdrawalPackage(mandatory), LP be activated after
  * the pool initiation.
  *
@@ -124,7 +124,7 @@ library InitiatorExtensionLib {
    * @param maintainer an address that automates daily operations, a script, a contract... not so critical.
    * @param name is utilized while generating an ID for the Pool, similar to any other ID generation.
    * @param middleware_data middlewares might require additional data on initialization; like name, symbol, etc.
-   * @param config array(3)= [private(true) or public(false), deploy a middleware(if true), deploy liquidity pool(if true)]
+   * @param config array(3)= [private(true) or public(false), deploy a middleware(if true), deploy liquidity package(if true)]
    * @dev checking only initiated is enough to validate that ID is not used. no need to check TYPE, CONTROLLER etc.
    * @dev requires INITIATION_DEPOSIT worth of funds (currently 1 validator) to be deposited on initiation, prevent sybil attacks.
    */
@@ -166,8 +166,8 @@ library InitiatorExtensionLib {
       _deploygETHMiddleware(self, DATASTORE, poolId, middlewareVersion, middleware_data);
     }
     if (config[2]) {
-      // deploy a bound liquidity pool - optional
-      _deployLiquidityPool(self, DATASTORE, poolId);
+      // deploy a bound liquidity package - optional
+      _deployLiquidityPackage(self, DATASTORE, poolId);
     }
 
     // initially 1 ETHER = 1 ETHER
@@ -289,7 +289,7 @@ library InitiatorExtensionLib {
       self,
       DATASTORE,
       _poolId,
-      ID_TYPE.PACKAGE_WITHDRAWAL_CONTRACT,
+      ID_TYPE.PACKAGE_WITHDRAWAL,
       bytes("")
     );
 
@@ -298,19 +298,19 @@ library InitiatorExtensionLib {
   }
 
   /**
-   * @custom:subsection                        ** BOUND LIQUIDITY POOL **
+   * @custom:subsection                        ** BOUND LIQUIDITY PACKAGE **
    */
 
   /**
    * @custom:visibility -> internal
    */
   /**
-   * @notice deploys a bound liquidity pool for a staking pool.
+   * @notice deploys a bound liquidity package for a staking pool.
    * @dev gives full allowance to the pool (should not be a problem as Portal only temporarily holds gETH)
-   * @dev unlike withdrawal package, a controller can deploy a liquidity pool after initiation as well
-   * @dev _package_data of a liquidity pool is only the staking pool's name, used on LPToken.
+   * @dev unlike withdrawal package, a controller can deploy a liquidity package after initiation as well
+   * @dev _package_data of a liquidity package is only the staking pool's name, used on LPToken.
    */
-  function _deployLiquidityPool(
+  function _deployLiquidityPackage(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 poolId
@@ -319,11 +319,11 @@ library InitiatorExtensionLib {
       self,
       DATASTORE,
       poolId,
-      ID_TYPE.PACKAGE_LIQUIDITY_POOL,
+      ID_TYPE.PACKAGE_LIQUIDITY,
       DATASTORE.readBytes(poolId, rks.NAME)
     );
 
-    DATASTORE.writeAddress(poolId, rks.liquidityPool, lp);
+    DATASTORE.writeAddress(poolId, rks.liquidityPackage, lp);
     // approve gETH so we can use it in buybacks
     self.gETH.setApprovalForAll(lp, true);
   }
@@ -332,16 +332,19 @@ library InitiatorExtensionLib {
    * @custom:visibility -> external
    */
   /**
-   * @notice allows pools to deploy a Liquidity Pool after initiation, if it does not have one.
+   * @notice allows pools to deploy a Liquidity Package after initiation, if it does not have one.
    */
-  function deployLiquidityPool(
+  function deployLiquidityPackage(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 poolId
   ) public {
     SML._authenticate(DATASTORE, poolId, true, false, [false, true]);
-    require(DATASTORE.readAddress(poolId, rks.liquidityPool) == address(0), "SML:already deployed");
+    require(
+      DATASTORE.readAddress(poolId, rks.liquidityPackage) == address(0),
+      "SML:already deployed"
+    );
 
-    _deployLiquidityPool(self, DATASTORE, poolId);
+    _deployLiquidityPackage(self, DATASTORE, poolId);
   }
 }

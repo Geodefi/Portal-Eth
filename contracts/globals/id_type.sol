@@ -22,7 +22,7 @@ pragma solidity =0.8.20;
  * * * Portal's dual governance consists of a Governance Token(governance) and a Senate(senate).
  * * * A Package's dual governance consists of Portal(governance) and the pool owner(senate).
  * * Built by utilizing the Modules.
- * * LiquidityPool and WithdrawalPackage are some examples.
+ * * LiquidityPackage and WithdrawalPackage are some examples.
  *
  * Middlewares: (hosted on StakeModuleLib)
  * * An ID can point to multiple Middleware version' implementation address at the same time.
@@ -64,11 +64,11 @@ library ID_TYPE {
   /// @notice TYPE 10001: Package: Portal is also a package
   uint256 internal constant PACKAGE_PORTAL = 10001;
 
-  /// @notice TYPE 10011: Package: The Withdrawal Credential Contract
-  uint256 internal constant PACKAGE_WITHDRAWAL_CONTRACT = 10011;
+  /// @notice TYPE 10011: Package: The Withdrawal Contract
+  uint256 internal constant PACKAGE_WITHDRAWAL = 10011;
 
   /// @notice TYPE 10021: Package: A Liquidity Pool
-  uint256 internal constant PACKAGE_LIQUIDITY_POOL = 10021;
+  uint256 internal constant PACKAGE_LIQUIDITY = 10021;
 
   /// @notice TYPE 19999: Limit: exclusive, maximum TYPE that will be percieved as a package
   uint256 internal constant LIMIT_MAX_PACKAGE = 19999;

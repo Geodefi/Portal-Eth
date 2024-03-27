@@ -1,8 +1,8 @@
 // const { ethers, deployments, upgrades } = require("hardhat");
 const { delay } = require("../../utils");
 
-const TYPE_PACKAGE_WITHDRAWAL_CONTRACT = 10011;
-const TYPE_LIQUIDITY_POOL_CONTRACT = 10021;
+const TYPE_PACKAGE_WITHDRAWAL = 10011;
+const TYPE_PACKAGE_LIQUIDITY = 10021;
 const MAX_PROPOSAL_DURATION = 2419200;
 const DELAY_SECONDS = 100;
 
@@ -46,11 +46,11 @@ module.exports.upgradePackage = async function (hre, portal, version = "V1_0") {
     await delay(DELAY_SECONDS);
 
     const _name = web3.utils.asciiToHex(version);
-    const _id = await portal.generateId(version, TYPE_PACKAGE_WITHDRAWAL_CONTRACT);
+    const _id = await portal.generateId(version, TYPE_PACKAGE_WITHDRAWAL);
 
     await portal.propose(
       newImplementationAddress,
-      TYPE_PACKAGE_WITHDRAWAL_CONTRACT,
+      TYPE_PACKAGE_WITHDRAWAL,
       _name,
       MAX_PROPOSAL_DURATION
     );
@@ -65,19 +65,19 @@ module.exports.upgradePackage = async function (hre, portal, version = "V1_0") {
   }
 };
 
-module.exports.upgradeLPPackage = async function (hre, portal, version = "V1_0") {
+module.exports.upgradeLiquidityPackage = async function (hre, portal, version = "V1_0") {
   try {
     const { ethers, upgrades, deployments } = hre;
     const { get } = deployments;
 
-    const oldLPFactory = await ethers.getContractFactory("LiquidityPool", {
+    const oldLPFactory = await ethers.getContractFactory("LiquidityPackage", {
       libraries: {
         GeodeModuleLib: (await get("GeodeModuleLib")).address,
         LiquidityModuleLib: (await get("LiquidityModuleLib")).address,
       },
     });
 
-    const LPFactory = await ethers.getContractFactory("LiquidityPool" + version, {
+    const LPFactory = await ethers.getContractFactory("LiquidityPackage" + version, {
       libraries: {
         GeodeModuleLib: (await get("GeodeModuleLib")).address,
         LiquidityModuleLib: (await get("LiquidityModuleLib")).address,
@@ -86,7 +86,7 @@ module.exports.upgradeLPPackage = async function (hre, portal, version = "V1_0")
 
     const currentLP = await upgrades.forceImport(
       (
-        await get("LiquidityPool")
+        await get("LiquidityPackage")
       ).address,
       oldLPFactory,
       {
@@ -113,11 +113,11 @@ module.exports.upgradeLPPackage = async function (hre, portal, version = "V1_0")
     await delay(DELAY_SECONDS);
 
     const _name = web3.utils.asciiToHex(version);
-    const _id = await portal.generateId(version, TYPE_LIQUIDITY_POOL_CONTRACT);
+    const _id = await portal.generateId(version, TYPE_PACKAGE_LIQUIDITY);
 
     await portal.propose(
       newImplementationAddress,
-      TYPE_LIQUIDITY_POOL_CONTRACT,
+      TYPE_PACKAGE_LIQUIDITY,
       _name,
       MAX_PROPOSAL_DURATION
     );

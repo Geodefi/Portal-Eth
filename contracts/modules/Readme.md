@@ -89,14 +89,14 @@ This process results in:
   - Setting the pool's maintainance fee.
   - Setting
   - Deploying the latest version of the Withdrawal Package.
-  - Optionally deploying the latest version of the Liquidity Pool Package.
+  - Optionally deploying the latest version of the Liquidity Package.
   - Optionally deploying a gETH Middleware that is bound to given ID, using the setting that is provided by the user:
     - Middleware ID among the allowed implementations of the gETH Middlewares.
     - Middleware data that contains the token name and symbol.
 
 Additionally a Pool CONTROLLER can change some settings after the initiation:
 
-- Deploying a Bound Liquidity Pool.
+- Deploying a Bound Liquidity Package.
 - Setting the Pool visibility and setting a whitelist if the pool is set to private.
 
 ### ID Management
@@ -115,7 +115,7 @@ Every Operator and Pool has an ID. Some parameters of the ID are open to the man
 Simply, stakers can deposit Ether and mint gETH.
 
 - Private pools only allow whitelisted addresses and pool CONTROLLER to deposit.
-- If Liquidity Pool is in isolation mode, Portal does not trust it and just mints.
+- If Liquidity Package is in isolation mode, Portal does not trust it and just mints.
 - If Withdrawal Pool is in isolation mode, Portal does not trust the Pool and does not mint at all.
 
 ### Validator Delegation

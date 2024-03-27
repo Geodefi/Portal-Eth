@@ -41,7 +41,7 @@ pragma solidity =0.8.20;
 //    */
 
 //   modifier onlyOwner() {
-//     require(msg.sender == GEODE.SENATE, "WCP:sender not owner");
+//     require(msg.sender == GEODE.SENATE, "WP:sender not owner");
 //     _;
 //   }
 
@@ -57,8 +57,8 @@ pragma solidity =0.8.20;
 //    * and fetch when needed on initialization.
 //    */
 //   constructor(address _gETHPos, address _portalPos) {
-//     require(_gETHPos != address(0), "WCP:_gETHPos cannot be zero");
-//     require(_portalPos != address(0), "WCP:_portalPos cannot be zero");
+//     require(_gETHPos != address(0), "WP:_gETHPos cannot be zero");
+//     require(_portalPos != address(0), "WP:_portalPos cannot be zero");
 
 //     gETHPos = _gETHPos;
 //     portalPos = _portalPos;
@@ -92,7 +92,7 @@ pragma solidity =0.8.20;
 //       portalPos,
 //       poolOwner,
 //       type(uint256).max,
-//       ID_TYPE.PACKAGE_WITHDRAWAL_CONTRACT,
+//       ID_TYPE.PACKAGE_WITHDRAWAL,
 //       versionName
 //     );
 //     __WithdrawalModule_init(gETHPos, portalPos, poolId);
@@ -170,8 +170,8 @@ pragma solidity =0.8.20;
 //    * @dev IGeodePackage override
 //    */
 //   function pullUpgrade() external virtual override onlyOwner {
-//     require(!(getPortal().isolationMode()), "WCP:Portal is isolated");
-//     require(getProposedVersion() != getContractVersion(), "WCP:no upgrades");
+//     require(!(getPortal().isolationMode()), "WP:Portal is isolated");
+//     require(getProposedVersion() != getContractVersion(), "WP:no upgrades");
 
 //     uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
 //     approveProposal(id);

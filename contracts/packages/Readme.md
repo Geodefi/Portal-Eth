@@ -29,6 +29,6 @@ All packages, including Portal has a unique TYPE (uint256) that separates it fro
 
 ## Contents
 
-* [LPP / Liquidity Pool Package](LiquidityPool.sol): Combines GeodeModule with Liquidity Module. Allowing every staking pool to have a built-in liquidity pool.
+* [LP / Liquidity Package](LiquidityPackage.sol): Combines GeodeModule with Liquidity Module. Allowing every staking pool to have a built-in liquidity package.
 
-* [WCP / Withdrawal Package](WithdrawalPackage.sol): To be implemented.
+* [WP / Withdrawal Package](WithdrawalPackage.sol): To be implemented.

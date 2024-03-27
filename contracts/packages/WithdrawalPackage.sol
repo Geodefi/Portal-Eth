@@ -24,7 +24,7 @@ contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule 
   /**
    * @custom:section                           ** VARIABLES **
    * Following immutable parameters are set when the referance library implementation is deployed.
-   * Making necessary data for initialization reachable for all instances of LP package.
+   * Making necessary data for initialization reachable for all instances of LP.
    */
   /// @notice gETH position
   address internal immutable gETHPos;
@@ -36,7 +36,7 @@ contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule 
    */
 
   modifier onlyOwner() {
-    require(msg.sender == _getGeodeModuleStorage().SENATE, "WCP:sender not owner");
+    require(msg.sender == _getGeodeModuleStorage().SENATE, "WP:sender not owner");
     _;
   }
 
@@ -52,8 +52,8 @@ contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule 
    * and fetch when needed on initialization.
    */
   constructor(address _gETHPos, address _portalPos) {
-    require(_gETHPos != address(0), "WCP:_gETHPos cannot be zero");
-    require(_portalPos != address(0), "WCP:_portalPos cannot be zero");
+    require(_gETHPos != address(0), "WP:_gETHPos cannot be zero");
+    require(_portalPos != address(0), "WP:_portalPos cannot be zero");
 
     gETHPos = _gETHPos;
     portalPos = _portalPos;
@@ -83,7 +83,7 @@ contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule 
       portalPos,
       poolOwner,
       type(uint256).max,
-      ID_TYPE.PACKAGE_WITHDRAWAL_CONTRACT,
+      ID_TYPE.PACKAGE_WITHDRAWAL,
       versionName
     );
     __WithdrawalModule_init(gETHPos, portalPos, poolId);
@@ -158,10 +158,10 @@ contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule 
     GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
     IPortal Portal = IPortal(GMStorage.GOVERNANCE);
 
-    require(!Portal.isolationMode(), "WCP:Portal is isolated");
+    require(!Portal.isolationMode(), "WP:Portal is isolated");
     require(
       GMStorage.CONTRACT_VERSION != Portal.getPackageVersion(GMStorage.PACKAGE_TYPE),
-      "WCP:no upgrades"
+      "WP:no upgrades"
     );
 
     uint256 id = Portal.pushUpgrade(GMStorage.PACKAGE_TYPE);
@@ -212,7 +212,7 @@ contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule 
     uint256 claimable = $.gatheredInfrastructureFees;
 
     (success, ) = payable(receiver).call{value: claimable}("");
-    require(success, "WCP:Failed to send ETH");
+    require(success, "WP:Failed to send ETH");
   }
 
   /**

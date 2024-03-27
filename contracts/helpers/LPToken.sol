@@ -12,8 +12,8 @@ import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.so
 /**
  * @title Liquidity Provider Token
  * @notice This token is an ERC20 detailed token with added capability to be minted by the owner.
- * It is used to represent user shares when providing liquidity to LPP.
- * @dev Only LPP contracts should initialize and own LPToken contracts.
+ * It is used to represent user shares when providing liquidity to Liquidity Package.
+ * @dev Only Liquidity Package contracts should initialize and own LPToken contracts.
  */
 contract LPToken is
   Initializable,

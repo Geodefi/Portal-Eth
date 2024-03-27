@@ -61,14 +61,14 @@ const func = async (hre) => {
       console.log("Withdrawal Package is released\n");
     }
 
-    // LIQUIDITY POOL
-    console.log("LiquidityPool Package WILL NOT BE SETUP");
+    // LIQUIDITY PACKAGE
+    console.log("LiquidityPackage WILL NOT BE SETUP");
     // const lpType = 10021;
 
-    // const lpAddress = (await get("LiquidityPool")).address;
-    // const expectedLPPVersion = (await generateId(strToBytes("v1"), lpType)).toString();
-    // if ((await read("Portal", "getPackageVersion", lpType)).toString() === expectedLPPVersion) {
-    //   console.log("Liquidity Pool Package is ALREADY released\n");
+    // const lpAddress = (await get("LiquidityPackage")).address;
+    // const expectedLPVersion = (await generateId(strToBytes("v1"), lpType)).toString();
+    // if ((await read("Portal", "getPackageVersion", lpType)).toString() === expectedLPVersion) {
+    //   console.log("Liquidity Package Package is ALREADY released\n");
     // } else {
     //   await execute(
     //     "Portal",
@@ -79,8 +79,8 @@ const func = async (hre) => {
     //     strToBytes("v1"),
     //     DAY
     //   );
-    //   await execute("Portal", { from: deployer, log: true }, "approveProposal", expectedLPPVersion);
-    //   console.log("Liquidity Pool Package is released\n");
+    //   await execute("Portal", { from: deployer, log: true }, "approveProposal", expectedLPVersion);
+    //   console.log("Liquidity Package Package is released\n");
     // }
 
     // MIDDLEWARES
