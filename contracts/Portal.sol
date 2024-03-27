@@ -130,7 +130,7 @@ contract Portal is IPortal, GeodeModule, StakeModule {
    * @dev GeodeModule override
    *
    * @notice Isolation Mode is an external view function signaling other contracts
-   * * to isolate themselves from Portal. For example, withdrawalContract will not fetch upgrades.
+   * * to isolate themselves from Portal. For example, Withdrawal Package of the pool will not fetch upgrades.
    * @return isRecovering true if isolationMode is active:
    * * 1. Portal is paused
    * * 2. Portal needs to be upgraded

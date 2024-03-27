@@ -9,7 +9,7 @@ import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
 // internal - interfaces
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {ILiquidityModule} from "../interfaces/modules/ILiquidityModule.sol";
-import {ILiquidityPool} from "../interfaces/packages/ILiquidityPool.sol";
+import {ILiquidityPackage} from "../interfaces/packages/ILiquidityPackage.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
 // internal - structs
 import {GeodeModuleStorage} from "../modules/GeodeModule/structs/storage.sol";
@@ -23,11 +23,11 @@ import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
 
 /**
- * @title LPP: Liquidity Pool Package: Geode Module + Liquidity Module
+ * @title LP: Liquidity Package: Geode Module + Liquidity Module
  *
- * @notice LPP is a package that provides a liquidity pool for a staking pool created through Portal.
+ * @notice LP is a package that provides a liquidity package for a staking pool created through Portal.
  *
- * @dev TYPE: PACKAGE_LIQUIDITY_POOL
+ * @dev TYPE: PACKAGE_LIQUIDITY
  * @dev Utilizing IGeodePackage interface, meaning initialize function takes 3 parameters:
  * * * poolOwner: will be assigned as the senate of the package
  * * * pooledTokenId: used internally on LM and LML.
@@ -45,7 +45,7 @@ import {LiquidityModule} from "../modules/LiquidityModule/LiquidityModule.sol";
  *
  * @author Ice Bear & Crash Bandicoot
  */
-contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
+contract LiquidityPackage is ILiquidityPackage, GeodeModule, LiquidityModule {
   using GML for GeodeModuleStorage;
   using AL for LiquidityModuleStorage;
   using LML for LiquidityModuleStorage;
@@ -65,14 +65,14 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
   address internal immutable portalPos;
   /// @notice LPToken implementation referance, needs to be cloned
   address internal immutable LPTokenRef;
-  /// @notice LPP package type, useful for Limited Upgradability
+  /// @notice Liquidity Package type, useful for Limited Upgradability
 
   /**
    * @custom:section                           ** MODIFIERS **
    */
 
   modifier onlyOwner() {
-    require(msg.sender == _getGeodeModuleStorage().SENATE, "LPP:sender not owner");
+    require(msg.sender == _getGeodeModuleStorage().SENATE, "LP:sender not owner");
     _;
   }
 
@@ -84,9 +84,9 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
    * @custom:oz-upgrades-unsafe-allow constructor
    */
   constructor(address _gETHPos, address _portalPos, address _LPTokenRef) {
-    require(_gETHPos != address(0), "LPP:_gETHPos cannot be zero");
-    require(_portalPos != address(0), "LPP:_portalPos cannot be zero");
-    require(_LPTokenRef != address(0), "LPP:_LPTokenRef cannot be zero");
+    require(_gETHPos != address(0), "LP:_gETHPos cannot be zero");
+    require(_portalPos != address(0), "LP:_portalPos cannot be zero");
+    require(_LPTokenRef != address(0), "LP:_LPTokenRef cannot be zero");
 
     gETHPos = _gETHPos;
     portalPos = _portalPos;
@@ -104,10 +104,10 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
     bytes calldata versionName,
     bytes calldata data
   ) public virtual override initializer {
-    __LiquidityPool_init(pooledTokenId, poolOwner, versionName, data);
+    __LiquidityPackage_init(pooledTokenId, poolOwner, versionName, data);
   }
 
-  function __LiquidityPool_init(
+  function __LiquidityPackage_init(
     uint256 pooledTokenId,
     address poolOwner,
     bytes calldata versionName,
@@ -117,7 +117,7 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
       portalPos,
       poolOwner,
       type(uint256).max,
-      ID_TYPE.PACKAGE_LIQUIDITY_POOL,
+      ID_TYPE.PACKAGE_LIQUIDITY,
       versionName
     );
     __LiquidityModule_init(
@@ -128,10 +128,10 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
       (4 * PERCENTAGE_DENOMINATOR) / 10000,
       string(data)
     );
-    __LiquidityPool_init_unchained();
+    __LiquidityPackage_init_unchained();
   }
 
-  function __LiquidityPool_init_unchained() internal onlyInitializing {}
+  function __LiquidityPackage_init_unchained() internal onlyInitializing {}
 
   /**
    * @custom:section                           ** GETTER FUNCTIONS **
@@ -209,10 +209,10 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
     GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
     IPortal Portal = IPortal(GMStorage.GOVERNANCE);
 
-    require(!Portal.isolationMode(), "LPP:Portal is isolated");
+    require(!Portal.isolationMode(), "LP:Portal is isolated");
     require(
       GMStorage.CONTRACT_VERSION != Portal.getPackageVersion(GMStorage.PACKAGE_TYPE),
-      "LPP:no upgrades"
+      "LP:no upgrades"
     );
 
     uint256 id = Portal.pushUpgrade(GMStorage.PACKAGE_TYPE);
@@ -238,7 +238,7 @@ contract LiquidityPool is ILiquidityPool, GeodeModule, LiquidityModule {
   }
 
   /**
-   * @custom:subsection                           ** LIQUIDITY POOL **
+   * @custom:subsection                           ** LIQUIDITY PACKAGE **
    *
    * @dev LM override
    */

@@ -6,7 +6,7 @@ import {IgETH} from "../../../interfaces/IgETH.sol";
 import {ILPToken} from "../../../interfaces/helpers/ILPToken.sol";
 
 /**
- * @notice Storage struct for the liquidity pool logic, should be correctly initialized.
+ * @notice Storage struct for the liquidity package logic, should be correctly initialized.
  *
  * @param gETH ERC1155 contract
  * @param lpToken address of the LP Token

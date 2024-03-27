@@ -99,7 +99,7 @@ contract LiquidityModuleMock is LiquidityModule {
   }
 
   /**
-   * @custom:section                           ** LIQUIDITY POOL ADMIN **
+   * @custom:section                           ** LIQUIDITY PACKAGE ADMIN **
    */
 
   function setSwapFee(uint256 newSwapFee) public virtual override {

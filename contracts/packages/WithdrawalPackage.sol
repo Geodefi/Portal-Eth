@@ -8,7 +8,7 @@ import {RESERVED_KEY_SPACE as rks} from "../globals/reserved_key_space.sol";
 // internal - interfaces
 import {IGeodeModule} from "../interfaces/modules/IGeodeModule.sol";
 import {IWithdrawalModule} from "../interfaces/modules/IWithdrawalModule.sol";
-import {IWithdrawalContract} from "../interfaces/packages/IWithdrawalContract.sol";
+import {IWithdrawalPackage} from "../interfaces/packages/IWithdrawalPackage.sol";
 import {IPortal} from "../interfaces/IPortal.sol";
 // internal - structs
 import {GeodeModuleStorage} from "../modules/GeodeModule/structs/storage.sol";
@@ -19,12 +19,12 @@ import {WithdrawalModuleLib as WML} from "../modules/WithdrawalModule/libs/Withd
 import {GeodeModule} from "../modules/GeodeModule/GeodeModule.sol";
 import {WithdrawalModule} from "../modules/WithdrawalModule/WithdrawalModule.sol";
 
-contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModule {
+contract WithdrawalPackage is IWithdrawalPackage, GeodeModule, WithdrawalModule {
   using WML for WithdrawalModuleStorage;
   /**
    * @custom:section                           ** VARIABLES **
    * Following immutable parameters are set when the referance library implementation is deployed.
-   * Making necessary data for initialization reachable for all instances of LP package.
+   * Making necessary data for initialization reachable for all instances of LP.
    */
   /// @notice gETH position
   address internal immutable gETHPos;
@@ -36,7 +36,7 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
    */
 
   modifier onlyOwner() {
-    require(msg.sender == _getGeodeModuleStorage().SENATE, "WCP:sender not owner");
+    require(msg.sender == _getGeodeModuleStorage().SENATE, "WP:sender not owner");
     _;
   }
 
@@ -52,8 +52,8 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
    * and fetch when needed on initialization.
    */
   constructor(address _gETHPos, address _portalPos) {
-    require(_gETHPos != address(0), "WCP:_gETHPos cannot be zero");
-    require(_portalPos != address(0), "WCP:_portalPos cannot be zero");
+    require(_gETHPos != address(0), "WP:_gETHPos cannot be zero");
+    require(_portalPos != address(0), "WP:_portalPos cannot be zero");
 
     gETHPos = _gETHPos;
     portalPos = _portalPos;
@@ -71,10 +71,10 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
     bytes calldata versionName,
     bytes calldata data
   ) public virtual override initializer {
-    __WithdrawalContract_init(poolId, poolOwner, versionName);
+    __WithdrawalPackage_init(poolId, poolOwner, versionName);
   }
 
-  function __WithdrawalContract_init(
+  function __WithdrawalPackage_init(
     uint256 poolId,
     address poolOwner,
     bytes calldata versionName
@@ -83,14 +83,14 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
       portalPos,
       poolOwner,
       type(uint256).max,
-      ID_TYPE.PACKAGE_WITHDRAWAL_CONTRACT,
+      ID_TYPE.PACKAGE_WITHDRAWAL,
       versionName
     );
     __WithdrawalModule_init(gETHPos, portalPos, poolId);
-    __WithdrawalContract_init_unchained();
+    __WithdrawalPackage_init_unchained();
   }
 
-  function __WithdrawalContract_init_unchained() internal onlyInitializing {}
+  function __WithdrawalPackage_init_unchained() internal onlyInitializing {}
 
   function getPoolId() public view override returns (uint256) {
     return _getWithdrawalModuleStorage().POOL_ID;
@@ -158,10 +158,10 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
     GeodeModuleStorage storage GMStorage = _getGeodeModuleStorage();
     IPortal Portal = IPortal(GMStorage.GOVERNANCE);
 
-    require(!Portal.isolationMode(), "WCP:Portal is isolated");
+    require(!Portal.isolationMode(), "WP:Portal is isolated");
     require(
       GMStorage.CONTRACT_VERSION != Portal.getPackageVersion(GMStorage.PACKAGE_TYPE),
-      "WCP:no upgrades"
+      "WP:no upgrades"
     );
 
     uint256 id = Portal.pushUpgrade(GMStorage.PACKAGE_TYPE);
@@ -212,7 +212,7 @@ contract WithdrawalContract is IWithdrawalContract, GeodeModule, WithdrawalModul
     uint256 claimable = $.gatheredInfrastructureFees;
 
     (success, ) = payable(receiver).call{value: claimable}("");
-    require(success, "WCP:Failed to send ETH");
+    require(success, "WP:Failed to send ETH");
   }
 
   /**

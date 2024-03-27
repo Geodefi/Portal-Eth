@@ -31,7 +31,7 @@ The Staking Library utilizes a Modular Architecture. Meaning all functionality i
 
 ![](./docs/images/contracts.png)
 
-**There are currently only 3 packages**: Portal, Liquidity Pool and Withdrawal Contract. However, there can be more modules and packages implemented later.
+**There are currently only 3 packages**: Portal, LiquidityPackage and WithdrawalPackage. However, there can be more modules and packages implemented later.
 
 Additionally there are other contracts such as gETH, an ERC1155 contract, and its middlewares allowing every ID to have its own functionality.
 
@@ -129,10 +129,6 @@ It is advised to audit these smart contracts with the order of:
       2. [AmplificationLib](./contracts/modules/LiquidityModule/libs/AmplificationLib.sol)
       3. [LiquidityModule](./contracts/modules/GeodeModule/GeodeModule.sol)
 4. Packages
-   1. [Liquidity Pool Package](./contracts/packages/LiquidityPool.sol)
-   2. [Withdrawal Contract Package](./contracts/packages/WithdrawalContract.sol)
+   1. [Liquidity Package](./contracts/packages/LiquidityPackage.sol)
+   2. [Withdrawal Package](./contracts/packages/WithdrawalPackage.sol)
 5. [Portal](./contracts/Portal.sol)
-
-## Licensing
-
-This section will be updated with a proper license.

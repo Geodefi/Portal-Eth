@@ -31,9 +31,9 @@ const gETH = artifacts.require("gETH");
 
 const ERC20Middleware = artifacts.require("ERC20Middleware");
 
-const LiquidityPool = artifacts.require("LiquidityPool");
+const LiquidityPackage = artifacts.require("LiquidityPackage");
 
-const WithdrawalContract = artifacts.require("WithdrawalContract");
+const WithdrawalPackage = artifacts.require("WithdrawalPackage");
 
 contract("StakeModuleLib", function (accounts) {
   const [
@@ -72,10 +72,10 @@ contract("StakeModuleLib", function (accounts) {
   let operatorId;
   let poolIds;
 
-  const liquidityPackageName = "LiquidityPool";
+  const liquidityPackageName = "LiquidityPackage";
   let liquidityPackageId;
 
-  const withdrawalPackageName = "WithdrawalContract";
+  const withdrawalPackageName = "WithdrawalPackage";
   let withdrawalPackageId;
 
   const middlewareName = "erc20";
@@ -128,11 +128,11 @@ contract("StakeModuleLib", function (accounts) {
     const OEL = await OracleExtensionLib.new();
     const WML = await WithdrawalModuleLib.new();
 
-    await LiquidityPool.link(GML);
-    await LiquidityPool.link(LML);
+    await LiquidityPackage.link(GML);
+    await LiquidityPackage.link(LML);
 
-    await WithdrawalContract.link(GML);
-    await WithdrawalContract.link(WML);
+    await WithdrawalPackage.link(GML);
+    await WithdrawalPackage.link(WML);
 
     await StakeModuleLibMock.link(SML);
     await StakeModuleLibMock.link(OEL);
@@ -151,8 +151,8 @@ contract("StakeModuleLib", function (accounts) {
 
     poolNames = poolNames.map((e) => strToBytes(e));
 
-    withdrawalPackageId = await contract.generateId(withdrawalPackageName, 10011); // 10011 = PACKAGE_WITHDRAWAL_CONTRACT
-    liquidityPackageId = await contract.generateId(liquidityPackageName, 10021); // 10021 = PACKAGE_LIQUIDITY_POOL
+    withdrawalPackageId = await contract.generateId(withdrawalPackageName, 10011); // 10011 = PACKAGE_WITHDRAWAL
+    liquidityPackageId = await contract.generateId(liquidityPackageName, 10021); // 10021 = PACKAGE_LIQUIDITY
 
     middlewareId = await contract.generateId(middlewareName, 20011); // 20011 = MIDDLEWARE_GETH
     const nameBytes = strToBytes("myPool Ether").substr(2);
@@ -179,16 +179,13 @@ contract("StakeModuleLib", function (accounts) {
     await this.gETH.transferMiddlewareManagerRole(this.contract.address);
     await this.gETH.transferOracleRole(this.contract.address);
 
-    this.LiquidityPool = await LiquidityPool.new(
+    this.LiquidityPackage = await LiquidityPackage.new(
       this.gETH.address,
       this.contract.address,
       this.lpTokenImp
     );
 
-    this.WithdrawalContract = await WithdrawalContract.new(
-      this.gETH.address,
-      this.contract.address
-    );
+    this.WithdrawalPackage = await WithdrawalPackage.new(this.gETH.address, this.contract.address);
   });
 
   context("__StakeModule_init_unchained", function () {
@@ -241,8 +238,12 @@ contract("StakeModuleLib", function (accounts) {
         "EnforcedPause"
       );
     });
-    it("deployLiquidityPool", async function () {
-      await expectCustomError(this.contract.deployLiquidityPool(0), this.contract, "EnforcedPause");
+    it("deployLiquidityPackage", async function () {
+      await expectCustomError(
+        this.contract.deployLiquidityPackage(0),
+        this.contract,
+        "EnforcedPause"
+      );
     });
     it("initiatePool", async function () {
       await expectCustomError(
@@ -483,21 +484,21 @@ contract("StakeModuleLib", function (accounts) {
           );
         });
         it("success", async function () {
-          await this.setLP(this.LiquidityPool.address);
+          await this.setLP(this.LiquidityPackage.address);
           await this.contract.$writeAddress(unknownId, strToBytes32("CONTROLLER"), deployer);
           await this.contract.$_deployGeodePackage(unknownId, 10021, strToBytes("poolname"));
         });
       });
-      describe("_deployWithdrawalContract", function () {
+      describe("_deployWithdrawalPackage", function () {
         beforeEach(async function () {
-          await this.setWP(this.WithdrawalContract.address);
+          await this.setWP(this.WithdrawalPackage.address);
           await this.contract.$writeAddress(unknownId, strToBytes32("CONTROLLER"), deployer);
-          await this.contract.$_deployWithdrawalContract(unknownId);
+          await this.contract.$_deployWithdrawalPackage(unknownId);
         });
         it("sets correct withdrawalCredential", async function () {
           const WCAddress = await this.contract.readAddress(
             unknownId,
-            strToBytes32("withdrawalContract")
+            strToBytes32("withdrawalPackage")
           );
           const withdrawalCredential = "0x01" + "0000000000000000000000" + WCAddress.substring(2);
 
@@ -507,30 +508,33 @@ contract("StakeModuleLib", function (accounts) {
         });
       });
 
-      describe("deployLiquidityPool", function () {
+      describe("deployLiquidityPackage", function () {
         beforeEach(async function () {
-          await this.setLP(this.LiquidityPool.address);
+          await this.setLP(this.LiquidityPackage.address);
           await this.contract.$writeUint(unknownId, strToBytes32("initiated"), 1);
           await this.contract.$writeUint(unknownId, strToBytes32("TYPE"), 5);
           await this.contract.$writeAddress(unknownId, strToBytes32("CONTROLLER"), deployer);
-          await this.contract.deployLiquidityPool(unknownId);
+          await this.contract.deployLiquidityPackage(unknownId);
         });
         it("reverts: if already deployed", async function () {
-          await expectRevert(this.contract.deployLiquidityPool(unknownId), "SML:already deployed");
+          await expectRevert(
+            this.contract.deployLiquidityPackage(unknownId),
+            "SML:already deployed"
+          );
         });
-        it("sets liquidityPool & approves gETH", async function () {
-          const lp = await this.contract.readAddress(unknownId, strToBytes32("liquidityPool"));
+        it("sets liquidityPackage & approves gETH", async function () {
+          const lp = await this.contract.readAddress(unknownId, strToBytes32("liquidityPackage"));
           expect(await this.gETH.isApprovedForAll(this.contract.address, lp)).to.be.equal(true);
         });
       });
 
       describe("initiatePool", function () {
         beforeEach(async function () {
-          await this.setWP(this.WithdrawalContract.address);
+          await this.setWP(this.WithdrawalPackage.address);
           expect(await this.contract.getPackageVersion(10011)).to.be.bignumber.equal(
             withdrawalPackageId
           );
-          await this.setLP(this.LiquidityPool.address);
+          await this.setLP(this.LiquidityPackage.address);
           expect(await this.contract.getPackageVersion(10021)).to.be.bignumber.equal(
             liquidityPackageId
           );
@@ -667,7 +671,7 @@ contract("StakeModuleLib", function (accounts) {
               await this.contract.readAddress(poolIds[0], strToBytes32("middlewares"))
             ).to.be.bignumber.equal(new BN("0"));
           });
-          it("liquidity pool", async function () {
+          it("liquidity package", async function () {
             await this.contract.initiatePool(
               poolFee,
               middlewareId,
@@ -678,10 +682,10 @@ contract("StakeModuleLib", function (accounts) {
               { from: poolOwner, value: new BN(String(1e18)).muln(32) }
             );
             expect(
-              await this.contract.readAddress(poolIds[0], strToBytes32("liquidityPool"))
+              await this.contract.readAddress(poolIds[0], strToBytes32("liquidityPackage"))
             ).to.be.equal(ZERO_ADDRESS);
           });
-          it("no liquidity pool", async function () {
+          it("no liquidity package", async function () {
             await this.contract.initiatePool(
               poolFee,
               middlewareId,
@@ -692,7 +696,7 @@ contract("StakeModuleLib", function (accounts) {
               { from: poolOwner, value: new BN(String(1e18)).muln(32) }
             );
             expect(
-              await this.contract.readAddress(poolIds[0], strToBytes32("liquidityPool"))
+              await this.contract.readAddress(poolIds[0], strToBytes32("liquidityPackage"))
             ).to.be.not.equal(ZERO_ADDRESS);
           });
         });
@@ -732,8 +736,8 @@ contract("StakeModuleLib", function (accounts) {
         { from: maliciousOperatorOwner, value: new BN(String(1e18)).muln(10) }
       );
 
-      await this.setWP(this.WithdrawalContract.address);
-      await this.setLP(this.LiquidityPool.address);
+      await this.setWP(this.WithdrawalPackage.address);
+      await this.setLP(this.LiquidityPackage.address);
 
       publicPoolId = poolIds[0];
       await this.contract.initiatePool(
@@ -1525,7 +1529,7 @@ contract("StakeModuleLib", function (accounts) {
           await this.contract.$set_ORACLE_UPDATE_TIMESTAMP(ts.add(DAY));
           expect(await this.contract.isMintingAllowed(publicPoolId)).to.be.equal(false);
         });
-        it("returns false if withdrawalContract is isolated", async function () {
+        it("returns false if withdrawalPackage is isolated", async function () {
           // changing only the pool owner will take it to isolation
           await this.contract.$writeAddress(publicPoolId, strToBytes32("CONTROLLER"), attacker);
           expect(await this.contract.isMintingAllowed(publicPoolId)).to.be.equal(false);
@@ -1611,8 +1615,8 @@ contract("StakeModuleLib", function (accounts) {
         context("with LP", function () {
           let LP;
           beforeEach(async function () {
-            LP = await LiquidityPool.at(
-              await this.contract.readAddress(liquidPoolId, strToBytes32("liquidityPool"))
+            LP = await LiquidityPackage.at(
+              await this.contract.readAddress(liquidPoolId, strToBytes32("liquidityPackage"))
             );
 
             await this.gETH.setApprovalForAll(LP.address, true, { from: poolOwner });
@@ -1763,11 +1767,11 @@ contract("StakeModuleLib", function (accounts) {
           beforeEach(async function () {
             prevReceiverBalance = await this.gETH.balanceOf(staker, privatePoolId);
 
-            await this.contract.deployLiquidityPool(privatePoolId, {
+            await this.contract.deployLiquidityPackage(privatePoolId, {
               from: poolOwner,
             });
-            LP = await LiquidityPool.at(
-              await this.contract.readAddress(privatePoolId, strToBytes32("liquidityPool"))
+            LP = await LiquidityPackage.at(
+              await this.contract.readAddress(privatePoolId, strToBytes32("liquidityPackage"))
             );
             await this.gETH.setApprovalForAll(LP.address, true, { from: poolOwner });
             await LP.addLiquidity([String(1e18), String(1e19)], 0, MAX_UINT256, {
@@ -1822,13 +1826,13 @@ contract("StakeModuleLib", function (accounts) {
 
       describe("proposeStake() call", function () {
         context("initial checks", function () {
-          it("reverts if withdrawal contract is isolated", async function () {
+          it("reverts if withdrawal package is isolated", async function () {
             await this.contract.$writeAddress(publicPoolId, strToBytes32("CONTROLLER"), attacker);
             await expectRevert(
               this.contract.proposeStake(publicPoolId, operatorId, [], [], [], {
                 from: operatorMaintainer,
               }),
-              "SML:withdrawalContract is isolated"
+              "SML:withdrawalPackage is isolated"
             );
           });
           it("reverts if 0 validators", async function () {

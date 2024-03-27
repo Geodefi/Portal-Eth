@@ -3,8 +3,8 @@ const func = async function (hre) {
   const { deploy, get } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  console.log("LiquidityPool Package WILL NOT BE DEPLOYED");
-  // await deploy("LiquidityPool", {
+  console.log("LiquidityPackage WILL NOT BE DEPLOYED");
+  // await deploy("LiquidityPackage", {
   //   from: deployer,
   //   log: true,
   //   skipIfAlreadyDeployed: true,
@@ -21,5 +21,5 @@ const func = async function (hre) {
 };
 
 module.exports = func;
-module.exports.tags = ["LiquidityPool"];
+module.exports.tags = ["LiquidityPackage"];
 module.exports.dependencies = ["GeodeModuleLib", "LiquidityModuleLib", "gETH", "Portal", "LPToken"];

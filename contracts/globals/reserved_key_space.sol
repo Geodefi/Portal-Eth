@@ -83,9 +83,9 @@ library RESERVED_KEY_SPACE {
 
   /**
    * @custom:type address
-   * @custom:definition bound liquidity pool of a pool
+   * @custom:definition bound liquidity package of a staking pool
    */
-  bytes32 internal constant liquidityPool = "liquidityPool";
+  bytes32 internal constant liquidityPackage = "liquidityPackage";
 
   /**
    * @custom:type address
@@ -177,11 +177,11 @@ library RESERVED_KEY_SPACE {
    * @custom:type address
    * @custom:definition custodian of validator funds for a pool
    */
-  bytes32 internal constant withdrawalContract = "withdrawalContract";
+  bytes32 internal constant withdrawalPackage = "withdrawalPackage";
 
   /**
    * @custom:type bytes
-   * @custom:definition derived from withdrawalContract
+   * @custom:definition derived from withdrawalPackage address of the pool
    */
   bytes32 internal constant withdrawalCredential = "withdrawalCredential";
 

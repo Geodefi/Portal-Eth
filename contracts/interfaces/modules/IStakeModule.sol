@@ -51,7 +51,7 @@ interface IStakeModule is IDataStoreModule {
     address maintainer
   ) external payable;
 
-  function deployLiquidityPool(uint256 poolId) external;
+  function deployLiquidityPackage(uint256 poolId) external;
 
   function initiatePool(
     uint256 fee,
@@ -136,7 +136,7 @@ interface IStakeModule is IDataStoreModule {
 
   function stake(uint256 operatorId, bytes[] calldata pubkeys) external;
 
-  function requestExit(uint256 poolId, bytes memory pk) external;
+  function requestExit(uint256 poolId, bytes memory pk) external returns (bool);
 
   function finalizeExit(uint256 poolId, bytes memory pk) external;
 

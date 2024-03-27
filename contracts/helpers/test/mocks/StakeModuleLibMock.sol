@@ -136,8 +136,8 @@ contract StakeModuleLibMock is StakeModule {
       );
   }
 
-  function $_deployWithdrawalContract(uint256 _poolId) external {
-    _getStakeModuleStorage()._deployWithdrawalContract(_getDataStoreModuleStorage(), _poolId);
+  function $_deployWithdrawalPackage(uint256 _poolId) external {
+    _getStakeModuleStorage()._deployWithdrawalPackage(_getDataStoreModuleStorage(), _poolId);
   }
 
   function $_setMaintainer(uint256 _id, address _newMaintainer) external {

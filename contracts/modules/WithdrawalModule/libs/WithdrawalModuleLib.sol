@@ -89,7 +89,7 @@ import {Validator} from "../../StakeModule/structs/utils.sol";
  *
  * @dev while conducting the price calculations, a part of the balance within this contract should be taken into consideration.
  * This ETH amount can be calculated as: sum(lambda x: requests[x].withdrawnBalance) - [fulfilledEtherBalance] (todo for the telescope).
- * Note that, this is because: a price of the derivative is = total ETH / total Supply, and total ETH should include the balance within WC.
+ * Note that, this is because: a price of the derivative is = total ETH / total Supply, and total ETH should include the balance within WP.
  *
  * @dev Contracts relying on this library must initialize WithdrawalModuleLib.WithdrawalModuleStorage
  *
@@ -114,7 +114,7 @@ library WithdrawalModuleLib {
    */
   event NewExitThreshold(uint256 threshold);
   event Enqueue(uint256 indexed index, address owner);
-  event Vote(bytes indexed pubkey, uint256 size);
+  event Vote(uint256 indexed index, bytes indexed pubkey, uint256 size);
   event RequestTransfer(uint256 indexed index, address oldOwner, address newOwner);
   event Fulfill(uint256 indexed index, uint256 fulfillAmount, uint256 claimableETH);
   event Dequeue(uint256 indexed index, uint256 claim);
@@ -167,8 +167,11 @@ library WithdrawalModuleLib {
    * @notice notifies Portal to change validator state from ACTIVE to EXIT_REQUESTED
    * @param pubkey public key of the given validator.
    */
-  function _requestExit(WithdrawalModuleStorage storage self, bytes calldata pubkey) internal {
-    _getPortal(self).requestExit(self.POOL_ID, pubkey);
+  function _requestExit(
+    WithdrawalModuleStorage storage self,
+    bytes calldata pubkey
+  ) internal returns (bool) {
+    return _getPortal(self).requestExit(self.POOL_ID, pubkey);
   }
 
   /**
@@ -196,16 +199,15 @@ library WithdrawalModuleLib {
 
     if (commonPoll + validatorPoll > threshold) {
       // meaning it can request withdrawal
-
-      if (threshold > validatorPoll) {
-        // If Poll is not enough spend votes from commonPoll.
-        commonPoll -= threshold - validatorPoll;
-      } else if (validatorPoll > beaconBalancePriced) {
-        // If Poll is bigger than needed, move the extra votes instead of spending.
-        commonPoll += validatorPoll - beaconBalancePriced;
+      if (_requestExit(self, pubkey)) {
+        if (threshold > validatorPoll) {
+          // If Poll is not enough spend votes from commonPoll.
+          commonPoll -= threshold - validatorPoll;
+        } else if (validatorPoll > beaconBalancePriced) {
+          // If Poll is bigger than needed, move the extra votes instead of spending.
+          commonPoll += validatorPoll - beaconBalancePriced;
+        }
       }
-
-      _requestExit(self, pubkey);
     }
 
     return commonPoll;
@@ -258,6 +260,7 @@ library WithdrawalModuleLib {
    */
   function _vote(
     WithdrawalModuleStorage storage self,
+    uint256 index,
     bytes calldata pubkey,
     uint256 size
   ) internal {
@@ -267,7 +270,7 @@ library WithdrawalModuleLib {
     require(val.state == VALIDATOR_STATE.ACTIVE, "WML:voted for inactive validator");
 
     self.validators[pubkey].poll += size;
-    emit Vote(pubkey, size);
+    emit Vote(index, pubkey, size);
   }
 
   /**
@@ -324,7 +327,7 @@ library WithdrawalModuleLib {
     if (pubkey.length == 0) {
       self.queue.commonPoll += size;
     } else {
-      _vote(self, pubkey, size);
+      _vote(self, index, pubkey, size);
     }
 
     self.queue.requested = requestedgETH + size;
@@ -358,7 +361,7 @@ library WithdrawalModuleLib {
       if (pubkeys[i].length == 0) {
         commonPoll += sizes[i];
       } else {
-        _vote(self, pubkeys[i], sizes[i]);
+        _vote(self, indexes[i], pubkeys[i], sizes[i]);
       }
       requestedgETH = requestedgETH + sizes[i];
       totalSize += sizes[i];

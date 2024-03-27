@@ -2,7 +2,7 @@
 
 // const { BN } = require("@openzeppelin/test-helpers");
 // const { strToBytes, strToBytes32, generateId, DAY } = require("../../utils");
-// const { upgradePackage, upgradeLPPackage } = require("../../scripts/upgrade/package");
+// const { upgradePackage, upgradeLiquidityPackage } = require("../../scripts/upgrade/package");
 
 // const ERC1967Proxy = artifacts.require("ERC1967Proxy");
 
@@ -17,13 +17,13 @@
 // const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 
 // const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
-// const WithdrawalContract = artifacts.require("WithdrawalContract");
-// const LiquidityPool = artifacts.require("LiquidityPool");
+// const WithdrawalPackage = artifacts.require("WithdrawalPackage");
+// const LiquidityPackage = artifacts.require("LiquidityPackage");
 
 // contract("UpgradePackages", function (accounts) {
 //   const [deployer, poolOwner] = accounts;
 //   let upgradeWithdrawalPackage;
-//   let upgradedPoolWC;
+//   let upgradedPoolWP;
 //   let upgradedPoolLP;
 //   let portal;
 //   let gETHContract;
@@ -46,10 +46,10 @@
 //     await gETHContract.transferOracleRole(portal.address);
 //   });
 
-//   const setupWCTest = deployments.createFixture(async (hre) => {
-//     // set WC as middleware
-//     const wc = await WithdrawalContract.new(gETHContract.address, portal.address);
-//     await portal.propose(wc.address, 10011, strToBytes("name"), DAY, { from: deployer });
+//   const setupWPTest = deployments.createFixture(async (hre) => {
+//     // set WP as middleware
+//     const wp = await WithdrawalPackage.new(gETHContract.address, portal.address);
+//     await portal.propose(wp.address, 10011, strToBytes("name"), DAY, { from: deployer });
 //     await portal.approveProposal(await generateId(strToBytes("name"), 10011), {
 //       from: deployer,
 //     });
@@ -60,31 +60,31 @@
 //       value: new BN(String(1e18)).muln(32),
 //     });
 
-//     // upgrade the WC with proposal on portal
-//     await deployments.fixture(["WithdrawalContract"]);
+//     // upgrade the WP with proposal on portal
+//     await deployments.fixture(["WithdrawalPackage"]);
 //     await upgradePackage(hre, portal, "V2_0_Mock");
 
 //     // pull the upgrade
-//     const WCAddress = await portal.readAddress(tokenId, strToBytes32("withdrawalContract"));
-//     const poolWC = await ethers.getContractAt("WithdrawalContract", WCAddress);
-//     await poolWC.connect(poolOwnerSigner).pullUpgrade();
+//     const WPAddress = await portal.readAddress(tokenId, strToBytes32("withdrawalPackage"));
+//     const poolWP = await ethers.getContractAt("WithdrawalPackage", WPAddress);
+//     await poolWP.connect(poolOwnerSigner).pullUpgrade();
 
-//     // set upgraded WC and initialize
-//     upgradedPoolWC = await ethers.getContractAt("WithdrawalContractV2_0_Mock", WCAddress);
-//     await upgradedPoolWC.connect(poolOwnerSigner).initializeV2_0_Mock(8);
+//     // set upgraded WP and initialize
+//     upgradedPoolWP = await ethers.getContractAt("WithdrawalPackageV2_0_Mock", WPAddress);
+//     await upgradedPoolWP.connect(poolOwnerSigner).initializeV2_0_Mock(8);
 //   });
 
 //   const setupLPTest = deployments.createFixture(async (hre) => {
-//     // set WC as middleware
-//     const wc = await WithdrawalContract.new(gETHContract.address, portal.address);
-//     await portal.propose(wc.address, 10011, strToBytes("name"), DAY, { from: deployer });
+//     // set WP as middleware
+//     const wp = await WithdrawalPackage.new(gETHContract.address, portal.address);
+//     await portal.propose(wp.address, 10011, strToBytes("name"), DAY, { from: deployer });
 //     await portal.approveProposal(await generateId(strToBytes("name"), 10011), {
 //       from: deployer,
 //     });
 
 //     // set LP as middleware
 //     const lpImp = await LPToken.new();
-//     const lp = await LiquidityPool.new(gETHContract.address, portal.address, lpImp.address);
+//     const lp = await LiquidityPackage.new(gETHContract.address, portal.address, lpImp.address);
 //     await portal.propose(lp.address, 10021, strToBytes("name"), DAY, {
 //       from: deployer,
 //     });
@@ -99,19 +99,19 @@
 //     });
 
 //     // deploy LP for pool
-//     await portal.deployLiquidityPool(tokenId, { from: poolOwner });
+//     await portal.deployLiquidityPackage(tokenId, { from: poolOwner });
 
 //     // upgrade the LP with proposal on portal
-//     await deployments.fixture(["LiquidityPool"]);
-//     await upgradeLPPackage(hre, portal, "V2_0_Mock");
+//     await deployments.fixture(["LiquidityPackage"]);
+//     await upgradeLiquidityPackage(hre, portal, "V2_0_Mock");
 
 //     // pull the upgrade
-//     const LPAddress = await portal.readAddress(tokenId, strToBytes32("liquidityPool"));
-//     const poolLP = await ethers.getContractAt("LiquidityPool", LPAddress);
+//     const LPAddress = await portal.readAddress(tokenId, strToBytes32("liquidityPackage"));
+//     const poolLP = await ethers.getContractAt("LiquidityPackage", LPAddress);
 //     await poolLP.connect(poolOwnerSigner).pullUpgrade();
 
-//     // set upgraded WC and initialize
-//     upgradedPoolLP = await ethers.getContractAt("LiquidityPoolV2_0_Mock", LPAddress);
+//     // set upgraded WP and initialize
+//     upgradedPoolLP = await ethers.getContractAt("LiquidityPackageV2_0_Mock", LPAddress);
 //     await upgradedPoolLP.connect(poolOwnerSigner).initializeV2_0_Mock(8);
 //   });
 
@@ -130,11 +130,11 @@
 //     await Portal.link(this.OEL);
 //     await Portal.link(this.IEL);
 
-//     await LiquidityPool.link(this.GML);
-//     await LiquidityPool.link(this.LML);
+//     await LiquidityPackage.link(this.GML);
+//     await LiquidityPackage.link(this.LML);
 
-//     await WithdrawalContract.link(this.GML);
-//     await WithdrawalContract.link(this.WML);
+//     await WithdrawalPackage.link(this.GML);
+//     await WithdrawalPackage.link(this.WML);
 
 //     tokenId = await generateId(strToBytes("name"), 5);
 //   });
@@ -143,24 +143,24 @@
 //     await setupTest();
 //   });
 
-//   describe("Upgrade WC Package", async function () {
+//   describe("Upgrade WP Package", async function () {
 //     beforeEach(async function () {
-//       await setupWCTest();
+//       await setupWPTest();
 //     });
 //     it("can use reinitializer: freshSlot = 8", async function () {
-//       expect((await upgradedPoolWC.getFreshSlot()).toString()).to.be.equal(String(8));
+//       expect((await upgradedPoolWP.getFreshSlot()).toString()).to.be.equal(String(8));
 //     });
 
-//     it("Upgrade works correctly: WC version = V2_0_Mock", async function () {
-//       const version = await upgradedPoolWC.getContractVersion();
+//     it("Upgrade works correctly: WP version = V2_0_Mock", async function () {
+//       const version = await upgradedPoolWP.getContractVersion();
 //       expect(version.toString()).to.equal(
 //         (await generateId(strToBytes("V2_0_Mock"), 10011)).toString()
 //       );
 //     });
 
 //     it("can add new function with parameter: setFreshSlot, freshSlot", async function () {
-//       await upgradedPoolWC.setFreshSlot(3);
-//       expect((await upgradedPoolWC.getFreshSlot()).toString()).to.be.equal(String(3));
+//       await upgradedPoolWP.setFreshSlot(3);
+//       expect((await upgradedPoolWP.getFreshSlot()).toString()).to.be.equal(String(3));
 //     });
 //   });
 

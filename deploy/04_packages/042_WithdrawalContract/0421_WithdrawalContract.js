@@ -3,7 +3,7 @@ const func = async function (hre) {
   const { deploy, get } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("WithdrawalContract", {
+  await deploy("WithdrawalPackage", {
     from: deployer,
     log: true,
     skipIfAlreadyDeployed: true,
@@ -16,5 +16,5 @@ const func = async function (hre) {
 };
 
 module.exports = func;
-module.exports.tags = ["WithdrawalContract"];
+module.exports.tags = ["WithdrawalPackage"];
 module.exports.dependencies = ["GeodeModuleLib", "WithdrawalModuleLib", "gETH", "Portal"];

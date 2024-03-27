@@ -45,7 +45,7 @@ import {StakeModuleLib as SML} from "./StakeModuleLib.sol";
  * * Operators can act faulty in many different ways. To prevent such actions,
  * * Telescope regulates them with well defined limitations.
  * * Currently only issue is the fee theft, meaning operators have not
- * * used the withdrawal contract for miner fees or MEV boost.
+ * * used the withdrawal package for miner fees or MEV boost.
  * * There can be other restrictions in the future.
  *
  * 2. reportBeacon: Continous Data from Beacon chain: Price Merkle Root & Balances Merkle Root & # of active validators
@@ -364,7 +364,7 @@ library OracleExtensionLib {
    * * Lets say max decrease is 5%, and 50% is slashed.
    * * Then deposits/withdrawals are halted for 10 days.
    * This is not a bug, but a safe circuit-breaker.
-   * This logic have effects the withdrawal contract logic.
+   * This logic have effects the withdrawal package logic.
    */
   function _sanityCheck(
     StakeModuleStorage storage self,

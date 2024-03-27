@@ -22,7 +22,7 @@ const OracleExtensionLibMock = artifacts.require("$OracleExtensionLibMock");
 const GeodeModuleLib = artifacts.require("GeodeModuleLib");
 const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
-const WithdrawalContract = artifacts.require("WithdrawalContract");
+const WithdrawalPackage = artifacts.require("WithdrawalPackage");
 
 const pubkeys = [
   "0x91efd3ce6694bc034ad4c23773877da916ed878ff8376610633a9ae4b4d826f4086a6b9b5b197b5e148be658c66c4e9a",
@@ -75,19 +75,19 @@ contract("OracleExtensionLib", function (accounts) {
   let poolIds = [];
 
   const setWithdrawalPackage = async function () {
-    const wc = await WithdrawalContract.new(this.gETH.address, this.contract.address);
+    const wp = await WithdrawalPackage.new(this.gETH.address, this.contract.address);
     const packageType = new BN(10011);
-    const packageName = "WithdrawalContract";
+    const packageName = "WithdrawalPackage";
 
     const withdrawalPackageId = await this.contract.generateId(packageName, packageType);
 
     await this.contract.$writeUint(withdrawalPackageId, strToBytes32("TYPE"), packageType);
-    await this.contract.$writeAddress(withdrawalPackageId, strToBytes32("CONTROLLER"), wc.address);
+    await this.contract.$writeAddress(withdrawalPackageId, strToBytes32("CONTROLLER"), wp.address);
 
     await this.contract.$writeBytes(
       withdrawalPackageId,
       strToBytes32("NAME"),
-      strToBytes("WithdrawalContract")
+      strToBytes("WithdrawalPackage")
     );
 
     await this.contract.$set_package(packageType, withdrawalPackageId);
@@ -161,8 +161,8 @@ contract("OracleExtensionLib", function (accounts) {
     await OracleExtensionLibMock.link(OEL);
     await OracleExtensionLibMock.link(IEL);
 
-    await WithdrawalContract.link(GML);
-    await WithdrawalContract.link(WML);
+    await WithdrawalPackage.link(GML);
+    await WithdrawalPackage.link(WML);
 
     this.setWithdrawalPackage = setWithdrawalPackage;
     this.createOperator = createOperator;
@@ -465,10 +465,12 @@ contract("OracleExtensionLib", function (accounts) {
         });
 
         it("updates PRICE_MERKLE_ROOT", async function () {
-          expect(params.priceMerkleRoot).to.be.equal(strToBytes32("priceMerkleRoot"));
+          const priceMerkleRoot = await this.contract.getPriceMerkleRoot();
+          expect(priceMerkleRoot).to.be.equal(strToBytes32("priceMerkleRoot"));
         });
         it("updates BALANCE_MERKLE_ROOT", async function () {
-          expect(params.balanceMerkleRoot).to.be.equal(strToBytes32("balanceMerkleRoot"));
+          const balanceMerkleRoot = await this.contract.getBalancesMerkleRoot();
+          expect(balanceMerkleRoot).to.be.equal(strToBytes32("balanceMerkleRoot"));
         });
         it("updates ORACLE_UPDATE_TIMESTAMP", async function () {
           expect(params.oracleUpdateTimestamp).to.be.bignumber.equal(ts);

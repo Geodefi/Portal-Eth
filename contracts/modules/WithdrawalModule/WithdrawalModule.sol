@@ -69,7 +69,7 @@ abstract contract WithdrawalModule is
    */
   event NewExitThreshold(uint256 threshold);
   event Enqueue(uint256 indexed index, address owner);
-  event Vote(bytes indexed pubkey, uint256 size);
+  event Vote(uint256 indexed index, bytes indexed pubkey, uint256 size);
   event RequestTransfer(uint256 indexed index, address oldOwner, address newOwner);
   event Fulfill(uint256 indexed index, uint256 fulfillAmount, uint256 claimableETH);
   event Dequeue(uint256 indexed index, uint256 claim);

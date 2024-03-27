@@ -16,7 +16,7 @@ import {DataStoreModuleLib as DSML} from "../../DataStoreModule/libs/DataStoreMo
  *
  * @notice Dual Governance & Limited Upgradability:
  * Administration of the Isolated Storage with a Dual Governance consisting a Governance and a Senate.
- * Administration of a UUPS contract with Limited Upgradability for Packages like Portal, LiquidityPool.
+ * Administration of a UUPS contract with Limited Upgradability for Packages like Portal, LiquidityPackage.
  *
  * @dev review: DataStoreModule for the id based isolated storage logic.
  * @dev review: Reserved TYPEs are defined within globals/id_type.sol

@@ -17,7 +17,7 @@ import {AmplificationLib as AL} from "./AmplificationLib.sol";
  *
  * @notice A library to be used within LiquidityModule
  * * Contains functions responsible for custody and AMM functionalities with some changes.
- * * The main functionality of Liquidity Pools is allowing the depositors to have instant access to liquidity
+ * * The main functionality of Liquidity Packages is allowing the depositors to have instant access to liquidity
  * * relying on the Oracle Price, with the help of Liquidity Providers.
  *
  * @dev focus point (1-1) of the pricing algorithm is manipulated with PriceIn and PriceOut functions.

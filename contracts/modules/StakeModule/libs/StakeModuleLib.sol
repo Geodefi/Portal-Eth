@@ -9,7 +9,7 @@ import {RESERVED_KEY_SPACE as rks} from "../../../globals/reserved_key_space.sol
 // internal - interfaces
 import {IgETH} from "../../../interfaces/IgETH.sol";
 import {IGeodePackage} from "../../../interfaces/packages/IGeodePackage.sol";
-import {ILiquidityPool} from "../../../interfaces/packages/ILiquidityPool.sol";
+import {ILiquidityPackage} from "../../../interfaces/packages/ILiquidityPackage.sol";
 import {IWhitelist} from "../../../interfaces/helpers/IWhitelist.sol";
 // internal - structs
 import {DataStoreModuleStorage} from "../../DataStoreModule/structs/storage.sol";
@@ -52,10 +52,10 @@ import {DepositContractLib as DCL} from "./DepositContractLib.sol";
  *
  * Type 5 : Permissionless Configurable Staking Pools
  * * Permissionless to create.
- * * Can utilize powers of packages and middlewares such as Bound Liquidity Pools, gETHMiddlewares etc.
+ * * Can utilize powers of packages and middlewares such as Bound Liquidity Packages, gETHMiddlewares etc.
  * * Can be public or private, can use a whitelist if private.
  * * Can utilize maintainers for validator distribution on Operator Marketplace.
- * * Uses a Withdrawal Contract to be given as withdrawalCredential on validator creation,
+ * * Uses a Withdrawal Package to be given as withdrawalCredential on validator creation,
  * * accruing rewards and keeping Staked Ether safe and isolated.
  *
  * @dev Packages:
@@ -64,21 +64,21 @@ import {DepositContractLib as DCL} from "./DepositContractLib.sol";
  * Can be upgraded by a dual governance, via pullUpgrade.
  * * A Package's dual governance consists of Portal(governance) and the pool owner(senate).
  *
- * Type 10011 : Withdrawal Contract
+ * Type 10011 : Withdrawal Package
  * * Mandatory.
  * * CONTROLLER is the implementation contract position (always)
  * * Version Release Requires the approval of Senate
  * * Upgrading to a new version is optional for pool owners.
- * * * Staking Pools are in "Isolation Mode" until their Withdrawal Contract is upgraded.
+ * * * Staking Pools are in "Isolation Mode" until their Withdrawal Package is upgraded.
  * * * Meaning, no more Depositing or Validator Proposal can happen.
  * * Custodian of the validator funds after creation, including any type of rewards and fees.
  *
- * Type 10021 : Liquidity Pool implementation
+ * Type 10021 : Liquidity Package implementation
  * * Optional.
  * * CONTROLLER is the implementation contract position (always)
  * * Version Release Requires the approval of Senate
  * * Upgrading to a new version is optional for pool owners.
- * * * Liquidity Pools are in "Isolation Mode" until upgraded.
+ * * * Liquidity Packages are in "Isolation Mode" until upgraded.
  *
  * @dev Middlewares:
  * Can support many different versions that can be utilized by the Pool Owners.
@@ -121,7 +121,7 @@ library StakeModuleLib {
   /// @notice price of gETH is only valid for 24H, minting is not allowed afterwards.
   uint256 internal constant PRICE_EXPIRY = 24 hours;
 
-  /// @notice ignoring any buybacks if the Liquidity Pool has a low debt
+  /// @notice ignoring any buybacks if the Liquidity Package has a low debt
   uint256 internal constant IGNORABLE_DEBT = 1 ether;
 
   /// @notice limiting the operator.validatorPeriod, between 3 months to 2 years
@@ -524,7 +524,7 @@ library StakeModuleLib {
 
   /**
    * @notice external function to increase the internal wallet balance
-   * @dev anyone can increase the balance directly, useful for withdrawalContracts and fees etc.
+   * @dev anyone can increase the balance directly, useful for Withdrawal Packages and distributed fees etc.
    */
   function increaseWalletBalance(
     DataStoreModuleStorage storage DATASTORE,
@@ -847,20 +847,20 @@ library StakeModuleLib {
   }
 
   /**
-   * @notice returns wrapped bound liquidity pool. If deployed, if not in isolationMode.
+   * @notice returns wrapped bound liquidity package. If deployed, if not in isolationMode.
    * @dev returns address(0) if no pool or it is under isolation
    */
-  function _getLiquidityPool(
+  function _getLiquidityPackage(
     DataStoreModuleStorage storage DATASTORE,
     uint256 _poolId
-  ) internal view returns (ILiquidityPool) {
-    address liqPool = DATASTORE.readAddress(_poolId, rks.liquidityPool);
+  ) internal view returns (ILiquidityPackage) {
+    address liqPool = DATASTORE.readAddress(_poolId, rks.liquidityPackage);
     if (liqPool == address(0)) {
-      return ILiquidityPool(address(0));
+      return ILiquidityPackage(address(0));
     } else if (_isGeodePackageIsolated(liqPool)) {
-      return ILiquidityPool(address(0));
+      return ILiquidityPackage(address(0));
     } else {
-      return ILiquidityPool(liqPool);
+      return ILiquidityPackage(liqPool);
     }
   }
 
@@ -896,7 +896,7 @@ library StakeModuleLib {
    * @notice checks if staking is allowed in given staking pool
    * @notice staking is not allowed if:
    * 1. Price is not valid
-   * 2. WithdrawalContract is in Isolation Mode, can have many reasons
+   * 2. WithdrawalPackage is in Isolation Mode, can have many reasons
    */
   function isMintingAllowed(
     StakeModuleStorage storage self,
@@ -905,7 +905,7 @@ library StakeModuleLib {
   ) public view returns (bool) {
     return
       (isPriceValid(self, poolId)) &&
-      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalContract)));
+      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalPackage)));
   }
 
   /**
@@ -937,11 +937,11 @@ library StakeModuleLib {
   }
 
   /**
-   * @notice conducts a buyback using the given liquidity pool
+   * @notice conducts a buyback using the given liquidity package
    * @param _poolId id of the gETH that will be bought
    * @param _maxEthToSell max ETH amount to sell in the liq pool
    * @param _deadline TX is expected to revert by Swap.sol if not meet
-   * @dev this function assumes that pool is deployed by deployLiquidityPool
+   * @dev this function assumes that pool is deployed by deployLiquidityPackage
    * as index 0 is ETH and index 1 is gETH!
    */
   function _buyback(
@@ -950,8 +950,8 @@ library StakeModuleLib {
     uint256 _maxEthToSell,
     uint256 _deadline
   ) internal returns (uint256 remETH, uint256 boughtgETH) {
-    ILiquidityPool LP = _getLiquidityPool(DATASTORE, _poolId);
-    // skip if no liquidity pool is found
+    ILiquidityPackage LP = _getLiquidityPackage(DATASTORE, _poolId);
+    // skip if no liquidity package is found
     if (address(LP) != address(0)) {
       uint256 debt = LP.getDebt();
       // skip if debt is too low
@@ -980,9 +980,9 @@ library StakeModuleLib {
   /**
    * @notice Allowing users to deposit into a staking pool.
    * @notice If a pool is not public, only the controller and if there is a whitelist contract, the whitelisted addresses can deposit.
-   * @param poolId id of the staking pool, liquidity pool and gETH to be used.
-   * @param mingETH liquidity pool parameter
-   * @param deadline liquidity pool parameter
+   * @param poolId id of the staking pool, liquidity package and gETH to be used.
+   * @param mingETH liquidity package parameter
+   * @param deadline liquidity package parameter
    * @dev an example for minting + buybacks
    * Buys from DWP if price is low -debt-, mints new tokens if surplus is sent -more than debt-
    * * debt  msgValue
@@ -1103,8 +1103,8 @@ library StakeModuleLib {
     _authenticate(DATASTORE, operatorId, false, true, [true, false]);
     _authenticate(DATASTORE, poolId, false, false, [false, true]);
     require(
-      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalContract))),
-      "SML:withdrawalContract is isolated"
+      !(_isGeodePackageIsolated(DATASTORE.readAddress(poolId, rks.withdrawalPackage))),
+      "SML:withdrawalPackage is isolated"
     );
 
     uint256 pkLen = pubkeys.length;
@@ -1304,35 +1304,37 @@ library StakeModuleLib {
    * @notice Notifies the node operator with ExitRequest event
    * @dev Prevents the request if validator is still within the MIN_VALIDATOR_PERIOD
    * @dev Only the active validators can be called for an exit
-   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   * @dev Can only be called by the withdrawalPackage of the pool given validator belongs to.
+   * @dev fails in case the tx is submitted without a secure medium, withdrawal package of the correct pool
+   * @return true if operation is successful, false if early exit.
    */
   function requestExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 poolId,
     bytes calldata pk
-  ) external {
+  ) external returns (bool) {
+    if (self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD > block.timestamp) {
+      return false;
+    }
+
     require(
-      block.timestamp > self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD,
-      "SML:early exit not allowed"
-    );
-    require(
-      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is not withdrawal contract"
+      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalPackage),
+      "SML:sender is not withdrawal package"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
     require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "SML:not an active validator");
 
     self.validators[pk].state = VALIDATOR_STATE.EXIT_REQUESTED;
-
     emit ExitRequest(pk);
+    return true;
   }
 
   /**
    * @notice Finalizes the exit process for a validator.
    * @dev Strongly advised to be called right after the exiting process is over.
    * @dev Operators can exit at any time they want.
-   * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   * @dev Can only be called by the withdrawalPackage of the pool given validator belongs to.
    */
   function finalizeExit(
     StakeModuleStorage storage self,
@@ -1341,8 +1343,8 @@ library StakeModuleLib {
     bytes calldata pk
   ) external {
     require(
-      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
-      "SML:sender is not withdrawal contract"
+      msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalPackage),
+      "SML:sender is not withdrawal package"
     );
     require(self.validators[pk].poolId == poolId, "SML:incorrect poolId");
 

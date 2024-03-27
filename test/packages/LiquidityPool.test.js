@@ -16,10 +16,10 @@ const StakeModuleLib = artifacts.require("StakeModuleLib");
 const InitiatorExtensionLib = artifacts.require("InitiatorExtensionLib");
 
 const WithdrawalModuleLib = artifacts.require("WithdrawalModuleLib");
-const WithdrawalContract = artifacts.require("WithdrawalContract");
-const LiquidityPool = artifacts.require("LiquidityPool");
+const WithdrawalPackage = artifacts.require("WithdrawalPackage");
+const LiquidityPackage = artifacts.require("LiquidityPackage");
 
-contract("LiquidityPool", function (accounts) {
+contract("LiquidityPackage", function (accounts) {
   const [deployer, owner] = accounts;
   let tokenId;
 
@@ -38,11 +38,11 @@ contract("LiquidityPool", function (accounts) {
     await Portal.link(this.OEL);
     await Portal.link(this.IEL);
 
-    await LiquidityPool.link(this.GML);
-    await LiquidityPool.link(this.LML);
+    await LiquidityPackage.link(this.GML);
+    await LiquidityPackage.link(this.LML);
 
-    await WithdrawalContract.link(this.GML);
-    await WithdrawalContract.link(this.WML);
+    await WithdrawalPackage.link(this.GML);
+    await WithdrawalPackage.link(this.WML);
 
     tokenId = await generateId(strToBytes("name"), 5);
   });
@@ -60,13 +60,13 @@ contract("LiquidityPool", function (accounts) {
     await this.gETH.transferMiddlewareManagerRole(this.portal.address);
     await this.gETH.transferOracleRole(this.portal.address);
 
-    const wc = await WithdrawalContract.new(this.gETH.address, this.portal.address);
+    const WP = await WithdrawalPackage.new(this.gETH.address, this.portal.address);
 
-    await this.portal.propose(wc.address, 10011, strToBytes("name"), DAY, { from: deployer });
+    await this.portal.propose(WP.address, 10011, strToBytes("name"), DAY, { from: deployer });
     await this.portal.approveProposal(await generateId(strToBytes("name"), 10011), {
       from: deployer,
     });
-    this.implementation = await LiquidityPool.new(
+    this.implementation = await LiquidityPackage.new(
       this.gETH.address,
       this.portal.address,
       this.lpImp.address
@@ -84,36 +84,36 @@ contract("LiquidityPool", function (accounts) {
       value: new BN(String(1e18)).muln(32),
     });
 
-    await this.portal.deployLiquidityPool(tokenId, { from: owner });
+    await this.portal.deployLiquidityPackage(tokenId, { from: owner });
 
-    this.contract = await LiquidityPool.at(
-      await this.portal.readAddress(tokenId, strToBytes("liquidityPool"))
+    this.contract = await LiquidityPackage.at(
+      await this.portal.readAddress(tokenId, strToBytes("liquidityPackage"))
     );
   });
 
   describe("Constructor", function () {
     it("reverts if _gETHPos is zero", async function () {
       await expectRevert(
-        LiquidityPool.new(ZERO_ADDRESS, this.portal.address, this.lpImp.address, {
+        LiquidityPackage.new(ZERO_ADDRESS, this.portal.address, this.lpImp.address, {
           from: deployer,
         }),
-        "LPP:_gETHPos cannot be zero"
+        "LP:_gETHPos cannot be zero"
       );
     });
     it("reverts if _portalPos is zero", async function () {
       await expectRevert(
-        LiquidityPool.new(this.gETH.address, ZERO_ADDRESS, this.lpImp.address, {
+        LiquidityPackage.new(this.gETH.address, ZERO_ADDRESS, this.lpImp.address, {
           from: deployer,
         }),
-        "LPP:_portalPos cannot be zero"
+        "LP:_portalPos cannot be zero"
       );
     });
     it("reverts if _LPTokenRef is zero", async function () {
       await expectRevert(
-        LiquidityPool.new(this.gETH.address, this.portal.address, ZERO_ADDRESS, {
+        LiquidityPackage.new(this.gETH.address, this.portal.address, ZERO_ADDRESS, {
           from: deployer,
         }),
-        "LPP:_LPTokenRef cannot be zero"
+        "LP:_LPTokenRef cannot be zero"
       );
     });
   });
@@ -134,28 +134,28 @@ contract("LiquidityPool", function (accounts) {
 
   describe("reverts for onlyOwner", function () {
     it("pause", async function () {
-      await expectRevert(this.contract.pause(), "LPP:sender not owner");
+      await expectRevert(this.contract.pause(), "LP:sender not owner");
       await this.contract.pause({ from: owner });
     });
     it("unpause", async function () {
       await this.contract.pause({ from: owner });
-      await expectRevert(this.contract.unpause(), "LPP:sender not owner");
+      await expectRevert(this.contract.unpause(), "LP:sender not owner");
       await this.contract.unpause({ from: owner });
     });
     it("setSwapFee", async function () {
-      await expectRevert(this.contract.setSwapFee(0), "LPP:sender not owner");
+      await expectRevert(this.contract.setSwapFee(0), "LP:sender not owner");
       await this.contract.setSwapFee(1, { from: owner });
     });
     it("setAdminFee", async function () {
-      await expectRevert(this.contract.setAdminFee(0), "LPP:sender not owner");
+      await expectRevert(this.contract.setAdminFee(0), "LP:sender not owner");
       await this.contract.setAdminFee(1, { from: owner });
     });
     it("withdrawAdminFees", async function () {
-      await expectRevert(this.contract.withdrawAdminFees(ZERO_ADDRESS), "LPP:sender not owner");
+      await expectRevert(this.contract.withdrawAdminFees(ZERO_ADDRESS), "LP:sender not owner");
       await this.contract.withdrawAdminFees(owner, { from: owner });
     });
     it("rampA", async function () {
-      await expectRevert(this.contract.rampA(0, 0), "LPP:sender not owner");
+      await expectRevert(this.contract.rampA(0, 0), "LP:sender not owner");
       await this.contract.rampA(100, (await getBlockTimestamp()).add(DAY.muln(14).addn(1)), {
         from: owner,
       });
@@ -164,7 +164,7 @@ contract("LiquidityPool", function (accounts) {
       await this.contract.rampA(100, (await getBlockTimestamp()).add(DAY.muln(14).addn(1)), {
         from: owner,
       });
-      await expectRevert(this.contract.stopRampA(), "LPP:sender not owner");
+      await expectRevert(this.contract.stopRampA(), "LP:sender not owner");
       await this.contract.stopRampA({ from: owner });
     });
   });
@@ -195,20 +195,20 @@ contract("LiquidityPool", function (accounts) {
 
   describe("pullUpgrade", function () {
     it("reverts if not owner", async function () {
-      await expectRevert(this.contract.pullUpgrade(), "LPP:sender not owner");
+      await expectRevert(this.contract.pullUpgrade(), "LP:sender not owner");
     });
     it("reverts if portal is in isolation", async function () {
       await setTimestamp((await getBlockTimestamp()).add(DAY.muln(366)).toNumber());
-      await expectRevert(this.contract.pullUpgrade({ from: owner }), "LPP:Portal is isolated");
+      await expectRevert(this.contract.pullUpgrade({ from: owner }), "LP:Portal is isolated");
     });
     it("reverts if there is no new version", async function () {
-      await expectRevert(this.contract.pullUpgrade({ from: owner }), "LPP:no upgrades");
+      await expectRevert(this.contract.pullUpgrade({ from: owner }), "LP:no upgrades");
     });
 
     context("success", function () {
       let newimplementation;
       beforeEach(async function () {
-        newimplementation = await LiquidityPool.new(
+        newimplementation = await LiquidityPackage.new(
           this.gETH.address,
           this.portal.address,
           this.lpImp.address
@@ -230,7 +230,7 @@ contract("LiquidityPool", function (accounts) {
         );
       });
       it("cannot pull again", async function () {
-        await expectRevert(this.contract.pullUpgrade({ from: owner }), "LPP:no upgrades");
+        await expectRevert(this.contract.pullUpgrade({ from: owner }), "LP:no upgrades");
       });
     });
   });

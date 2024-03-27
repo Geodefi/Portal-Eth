@@ -11,7 +11,7 @@ pragma solidity =0.8.20;
 // import {ID_TYPE} from "../../../globals/id_type.sol";
 // // interfaces
 // import {IPortal} from "../../../interfaces/IPortal.sol";
-// import {ILiquidityPoolV2_0_Mock} from "./interfaces/ILiquidityPoolV2_0_Mock.sol";
+// import {ILiquidityPackageV2_0_Mock} from "./interfaces/ILiquidityPackageV2_0_Mock.sol";
 // import {IGeodeModule} from "../../../interfaces/modules/IGeodeModule.sol";
 // import {ILiquidityModule} from "../../../interfaces/modules/ILiquidityModule.sol";
 // // libraries
@@ -23,11 +23,11 @@ pragma solidity =0.8.20;
 // import {LiquidityModule} from "../../../modules/LiquidityModule/LiquidityModule.sol";
 
 // /**
-//  * @title LPP: Liquidity Pool Package: Geode Module + Liquidity Module
+//  * @title LP: Liquidity Package: Geode Module + Liquidity Module
 //  *
-//  * @notice LPP is a package that provides a liquidity pool for a staking pool created through Portal.
+//  * @notice LP is a package that provides a liquidity package for a staking pool created through Portal.
 //  *
-//  * @dev TYPE: PACKAGE_LIQUIDITY_POOL
+//  * @dev TYPE: PACKAGE_LIQUIDITY
 //  * @dev Utilizing IGeodePackage interface, meaning initialize function takes 3 parameters:
 //  * * * poolOwner: will be assigned as the senate of the package
 //  * * * pooledTokenId: used internally on LM and LML.
@@ -45,7 +45,7 @@ pragma solidity =0.8.20;
 //  *
 //  * @author Ice Bear & Crash Bandicoot
 //  */
-// contract LiquidityPoolV2_0_Mock is ILiquidityPoolV2_0_Mock, GeodeModule, LiquidityModule {
+// contract LiquidityPackageV2_0_Mock is ILiquidityPackageV2_0_Mock, GeodeModule, LiquidityModule {
 //   using GML for DualGovernance;
 //   using AL for Swap;
 //   using LML for Swap;
@@ -65,7 +65,7 @@ pragma solidity =0.8.20;
 //   address internal immutable portalPos;
 //   /// @notice LPToken implementation referance, needs to be cloned
 //   address internal immutable LPTokenRef;
-//   /// @notice LPP package type, useful for Limited Upgradability
+//   /// @notice Liquidity package type, useful for Limited Upgradability
 
 //   uint256 freshSlot;
 //   /**
@@ -73,7 +73,7 @@ pragma solidity =0.8.20;
 //    */
 
 //   modifier onlyOwner() {
-//     require(msg.sender == GEODE.SENATE, "LPP:sender not owner");
+//     require(msg.sender == GEODE.SENATE, "LP:sender not owner");
 //     _;
 //   }
 
@@ -85,9 +85,9 @@ pragma solidity =0.8.20;
 //    * @custom:oz-upgrades-unsafe-allow constructor
 //    */
 //   constructor(address _gETHPos, address _portalPos, address _LPTokenRef) {
-//     require(_gETHPos != address(0), "LPP:_gETHPos cannot be zero");
-//     require(_portalPos != address(0), "LPP:_portalPos cannot be zero");
-//     require(_LPTokenRef != address(0), "LPP:_LPTokenRef cannot be zero");
+//     require(_gETHPos != address(0), "LP:_gETHPos cannot be zero");
+//     require(_portalPos != address(0), "LP:_portalPos cannot be zero");
+//     require(_LPTokenRef != address(0), "LP:_LPTokenRef cannot be zero");
 
 //     gETHPos = _gETHPos;
 //     portalPos = _portalPos;
@@ -105,14 +105,14 @@ pragma solidity =0.8.20;
 //     bytes calldata versionName,
 //     bytes calldata data
 //   ) public virtual override initializer {
-//     __LiquidityPool_init(pooledTokenId, poolOwner, versionName, data);
+//     __LiquidityPackage_init(pooledTokenId, poolOwner, versionName, data);
 //   }
 
 //   function initializeV2_0_Mock(uint256 _freshSlot) public virtual override reinitializer(2) {
 //     setFreshSlot(_freshSlot);
 //   }
 
-//   function __LiquidityPool_init(
+//   function __LiquidityPackage_init(
 //     uint256 pooledTokenId,
 //     address poolOwner,
 //     bytes calldata versionName,
@@ -122,7 +122,7 @@ pragma solidity =0.8.20;
 //       portalPos,
 //       poolOwner,
 //       type(uint256).max,
-//       ID_TYPE.PACKAGE_LIQUIDITY_POOL,
+//       ID_TYPE.PACKAGE_LIQUIDITY,
 //       versionName
 //     );
 //     __LiquidityModule_init(
@@ -133,10 +133,10 @@ pragma solidity =0.8.20;
 //       (4 * PERCENTAGE_DENOMINATOR) / 10000,
 //       string(data)
 //     );
-//     __LiquidityPool_init_unchained();
+//     __LiquidityPackage_init_unchained();
 //   }
 
-//   function __LiquidityPool_init_unchained() internal onlyInitializing {}
+//   function __LiquidityPackage_init_unchained() internal onlyInitializing {}
 
 //   function setFreshSlot(uint256 value) public virtual override {
 //     freshSlot = value;
@@ -218,8 +218,8 @@ pragma solidity =0.8.20;
 //    * @dev IGeodePackage override
 //    */
 //   function pullUpgrade() external virtual override onlyOwner {
-//     require(!(getPortal().isolationMode()), "LPP:Portal is isolated");
-//     require(getProposedVersion() != getContractVersion(), "LPP:no upgrades");
+//     require(!(getPortal().isolationMode()), "LP:Portal is isolated");
+//     require(getProposedVersion() != getContractVersion(), "LP:no upgrades");
 
 //     uint256 id = getPortal().pushUpgrade(GEODE.PACKAGE_TYPE);
 //     approveProposal(id);
@@ -244,7 +244,7 @@ pragma solidity =0.8.20;
 //   }
 
 //   /**
-//    * @custom:subsection                           ** LIQUIDITY POOL **
+//    * @custom:subsection                           ** LIQUIDITY PACKAGE **
 //    *
 //    * @dev LM override
 //    */
