@@ -136,7 +136,7 @@ interface IStakeModule is IDataStoreModule {
 
   function stake(uint256 operatorId, bytes[] calldata pubkeys) external;
 
-  function requestExit(uint256 poolId, bytes memory pk) external;
+  function requestExit(uint256 poolId, bytes memory pk) external returns (bool);
 
   function finalizeExit(uint256 poolId, bytes memory pk) external;
 

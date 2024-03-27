@@ -167,8 +167,11 @@ library WithdrawalModuleLib {
    * @notice notifies Portal to change validator state from ACTIVE to EXIT_REQUESTED
    * @param pubkey public key of the given validator.
    */
-  function _requestExit(WithdrawalModuleStorage storage self, bytes calldata pubkey) internal {
-    _getPortal(self).requestExit(self.POOL_ID, pubkey);
+  function _requestExit(
+    WithdrawalModuleStorage storage self,
+    bytes calldata pubkey
+  ) internal returns (bool) {
+    return _getPortal(self).requestExit(self.POOL_ID, pubkey);
   }
 
   /**
@@ -196,16 +199,15 @@ library WithdrawalModuleLib {
 
     if (commonPoll + validatorPoll > threshold) {
       // meaning it can request withdrawal
-
-      if (threshold > validatorPoll) {
-        // If Poll is not enough spend votes from commonPoll.
-        commonPoll -= threshold - validatorPoll;
-      } else if (validatorPoll > beaconBalancePriced) {
-        // If Poll is bigger than needed, move the extra votes instead of spending.
-        commonPoll += validatorPoll - beaconBalancePriced;
+      if (_requestExit(self, pubkey)) {
+        if (threshold > validatorPoll) {
+          // If Poll is not enough spend votes from commonPoll.
+          commonPoll -= threshold - validatorPoll;
+        } else if (validatorPoll > beaconBalancePriced) {
+          // If Poll is bigger than needed, move the extra votes instead of spending.
+          commonPoll += validatorPoll - beaconBalancePriced;
+        }
       }
-
-      _requestExit(self, pubkey);
     }
 
     return commonPoll;

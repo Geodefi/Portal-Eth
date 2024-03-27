@@ -1305,17 +1305,19 @@ library StakeModuleLib {
    * @dev Prevents the request if validator is still within the MIN_VALIDATOR_PERIOD
    * @dev Only the active validators can be called for an exit
    * @dev Can only be called by the withdrawalContract of the pool given validator belongs to.
+   * @dev fails in case the tx is submitted without a secure medium, withdrawal contract of the correct pool
+   * @return true if operation is successful, false if early exit.
    */
   function requestExit(
     StakeModuleStorage storage self,
     DataStoreModuleStorage storage DATASTORE,
     uint256 poolId,
     bytes calldata pk
-  ) external {
-    require(
-      block.timestamp > self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD,
-      "SML:early exit not allowed"
-    );
+  ) external returns (bool) {
+    if (self.validators[pk].createdAt + MIN_VALIDATOR_PERIOD > block.timestamp) {
+      return false;
+    }
+
     require(
       msg.sender == DATASTORE.readAddress(poolId, rks.withdrawalContract),
       "SML:sender is not withdrawal contract"
@@ -1324,8 +1326,8 @@ library StakeModuleLib {
     require(self.validators[pk].state == VALIDATOR_STATE.ACTIVE, "SML:not an active validator");
 
     self.validators[pk].state = VALIDATOR_STATE.EXIT_REQUESTED;
-
     emit ExitRequest(pk);
+    return true;
   }
 
   /**
