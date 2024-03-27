@@ -989,8 +989,9 @@ contract("WithdrawalModuleLib", function (accounts) {
         expect(queueData.commonPoll).to.be.bignumber.equal(mockCommonPoll);
         expect(val.state).to.be.bignumber.equal(new BN(String(2))); // ACTIVE;
       });
-      it("reverts because of early exit for: 'validator state changes to EXIT_REQUESTED and commonPoll increases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than beaconBalancePriced'", async function () {
+      it("nothing changes when: 'validator state changes to EXIT_REQUESTED and commonPoll increases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than beaconBalancePriced'", async function () {
         const mockValidatorPoll = new BN(String(18e18)); // beaconBalance for validator is set to 10e18 and price set to 15e17 so 10e18 * 15e17 / 1e18 = 15e18 is bigger than beaconBalancePriced
+
         await this.contract.$setMockValidatorData(
           pubkey0,
           mockBeaconBalance,
@@ -998,10 +999,16 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        await expectRevert(
-          this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll),
-          "SML:early exit not allowed"
-        );
+        const beforeCommonPoll = (await this.contract.$getQueueData()).commonPoll;
+        const beforeValState = (await this.SMLM.getValidator(pubkey0)).state;
+
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
+
+        const afterCommonPoll = (await this.contract.$getQueueData()).commonPoll;
+        const afterValState = (await this.SMLM.getValidator(pubkey0)).state;
+
+        expect(beforeValState).to.be.bignumber.equal(afterValState); // no difference;
+        expect(beforeCommonPoll).to.be.bignumber.equal(afterCommonPoll);
       });
       it("validator state changes to EXIT_REQUESTED and commonPoll increases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than beaconBalancePriced", async function () {
         const delay = DAY.muln(91);
@@ -1029,7 +1036,7 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockCommonPoll.add(mockValidatorPoll.sub(beaconBalancePriced))
         );
       });
-      it("reverts because of early exit for: 'validator state changes to EXIT_REQUESTED and commonPoll stays same if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than validatorThreshold and smaller than beaconBalancePriced'", async function () {
+      it("nothing changes when: 'validator state changes to EXIT_REQUESTED and commonPoll stays same if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than validatorThreshold and smaller than beaconBalancePriced'", async function () {
         const mockValidatorPoll = new BN(String(65e17));
         await this.contract.$setMockValidatorData(
           pubkey0,
@@ -1038,10 +1045,16 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        await expectRevert(
-          this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll),
-          "SML:early exit not allowed"
-        );
+        const beforeCommonPoll = (await this.contract.$getQueueData()).commonPoll;
+        const beforeValState = (await this.SMLM.getValidator(pubkey0)).state;
+
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
+
+        const afterCommonPoll = (await this.contract.$getQueueData()).commonPoll;
+        const afterValState = (await this.SMLM.getValidator(pubkey0)).state;
+
+        expect(beforeValState).to.be.bignumber.equal(afterValState); // no difference;
+        expect(beforeCommonPoll).to.be.bignumber.equal(afterCommonPoll);
       });
       it("validator state changes to EXIT_REQUESTED and commonPoll stays same if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is bigger than validatorThreshold and smaller than beaconBalancePriced", async function () {
         const delay = DAY.muln(91);
@@ -1065,7 +1078,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         expect(val.state).to.be.bignumber.equal(new BN(String(3))); // EXIT_REQUESTED;
         expect(newCommonPoll).to.be.bignumber.equal(mockCommonPoll);
       });
-      it("reverts because of early exit for: 'validator state changes to EXIT_REQUESTED and commonPoll decreases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is smaller than validatorThreshold'", async function () {
+      it("nothing changes when: 'validator state changes to EXIT_REQUESTED and commonPoll decreases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is smaller than validatorThreshold'", async function () {
         const mockValidatorPoll = new BN(String(3e18));
         await this.contract.$setMockValidatorData(
           pubkey0,
@@ -1074,10 +1087,16 @@ contract("WithdrawalModuleLib", function (accounts) {
           mockValidatorPoll
         );
 
-        await expectRevert(
-          this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll),
-          "SML:early exit not allowed"
-        );
+        const beforeCommonPoll = (await this.contract.$getQueueData()).commonPoll;
+        const beforeValState = (await this.SMLM.getValidator(pubkey0)).state;
+
+        await this.contract.$checkAndRequestExit(pubkey0, mockCommonPoll);
+
+        const afterCommonPoll = (await this.contract.$getQueueData()).commonPoll;
+        const afterValState = (await this.SMLM.getValidator(pubkey0)).state;
+
+        expect(beforeValState).to.be.bignumber.equal(afterValState); // no difference;
+        expect(beforeCommonPoll).to.be.bignumber.equal(afterCommonPoll);
       });
       it("validator state changes to EXIT_REQUESTED and commonPoll decreases if commonPoll + validatorPoll bigger than validatorThreshold and validatorPoll is smaller than validatorThreshold", async function () {
         const delay = DAY.muln(91);
@@ -1111,13 +1130,13 @@ contract("WithdrawalModuleLib", function (accounts) {
       const mockVoteSize = new BN(String(2e16));
       it("reverts if validator not belong to pool", async function () {
         await expectRevert(
-          this.contract.$_vote(pubkeyNotExists, mockVoteSize),
+          this.contract.$_vote(31, pubkeyNotExists, mockVoteSize),
           "WML:vote for an unknown pool"
         );
       });
       it("reverts if validator not active", async function () {
         await expectRevert(
-          this.contract.$_vote(pubkey0, mockVoteSize),
+          this.contract.$_vote(31, pubkey0, mockVoteSize),
           "WML:voted for inactive validator"
         );
       });
@@ -1126,8 +1145,8 @@ contract("WithdrawalModuleLib", function (accounts) {
         await this.SMLM.stake(this.operatorId, [pubkey0], {
           from: operatorMaintainer,
         });
-        await this.contract.$_vote(pubkey0, mockVoteSize);
-        await this.contract.$_vote(pubkey0, mockVoteSize.muln(2));
+        await this.contract.$_vote(31, pubkey0, mockVoteSize);
+        await this.contract.$_vote(31, pubkey0, mockVoteSize.muln(2));
 
         expect((await this.contract.$getValidatorData(pubkey0)).poll).to.be.bignumber.equal(
           mockVoteSize.muln(3)

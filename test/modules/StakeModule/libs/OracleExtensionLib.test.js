@@ -465,10 +465,12 @@ contract("OracleExtensionLib", function (accounts) {
         });
 
         it("updates PRICE_MERKLE_ROOT", async function () {
-          expect(params.priceMerkleRoot).to.be.equal(strToBytes32("priceMerkleRoot"));
+          const priceMerkleRoot = await this.contract.getPriceMerkleRoot();
+          expect(priceMerkleRoot).to.be.equal(strToBytes32("priceMerkleRoot"));
         });
         it("updates BALANCE_MERKLE_ROOT", async function () {
-          expect(params.balanceMerkleRoot).to.be.equal(strToBytes32("balanceMerkleRoot"));
+          const balanceMerkleRoot = await this.contract.getBalancesMerkleRoot();
+          expect(balanceMerkleRoot).to.be.equal(strToBytes32("balanceMerkleRoot"));
         });
         it("updates ORACLE_UPDATE_TIMESTAMP", async function () {
           expect(params.oracleUpdateTimestamp).to.be.bignumber.equal(ts);
