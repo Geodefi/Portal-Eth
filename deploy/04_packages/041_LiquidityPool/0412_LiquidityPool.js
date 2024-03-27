@@ -3,7 +3,7 @@ const func = async function (hre) {
   const { deploy, get } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  console.log("LiquidityPackage Package WILL NOT BE DEPLOYED");
+  console.log("LiquidityPackage WILL NOT BE DEPLOYED");
   // await deploy("LiquidityPackage", {
   //   from: deployer,
   //   log: true,

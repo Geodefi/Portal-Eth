@@ -45,14 +45,14 @@ contract("WithdrawalModuleLib", function (accounts) {
   const MONOPOLY_THRESHOLD = new BN("50000");
 
   const setWithdrawalPackage = async function () {
-    const wc = await WithdrawalPackage.new(this.gETH.address, this.SMLM.address);
+    const wp = await WithdrawalPackage.new(this.gETH.address, this.SMLM.address);
     const packageType = new BN(10011);
     const packageName = "WithdrawalPackage";
 
     const withdrawalPackageId = await this.SMLM.generateId(packageName, packageType);
 
     await this.SMLM.$writeUint(withdrawalPackageId, strToBytes32("TYPE"), packageType);
-    await this.SMLM.$writeAddress(withdrawalPackageId, strToBytes32("CONTROLLER"), wc.address);
+    await this.SMLM.$writeAddress(withdrawalPackageId, strToBytes32("CONTROLLER"), wp.address);
 
     await this.SMLM.$writeBytes(
       withdrawalPackageId,
@@ -616,7 +616,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         "WML:receiver cannot be zero address"
       );
     });
-    it("reverts if WC does not have enough balance", async function () {
+    it("reverts if wp does not have enough balance", async function () {
       await expectRevert(
         this.contract.$dequeue(new BN(String(0)), randomAddress, { from: staker }),
         "WML:Failed to send Ether"
@@ -699,7 +699,7 @@ contract("WithdrawalModuleLib", function (accounts) {
         "WML:receiver cannot be zero address"
       );
     });
-    it("reverts if WC does not have enough balance", async function () {
+    it("reverts if WP does not have enough balance", async function () {
       await expectRevert(
         this.contract.$dequeueBatch([new BN(String(0)), new BN(String(1))], randomAddress, {
           from: staker,
@@ -1185,7 +1185,7 @@ contract("WithdrawalModuleLib", function (accounts) {
           from: operatorMaintainer,
         });
 
-        // need this since WC is not approved by deployment
+        // need this since WP is not approved by deployment
         await this.gETH.setApprovalForAll(this.contract.address, true, { from: staker });
       });
       it("if pubkey is empty, commonPoll and requested increase by size", async function () {
@@ -1271,7 +1271,7 @@ contract("WithdrawalModuleLib", function (accounts) {
           from: operatorMaintainer,
         });
 
-        // need this since WC is not approved by deployment
+        // need this since WP is not approved by deployment
         await this.gETH.setApprovalForAll(this.contract.address, true, { from: staker });
       });
       it("reverts if pubkey and size arrays length not equal", async function () {

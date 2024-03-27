@@ -11,32 +11,32 @@ module.exports.upgradePackage = async function (hre, portal, version = "V1_0") {
     const { ethers, upgrades, deployments } = hre;
     const { get } = deployments;
 
-    const oldWCFactory = await ethers.getContractFactory("WithdrawalPackage", {
+    const oldWPFactory = await ethers.getContractFactory("WithdrawalPackage", {
       libraries: {
         GeodeModuleLib: (await get("GeodeModuleLib")).address,
         WithdrawalModuleLib: (await get("WithdrawalModuleLib")).address,
       },
     });
 
-    const WCFactory = await ethers.getContractFactory("WithdrawalPackage" + version, {
+    const WPFactory = await ethers.getContractFactory("WithdrawalPackage" + version, {
       libraries: {
         GeodeModuleLib: (await get("GeodeModuleLib")).address,
         WithdrawalModuleLib: (await get("WithdrawalModuleLib")).address,
       },
     });
 
-    const currentWC = await upgrades.forceImport(
+    const currentWP = await upgrades.forceImport(
       (
         await get("WithdrawalPackage")
       ).address,
-      oldWCFactory,
+      oldWPFactory,
       {
         kind: "uups",
         constructorArgs: [(await get("gETH")).address, portal.address],
       }
     );
 
-    const newImplementationAddress = await upgrades.prepareUpgrade(currentWC, WCFactory, {
+    const newImplementationAddress = await upgrades.prepareUpgrade(currentWP, WPFactory, {
       redeployImplementation: "onchange",
       kind: "uups",
       unsafeAllow: ["external-library-linking", "state-variable-immutable"],

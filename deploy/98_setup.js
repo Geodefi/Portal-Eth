@@ -44,7 +44,7 @@ const func = async (hre) => {
     const wpType = 10011;
 
     const wpAddress = (await get("WithdrawalPackage")).address;
-    const expectedWPVersion = (await generateId(strToBytes("v1"), wcType)).toString();
+    const expectedWPVersion = (await generateId(strToBytes("v1"), wpType)).toString();
     if ((await read("Portal", "getPackageVersion", wpType)).toString() === expectedWPVersion) {
       console.log("Withdrawal Package is ALREADY released\n");
     } else {

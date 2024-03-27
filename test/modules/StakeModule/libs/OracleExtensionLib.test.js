@@ -75,14 +75,14 @@ contract("OracleExtensionLib", function (accounts) {
   let poolIds = [];
 
   const setWithdrawalPackage = async function () {
-    const wc = await WithdrawalPackage.new(this.gETH.address, this.contract.address);
+    const wp = await WithdrawalPackage.new(this.gETH.address, this.contract.address);
     const packageType = new BN(10011);
     const packageName = "WithdrawalPackage";
 
     const withdrawalPackageId = await this.contract.generateId(packageName, packageType);
 
     await this.contract.$writeUint(withdrawalPackageId, strToBytes32("TYPE"), packageType);
-    await this.contract.$writeAddress(withdrawalPackageId, strToBytes32("CONTROLLER"), wc.address);
+    await this.contract.$writeAddress(withdrawalPackageId, strToBytes32("CONTROLLER"), wp.address);
 
     await this.contract.$writeBytes(
       withdrawalPackageId,

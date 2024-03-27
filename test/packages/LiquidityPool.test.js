@@ -60,9 +60,9 @@ contract("LiquidityPackage", function (accounts) {
     await this.gETH.transferMiddlewareManagerRole(this.portal.address);
     await this.gETH.transferOracleRole(this.portal.address);
 
-    const wc = await WithdrawalPackage.new(this.gETH.address, this.portal.address);
+    const WP = await WithdrawalPackage.new(this.gETH.address, this.portal.address);
 
-    await this.portal.propose(wc.address, 10011, strToBytes("name"), DAY, { from: deployer });
+    await this.portal.propose(WP.address, 10011, strToBytes("name"), DAY, { from: deployer });
     await this.portal.approveProposal(await generateId(strToBytes("name"), 10011), {
       from: deployer,
     });
