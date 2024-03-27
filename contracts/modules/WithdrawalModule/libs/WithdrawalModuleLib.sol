@@ -114,7 +114,7 @@ library WithdrawalModuleLib {
    */
   event NewExitThreshold(uint256 threshold);
   event Enqueue(uint256 indexed index, address owner);
-  event Vote(bytes indexed pubkey, uint256 size);
+  event Vote(uint256 indexed index, bytes indexed pubkey, uint256 size);
   event RequestTransfer(uint256 indexed index, address oldOwner, address newOwner);
   event Fulfill(uint256 indexed index, uint256 fulfillAmount, uint256 claimableETH);
   event Dequeue(uint256 indexed index, uint256 claim);
@@ -258,6 +258,7 @@ library WithdrawalModuleLib {
    */
   function _vote(
     WithdrawalModuleStorage storage self,
+    uint256 index,
     bytes calldata pubkey,
     uint256 size
   ) internal {
@@ -267,7 +268,7 @@ library WithdrawalModuleLib {
     require(val.state == VALIDATOR_STATE.ACTIVE, "WML:voted for inactive validator");
 
     self.validators[pubkey].poll += size;
-    emit Vote(pubkey, size);
+    emit Vote(index, pubkey, size);
   }
 
   /**
@@ -324,7 +325,7 @@ library WithdrawalModuleLib {
     if (pubkey.length == 0) {
       self.queue.commonPoll += size;
     } else {
-      _vote(self, pubkey, size);
+      _vote(self, index, pubkey, size);
     }
 
     self.queue.requested = requestedgETH + size;
@@ -358,7 +359,7 @@ library WithdrawalModuleLib {
       if (pubkeys[i].length == 0) {
         commonPoll += sizes[i];
       } else {
-        _vote(self, pubkeys[i], sizes[i]);
+        _vote(self, indexes[i], pubkeys[i], sizes[i]);
       }
       requestedgETH = requestedgETH + sizes[i];
       totalSize += sizes[i];
