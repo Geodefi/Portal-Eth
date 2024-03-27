@@ -9,7 +9,7 @@ Defining the range of functionalities and grouping them, isolating them from oth
 We isolate the functionalities within Packages with Modules. We then, isolate the functionalities within Modules with Libraries.
 
 > An example module architecture:
-> ![modules](../../../docs/images/modules.png)
+> ![modules](../../docs/images/modules.png)
 
 - A Module contains a predefined set of an isolated functionality that will be utilized by [Packages](../packages/).
 - Modules cannot have storage variables other than its main struct which is defined within the its main library.
@@ -58,7 +58,7 @@ The first use case of Dual Governance is upgrading the code of a package.
 
 With another contract that acts like a version manager (as Governance), which is Portal (Except for the Portal which manages its own version with an external Senate), we can release new versions for the Packages without disrupting the owner's control.
 
-![limited upgradability](../../../docs/images/limited%20upgradability.png)
+![limited upgradability](../../docs/images/limited%20upgradability.png)
 
 ## **Liquidity Module**
 
@@ -76,7 +76,7 @@ An already claimed ID cannot be initiated as a POOL. It is also practically impo
 
 > Initiating a Pool requires 1 validator worth of Ether to be deposited in the pool. This prevents spam.
 
-![initiatePool](../../../docs/images/initiatePool.png)
+![initiatePool](../../docs/images/initiatePool.png)
 
 This process results in:
 
@@ -88,7 +88,7 @@ This process results in:
   - Setting the visibility to either private or public.
   - Setting the pool's maintainance fee.
   - Setting
-  - Deploying the latest version of the Withdrawal Contract Package.
+  - Deploying the latest version of the Withdrawal Package.
   - Optionally deploying the latest version of the Liquidity Pool Package.
   - Optionally deploying a gETH Middleware that is bound to given ID, using the setting that is provided by the user:
     - Middleware ID among the allowed implementations of the gETH Middlewares.
@@ -110,7 +110,7 @@ Every Operator and Pool has an ID. Some parameters of the ID are open to the man
 
 ### Pooling
 
-![deposit](../../../docs/images/deposit.png)
+![deposit](../../docs/images/deposit.png)
 
 Simply, stakers can deposit Ether and mint gETH.
 
@@ -131,7 +131,7 @@ Validator creation is 3 step process, this is because there is a frontrunning bu
 
 #### Validator Proposal
 
-![propose](../../../docs/images/propose.png)
+![propose](../../docs/images/propose.png)
 
 - If Withdrawal Pool is in isolation mode, Portal does not trust the Pool prevents validator proposals.
 
@@ -141,7 +141,7 @@ Oracle approves the validator if all looks good.
 
 #### Validator Activation
 
-![stake](../../../docs/images/stake.png)
+![stake](../../docs/images/stake.png)
 
 If a validator proposal is approved by the Oracle, it can be activated by using the pool's funds.
 
@@ -162,7 +162,7 @@ If a validator proposal is approved by the Oracle, it can be activated by using 
    - Operators can act faulty in many different ways. To prevent such actions,
    - Telescope regulates them with well defined limitations.
    - Currently only issue is the fee theft, meaning operators have not
-   - used the withdrawal contract for miner fees or MEV boost.
+   - used the withdrawal package for miner fees or MEV boost.
    - There can be other restrictions in the future.
 
 3. **Continous Data from Beacon chain**: Price Merkle Root & Balances Merkle Root &
@@ -193,7 +193,7 @@ A request can be fulfilled if there is claimable ETH, it can be fulfilled partia
 
 ### Elections on Which Validators to Exit
 
-While getting into the queue, caller can vote on a validator, increasing it's `poll`. If a validator is not specified, vote goes to `commonPoll`. It can be used for any validator to top-up the `EXIT_THRESHOLD` which is the threshold that can be set as percentage to decide the minimum gETH amount over beacon balance of the validator for withdrawal contract to call `requestExit` function from Portal to make operator to know that validator is selected for the exit and it should be exited as soon as possible. If a validator is called for exit but there are remaining votes in it, it is transferred to the commonPoll.
+While getting into the queue, caller can vote on a validator, increasing it's `poll`. If a validator is not specified, vote goes to `commonPoll`. It can be used for any validator to top-up the `EXIT_THRESHOLD` which is the threshold that can be set as percentage to decide the minimum gETH amount over beacon balance of the validator for withdrawal package to call `requestExit` function from Portal to make operator to know that validator is selected for the exit and it should be exited as soon as possible. If a validator is called for exit but there are remaining votes in it, it is transferred to the commonPoll.
 
 - Note that, elections are basically just stating a preference, exit of the voted validator does not change the voter's priority in the queue.
 
