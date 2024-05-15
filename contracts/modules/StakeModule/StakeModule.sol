@@ -77,12 +77,13 @@ abstract contract StakeModule is
   /**
    * @custom:section                           ** EVENTS **
    */
+  event InitiationDepositSet(uint256 initiationDeposit);
   event IdInitiated(uint256 id, uint256 indexed TYPE);
   event MiddlewareDeployed(uint256 poolId, uint256 version);
   event PackageDeployed(uint256 poolId, uint256 packageType, address instance);
+
   event InfrastructureFeeSet(uint256 _type, uint256 fee);
   event BeaconDelaySet(uint256 entryDelay, uint256 exitDelay);
-  event InitiationDepositSet(uint256 initiationDeposit);
   event VisibilitySet(uint256 id, bool isPrivate);
   event YieldReceiverSet(uint256 indexed poolId, address yieldReceiver);
   event MaintainerChanged(uint256 indexed id, address newMaintainer);
@@ -90,21 +91,22 @@ abstract contract StakeModule is
   event ValidatorPeriodSwitched(uint256 indexed operatorId, uint256 period, uint256 effectiveAfter);
   event Delegation(uint256 poolId, uint256 indexed operatorId, uint256 allowance);
   event FallbackOperator(uint256 poolId, uint256 indexed operatorId, uint256 threshold);
-  event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event Deposit(uint256 indexed poolId, uint256 boughtgETH, uint256 mintedgETH);
   event StakeProposal(uint256 poolId, uint256 operatorId, bytes[] pubkeys);
   event Stake(bytes[] pubkeys);
+  event ExitRequest(bytes pubkey);
+  event Exit(bytes pubkey);
 
   event Alienated(bytes pubkey);
   event VerificationIndexUpdated(uint256 validatorVerificationIndex);
   event FeeTheft(uint256 indexed id, bytes proofs);
+  event Prisoned(uint256 indexed operatorId, bytes proof, uint256 releaseTimestamp);
   event YieldDistributed(uint256 indexed poolId, uint256 amount);
   event OracleReported(
     bytes32 priceMerkleRoot,
     bytes32 balanceMerkleRoot,
     uint256 monopolyThreshold
   );
-
   /**
    * @custom:section                           ** ABSTRACT FUNCTIONS **
    */
