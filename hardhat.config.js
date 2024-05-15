@@ -1,19 +1,23 @@
 require("dotenv").config();
 
-require("@nomiclabs/hardhat-etherscan");
-require("@nomiclabs/hardhat-waffle");
+require("ethers");
+require("@nomiclabs/hardhat-web3");
+require("@nomiclabs/hardhat-truffle5");
+require("@nomicfoundation/hardhat-verify");
+require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-chai-matchers");
+require("@nomicfoundation/hardhat-network-helpers");
+
+require("hardhat-deploy");
+require("hardhat-deploy-ethers");
+require("hardhat-exposed");
 require("hardhat-gas-reporter");
+require("hardhat-contract-sizer");
 require("solidity-coverage");
 
-// This is a sample Hardhat task. To learn how to create your own go to
-// https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
-  const accounts = await hre.ethers.getSigners();
+require("@openzeppelin/hardhat-upgrades");
 
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
+require("./scripts");
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -21,20 +25,94 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-module.exports = {
-  solidity: "0.8.4",
+const FORK_MAINNET = process.env.FORK_MAINNET === "true";
+
+const config = {
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.20",
+        evmVersion: "shanghai", // if the blockchain is not supporting PUSH0: paris.
+        settings: {
+          // viaIR: false,
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            // details: {
+            //   yulDetails: {
+            //     optimizerSteps: "u",
+            //   },
+            // },
+          },
+        },
+      },
+    ],
+  },
+  defaultNetwork: "hardhat",
   networks: {
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    hardhat: {
+      deploy: ["./deploy"],
+      forking: FORK_MAINNET
+        ? {
+            url: process.env.HOLESKY_URL,
+          }
+        : undefined,
+      accounts: {
+        accountsBalance: "1000000000000000000000000",
+      },
+      allowUnlimitedContractSize: true,
+    },
+    goerli: {
+      url: process.env.GOERLI_URL,
+      deploy: ["./deploy"],
+      chainId: 5,
+      gasPrice: 1e10, // 10 gwei
+    },
+    holesky: {
+      url: process.env.HOLESKY_URL,
+      deploy: ["./deploy"],
+      chainId: 17000,
+      gasPrice: 1e10, // 10 gwei
     },
   },
+  namedAccounts: {
+    deployer: {
+      default: 0, // here this will by default take the first account as deployer
+      1: 0, // similarly on mainnet it will take the first account as deployer.
+    },
+    oracle: {
+      default: 1,
+      0: 1,
+    },
+  },
+  paths: {
+    sources: "./contracts",
+    artifacts: "./build/artifacts",
+    cache: "./build/cache",
+  },
   gasReporter: {
-    enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
+    gasPrice: 30,
+    coinmarketcap: process.env.COINMARKETCAP,
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      goerli: process.env.ETHERSCAN_API_KEY,
+      holesky: process.env.ETHERSCAN_API_KEY,
+    },
   },
 };
+if (process.env.ACCOUNT_PRIVATE_KEYS) {
+  config.networks = {
+    ...config.networks,
+    goerli: {
+      ...config.networks?.goerli,
+      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),
+    },
+    holesky: {
+      ...config.networks?.holesky,
+      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),
+    },
+  };
+}
+module.exports = config;

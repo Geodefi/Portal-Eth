@@ -5,11 +5,7 @@ module.exports = {
     mocha: true,
     node: true,
   },
-  extends: [
-    "standard",
-    "plugin:prettier/recommended",
-    "plugin:node/recommended",
-  ],
+  extends: ["standard", "plugin:prettier/recommended", "plugin:node/recommended"],
   parserOptions: {
     ecmaVersion: 12,
   },
@@ -19,4 +15,13 @@ module.exports = {
       globals: { task: true },
     },
   ],
+  rules: {
+    "no-undef": "off",
+    "prettier/prettier": [
+      "error",
+      {
+        endOfLine: "auto",
+      },
+    ],
+  },
 };

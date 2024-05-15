@@ -3,3 +3,7 @@ artifacts
 cache
 coverage*
 gasReporterOutput.json
+
+contracts/gETHInterfaces
+contracts/helpers/ERC1155SupplyMinterPauser.sol
+contracts/helpers/BytesLib.sol
