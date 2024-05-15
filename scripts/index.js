@@ -32,7 +32,7 @@ task("initiate-pool", "initiate a pool with correct parameters")
   .addOptionalParam("tn", "token name")
   .addOptionalParam("ts", "token symbol")
   .addOptionalParam("v", "visibility: public/private, default:public", "public")
-  .addOptionalParam("lp", "liquidity package, default: false", "false", types.boolean)
+  .addOptionalParam("lp", "liquidity package, default: false", false, types.boolean)
   .setAction(initiatePool);
 
 task("initiate-operator", "initiate an operator with correct parameters")
