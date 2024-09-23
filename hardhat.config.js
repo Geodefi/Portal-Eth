@@ -62,12 +62,6 @@ const config = {
       },
       allowUnlimitedContractSize: true,
     },
-    goerli: {
-      url: process.env.GOERLI_URL,
-      deploy: ["./deploy"],
-      chainId: 5,
-      gasPrice: 1e10, // 10 gwei
-    },
     holesky: {
       url: process.env.HOLESKY_URL,
       deploy: ["./deploy"],
@@ -95,9 +89,11 @@ const config = {
     gasPrice: 30,
     coinmarketcap: process.env.COINMARKETCAP,
   },
+  sourcify: {
+    enabled: true,
+  },
   etherscan: {
     apiKey: {
-      goerli: process.env.ETHERSCAN_API_KEY,
       holesky: process.env.ETHERSCAN_API_KEY,
     },
   },
@@ -105,10 +101,6 @@ const config = {
 if (process.env.ACCOUNT_PRIVATE_KEYS) {
   config.networks = {
     ...config.networks,
-    goerli: {
-      ...config.networks?.goerli,
-      accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),
-    },
     holesky: {
       ...config.networks?.holesky,
       accounts: process.env.ACCOUNT_PRIVATE_KEYS.split(","),

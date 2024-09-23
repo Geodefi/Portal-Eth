@@ -66,7 +66,6 @@ module.exports.upgradePortal = async function (
       MAX_PROPOSAL_DURATION
     );
     await delay(DELAY_SECONDS);
-
     await currentPortal.approveProposal(_id);
     await delay(DELAY_SECONDS);
 

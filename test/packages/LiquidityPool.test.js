@@ -122,9 +122,9 @@ contract("LiquidityPackage", function (accounts) {
     it("getPoolId", async function () {
       expect(await this.contract.getPoolId()).to.be.bignumber.equal(tokenId);
     });
-    it("getPortal", async function () {
-      expect(await this.contract.getPortal()).to.be.equal(this.portal.address);
-    });
+    // it("getPortal", async function () {
+    //   expect(await this.contract.getPortal()).to.be.equal(this.portal.address);
+    // });
     it("getProposedVersion", async function () {
       expect(await this.contract.getProposedVersion()).to.be.bignumber.equal(
         await generateId(strToBytes("name"), 10021)

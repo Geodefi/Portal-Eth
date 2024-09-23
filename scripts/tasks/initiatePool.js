@@ -61,7 +61,7 @@ const func = async (taskArgs, hre) => {
       {
         from: deployer,
         log: true,
-        value: String(32e18),
+        value: String(1e9), // TODO : make dynamic
       },
       "initiatePool",
       BN(Math.floor((taskArgs.f * 10 ** 10) / 100)).toString(),
