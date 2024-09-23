@@ -338,7 +338,9 @@ library OracleExtensionLib {
     self.ORACLE_UPDATE_TIMESTAMP = block.timestamp;
 
     uint256 newThreshold = (allValidatorsCount * MONOPOLY_RATIO) / PERCENTAGE_DENOMINATOR;
-    self.MONOPOLY_THRESHOLD = newThreshold;
+    if (self.MONOPOLY_THRESHOLD != newThreshold) {
+      self.MONOPOLY_THRESHOLD = newThreshold;
+    }
 
     emit OracleReported(priceMerkleRoot, balanceMerkleRoot, newThreshold);
   }
