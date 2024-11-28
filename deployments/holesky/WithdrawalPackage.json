@@ -1517,9 +1517,7 @@
         "blockNumber": 1550553,
         "transactionHash": "0xa9d006c7efada27855104c7ad05eb72befbff60b47e9d73bc1322f6643e27e3a",
         "address": "0x818D3F510C1512f951c08e8f32B92832C3a46748",
-        "topics": [
-          "0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2"
-        ],
+        "topics": ["0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2"],
         "data": "0x000000000000000000000000000000000000000000000000ffffffffffffffff",
         "logIndex": 45,
         "blockHash": "0x361a8d6ec9120a2a8211e74c67cec422f3c6c8acede0444f84c733ce58f55a72"

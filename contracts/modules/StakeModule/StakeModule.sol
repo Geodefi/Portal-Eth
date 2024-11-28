@@ -107,6 +107,7 @@ abstract contract StakeModule is
     bytes32 balanceMerkleRoot,
     uint256 monopolyThreshold
   );
+
   /**
    * @custom:section                           ** ABSTRACT FUNCTIONS **
    */
