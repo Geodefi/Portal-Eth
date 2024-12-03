@@ -352,7 +352,7 @@ library WithdrawalModuleLib {
 
     uint256 commonPoll = self.queue.commonPoll;
     uint256 requestedgETH = self.queue.requested;
-    uint256 totalSize;
+    uint256 initialRequestedgETH = requestedgETH;
 
     indexes = new uint256[](len);
     for (uint256 i; i < len; ) {
@@ -364,7 +364,6 @@ library WithdrawalModuleLib {
         _vote(self, indexes[i], pubkeys[i], sizes[i]);
       }
       requestedgETH = requestedgETH + sizes[i];
-      totalSize += sizes[i];
 
       unchecked {
         i += 1;
@@ -374,7 +373,13 @@ library WithdrawalModuleLib {
     self.queue.commonPoll = commonPoll;
     self.queue.requested = requestedgETH;
 
-    self.gETH.safeTransferFrom(msg.sender, address(this), self.POOL_ID, totalSize, "");
+    self.gETH.safeTransferFrom(
+      msg.sender,
+      address(this),
+      self.POOL_ID,
+      requestedgETH - initialRequestedgETH,
+      ""
+    );
   }
 
   /**
